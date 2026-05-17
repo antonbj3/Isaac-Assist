@@ -1,7 +1,8 @@
 """Constraint / Violation / Verdict types.
 
-Mirrors `sibling-project/lib/constraint_handler.py:90-98` (proven shape, do not
-import — sibling-project is a separate venv per memory).
+Schema follows an externally-proven constraint-check shape (Constraint /
+Violation / severity / verdict) reimplemented here as a self-contained
+unit — no upstream dependency.
 """
 from __future__ import annotations
 
