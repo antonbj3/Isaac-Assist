@@ -88,7 +88,7 @@
     "target_path": "/World/Pallet",
     "duration_s": 180,
     "xy_tolerance": 0.15,
-    "rest_speed_threshold": 100.0
+    "rest_speed_threshold": 0.1
   },
   "extends": "CP-08",
   "extension_notes": "CP-10 scales CP-08's 4-cube grid_2x2 to 9-cube grid_3x3. Same code pattern. Validates compute_stack_placement at scale and drop_targets dict with 9 entries. Function-gate timing: 9 cubes × ~10s/cube ≈ 90-180s. Stack stability not asserted (cubes are loose 5cm rubber on flat pallet — may settle into staggered positions if drop precision drifts).",
@@ -185,7 +185,7 @@
     "target_path": "{{primary_destination.path}}",
     "duration_s": 180,
     "xy_tolerance": 0.15,
-    "rest_speed_threshold": 100.0
+    "rest_speed_threshold": 0.1
   },
   "failure_modes": [
     "Cubes_7..9 start within Franka reach immediately — controller picks them out of conveyor order. Verifier still passes if Cube_1 reaches pallet eventually.",
@@ -194,7 +194,7 @@
     "drop_targets dict missing some cube — falls through to DEST_PATH (pallet bbox center), all unmapped cubes pile up at center.",
     "Conveyor not wide enough — Cube_1 starts at x=-2.7, conveyor [-3, +3] = 6m. Within bound."
   ],
-  "verified_status": "build-spec-2026-04-XX; form-gate ✓; function-gate ✓ (multi-cube cube_paths + Mode A 3-strike fix)",
+  "verified_status": "build-spec-2026-04-XX; form-gate ✓; function-gate ✓ [pre-fix; re-verify pending — rest_speed standardised 2026-05-18] (multi-cube cube_paths + Mode A 3-strike fix)",
   "diagnose_args": {
     "robot_path": "/World/Franka",
     "obstacles": [

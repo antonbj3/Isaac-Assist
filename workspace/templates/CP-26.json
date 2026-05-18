@@ -68,7 +68,7 @@
     "target_path": "/World/Bin",
     "duration_s": 180,
     "xy_tolerance": 0.15,
-    "rest_speed_threshold": 100.0
+    "rest_speed_threshold": 0.1
   },
   "extends": "CP-02",
   "extension_notes": "CP-26 demonstrates robot-mediated belt-to-belt transfer — destination is a moving belt, not a static bin. Cube continues motion via Conv2's belt friction. Industrial use: pre-sortation transfer (off line A onto line B). Future: with vision-gate, cube-color decides which sub-belt of Conv2 to drop on (multi-lane sortation).",
@@ -78,7 +78,7 @@
     "Bin too far downstream — cube falls off Conv2 end (x=+1.5) before reaching Bin (x=+1.7). 0.2m gap; cube falls 5cm onto Ground. Acceptable.",
     "Sensor on Conv1 only — no pick decision needed for Conv2 (cube just rides). Standard CP-01 sensor pattern."
   ],
-  "verified_status": "build-spec-2026-04-XX; form-gate ✓; function-gate ✓ (postal sorter — Mode A 3-strike + cuRobo pre-step belt-pause)",
+  "verified_status": "build-spec-2026-04-XX; form-gate ✓; function-gate ✓ [pre-fix; re-verify pending — rest_speed standardised 2026-05-18] (postal sorter — Mode A 3-strike + cuRobo pre-step belt-pause)",
   "diagnose_args": {
     "robot_path": "/World/Franka",
     "sensor_path": "/World/PickSensor",

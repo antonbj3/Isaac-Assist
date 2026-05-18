@@ -62,7 +62,7 @@
     "target_path": "/World/Pallet",
     "duration_s": 180,
     "xy_tolerance": 0.15,
-    "rest_speed_threshold": 100.0
+    "rest_speed_threshold": 0.1
   },
   "extends": "CP-08",
   "extension_notes": "CP-30 is the empirically-grounded palletizer: pallet sized at 2× the measured cuRobo precision drift (17cm) → 50cm pallet. Wider grid spacing (16cm) ensures cubes don't collide even with 17cm drift. Production lesson: design pallets with measured-precision × 2 margin for reliable delivery.",
@@ -71,7 +71,7 @@
     "Wider drop_targets spacing (16cm) could mean longer transit time per cube — total cycle longer than CP-08.",
     "Same physics gotchas as CP-01."
   ],
-  "verified_status": "build-spec-2026-04-XX; form-gate ✓; function-gate ✓ (Mode B FixedJoint at grip_close + 16 IK seeds)",
+  "verified_status": "build-spec-2026-04-XX; form-gate ✓; function-gate ✓ [pre-fix; re-verify pending — rest_speed standardised 2026-05-18] (Mode B FixedJoint at grip_close + 16 IK seeds)",
   "diagnose_args": {
     "robot_path": "/World/Franka",
     "obstacles": [

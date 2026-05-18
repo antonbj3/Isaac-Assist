@@ -49,7 +49,7 @@
     "target_path": "/World/Bin_red",
     "duration_s": 180,
     "xy_tolerance": 0.15,
-    "rest_speed_threshold": 100.0,
+    "rest_speed_threshold": 0.1,
     "cube_paths": [
       "/World/Cube_1",
       "/World/Cube_2"
@@ -142,7 +142,7 @@
     "Bin proximity (10cm gap between bins) may cause cube-to-wrong-bin if drop accuracy is poor.",
     "Same raycast dependencies as CP-78."
   ],
-  "verified_status": "build-spec-2026-04-XX; form-gate ✓; function-gate ✓ (drop-precision XY arrival gate (UR10 cuRobo))",
+  "verified_status": "build-spec-2026-04-XX; form-gate ✓; function-gate ✓ [pre-fix; re-verify pending — rest_speed standardised 2026-05-18] (drop-precision XY arrival gate (UR10 cuRobo))",
   "diagnose_args": {
     "robot_path": "/World/UR10",
     "obstacles": [

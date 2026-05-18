@@ -78,7 +78,7 @@
     "target_path": "/World/PalletA",
     "duration_s": 180,
     "xy_tolerance": 0.15,
-    "rest_speed_threshold": 100.0
+    "rest_speed_threshold": 0.1
   },
   "extends": "CP-08",
   "extension_notes": "CP-19 demonstrates that drop_targets can dispatch to multiple distinct destinations within a single controller install — not all cubes need to go to the same pallet/bin. Useful for fan-out/distribution scenarios. Future variant: 4 pallets in cardinal directions, color-coded routing.",
@@ -88,7 +88,7 @@
     "PalletB at x=+0.35, distance from robot (0,0): sqrt(0.35^2+0.4^2) = 0.53m. Within reach.",
     "Verify_args has 2 stages but they're independent (same robot, different bin) — verify_pickplace_pipeline checks each stage's reach + bridge separately."
   ],
-  "verified_status": "build-spec-2026-04-XX; form-gate ✓; function-gate ✓ (multi-cube cube_paths + Mode A 3-strike fix)",
+  "verified_status": "build-spec-2026-04-XX; form-gate ✓; function-gate ✓ [pre-fix; re-verify pending — rest_speed standardised 2026-05-18] (multi-cube cube_paths + Mode A 3-strike fix)",
   "diagnose_args": {
     "robot_path": "/World/Franka",
     "obstacles": [

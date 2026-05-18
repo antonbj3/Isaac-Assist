@@ -66,7 +66,7 @@
     "target_path": "/World/RedTray",
     "duration_s": 240,
     "xy_tolerance": 0.15,
-    "rest_speed_threshold": 10.0
+    "rest_speed_threshold": 0.1
   },
   "extends": "CP-47",
   "extension_notes": "CP-50 combines runtime vision (CP-47 pattern) with kitting (CP-49 pattern). 2 separate trays \u2014 vision dispatches by color. Production-grade vision-driven kitting.",
@@ -75,7 +75,7 @@
     "Cubes within each tray not slot-precision-placed (no drop_targets dict). They land in tray but pile up if multiple cubes per tray.",
     "1 Gemini API call per build."
   ],
-  "verified_status": "build-spec-2026-04-XX; form-gate \u2713; function-gate \u2713 (multi-cube cube_paths + xy_tol=0.15 + rest_speed=10 \u2014 Cube_4 delivered to RedTray)",
+  "verified_status": "build-spec-2026-04-XX; form-gate \u2713; function-gate \u2713 [pre-fix; re-verify pending \u2014 rest_speed standardised 2026-05-18] (multi-cube cube_paths + xy_tol=0.15 + rest_speed=10 \u2014 Cube_4 delivered to RedTray)",
   "intent": {
     "pattern_hint": "pick_place",
     "structural_features": {
@@ -167,7 +167,7 @@
     "target_path": "{{destinations[0].path}}",
     "duration_s": 240,
     "xy_tolerance": 0.15,
-    "rest_speed_threshold": 10.0
+    "rest_speed_threshold": 0.1
   },
   "diagnose_args": {
     "robot_path": "/World/Franka",

@@ -83,7 +83,7 @@
     "target_path": "/World/Pallet",
     "duration_s": 180,
     "xy_tolerance": 0.15,
-    "rest_speed_threshold": 100.0
+    "rest_speed_threshold": 0.1
   },
   "extends": "CP-10",
   "extension_notes": "CP-11 differs from CP-10 only in pattern (donut_3x3 vs grid_3x3) and cube count (8 vs 9). Same pallet, same robot, same controller. Industrial value: pinwheel patterns leave a central gap for fasteners, central pegs, or air-flow channels in palletized goods. Future extensions: donut_5x5 (24-cube ring), multi-layer donut + layer_rotation_deg=45 for offset stacking.",
@@ -180,14 +180,14 @@
     "target_path": "{{primary_destination.path}}",
     "duration_s": 180,
     "xy_tolerance": 0.15,
-    "rest_speed_threshold": 100.0
+    "rest_speed_threshold": 0.1
   },
   "failure_modes": [
     "drop_targets dict ordering matters: cube_path → slot mapping is by name, not list-index. If drop_targets keys mismatch source_paths names, cubes go to default DEST_PATH center.",
     "Donut center (0, -0.4) is empty — if a different cube is placed there (e.g. Cube_9 from copy/paste error), it'll collide with fingers during subsequent drops.",
     "Spacing 0.10m means donut diameter = 2*spacing = 0.20m + cube_size = 0.25m. Pallet must be ≥0.25m wide. Used 0.45m — safe."
   ],
-  "verified_status": "build-spec-2026-04-XX; form-gate ✓; function-gate ✓ (multi-cube cube_paths + Mode A 3-strike fix)",
+  "verified_status": "build-spec-2026-04-XX; form-gate ✓; function-gate ✓ [pre-fix; re-verify pending — rest_speed standardised 2026-05-18] (multi-cube cube_paths + Mode A 3-strike fix)",
   "diagnose_args": {
     "robot_path": "/World/Franka",
     "obstacles": [

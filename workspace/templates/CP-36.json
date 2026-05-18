@@ -62,7 +62,7 @@
     "target_path": "/World/ShelfBottom",
     "duration_s": 240,
     "xy_tolerance": 0.15,
-    "rest_speed_threshold": 10.0
+    "rest_speed_threshold": 0.1
   },
   "extends": "CP-08",
   "extension_notes": "CP-36 demonstrates vertical workspace utilization with distinct z-tiers. drop_targets dispatches cubes to different z-heights based on cube identity. Robot must clear top shelf during transit (planning_obstacles include ShelfTop).",
@@ -72,7 +72,7 @@
     "Cube placement on TOP shelf at z=1.0: robot descends from h1=1.20 to z=1.0. 0.20m descent — adequate.",
     "Same physics gotchas as CP-08."
   ],
-  "verified_status": "build-spec-2026-04-XX; form-gate ✓; function-gate ✓ (multi-cube cube_paths + xy_tol=0.15 + rest_speed=10 — Cube_3 delivered to ShelfBottom)",
+  "verified_status": "build-spec-2026-04-XX; form-gate ✓; function-gate ✓ [pre-fix; re-verify pending — rest_speed standardised 2026-05-18] (multi-cube cube_paths + xy_tol=0.15 + rest_speed=10 — Cube_3 delivered to ShelfBottom)",
   "diagnose_args": {
     "robot_path": "/World/Franka",
     "obstacles": [
