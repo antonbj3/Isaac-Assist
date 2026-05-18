@@ -1,5 +1,6 @@
 {
   "task_id": "CP-NEW-turn-faucet",
+  "is_self_consistent": false,
   "goal": "ManiSkill2 TurnFaucet-v0 parity: Franka Panda grasps a revolute faucet handle mounted on a fixture and rotates it from 0° to a target angle of 90°. A prismatic approach motion aligns the gripper with the handle, then a joint-space rotation drives the handle to the target. get_joint_positions polls the faucet revolute joint until angle ≥ 85° (5° tolerance). Exercises create_articulated_joint (revolute, single-DOF), plan_trajectory for approach, set_joint_targets for wrist rotation, and get_joint_positions for angle feedback — a structural pattern not present in any existing A1/A2/A3 or sort template.",
   "tools_used": [
     "create_prim",

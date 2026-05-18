@@ -1,5 +1,6 @@
 {
   "task_id": "CP-NEW-maniskill-pick-cube",
+  "is_self_consistent": false,
   "goal": "ManiSkill2 PickCube-v0 cross-benchmark parity check: build a standard Franka tabletop scene, run 50 episodes via run_arena_benchmark against the Isaac Arena env 'Isaac-PickCube-Franka-v0', then format a leaderboard table with arena_leaderboard. SUCCESS criterion: benchmark returns success_rate >= 0 (smoke-pass; real threshold deferred to policy training). Exercises run_arena_benchmark and arena_leaderboard \u2014 both novel to the library.",
   "tools_used": [
     "create_prim",

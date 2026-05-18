@@ -1,5 +1,6 @@
 {
   "task_id": "CP-NEW-ros2control-hw-mock",
+  "is_self_consistent": false,
   "goal": "Register a UR10e arm as a ros2_control hardware interface mock using the velocity_controllers path. Step 1: precheck_ros2_environment to confirm rclpy available. Step 2: robot_wizard to load UR10e at /World/UR10e. Step 3: setup_ros2_control_compat with controller_type='velocity_controllers' to wire /isaac_joint_states + /isaac_joint_commands for velocity-control clients. Step 4: emit_ros2_control_yaml with controller_type='velocity_controllers' + update_rate_hz=500 to write the hardware-interface YAML. Step 5: setup_ros2_bridge profile=ur10e_moveit2 to build the OmniGraph with velocity-command subscriber. Step 6: configure_ros2_time mode='sim_time'. Step 7: ros2_list_topics to verify /isaac_joint_states and /isaac_joint_commands present. Step 8: diagnose_ros2 to confirm QoS + domain health. Distinct from CP-NEW-ros2-moveit2-franka: exercises velocity_controllers branch (not joint_trajectory_controller) + UR10e (not Franka) + omits cumotion plugin (hardware-interface mock path only, no motion planner).",
   "tools_used": [
     "precheck_ros2_environment",

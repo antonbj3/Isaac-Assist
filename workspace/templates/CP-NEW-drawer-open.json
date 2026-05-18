@@ -1,5 +1,6 @@
 {
   "task_id": "CP-NEW-drawer-open",
+  "is_self_consistent": false,
   "goal": "Build a drawer-open station: Franka pulls open a kitchen-cabinet drawer (prismatic joint along Y axis, ~30cm travel). Validates the articulated-mechanism manipulation pattern needed for fixture-disassembly and inspection workflows.",
   "tools_used": [
     "robot_wizard",
