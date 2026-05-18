@@ -1,5 +1,26 @@
 {
   "task_id": "CP-07",
+  "intent": {
+    "pattern_hint": "pick_place",
+    "structural_features": {
+      "n_robot_stations": 4,
+      "n_handoffs": 0,
+      "destination_kind": "single_bin",
+      "uses_conveyor_transport": true,
+      "has_stacking": false,
+      "is_parallel_cells": true,
+      "n_workpieces": 4
+    },
+    "structural_tags": [
+      "isaac:transport.conveyor",
+      "isaac:robot.fixed_base.arm",
+      "isaac:robot.franka_panda",
+      "isaac:topology.parallel_cells",
+      "isaac:topology.multi_robot",
+      "isaac:n_stations.4",
+      "isaac:industry.conveyor_pick"
+    ]
+  },
   "goal": "Robo-factory: 4 parallel Franka pick-and-place cells in a single scene, each independently picking cubes from its own conveyor and placing them in its own bin. Demonstrates per-robot subscription scoping (_curobo_pp_sub_<TAG> per Franka prim path) and that multiple cuRobo controllers coexist without interference. Reverse-engineered from /standalone_examples/.../robo_factory/robo_factory.py (which uses StackingController \u00d7 4 with offset cloning).",
   "tools_used": [
     "create_prim",

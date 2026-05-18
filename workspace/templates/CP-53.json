@@ -1,5 +1,30 @@
 {
   "task_id": "CP-53",
+  "intent": {
+    "pattern_hint": "pick_place",
+    "structural_features": {
+      "n_robot_stations": 2,
+      "n_handoffs": 1,
+      "destination_kind": "single_bin",
+      "uses_conveyor_transport": true,
+      "has_stacking": false,
+      "has_claim_mutex": true,
+      "has_staging_buffer": true,
+      "is_serial_pipeline": true,
+      "n_workpieces": 3
+    },
+    "structural_tags": [
+      "isaac:transport.conveyor",
+      "isaac:topology.producer_consumer",
+      "isaac:topology.multi_robot",
+      "isaac:coordination.claim_mutex",
+      "isaac:fixture.staging_rack",
+      "isaac:robot.fixed_base.arm",
+      "isaac:robot.franka_panda",
+      "isaac:n_stations.2",
+      "isaac:industry.assembly"
+    ]
+  },
   "goal": "Build a producer/consumer bounded buffer: 2 Frankas, robot A (producer) feeds cubes from conveyor onto a 3-slot staging rack, robot B (consumer) picks from staging rack into bin. Mutex coordinates rack access. Realizes research scenario #12.",
   "tools_used": [
     "create_prim",

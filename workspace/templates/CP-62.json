@@ -1,5 +1,28 @@
 {
   "task_id": "CP-62",
+  "intent": {
+    "pattern_hint": "pick_place",
+    "structural_features": {
+      "n_robot_stations": 1,
+      "n_handoffs": 0,
+      "destination_kind": "single_bin",
+      "uses_conveyor_transport": true,
+      "has_stacking": false,
+      "has_linear_axis": true,
+      "uses_surface_gripper": true,
+      "n_workpieces": 4
+    },
+    "structural_tags": [
+      "isaac:transport.conveyor",
+      "isaac:robot.fixed_base.arm",
+      "isaac:robot.franka_panda",
+      "isaac:robot.gantry",
+      "isaac:topology.single_station",
+      "isaac:gripper.surface_gripper",
+      "isaac:axis.linear_slider",
+      "isaac:industry.conveyor_pick"
+    ]
+  },
   "goal": "Build a surface-gripper gantry: Franka mounted on a linear-axis slider with surface_gripper for vacuum pickup. Realizes #29 SurfaceGripperGantry infrastructure.",
   "tools_used": [
     "create_prim",

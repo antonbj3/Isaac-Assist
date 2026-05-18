@@ -1,5 +1,26 @@
 {
   "task_id": "CP-46",
+  "intent": {
+    "pattern_hint": "pick_place",
+    "structural_features": {
+      "n_robot_stations": 1,
+      "n_handoffs": 0,
+      "destination_kind": "single_bin",
+      "uses_conveyor_transport": true,
+      "has_stacking": false,
+      "has_grid_placement": true,
+      "n_workpieces": 6
+    },
+    "structural_tags": [
+      "isaac:transport.conveyor",
+      "isaac:robot.fixed_base.arm",
+      "isaac:robot.franka_panda",
+      "isaac:topology.single_station",
+      "isaac:placement.grid_3x2",
+      "isaac:industry.palletizing",
+      "isaac:resolver.compute_stack_placement"
+    ]
+  },
   "goal": "Build a baseline 6-cube precision-grounded palletizer: 6 cubes onto a 50\u00d750cm pallet using compute_stack_placement v3 (grid_3x2). Combines empirical precision (50cm pallet for 17cm drift margin) + compute_stack_placement integration. Reference template for production-grade canonical authoring.",
   "tools_used": [
     "create_prim",

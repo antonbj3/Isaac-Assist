@@ -1,5 +1,28 @@
 {
   "task_id": "CP-80",
+  "intent": {
+    "pattern_hint": "pick_place",
+    "structural_features": {
+      "n_robot_stations": 1,
+      "n_handoffs": 0,
+      "destination_kind": "single_bin",
+      "uses_conveyor_transport": true,
+      "has_stacking": false,
+      "uses_surface_gripper": true,
+      "n_workpieces": 1,
+      "elevated_conveyor": true
+    },
+    "structural_tags": [
+      "isaac:transport.conveyor",
+      "isaac:transport.elevated_belt",
+      "isaac:robot.fixed_base.arm",
+      "isaac:robot.ur10",
+      "isaac:topology.single_station",
+      "isaac:controller.native_pickplace",
+      "isaac:gripper.surface_gripper",
+      "isaac:industry.conveyor_pick"
+    ]
+  },
   "goal": "UR10 builtin pick-place with an ELEVATED conveyor (z=0.95) to test whether CP-78's success pattern (cube \u226515cm above robot base) extends to conveyor-fed scenarios. Conveyor mounted on a fixed stand 20cm above table top puts cube at z=0.985 \u2014 within UR10's reachable workspace AND on a moving belt for industrial realism.",
   "tools_used": [
     "create_prim",

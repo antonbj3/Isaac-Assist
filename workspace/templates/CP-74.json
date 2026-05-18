@@ -1,5 +1,26 @@
 {
   "task_id": "CP-74",
+  "intent": {
+    "pattern_hint": "pick_place",
+    "structural_features": {
+      "n_robot_stations": 1,
+      "n_handoffs": 0,
+      "destination_kind": "single_bin",
+      "uses_conveyor_transport": true,
+      "has_stacking": false,
+      "uses_surface_gripper": true,
+      "n_workpieces": 1
+    },
+    "structural_tags": [
+      "isaac:transport.conveyor",
+      "isaac:robot.fixed_base.arm",
+      "isaac:robot.ur10",
+      "isaac:topology.single_station",
+      "isaac:controller.native_pickplace",
+      "isaac:gripper.surface_gripper",
+      "isaac:industry.conveyor_pick"
+    ]
+  },
   "goal": "Build a UR10 native (PickPlaceController) pick-place canonical \u2014 same scene as CP-69 but with target_source='native' instead of 'curobo'. Native handler routes to the universal_robots PickPlaceController + RMPFlowController + SurfaceGripper, which is the exact stack the Isaac Sim ur10_pick_up.py standalone example uses. Goal: provide a working UR10 delivery path while cuRobo grasp-wiring is being investigated (task #36).",
   "tools_used": [
     "create_prim",

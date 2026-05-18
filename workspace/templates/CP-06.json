@@ -1,5 +1,25 @@
 {
   "task_id": "CP-06",
+  "intent": {
+    "pattern_hint": "pick_place",
+    "structural_features": {
+      "n_robot_stations": 1,
+      "n_handoffs": 0,
+      "destination_kind": "single_bin",
+      "uses_conveyor_transport": true,
+      "has_stacking": false,
+      "has_grid_placement": false,
+      "n_workpieces": 4
+    },
+    "structural_tags": [
+      "isaac:transport.conveyor",
+      "isaac:robot.fixed_base.arm",
+      "isaac:robot.franka_panda",
+      "isaac:topology.single_station",
+      "isaac:controller.builtin_pickplace",
+      "isaac:industry.conveyor_pick"
+    ]
+  },
   "blocked": {
     "since": "2026-05-07",
     "status": "infrastructure-built-but-controller-fails-delivery",

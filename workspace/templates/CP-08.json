@@ -1,5 +1,26 @@
 {
   "task_id": "CP-08",
+  "intent": {
+    "pattern_hint": "pick_place",
+    "structural_features": {
+      "n_robot_stations": 1,
+      "n_handoffs": 0,
+      "destination_kind": "single_bin",
+      "uses_conveyor_transport": true,
+      "has_stacking": false,
+      "has_grid_placement": true,
+      "n_workpieces": 4
+    },
+    "structural_tags": [
+      "isaac:transport.conveyor",
+      "isaac:robot.fixed_base.arm",
+      "isaac:robot.franka_panda",
+      "isaac:topology.single_station",
+      "isaac:placement.grid_2x2",
+      "isaac:industry.palletizing",
+      "isaac:resolver.compute_stack_placement"
+    ]
+  },
   "goal": "Build a 2\u00d72 grid palletizer: a Franka Panda picks 5cm cubes from a conveyor and stacks them in a 2\u00d72 grid on top of a flat pallet behind the robot. Each cube goes to a DISTINCT drop position computed via compute_stack_placement (Tier A tool). First canonical demonstrating per-cube drop targeting via drop_targets={cube_path: [x,y,z]} on cuRobo controller.",
   "tools_used": [
     "create_prim",

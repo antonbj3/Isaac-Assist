@@ -1,5 +1,28 @@
 {
   "task_id": "CP-52",
+  "intent": {
+    "pattern_hint": "pick_place",
+    "structural_features": {
+      "n_robot_stations": 2,
+      "n_handoffs": 0,
+      "destination_kind": "single_bin",
+      "uses_conveyor_transport": true,
+      "has_stacking": false,
+      "has_claim_mutex": true,
+      "shared_workspace": true,
+      "n_workpieces": 4
+    },
+    "structural_tags": [
+      "isaac:transport.conveyor",
+      "isaac:topology.shared_pickup_zone",
+      "isaac:topology.multi_robot",
+      "isaac:coordination.claim_mutex",
+      "isaac:robot.fixed_base.arm",
+      "isaac:robot.franka_panda",
+      "isaac:n_stations.2",
+      "isaac:industry.conveyor_pick"
+    ]
+  },
   "goal": "Build a parallel-picking duo: 2 Frankas share a single conveyor pickup zone, coordinated via setup_robot_claim_mutex. Both robots pick from same belt to same bin; mutex prevents simultaneous picks. Realizes research scenario #10 'Parallel Picking Duo (Zone Belt)'.",
   "tools_used": [
     "create_prim",

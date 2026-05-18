@@ -1,5 +1,26 @@
 {
   "task_id": "CP-84",
+  "intent": {
+    "pattern_hint": "pick_place",
+    "structural_features": {
+      "n_robot_stations": 1,
+      "n_handoffs": 0,
+      "destination_kind": "fixture",
+      "uses_conveyor_transport": false,
+      "has_stacking": true,
+      "uses_surface_gripper": true,
+      "n_workpieces": 1
+    },
+    "structural_tags": [
+      "isaac:robot.fixed_base.arm",
+      "isaac:robot.ur10",
+      "isaac:topology.single_station",
+      "isaac:controller.native_pickplace",
+      "isaac:operation.stack",
+      "isaac:gripper.surface_gripper",
+      "isaac:spatial_resolver.place_on_top_of"
+    ]
+  },
   "goal": "UR10 builtin stacking pick-place: pick cube from pedestal, stack ON TOP OF a stationary base cube. Validates raycast workaround composes with stacking destinations (drop on prim instead of into bin).",
   "tools_used": [
     "create_prim",

@@ -1,5 +1,29 @@
 {
   "task_id": "CP-51",
+  "intent": {
+    "pattern_hint": "pick_place",
+    "structural_features": {
+      "n_robot_stations": 2,
+      "n_handoffs": 1,
+      "destination_kind": "single_bin",
+      "uses_conveyor_transport": true,
+      "has_stacking": false,
+      "has_handoff_signals": true,
+      "handoff_signals_advisory_only": true,
+      "is_serial_pipeline": true,
+      "n_workpieces": 1
+    },
+    "structural_tags": [
+      "isaac:transport.conveyor",
+      "isaac:topology.handoff_station",
+      "isaac:topology.multi_robot",
+      "isaac:coordination.handoff_signal",
+      "isaac:robot.fixed_base.arm",
+      "isaac:robot.franka_panda",
+      "isaac:n_stations.2",
+      "isaac:industry.assembly"
+    ]
+  },
   "goal": "Build a robot-to-robot handoff station: 2 Frankas, robot A picks cubes from conveyor + drops at handoff station, robot B picks from handoff + drops in bin. Uses setup_robot_handoff_signal to define the handoff position. Realizes research scenario #11 'Fixed-Point Robot-to-Robot Handoff'.",
   "tools_used": [
     "create_prim",

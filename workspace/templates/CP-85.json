@@ -1,5 +1,29 @@
 {
   "task_id": "CP-85",
+  "intent": {
+    "pattern_hint": "sort",
+    "structural_features": {
+      "n_robot_stations": 1,
+      "n_handoffs": 0,
+      "destination_kind": "n_bins_routed",
+      "routing_axis": "color",
+      "uses_conveyor_transport": false,
+      "has_stacking": false,
+      "uses_surface_gripper": true,
+      "n_workpieces": 1,
+      "n_destination_bins": 2
+    },
+    "structural_tags": [
+      "isaac:robot.fixed_base.arm",
+      "isaac:robot.ur10",
+      "isaac:topology.single_station",
+      "isaac:controller.native_pickplace",
+      "isaac:gripper.surface_gripper",
+      "isaac:routing.color_routing",
+      "isaac:sensor.semantic_label",
+      "isaac:industry.sortation"
+    ]
+  },
   "goal": "UR10 builtin SINGLE-cube color-routing pick-place \u2014 picks Cube_1 (red) and delivers to Bin_red. Validates color_routing dispatch with raycast workaround using simulate_traversal_check (which is single-cube), avoiding multi-cube measurement issues.",
   "tools_used": [
     "create_prim",

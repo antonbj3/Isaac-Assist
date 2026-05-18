@@ -1,5 +1,31 @@
 {
   "task_id": "CP-76",
+  "intent": {
+    "pattern_hint": "pick_place",
+    "structural_features": {
+      "n_robot_stations": 2,
+      "n_handoffs": 0,
+      "destination_kind": "fixture",
+      "uses_conveyor_transport": true,
+      "has_stacking": true,
+      "has_moving_obstacle": true,
+      "has_dynamic_fixture_hold": true,
+      "shared_workspace": true,
+      "n_workpieces": 2
+    },
+    "structural_tags": [
+      "isaac:transport.conveyor",
+      "isaac:topology.multi_robot",
+      "isaac:topology.dual_arm_workspace",
+      "isaac:coordination.dynamic_fixture_hold",
+      "isaac:collision.register_moving_obstacle",
+      "isaac:operation.stack",
+      "isaac:robot.fixed_base.arm",
+      "isaac:robot.franka_panda",
+      "isaac:n_stations.2",
+      "isaac:industry.assembly"
+    ]
+  },
   "goal": "Build a dual-robot dynamic fixture hold canonical: R1 holds a workpiece (Cube_workpiece) mid-air at a fixed transfer pose while R2 picks a mating part (Cube_mating) and stacks it onto the held workpiece. The hardest collision-avoidance case in the research set \u2014 both robots simultaneously occupy the central workspace, and R2 must treat R1's hand as a moving obstacle. Realizes Industrial Set 1 #4 Dual-Robot Dynamic Fixture Hold.",
   "tools_used": [
     "create_prim",

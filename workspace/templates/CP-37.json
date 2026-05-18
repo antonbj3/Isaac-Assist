@@ -1,5 +1,27 @@
 {
   "task_id": "CP-37",
+  "intent": {
+    "pattern_hint": "pick_place",
+    "structural_features": {
+      "n_robot_stations": 1,
+      "n_handoffs": 0,
+      "destination_kind": "single_bin",
+      "uses_conveyor_transport": true,
+      "has_stacking": false,
+      "has_grid_placement": false,
+      "has_static_obstacle": true,
+      "n_workpieces": 4
+    },
+    "structural_tags": [
+      "isaac:transport.conveyor",
+      "isaac:robot.fixed_base.arm",
+      "isaac:robot.franka_panda",
+      "isaac:topology.single_station",
+      "isaac:obstacle.static_pillar",
+      "isaac:motion.collision_aware_path",
+      "isaac:industry.conveyor_pick"
+    ]
+  },
   "goal": "Build an obstacle-avoidance station: 4 cubes from conveyor delivered to bin, but a tall pillar obstacle stands between pick zone and bin. cuRobo must plan around it. Tests planning_obstacles + collision-aware path.",
   "tools_used": [
     "create_prim",
