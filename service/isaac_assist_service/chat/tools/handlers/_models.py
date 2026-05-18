@@ -351,7 +351,8 @@ class SimulateTraversalCheckArgs(BaseModel):
     """FUNCTION GATE for pick-place / assembly-line scenes — counterpart to verify_pickplace_pipeline's FORM gate. Plays the timeline for duration_s of sim time, captures the cube's position twice (for veloc"""
     model_config = ConfigDict(populate_by_name=True, extra='allow')
 
-    cube_path: str = Field(..., description="Prim path of the cube to track (e.g. /World/Cube_1).")
+    cube_path: Optional[str] = Field(None, description="Prim path of the cube to track (e.g. /World/Cube_1). Optional if cube_paths is provided (multi-cube mode).")
+    cube_paths: Optional[List[str]] = Field(None, description="MULTI-CUBE mode: list of cube prim paths. Either cube_path OR cube_paths required. Takes precedence over cube_path when both provided.")
     target_path: str = Field(..., description="Prim path of the destination whose world bbox is the target (e.g. /World/Bin).")
     duration_s: Optional[float] = Field(None, description="Sim duration in seconds. Default 60. Use 30 for smoke tests.")
     xy_tolerance: Optional[float] = Field(None, description="Extra xy slack on target bbox in meters. Default 0.0 (strict).")
