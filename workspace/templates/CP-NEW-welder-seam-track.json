@@ -1,6 +1,5 @@
 {
   "task_id": "CP-NEW-welder-seam-track",
-  "is_self_consistent": false,
   "goal": "Seam-tracking welder persona: UR10 follows a weld seam on a workpiece using impedance-compliant Cartesian path with adaptive correction from vision_plan_trajectory feedback. Realizes ONET SOC 51-4121 yrkesroll-welder-seam-track-002.",
   "tools_used": [
     "create_prim",
@@ -35,21 +34,17 @@
     "static_prims": ["/World/Workpiece", "/World/SeamMarker"]
   },
   "verify_args": {
-    "stages": [
-      {
-        "robot_path": "/World/UR10",
-        "pick_path": "/World/SeamMarker",
-        "place_path": "/World/SeamMarker",
-        "robot_kind": "ur10"
-      }
-    ],
-    "cube_path": "/World/SeamMarker"
+    "stages": [],
+    "note": "Compliant seam-tracking diagnostic canonical — no cube delivery. Success criterion is torch path deviation < 2 mm from /World/SeamMarker centreline over the 0.5 m seam (compliance handoff + vision-corrected follow). Measured offline via get_kinematic_state on tool0 and projecting onto the seam parametric axis. All compliance calls currently dry_run=True pending torque-bridge provisioning.",
+    "robot_path": "/World/UR10",
+    "seam_path": "/World/SeamMarker",
+    "workpiece_path": "/World/Workpiece",
+    "max_deviation_mm": 2.0,
+    "seam_length_m": 0.5,
+    "expected_compliance_controller": "cartesian_impedance",
+    "expected_vision_plan_segments": 3
   },
-  "simulate_args": {
-    "cube_path": "/World/SeamMarker",
-    "target_path": "/World/SeamMarker",
-    "duration_s": 120
-  },
+  "simulate_args": null,
   "diagnose_args": {
     "robot_path": "/World/UR10",
     "obstacles": ["/World/Workpiece", "/World/WeldTable"],
@@ -64,7 +59,7 @@
     "follow_trajectory_with_compliance compliance_controller='cartesian_impedance' — must match installed controller name in ros2_control; mismatch causes 400 error",
     "SeamMarker is a static Cube — no physics; verify_args pick_path/place_path pointing to seam is a form-only proxy; real success criterion is torch path deviation <2 mm"
   ],
-  "verified_status": "drafted-2026-05-16; form-gate-schema ✓; function-gate ⏳",
+  "verified_status": "drafted-2026-05-16; form-gate-schema ✓; function-gate ⏳ diagnostic — success measured via torch path deviation < 2 mm vs SeamMarker centreline (not cube delivery). All compliance calls dry_run=True pending ros2_control torque bridge. Wave-2 self-ref redesign 2026-05-18.",
   "motion_controllers": {
     "verified": [],
     "failed": {},

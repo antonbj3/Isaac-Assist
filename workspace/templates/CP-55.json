@@ -1,6 +1,5 @@
 {
   "task_id": "CP-55",
-  "is_self_consistent": false,
   "goal": "Build a drawer-open station: a drawer (prismatic joint) attached to a static cabinet, robot reaches and pulls drawer open. First user of create_articulated_joint. Realizes research scenario #30 FrankaDrawerOpen.",
   "tools_used": [
     "create_prim",
@@ -18,21 +17,15 @@
     "conveyors": {}
   },
   "verify_args": {
-    "stages": [
-      {
-        "robot_path": "/World/Franka",
-        "pick_path": "/World/Drawer",
-        "place_path": "/World/Drawer",
-        "robot_kind": "franka_panda"
-      }
-    ],
-    "cube_path": "/World/Drawer"
+    "stages": [],
+    "note": "Articulated-mechanism diagnostic canonical — no cube delivery. Success criterion is drawer prismatic-joint position approaching upper limit (drawer is pulled open). Measured via get_attribute on /World/DrawerJoint:physics:jointPosition vs upperLimit=0.15.",
+    "robot_path": "/World/Franka",
+    "drawer_path": "/World/Drawer",
+    "joint_path": "/World/DrawerJoint",
+    "joint_upper_limit_m": 0.15,
+    "min_extension_m": 0.10
   },
-  "simulate_args": {
-    "cube_path": "/World/Drawer",
-    "target_path": "/World/Drawer",
-    "duration_s": 180
-  },
+  "simulate_args": null,
   "extends": "CP-01",
   "extension_notes": "CP-55 demonstrates create_articulated_joint with prismatic drawer. Scene has cabinet + drawer + joint + Franka + sensor. Pick-place semantics don't directly apply (drawer doesn't 'travel' to bin), so verify_args/simulate_args are loose \u2014 pick=place=Drawer. Robot teleop or RL-trained policy (research #30) would actuate the drawer. Realizes CP-N drawer-open infrastructure.",
   "failure_modes": [
@@ -41,7 +34,7 @@
     "create_articulated_joint sets axis as 'Y' string from [0,1,0] vector via max-mag selection.",
     "verify_args is approximate \u2014 drawer-open isn't a pick-place flow."
   ],
-  "verified_status": "build-spec-2026-04-XX; form-gate \u2713; function-gate \u2713 (drawer extends + Drawer prim is target \u2014 odd self-reference but criteria met)",
+  "verified_status": "build-spec-2026-04-XX; form-gate \u2713; function-gate diagnostic \u2014 success measured via DrawerJoint position attribute (>= 0.10 m of 0.15 m upper limit) rather than cube-in-bin delivery. Wave-2 self-ref redesign 2026-05-18.",
   "intent": {
     "pattern_hint": "pick_place",
     "structural_features": {
@@ -95,21 +88,15 @@
   },
   "code_template": "# DomeLight + Ground + Cell + Table\ncreate_prim(prim_path=\"/World/DomeLight\", prim_type=\"DomeLight\")\nset_attribute(prim_path=\"/World/DomeLight\", attr_name=\"inputs:intensity\", value=1000.0)\ncreate_prim(prim_path=\"/World/Ground\", prim_type=\"Cube\", position=[0, 0, -0.5], scale=[20, 20, 1])\napply_api_schema(prim_path=\"/World/Ground\", schema_name=\"PhysicsCollisionAPI\")\ncreate_prim(prim_path=\"/World/Cell\", prim_type=\"Xform\")\ncreate_prim(prim_path=\"/World/Table\", prim_type=\"Cube\", position=[0, 0, 0.375], scale=[1.0, 0.5, 0.375])\napply_api_schema(prim_path=\"/World/Table\", schema_name=\"PhysicsCollisionAPI\")\n\nset_physics_scene_config(config={\"enable_gpu_dynamics\": False, \"broadphase_type\": \"MBP\"})\n\nrobot_wizard(\n    robot_name={{primary_robot.class}},\n    dest_path={{primary_robot.path}},\n    position={{primary_robot.position}},\n    orientation={{primary_robot.orientation}},\n)\n\n# Cabinet (static body)\ncreate_prim(prim_path={{cabinet.path}}, prim_type=\"Cube\", position={{cabinet.position}}, scale={{cabinet.scale}})\napply_api_schema(prim_path={{cabinet.path}}, schema_name=\"PhysicsCollisionAPI\")\n\n# Drawer (rigid, sliding)\ncreate_prim(prim_path={{drawer.path}}, prim_type=\"Cube\", position={{drawer.position}}, scale={{drawer.scale}})\nfor api in (\"PhysicsRigidBodyAPI\", \"PhysicsCollisionAPI\", \"PhysicsMassAPI\"):\n    apply_api_schema(prim_path={{drawer.path}}, schema_name=api)\n\n# Prismatic joint \u2014 drawer slides along world Y\ncreate_articulated_joint(\n    joint_path=\"/World/DrawerJoint\",\n    body0_path={{cabinet.path}},\n    body1_path={{drawer.path}},\n    joint_type=\"prismatic\",\n    axis=[0, 1, 0],\n    limit_lower=0.0,\n    limit_upper=0.15,\n)\n\nadd_proximity_sensor(sensor_path=\"/World/PickSensor\", position=[0.5, -0.25, 0.85], size=[0.08, 0.08, 0.08])",
   "verify_args_template": {
-    "stages": [
-      {
-        "robot_path": "{{primary_robot.path}}",
-        "pick_path": "{{drawer.path}}",
-        "place_path": "{{drawer.path}}",
-        "robot_kind": "{{primary_robot.class}}"
-      }
-    ],
-    "cube_path": "{{drawer.path}}"
+    "stages": [],
+    "note": "Articulated-mechanism diagnostic canonical — no cube delivery. Success criterion is drawer prismatic-joint position approaching upper limit.",
+    "robot_path": "{{primary_robot.path}}",
+    "drawer_path": "{{drawer.path}}",
+    "joint_path": "/World/DrawerJoint",
+    "joint_upper_limit_m": 0.15,
+    "min_extension_m": 0.10
   },
-  "simulate_args_template": {
-    "cube_path": "{{drawer.path}}",
-    "target_path": "{{drawer.path}}",
-    "duration_s": 180
-  },
+  "simulate_args_template": null,
   "diagnose_args": {
     "robot_path": "/World/Franka",
     "obstacles": [

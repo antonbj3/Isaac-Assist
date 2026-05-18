@@ -1,6 +1,5 @@
 {
   "task_id": "CP-NEW-occupancy-map-nav",
-  "is_self_consistent": false,
   "goal": "Build a warehouse floor layout, generate a 2D occupancy map, export a Nav2-compatible PGM map, then navigate a Carter AMR from the start zone to the pick station using the exported map as the planning grid. Realizes industrial-occupancy-map-nav-001 (Phase 8 industrial-asset).",
   "tools_used": [
     "create_prim",
@@ -49,21 +48,14 @@
     }
   },
   "verify_args": {
-    "stages": [
-      {
-        "robot_path": "/World/Carter",
-        "pick_path": "/World/Carter",
-        "place_path": "/World/Carter",
-        "robot_kind": "wheeled"
-      }
-    ],
-    "cube_path": "/World/Carter"
+    "stages": [],
+    "note": "Occupancy-map nav diagnostic canonical — no cube delivery. Success criterion is (a) PGM map file written to workspace/maps/warehouse.pgm + .yaml AND (b) Carter world-X transform > 3.0 m after 180 s simulation (start near origin, target near (3.5, 0)). Measured offline via file existence + get_world_transform on /World/Carter.",
+    "robot_path": "/World/Carter",
+    "target_xy": [3.5, 0.0],
+    "min_progress_x_m": 3.0,
+    "expected_map_files": ["workspace/maps/warehouse.pgm", "workspace/maps/warehouse.yaml"]
   },
-  "simulate_args": {
-    "cube_path": "/World/Carter",
-    "target_path": "/World/Carter",
-    "duration_s": 180
-  },
+  "simulate_args": null,
   "diagnose_args": {
     "robot_path": "/World/Carter",
     "robot_base": [
@@ -215,5 +207,5 @@
     }
   },
   "code_template": "create_prim(prim_path=\"/World/DomeLight\", prim_type=\"DomeLight\")\nset_attribute(prim_path=\"/World/DomeLight\", attr_name=\"inputs:intensity\", value=1000.0)\n\ncreate_prim(prim_path=\"/World/Ground\", prim_type=\"Cube\", position=[0, 0, -0.025], scale=[10.0, 10.0, 0.05])\napply_api_schema(prim_path=\"/World/Ground\", schema_name=\"PhysicsCollisionAPI\")\n\nset_physics_scene_config(config={\"enable_gpu_dynamics\": False, \"broadphase_type\": \"MBP\"})\n\ncreate_prim(prim_path={{obstacle_shelf[0].path}}, prim_type=\"Cube\",\n            position={{obstacle_shelf[0].position}}, scale={{obstacle_shelf[0].scale}})\napply_api_schema(prim_path={{obstacle_shelf[0].path}}, schema_name=\"PhysicsCollisionAPI\")\ncreate_prim(prim_path={{obstacle_shelf[1].path}}, prim_type=\"Cube\",\n            position={{obstacle_shelf[1].position}}, scale={{obstacle_shelf[1].scale}})\napply_api_schema(prim_path={{obstacle_shelf[1].path}}, schema_name=\"PhysicsCollisionAPI\")\ncreate_prim(prim_path={{obstacle_shelf[2].path}}, prim_type=\"Cube\",\n            position={{obstacle_shelf[2].position}}, scale={{obstacle_shelf[2].scale}})\napply_api_schema(prim_path={{obstacle_shelf[2].path}}, schema_name=\"PhysicsCollisionAPI\")\ncreate_prim(prim_path={{obstacle_shelf[3].path}}, prim_type=\"Cube\",\n            position={{obstacle_shelf[3].position}}, scale={{obstacle_shelf[3].scale}})\napply_api_schema(prim_path={{obstacle_shelf[3].path}}, schema_name=\"PhysicsCollisionAPI\")\n\ncreate_prim(prim_path=\"/World/WallN\", prim_type=\"Cube\",\n            position=[0, 4.9, 0.50], scale=[10.0, 0.10, 1.0])\napply_api_schema(prim_path=\"/World/WallN\", schema_name=\"PhysicsCollisionAPI\")\ncreate_prim(prim_path=\"/World/WallS\", prim_type=\"Cube\",\n            position=[0, -4.9, 0.50], scale=[10.0, 0.10, 1.0])\napply_api_schema(prim_path=\"/World/WallS\", schema_name=\"PhysicsCollisionAPI\")\n\ncreate_wheeled_robot(\n    robot_path={{primary_robot.path}},\n    drive_type={{primary_robot.drive_type}},\n    wheel_radius={{primary_robot.wheel_radius}},\n    wheel_base={{primary_robot.wheel_base}},\n)\n\ngenerate_occupancy_map(\n    origin=[0.0, 0.0],\n    dimensions={{map_config.dimensions}},\n    resolution={{map_config.resolution}},\n    height_range={{map_config.height_range}},\n)\n\nexport_nav2_map(\n    output_path={{map_config.output_path}},\n    resolution={{map_config.resolution}},\n    origin={{map_config.origin}},\n    dimensions={{map_config.dimensions}},\n    height_range={{map_config.height_range}},\n    occupied_thresh=0.65,\n    free_thresh=0.196,\n)\n\nnavigate_to(\n    robot_path={{primary_robot.path}},\n    target_position={{primary_robot.target_position}},\n    planner=\"astar\",\n)",
-  "verified_status": "env_blocked: isaacsim.asset.gen — extension not present in Isaac Sim 5.1 (renamed/deprecated)"
+  "verified_status": "env_blocked: isaacsim.asset.gen — extension not present in Isaac Sim 5.1 (renamed/deprecated); function-gate diagnostic — success measured via Nav2 PGM file output + Carter X-progress > 3.0 m. Wave-2 self-ref redesign 2026-05-18."
 }

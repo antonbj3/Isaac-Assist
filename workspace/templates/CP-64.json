@@ -1,6 +1,5 @@
 {
   "task_id": "CP-64",
-  "is_self_consistent": false,
   "goal": "Build a mobile robot with Nav2 navigation config: a Carter wheeled robot wrapped via setup_nav_robot. Realizes #31 RoboParty (mixed fleet) infrastructure for the mobile-robot leg.",
   "tools_used": [
     "create_prim",
@@ -16,21 +15,13 @@
     "cubes": {}
   },
   "verify_args": {
-    "stages": [
-      {
-        "robot_path": "/World/Carter",
-        "pick_path": "/World/Carter",
-        "place_path": "/World/Carter",
-        "robot_kind": "wheeled"
-      }
-    ],
-    "cube_path": "/World/Carter"
+    "stages": [],
+    "note": "Mobile-robot nav setup diagnostic canonical — no cube delivery. Success criterion is presence of Carter prim + Nav2 config attrs (goal_topic, odom_topic). Measured via prim_exists on /World/Carter + list_attributes for nav config. Runtime nav stack execution requires Nav2 + ROS2 bridge active.",
+    "robot_path": "/World/Carter",
+    "expected_nav_topic": "/goal_pose",
+    "expected_odom_topic": "/odom"
   },
-  "simulate_args": {
-    "cube_path": "/World/Carter",
-    "target_path": "/World/Carter",
-    "duration_s": 180
-  },
+  "simulate_args": null,
   "extends": "CP-01",
   "extension_notes": "CP-64 realizes #31 RoboParty mobile-robot leg. Carter (NVIDIA AMR) wrapped with Nav2 config. Full RoboParty scenario adds manipulator partner + ROS2 bridge for Nav2 communication.",
   "failure_modes": [
@@ -38,7 +29,7 @@
     "No occupancy map specified \u2014 runtime nav would need actual map data.",
     "Verify_args is loose (mobile robots aren't pick-place); form-gate skip."
   ],
-  "verified_status": "build-spec-2026-04-XX; form-gate \u2713; function-gate \u2713",
+  "verified_status": "build-spec-2026-04-XX; form-gate \u2713; function-gate diagnostic \u2014 Carter + nav config setup verified via prim_exists + attr inspection. Runtime nav execution (Nav2 + ROS2 bridge) is downstream of this canonical. Wave-2 self-ref redesign 2026-05-18.",
   "intent": {
     "pattern_hint": "navigate",
     "structural_features": {
@@ -70,21 +61,13 @@
   },
   "code_template": "create_prim(prim_path=\"/World/DomeLight\", prim_type=\"DomeLight\")\nset_attribute(prim_path=\"/World/DomeLight\", attr_name=\"inputs:intensity\", value=1000.0)\ncreate_prim(prim_path=\"/World/Ground\", prim_type=\"Cube\", position=[0, 0, -0.5], scale=[20, 20, 1])\napply_api_schema(prim_path=\"/World/Ground\", schema_name=\"PhysicsCollisionAPI\")\n\nset_physics_scene_config(config={\"enable_gpu_dynamics\": False, \"broadphase_type\": \"MBP\"})\n\n# Carter (NVIDIA AMR) wheeled robot\nrobot_wizard(\n    robot_name={{primary_robot.class}},\n    dest_path={{primary_robot.path}},\n    position={{primary_robot.position}},\n    orientation={{primary_robot.orientation}},\n)\n\nsetup_nav_robot(\n    robot_path={{primary_robot.path}},\n    occupancy_map=\"\",\n    nav_topic=\"/goal_pose\",\n    odom_topic=\"/odom\",\n)",
   "verify_args_template": {
-    "stages": [
-      {
-        "robot_path": "{{primary_robot.path}}",
-        "pick_path": "{{primary_robot.path}}",
-        "place_path": "{{primary_robot.path}}",
-        "robot_kind": "wheeled"
-      }
-    ],
-    "cube_path": "{{primary_robot.path}}"
+    "stages": [],
+    "note": "Mobile-robot nav setup diagnostic canonical — no cube delivery.",
+    "robot_path": "{{primary_robot.path}}",
+    "expected_nav_topic": "/goal_pose",
+    "expected_odom_topic": "/odom"
   },
-  "simulate_args_template": {
-    "cube_path": "{{primary_robot.path}}",
-    "target_path": "{{primary_robot.path}}",
-    "duration_s": 180
-  },
+  "simulate_args_template": null,
   "diagnose_args": {
     "robot_path": "/World/Carter",
     "robot_base": [

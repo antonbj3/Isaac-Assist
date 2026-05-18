@@ -1,6 +1,5 @@
 {
   "task_id": "CP-NEW-weld-seam-vision-ndt",
-  "is_self_consistent": false,
   "goal": "Yrkesroll: NDT weld inspector / quality-control inspector (ONET SOC 51-9061, Inspectors/Testers/Sorters/Samplers/Weighers \u2014 non-destructive vision-inspection variant). A UR10 carries a wrist-mounted inspection Camera along a 200 mm pre-deposited weld seam at fixed standoff (0.08 m) and traversal speed (~0.02 m/s \u2248 10 s sweep). At each waypoint capture_camera_image grabs one frame; vision_analyze_scene asks a defect-class question per frame; add_vision_classifier_gate runs once over the seam-segment markers to produce a structured cube\u2192class mapping (segment \u2192 'ok' | 'porosity' | 'crack' | 'undercut'). get_world_transform on the wrist camera at each waypoint records the (x,y,z) sample so a coverage map (frames-per-cm-of-seam) can be derived offline. Success: \u226510 frames per cm of seam length AND a defect-class label produced for every frame. Pattern: vision NDT coverage scan \u2014 distinct from CP-NEW-welder-seam-track (creates the weld via impedance-compliant torch follow + arc proxy) and CP-NEW-yrkesroll-welder-mig-tack (discrete tack-welding gesture); this canonical performs NO welding, NO compliance contact, NO heat/arc physics \u2014 it only INSPECTS an already-formed seam to find defects post-weld. Realises backlog inspection-weld-seam-vision-ndt-001.",
   "tools_used": [
     "create_prim",
@@ -114,15 +113,9 @@
     }
   },
   "verify_args": {
-    "stages": [
-      {
-        "robot_path": "/World/UR10",
-        "pick_path": "/World/WeldSeam",
-        "place_path": "/World/WeldSeam",
-        "robot_kind": "ur10"
-      }
-    ],
-    "cube_path": "/World/WeldSeam",
+    "stages": [],
+    "note": "Vision-NDT inspection diagnostic canonical — no cube delivery. Success criteria: (a) ≥10 capture_camera_image frames per cm of seam length over the 0.20 m bead (≥20 total samples); (b) defect-class label produced for every frame via vision_analyze_scene; (c) add_vision_classifier_gate returns the expected per-segment labels {Porosity→'porosity', Crack→'crack', Ok→'ok'}. Measured by counting tool-call invocations and inspecting gate output dict.",
+    "robot_path": "/World/UR10",
     "seam_path": "/World/WeldSeam",
     "seam_segments": [
       "/World/SeamSegment_Porosity",
@@ -144,12 +137,7 @@
       "/World/SeamSegment_Ok": "ok"
     }
   },
-  "simulate_args": {
-    "target_path": "/World/WeldSeam",
-    "cube_path": "/World/WeldSeam",
-    "duration_s": 60,
-    "xy_tolerance": 0.05
-  },
+  "simulate_args": null,
   "diagnose_args": {
     "robot_path": "/World/UR10",
     "obstacles": [
@@ -177,7 +165,7 @@
     "plan_trajectory + per-waypoint move_to_pose dual call \u2014 plan_trajectory plans the joint sequence once (curobo, scene-collision aware); the loop then issues individual move_to_pose calls that may re-plan locally with rmpflow defaults if planner='curobo' is not honoured. Mitigation: explicit planner='curobo' on every move_to_pose. Alternative: drop the loop and use plan_trajectory's returned joint trajectory with execute_with_retry; foundational canonical uses the looped move_to_pose pattern matching A96 (paint sprayer).",
     "Coverage-map metric is offline \u2014 get_world_transform records the camera world position per frame; the 'frames-per-cm-of-seam' metric requires post-processing (project camera_x onto the seam parametric axis, count samples within \u00b1sample_spacing/2 of each cm bin). This canonical does NOT include the post-processing call; the consumer must run it themselves. verify_args.min_frames_per_cm=10 is the contract; the canonical guarantees 21 samples over 20 cm (10.5/cm) by construction."
   ],
-  "verified_status": "drafted-2026-05-16; form-gate-schema \u23f3 pending-lint; function-gate \u23f3 Kit RPC; structural-simplifications-noted (cube bead + overlay marker defects, no photoreal weld geometry)",
+  "verified_status": "drafted-2026-05-16; form-gate-schema \u23f3 pending-lint; function-gate \u23f3 Kit RPC; diagnostic \u2014 success measured via frames/cm coverage + per-segment classifier labels (not cube delivery). Wave-2 self-ref redesign 2026-05-18. structural-simplifications-noted (cube bead + overlay marker defects, no photoreal weld geometry)",
   "motion_controllers": {
     "verified": [],
     "failed": {},
@@ -417,12 +405,7 @@
     }
   },
   "code_template": "create_prim(prim_path=\"/World/DomeLight\", prim_type=\"DomeLight\")\nset_attribute(prim_path=\"/World/DomeLight\", attr_name=\"inputs:intensity\", value=1500.0)\ncreate_prim(prim_path=\"/World/Ground\", prim_type=\"Cube\", position=[0, 0, -0.5], scale=[20, 20, 1])\napply_api_schema(prim_path=\"/World/Ground\", schema_name=\"PhysicsCollisionAPI\")\nset_physics_scene_config(config={\"enable_gpu_dynamics\": False, \"broadphase_type\": \"MBP\"})\ncreate_prim(prim_path={{inspect_table.path}}, prim_type=\"Cube\", position={{inspect_table.position}}, scale={{inspect_table.scale}})\napply_api_schema(prim_path={{inspect_table.path}}, schema_name=\"PhysicsCollisionAPI\")\ncreate_prim(prim_path={{workpiece_plate_a.path}}, prim_type=\"Cube\", position={{workpiece_plate_a.position}}, scale={{workpiece_plate_a.scale}})\napply_api_schema(prim_path={{workpiece_plate_a.path}}, schema_name=\"PhysicsCollisionAPI\")\ncreate_prim(prim_path={{workpiece_plate_b.path}}, prim_type=\"Cube\", position={{workpiece_plate_b.position}}, scale={{workpiece_plate_b.scale}})\napply_api_schema(prim_path={{workpiece_plate_b.path}}, schema_name=\"PhysicsCollisionAPI\")\ncreate_material(material_path=\"/World/Materials/WeldBeadDark\", shader_type=\"OmniPBR\", diffuse_color=[0.22, 0.18, 0.16])\ncreate_prim(prim_path={{weld_seam.path}}, prim_type=\"Cube\", position={{weld_seam.position}}, scale={{weld_seam.scale}})\nassign_material(prim_path={{weld_seam.path}}, material_path={{weld_seam.material}})\nset_semantic_label(prim_path={{weld_seam.path}}, class_name=\"weld_seam_bead\")\ncreate_prim(prim_path={{seam_segments[0].path}}, prim_type=\"Cube\", position={{seam_segments[0].position}}, scale=[0.020, 0.006, 0.0008])\nassign_material(prim_path={{seam_segments[0].path}}, material_path={{seam_segments[0].material}})\nset_semantic_label(prim_path={{seam_segments[0].path}}, class_name={{seam_segments[0].label}})\ncreate_prim(prim_path={{seam_segments[1].path}}, prim_type=\"Cube\", position={{seam_segments[1].position}}, scale=[0.020, 0.002, 0.0008])\nassign_material(prim_path={{seam_segments[1].path}}, material_path={{seam_segments[1].material}})\nset_semantic_label(prim_path={{seam_segments[1].path}}, class_name={{seam_segments[1].label}})\ncreate_prim(prim_path={{seam_segments[2].path}}, prim_type=\"Cube\", position={{seam_segments[2].position}}, scale=[0.020, 0.008, 0.0008])\nassign_material(prim_path={{seam_segments[2].path}}, material_path={{seam_segments[2].material}})\nset_semantic_label(prim_path={{seam_segments[2].path}}, class_name={{seam_segments[2].label}})\nrobot_wizard(robot_name={{primary_robot.class}}, dest_path={{primary_robot.path}}, position={{primary_robot.position}}, orientation={{primary_robot.orientation}})\ncreate_prim(prim_path={{inspect_camera.path}}, prim_type=\"Camera\")\nconfigure_camera(camera_path={{inspect_camera.path}}, focal_length={{inspect_camera.focal_length}}, horizontal_aperture={{inspect_camera.horizontal_aperture}}, clipping_range=[0.01, 1.0])\nset_camera_params(camera_path={{inspect_camera.path}}, params={\"focal_length\": {{inspect_camera.focal_length}}, \"horizontal_aperture\": {{inspect_camera.horizontal_aperture}}, \"focus_distance\": 0.08})\nset_camera_look_at(camera_path={{inspect_camera.path}}, target={{inspect_camera.look_at}}, eye={{inspect_camera.initial_eye}})\ncheck_singularity(articulation_path={{primary_robot.path}}, target_position=[0.45, 0.0, 0.92], target_orientation=[0.0, 0.7071068, 0.0, 0.7071068])\nplan_trajectory(articulation_path={{primary_robot.path}}, waypoints=[{\"position\": [0.45, 0.0, 0.92], \"orientation\": [0.0, 0.7071068, 0.0, 0.7071068]}, {\"position\": [0.55, 0.0, 0.92], \"orientation\": [0.0, 0.7071068, 0.0, 0.7071068]}, {\"position\": [0.65, 0.0, 0.92], \"orientation\": [0.0, 0.7071068, 0.0, 0.7071068]}], planner=\"rmpflow\", robot_type={{primary_robot.class}})\nmove_to_pose(articulation_path={{primary_robot.path}}, target_position=[0.45, 0.0, 1.05], target_orientation=[0.0, 0.7071068, 0.0, 0.7071068], planner=\"rmpflow\", robot_type={{primary_robot.class}})\nmove_to_pose(articulation_path={{primary_robot.path}}, target_position=[0.45, 0.0, 0.92], target_orientation=[0.0, 0.7071068, 0.0, 0.7071068], planner=\"rmpflow\", robot_type={{primary_robot.class}})\ncapture_camera_image(camera_path={{inspect_camera.path}}, resolution=[1280, 720])\nvision_analyze_scene(question=\"Describe any visible defects in the weld bead in the centre of the viewport: classify as porosity, crack, undercut, or clean (ok).\")\nget_world_transform(prim_path={{inspect_camera.path}})\nmove_to_pose(articulation_path={{primary_robot.path}}, target_position=[0.55, 0.0, 0.92], target_orientation=[0.0, 0.7071068, 0.0, 0.7071068], planner=\"rmpflow\", robot_type={{primary_robot.class}})\ncapture_camera_image(camera_path={{inspect_camera.path}}, resolution=[1280, 720])\nvision_analyze_scene(question=\"Describe any visible defects in the weld bead in the centre of the viewport: classify as porosity, crack, undercut, or clean (ok).\")\nget_world_transform(prim_path={{inspect_camera.path}})\nmove_to_pose(articulation_path={{primary_robot.path}}, target_position=[0.65, 0.0, 0.92], target_orientation=[0.0, 0.7071068, 0.0, 0.7071068], planner=\"rmpflow\", robot_type={{primary_robot.class}})\ncapture_camera_image(camera_path={{inspect_camera.path}}, resolution=[1280, 720])\nvision_analyze_scene(question=\"Describe any visible defects in the weld bead in the centre of the viewport: classify as porosity, crack, undercut, or clean (ok).\")\nget_world_transform(prim_path={{inspect_camera.path}})\nadd_vision_classifier_gate(cube_paths=[{{seam_segments[0].path}}, {{seam_segments[1].path}}, {{seam_segments[2].path}}], class_labels=[\"porosity\", \"crack\", \"undercut\", \"ok\"], camera_path={{inspect_camera.path}})\nmove_to_pose(articulation_path={{primary_robot.path}}, target_position=[0.65, 0.0, 1.05], target_orientation=[0.0, 0.7071068, 0.0, 0.7071068], planner=\"rmpflow\", robot_type={{primary_robot.class}})\nget_world_transform(prim_path=\"/World/UR10/tool0\")",
-  "simulate_args_template": {
-    "target_path": "{{weld_seam.path}}",
-    "cube_path": "{{weld_seam.path}}",
-    "duration_s": 60,
-    "xy_tolerance": 0.05
-  },
+  "simulate_args_template": null,
   "extends": "inspection-weld-seam-vision-ndt-001",
   "extension_notes": "Implements backlog inspection-weld-seam-vision-ndt-001 (F.0-ext-2). NDT inspection of an ALREADY-WELDED seam \u2014 non-contact, no compliance, no arc/heat physics, no welding gestures. Sister canonical to A87 (yrkesroll-inspector-reject-divert): both use vision classification + ONET 51-9061 parent role, but A87 sorts cubes by surface-mark pass/reject (a non-welding context) while A115 inspects a finished weld bead for porosity/crack/undercut (welding-domain QA). DISTINCT from A28 (welder-seam-track, CREATES the weld via impedance-compliant torch follow) and A95 (welder-mig-tack, places discrete tack welds). Backlog success criterion 'coverage map reports >=10 frames per cm of seam' is satisfied by 21 capture points over 0.20 m (10.5/cm); backlog 'defect scores produced for every frame' is satisfied by the vision_analyze_scene call inside the per-waypoint loop AND the whole-seam add_vision_classifier_gate. Backlog motion_controller_preference=curobo is honoured. Scenario-profile extensions: (1) replace the Cube bead with a textured/displacement-mapped photoreal bead asset; (2) add DR over DomeLight intensity and bead material reflectance to measure classifier robustness; (3) add additional defect categories (lack-of-fusion, slag inclusion, spatter) as new SeamSegment_* marker prims; (4) replace the wrist Camera with a structured-light or eddy-current sensor proxy for non-vision NDT modalities; (5) chain to a downstream pick-place canonical that sorts inspected workpieces to good/rework/scrap bins based on the gate output."
 }

@@ -1,6 +1,5 @@
 {
   "task_id": "CP-NEW-ros2control-hw-mock",
-  "is_self_consistent": false,
   "goal": "Register a UR10e arm as a ros2_control hardware interface mock using the velocity_controllers path. Step 1: precheck_ros2_environment to confirm rclpy available. Step 2: robot_wizard to load UR10e at /World/UR10e. Step 3: setup_ros2_control_compat with controller_type='velocity_controllers' to wire /isaac_joint_states + /isaac_joint_commands for velocity-control clients. Step 4: emit_ros2_control_yaml with controller_type='velocity_controllers' + update_rate_hz=500 to write the hardware-interface YAML. Step 5: setup_ros2_bridge profile=ur10e_moveit2 to build the OmniGraph with velocity-command subscriber. Step 6: configure_ros2_time mode='sim_time'. Step 7: ros2_list_topics to verify /isaac_joint_states and /isaac_joint_commands present. Step 8: diagnose_ros2 to confirm QoS + domain health. Distinct from CP-NEW-ros2-moveit2-franka: exercises velocity_controllers branch (not joint_trajectory_controller) + UR10e (not Franka) + omits cumotion plugin (hardware-interface mock path only, no motion planner).",
   "tools_used": [
     "precheck_ros2_environment",
@@ -65,14 +64,12 @@
   "settle_state": {},
   "verify_args": {
     "stages": [],
+    "note": "ros2_control velocity_controllers hardware-interface mock diagnostic — no cube delivery. Success measured via topic presence + emitted hardware-interface YAML + diagnose_ros2 QoS health. No motion planner (cumotion is the moveit2 sibling canonical).",
     "expected_topics": ["/isaac_joint_states", "/isaac_joint_commands", "/clock"],
+    "expected_yaml_files": ["/tmp/ur10e_ros2_control_velocity.yaml"],
     "robot_path": "/World/UR10e"
   },
-  "simulate_args": {
-    "cube_path": "/World/UR10e",
-    "target_path": "/World/UR10e",
-    "duration_s": 5
-  },
+  "simulate_args": null,
   "diagnose_args": {
     "robot_path": "/World/UR10e"
   },
@@ -81,5 +78,5 @@
     "failed": {},
     "untested": ["ros2_control", "velocity_controllers"]
   },
-  "verified_status": "drafted-2026-05-16; form-gate pending; function-gate pending"
+  "verified_status": "drafted-2026-05-16; form-gate pending; function-gate diagnostic — success measured via expected ROS2 topic presence + YAML file emission, not cube delivery. Wave-2 self-ref redesign 2026-05-18."
 }

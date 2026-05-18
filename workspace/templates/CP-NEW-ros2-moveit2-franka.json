@@ -1,6 +1,5 @@
 {
   "task_id": "CP-NEW-ros2-moveit2-franka",
-  "is_self_consistent": false,
   "goal": "Configure a Franka Panda arm for MoveIt2 + isaac_ros_cumotion motion planning through Isaac Sim's ROS2 bridge. Step 1: precheck_ros2_environment to confirm rclpy + rosbridge port 9090 reachable. Step 2: robot_wizard to load Franka. Step 3: setup_ros2_control_compat to wire /isaac_joint_states + /isaac_joint_commands topics (franka_panda controller type). Step 4: emit_ros2_control_yaml to write the ros2_control YAML a downstream colcon workspace needs. Step 5: setup_isaac_ros_cumotion_moveit to emit the MoveIt2 planning_pipeline YAML with the cumotion plugin (planner_id='cuMotion', max_planning_time=5.0). Step 6: setup_ros2_bridge profile=franka_moveit2 to build the OmniGraph that binds joint-state publisher, trajectory subscriber, TF, and clock. Step 7: configure_ros2_time to lock sim clock to /clock at 1000 Hz. Step 8: ros2_list_topics to verify /isaac_joint_states, /isaac_joint_commands, /clock are live. Step 9: diagnose_ros2 to confirm QoS health. Exercises the full Phase 6 M1+M4 MoveIt2 integration path — distinct from CP-NEW-ros2-bridge-franka which validates basic topic plumbing only.",
   "tools_used": [
     "precheck_ros2_environment",
@@ -65,14 +64,12 @@
   "settle_state": {},
   "verify_args": {
     "stages": [],
+    "note": "ROS2 / MoveIt2 bridge-setup diagnostic canonical — no cube delivery. Success measured via topic presence + emitted YAML files + diagnose_ros2 QoS health. Validates Phase 6 M1+M4 integration path (ros2_control_compat + isaac_ros_cumotion_moveit + ros2_bridge profile='franka_moveit2').",
     "expected_topics": ["/isaac_joint_states", "/isaac_joint_commands", "/clock"],
+    "expected_yaml_files": ["/tmp/franka_ros2_control.yaml", "/tmp/franka_moveit2_config"],
     "robot_path": "/World/Franka"
   },
-  "simulate_args": {
-    "cube_path": "/World/Franka",
-    "target_path": "/World/Franka",
-    "duration_s": 5
-  },
+  "simulate_args": null,
   "diagnose_args": {
     "robot_path": "/World/Franka"
   },
@@ -81,5 +78,5 @@
     "failed": {},
     "untested": ["ros2_control", "moveit2"]
   },
-  "verified_status": "drafted-2026-05-16; form-gate pending; function-gate pending"
+  "verified_status": "drafted-2026-05-16; form-gate pending; function-gate diagnostic — success measured via expected ROS2 topic presence + YAML file emission, not cube delivery. Wave-2 self-ref redesign 2026-05-18."
 }

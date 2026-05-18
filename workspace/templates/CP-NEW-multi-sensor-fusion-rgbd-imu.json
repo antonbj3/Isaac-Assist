@@ -1,6 +1,5 @@
 {
   "task_id": "CP-NEW-multi-sensor-fusion-rgbd-imu",
-  "is_self_consistent": false,
   "goal": "Tri-modal pose fusion on a moving wheeled platform: an overhead RGB camera (30 Hz), a depth camera (30 Hz), and an IMU on the chassis (200 Hz) each produce an independent pose estimate of a target marker cube; an OmniGraph fusion graph averages the three estimates per tick with /clock-based time alignment so RGB and depth samples sharing a timestamp are paired and IMU integration between camera frames compensates platform motion. Reports per-modality variance vs fused variance over a 100-sample window; success is fused variance at least 20 % below the best single modality. Distinct from CP-NEW-multi-rate-sensor-fusion (sample-rate VecEnv wrapper + F/T) and CP-NEW-ros2-multi-rate (ROS2 publisher rate fan-out): this canonical is modality fusion (RGB + depth + IMU) on a single shared timeline.",
   "tools_used": [
     "create_prim",
@@ -39,29 +38,23 @@
   },
   "verify_args": {
     "stages": [],
-    "note": "Modality-fusion canonical — success is fused-pose variance ≥ 20 % below best single modality over a 100-sample window. No object delivery.",
+    "note": "Modality-fusion canonical — success is fused-pose variance ≥ 20 % below best single modality over a 100-sample window. No object delivery. Marker is the GROUND-TRUTH SOURCE; sensors estimate its pose with per-modality noise; fusion graph averages. Success measured offline by computing per-modality vs fused variance from logged samples.",
     "robot_path": "/World/Jetbot",
     "marker_path": "/World/Jetbot/Marker",
+    "rgb_camera_path": "/World/Sensors/OverheadRGB",
+    "depth_camera_path": "/World/Sensors/SideDepth",
+    "imu_path": "/World/Jetbot/IMU",
     "sensor_paths": [
       "/World/Sensors/OverheadRGB",
       "/World/Sensors/SideDepth",
       "/World/Jetbot/IMU"
     ],
     "fusion_graph_path": "/World/FusionGraph",
-    "ros2_clock_mode": "sim_time"
-  },
-  "simulate_args": {
-    "target_path": "/World/Jetbot/Marker",
-    "cube_path": "/World/Jetbot/Marker",
-    "robot_path": "/World/Jetbot",
-    "fusion_graph_path": "/World/FusionGraph",
-    "rgb_camera_path": "/World/Sensors/OverheadRGB",
-    "depth_camera_path": "/World/Sensors/SideDepth",
-    "imu_path": "/World/Jetbot/IMU",
+    "ros2_clock_mode": "sim_time",
     "window_samples": 100,
-    "variance_reduction_target": 0.20,
-    "duration_s": 30
+    "variance_reduction_target": 0.20
   },
+  "simulate_args": null,
   "diagnose_args": {
     "robot_path": "/World/Jetbot",
     "sensor_paths": [
@@ -199,5 +192,5 @@
     ],
     "failed": {}
   },
-  "verified_status": "drafted-2026-05-16; form-gate pending; env_blocked: isaacsim.sensors.ReadCameraPose OmniGraph node type not registered in current Isaac Sim 5.1 build (extension isaacsim.sensors does not expose the camera-pose reader node); function-gate pending until the sensor extension ships the node type"
+  "verified_status": "drafted-2026-05-16; form-gate pending; env_blocked: isaacsim.sensors.ReadCameraPose OmniGraph node type not registered in current Isaac Sim 5.1 build; function-gate pending. Diagnostic — success measured via per-modality vs fused variance over 100-sample window (not cube delivery). Wave-2 self-ref redesign 2026-05-18."
 }

@@ -1,6 +1,5 @@
 {
   "task_id": "CP-NEW-turn-faucet",
-  "is_self_consistent": false,
   "goal": "ManiSkill2 TurnFaucet-v0 parity: Franka Panda grasps a revolute faucet handle mounted on a fixture and rotates it from 0° to a target angle of 90°. A prismatic approach motion aligns the gripper with the handle, then a joint-space rotation drives the handle to the target. get_joint_positions polls the faucet revolute joint until angle ≥ 85° (5° tolerance). Exercises create_articulated_joint (revolute, single-DOF), plan_trajectory for approach, set_joint_targets for wrist rotation, and get_joint_positions for angle feedback — a structural pattern not present in any existing A1/A2/A3 or sort template.",
   "tools_used": [
     "create_prim",
@@ -40,21 +39,16 @@
   },
   "verify_args": {
     "stages": [],
-    "note": "Articulated-joint rotation task. Success criterion is faucet joint angle >= 85 deg, not cube-in-bin delivery. No stages required.",
+    "note": "Articulated-joint rotation diagnostic canonical (ManiSkill2 TurnFaucet-v0 parity) — no cube delivery. Success criterion is faucet revolute joint angle ≥ 85° (target 90° ± 5° tolerance). Measured via get_joint_positions on /World/FaucetJoint.",
+    "robot_path": "/World/Franka",
+    "faucet_handle_path": "/World/FaucetHandle",
     "faucet_joint_path": "/World/FaucetJoint",
     "faucet_success_deg": 85.0,
     "faucet_target_deg": 90.0,
-    "robot_path": "/World/Franka"
+    "joint_tolerance_deg": 5.0,
+    "duration_s": 60
   },
-  "simulate_args": {
-    "target_path": "/World/FaucetHandle",
-    "cube_path": "/World/FaucetHandle",
-    "duration_s": 60,
-    "success_criterion": "joint_angle",
-    "joint_path": "/World/FaucetJoint",
-    "joint_target_deg": 90.0,
-    "joint_tolerance_deg": 5.0
-  },
+  "simulate_args": null,
   "diagnose_args": {
     "robot_path": "/World/Franka",
     "obstacles": ["/World/Table", "/World/FaucetBody"],
@@ -125,5 +119,5 @@
     "untested": ["curobo", "direct_joint", "rmpflow"],
     "failed": {}
   },
-  "verified_status": "drafted-2026-05-16-patched-r-a-fix-3; form-gate ⏳ (plan_trajectory robot_path->articulation_path+waypoints, set_joint_targets robot_path->articulation_path+joint_name+target_position fixed); function-gate ⏳"
+  "verified_status": "drafted-2026-05-16-patched-r-a-fix-3; form-gate ⏳ (plan_trajectory robot_path->articulation_path+waypoints, set_joint_targets robot_path->articulation_path+joint_name+target_position fixed); function-gate ⏳ diagnostic — success measured via FaucetJoint angle ≥ 85° (ManiSkill2 TurnFaucet-v0 success criterion), not cube delivery. Wave-2 self-ref redesign 2026-05-18."
 }
