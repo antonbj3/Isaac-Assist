@@ -1,5 +1,6 @@
 {
   "task_id": "CP-NEW-yrkesroll-ergonomics-lift-assist",
+  "is_self_consistent": false,
   "goal": "Yrkesroll: ergonomics / material-mover lift-assist operator (ONET SOC 53-7062, Laborers and Freight, Stock, and Material Movers, Hand). A Franka cobot lifts a heavy workpiece (15 kg cube) in concert with a human-proxy (Sphere) co-grasping the opposite end: cobot bears ~10 kg, human-proxy bears ~5 kg. The cobot uses Cartesian impedance control (soft Z stiffness, torque mode) to share load compliantly; an add_force_torque_sensor on the cobot wrist monitors the carried load; set_compliance_params softens stiffness mid-lift as the load is transferred. The workpiece is lifted from worktable height (z=0.81) to a shoulder-height target (z=1.35) while staying laterally aligned. Exercises the cobot+human force-shared lift pattern — structurally distinct from CP-NEW-safety-clearance-monitor-stop (human-proxy is INTRUDER, not co-actor) and CP-NEW-peg-bushing-impedance (impedance for INSERTION, not LIFT).",
   "tools_used": [
     "create_prim",

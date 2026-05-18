@@ -44,7 +44,7 @@
     "expected_contact_after_settle": true
   },
   "simulate_args": {
-    "target_path": "/World/Peg",
+    "target_path": "/World/BushingHole",
     "cube_path": "/World/Peg",
     "settle_steps": 30,
     "check_contact_prim": "/World/Peg",

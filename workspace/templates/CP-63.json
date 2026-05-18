@@ -1,5 +1,6 @@
 {
   "task_id": "CP-63",
+  "is_self_consistent": false,
   "goal": "Build a grasp-pose-sampler SDG station: 1 target object on a tabletop, grasp_pose_sampler generates antipodal grasps for SDG dataset. Realizes #32 GraspingWorkflow SDG infrastructure.",
   "tools_used": [
     "create_prim",

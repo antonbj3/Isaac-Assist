@@ -1,5 +1,6 @@
 {
   "task_id": "CP-NEW-welder-seam-track",
+  "is_self_consistent": false,
   "goal": "Seam-tracking welder persona: UR10 follows a weld seam on a workpiece using impedance-compliant Cartesian path with adaptive correction from vision_plan_trajectory feedback. Realizes ONET SOC 51-4121 yrkesroll-welder-seam-track-002.",
   "tools_used": [
     "create_prim",

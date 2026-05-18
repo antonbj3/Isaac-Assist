@@ -1,5 +1,6 @@
 {
   "task_id": "CP-NEW-occupancy-map-nav",
+  "is_self_consistent": false,
   "goal": "Build a warehouse floor layout, generate a 2D occupancy map, export a Nav2-compatible PGM map, then navigate a Carter AMR from the start zone to the pick station using the exported map as the planning grid. Realizes industrial-occupancy-map-nav-001 (Phase 8 industrial-asset).",
   "tools_used": [
     "create_prim",

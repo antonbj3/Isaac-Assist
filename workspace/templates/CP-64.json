@@ -1,5 +1,6 @@
 {
   "task_id": "CP-64",
+  "is_self_consistent": false,
   "goal": "Build a mobile robot with Nav2 navigation config: a Carter wheeled robot wrapped via setup_nav_robot. Realizes #31 RoboParty (mixed fleet) infrastructure for the mobile-robot leg.",
   "tools_used": [
     "create_prim",

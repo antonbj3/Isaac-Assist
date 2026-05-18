@@ -1,5 +1,6 @@
 {
   "task_id": "CP-55",
+  "is_self_consistent": false,
   "goal": "Build a drawer-open station: a drawer (prismatic joint) attached to a static cabinet, robot reaches and pulls drawer open. First user of create_articulated_joint. Realizes research scenario #30 FrankaDrawerOpen.",
   "tools_used": [
     "create_prim",
