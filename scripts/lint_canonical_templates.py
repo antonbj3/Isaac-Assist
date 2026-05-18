@@ -6,6 +6,7 @@ Usage:
     python scripts/lint_canonical_templates.py [--strict] [--fix] [--json] [TEMPLATE_PATHS...]
     python scripts/lint_canonical_templates.py --validate-tool-calls [TEMPLATE_PATHS...]
     python scripts/lint_canonical_templates.py --validate-sandbox [TEMPLATE_PATHS...]
+    python scripts/lint_canonical_templates.py --validate-criteria [TEMPLATE_PATHS...]
 
 Options:
     --strict               Exit 1 if any ERROR is found (default: exit 0 unless parse failure)
@@ -20,6 +21,10 @@ Options:
                            and reject code that would crash there. Emits S1/S2/S3/S4 rule
                            codes. Catches the failure modes that A-series mass-drafting
                            (2026-05-16) introduced.
+    --validate-criteria    Opt-in: enforce success-criteria rules (audit 2026-05-18 wave 1).
+                           Emits L-SC-01 (self-reference), L-SC-02 (high rest_speed),
+                           L-SC-11 (CP-NEW must declare intent.pattern_hint). Pre-function-
+                           gate-sweep gate.
 
 Exit codes:
     0  No errors (WARNs and INFOs are OK)
@@ -1083,6 +1088,162 @@ def lint_one(path: Path, data: dict) -> list[Issue]:
     return issues
 
 
+# ── Success-criteria validation (--validate-criteria) ────────────────────────
+#
+# Rules added by the 2026-05-18 success-criteria audit wave 1.  These flag
+# anti-patterns in `verify_args` / `simulate_args` that make the function-gate
+# trivially pass (false-positive risk).  Each rule emits an ERROR.
+#
+#   L-SC-01  REJECT_SELF_REF       cube_path == target_path (or both == robot_path)
+#   L-SC-02  REJECT_HIGH_REST_SPEED simulate_args.rest_speed_threshold > 1.0
+#   L-SC-11  REQUIRE_PATTERN_HINT  CP-NEW template missing intent.pattern_hint
+#
+# Templates explicitly marked `is_self_consistent: false` are exempt from
+# L-SC-01 — the sentinel is the acknowledged design-gap marker.
+
+# Max plausible at-rest speed (m/s). Anything higher disables the gate.
+# Audit recommends ≤ 0.5 as a generous cap; we use 1.0 to leave headroom
+# while still rejecting the 10.0 / 100.0 abuse cases.
+_REST_SPEED_CAP_M_S: float = 1.0
+
+
+def lint_success_criteria(path: Path, data: dict) -> "list[Issue]":
+    """
+    Validate verify_args / simulate_args against the wave-1 success-criteria
+    rules.  Returns a list of Issue objects.
+
+    Rule codes emitted:
+      L-SC-01_REJECT_SELF_REF       ERROR
+      L-SC-02_REJECT_HIGH_REST_SPEED ERROR
+      L-SC-11_REQUIRE_PATTERN_HINT  ERROR
+    """
+    issues: list[Issue] = []
+
+    def err(rule: str, msg: str) -> None:
+        issues.append(Issue("ERROR", rule, msg))
+
+    task_id = str(data.get("task_id", ""))
+    if not schema.is_cp_template(task_id):
+        # Only enforce on T1 (CP-*) templates
+        return issues
+
+    is_self_consistent = data.get("is_self_consistent", True)
+    # Default to True (i.e. NOT exempt) so the rule fires unless explicitly
+    # marked false.  Boolean — anything else is treated as True.
+    if not isinstance(is_self_consistent, bool):
+        is_self_consistent = True
+
+    # ── L-SC-01: REJECT_SELF_REF ───────────────────────────────────────────
+    # cube_path == target_path makes the function-gate trivially pass
+    # (cube xy ∈ target bbox is always true when target *is* the cube).
+    # Also flag cube_path == robot_path (same false-positive shape).
+    #
+    # Templates with `is_self_consistent: false` are exempt — the sentinel
+    # explicitly acknowledges the design gap.
+    if is_self_consistent:
+        va = data.get("verify_args") if isinstance(data.get("verify_args"), dict) else None
+        sa = data.get("simulate_args") if isinstance(data.get("simulate_args"), dict) else None
+
+        cube_path: "str | None" = None
+        target_path: "str | None" = None
+        robot_path: "str | None" = None
+
+        if isinstance(sa, dict):
+            cp = sa.get("cube_path")
+            tp = sa.get("target_path")
+            if isinstance(cp, str) and cp:
+                cube_path = cp
+            if isinstance(tp, str) and tp:
+                target_path = tp
+
+        # robot_path lives in verify_args.stages[0]
+        if isinstance(va, dict):
+            stages = va.get("stages")
+            if isinstance(stages, list) and stages:
+                stage0 = stages[0]
+                if isinstance(stage0, dict):
+                    rp = stage0.get("robot_path")
+                    if isinstance(rp, str) and rp:
+                        robot_path = rp
+
+        if cube_path and target_path and cube_path == target_path:
+            err(
+                "L-SC-01_REJECT_SELF_REF",
+                f"simulate_args.cube_path == target_path ({cube_path!r}); "
+                "function-gate is trivially-satisfied (cube xy ∈ its own bbox). "
+                "Point target_path at a distinct prim or set "
+                "'is_self_consistent: false' to mark for re-design.",
+            )
+
+        # Also flag cube_path == robot_path (also trivial pass: robot
+        # 'reaches' itself)
+        if cube_path and robot_path and cube_path == robot_path:
+            err(
+                "L-SC-01_REJECT_SELF_REF",
+                f"simulate_args.cube_path == verify_args.stages[0].robot_path "
+                f"({cube_path!r}); the function-gate would check that the "
+                "robot is near itself, which is structurally meaningless. "
+                "Either point cube_path at a real workpiece or set "
+                "'is_self_consistent: false'.",
+            )
+
+    # ── L-SC-02: REJECT_HIGH_REST_SPEED ─────────────────────────────────────
+    # rest_speed_threshold > 1.0 m/s disables the at-rest check (real
+    # settling speeds are < 0.5 m/s).  This shows up as the cube being
+    # counted as 'delivered' while it is still mid-air.
+    sa = data.get("simulate_args")
+    if isinstance(sa, dict):
+        rst = sa.get("rest_speed_threshold")
+        if isinstance(rst, (int, float)) and rst > _REST_SPEED_CAP_M_S:
+            err(
+                "L-SC-02_REJECT_HIGH_REST_SPEED",
+                f"simulate_args.rest_speed_threshold = {rst} > "
+                f"{_REST_SPEED_CAP_M_S} m/s; this disables the at-rest "
+                "check (cubes in mid-flight count as delivered). "
+                "Reduce to a realistic settling-speed value (≤ 0.1 m/s for "
+                "most pick-place; ≤ 0.5 m/s only for genuinely heavy / "
+                "slow-settling parts).",
+            )
+        sat = data.get("simulate_args_template")
+        if isinstance(sat, dict):
+            rstt = sat.get("rest_speed_threshold")
+            if isinstance(rstt, (int, float)) and rstt > _REST_SPEED_CAP_M_S:
+                err(
+                    "L-SC-02_REJECT_HIGH_REST_SPEED",
+                    f"simulate_args_template.rest_speed_threshold = {rstt} > "
+                    f"{_REST_SPEED_CAP_M_S} m/s; same anti-pattern as above "
+                    "but in the template variant.",
+                )
+
+    # ── L-SC-11: REQUIRE_PATTERN_HINT ───────────────────────────────────────
+    # Every CP-NEW template MUST declare intent.pattern_hint so the
+    # structural-filter retrieval system can route it correctly.
+    # CP-NN templates predate the pattern_hint enum — grandfather them
+    # (separate backfill pass tracked in audit doc).
+    if task_id.startswith("CP-NEW-"):
+        intent = data.get("intent")
+        ph = None
+        if isinstance(intent, dict):
+            ph = intent.get("pattern_hint")
+        if not ph or not isinstance(ph, str) or not ph.strip():
+            err(
+                "L-SC-11_REQUIRE_PATTERN_HINT",
+                "CP-NEW template missing intent.pattern_hint; required for "
+                "structural-filter retrieval. Choose one of "
+                f"{sorted(schema.VALID_PATTERN_HINTS)}.",
+            )
+        elif ph not in schema.VALID_PATTERN_HINTS:
+            # Already covered by R1_BAD_PATTERN_HINT but include here so
+            # --validate-criteria is a complete pre-sweep gate by itself.
+            err(
+                "L-SC-11_REQUIRE_PATTERN_HINT",
+                f"intent.pattern_hint {ph!r} is not in VALID_PATTERN_HINTS; "
+                f"must be one of {sorted(schema.VALID_PATTERN_HINTS)}.",
+            )
+
+    return issues
+
+
 # ── --fix: safe mechanical transformations ───────────────────────────────────
 
 def apply_fixes(path: Path, data: dict, issues: list[Issue]) -> tuple[dict, list[str]]:
@@ -1195,6 +1356,19 @@ def main(argv=None):
             "verify-agent-claimed-counts; default-flip is a separate decision)."
         ),
     )
+    parser.add_argument(
+        "--validate-criteria",
+        action="store_true",
+        dest="validate_criteria",
+        help=(
+            "Opt-in: enforce success-criteria rules (audit 2026-05-18 wave 1). "
+            "Emits L-SC-01_REJECT_SELF_REF (cube_path == target_path), "
+            "L-SC-02_REJECT_HIGH_REST_SPEED (rest_speed_threshold > 1.0 m/s), "
+            "and L-SC-11_REQUIRE_PATTERN_HINT (CP-NEW must declare "
+            "intent.pattern_hint). Templates marked 'is_self_consistent: false' "
+            "are exempt from L-SC-01. Pre-sweep gate; not yet in default run."
+        ),
+    )
     args = parser.parse_args(argv)
 
     # --strict-tool-calls implies --validate-tool-calls
@@ -1260,6 +1434,11 @@ def main(argv=None):
                 include_code_template=True,
             )
             issues.extend(sb_issues)
+
+        # Success-criteria validation (optional pass)
+        if args.validate_criteria:
+            sc_issues = lint_success_criteria(path, data)
+            issues.extend(sc_issues)
 
         # Fix (if requested)
         if args.fix:
