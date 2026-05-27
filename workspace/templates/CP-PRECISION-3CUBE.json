@@ -1,0 +1,91 @@
+{
+  "task_id": "CP-PRECISION-3CUBE",
+  "goal": "RL-paradigm precision test: 3 cubes 0.5mm gap, pick MIDDLE without moving sides, drop in 5mm-tolerance bin. Penalty/reward signals: adjacent_cube_displacement (sides should NOT move), collision_events (gripper avoid sides), drop_precision (cube center within 5mm of bin center).",
+  "tools_used": [
+    "create_prim",
+    "set_attribute",
+    "apply_api_schema",
+    "robot_wizard",
+    "create_bin",
+    "apply_physics_material",
+    "set_physics_scene_config",
+    "setup_pick_place_controller"
+  ],
+  "thoughts": "Stress-test motion planning: gap mellan cubes \u00e4r 0.5mm. cuRobo m\u00e5ste plan trajectory som tar middle cube WITHOUT touching sides. Tight bin (5mm tolerance) drop-precision-forcing. Penalty-driven auto-tuning.",
+  "code": "\n# DomeLight + Ground\ncreate_prim(prim_path=\"/World/DomeLight\", prim_type=\"DomeLight\")\nset_attribute(prim_path=\"/World/DomeLight\", attr_name=\"inputs:intensity\", value=1000.0)\ncreate_prim(prim_path=\"/World/Ground\", prim_type=\"Cube\", position=[0, 0, -0.5], scale=[20, 20, 1])\napply_api_schema(prim_path=\"/World/Ground\", schema_name=\"PhysicsCollisionAPI\")\n\n# Table\ncreate_prim(prim_path=\"/World/Table\", prim_type=\"Cube\", position=[0, 0, 0.375], scale=[1.5, 0.6, 0.375])\napply_api_schema(prim_path=\"/World/Table\", schema_name=\"PhysicsCollisionAPI\")\n\nset_physics_scene_config(config={\"enable_gpu_dynamics\": False, \"broadphase_type\": \"MBP\"})\n\n# Franka centered\nrobot_wizard(robot_name=\"franka_panda\", dest_path=\"/World/Franka\", position=[0.0, 0, 0.75], orientation=[1.0, 0, 0, 0])\n\n# 3 cubes i rad with 0.5mm gap. Cube size 5cm. Center at y=0.30. X-spacing: 5cm + 0.5mm = 0.0505m.\n# Sides shouldn't move when middle is picked.\n# Cube_L at x=-0.0505 - 0.30 = -0.3505 (50.5mm left)\n# Cube_M (target) at x=-0.30 (center to pick)\n# Cube_R at x=-0.3 + 0.0505 = -0.2495\n\ncreate_prim(prim_path=\"/World/Cube_L\", prim_type=\"Cube\", position=[-0.3505, 0.30, 0.775], size=0.05)\nfor api in (\"PhysicsRigidBodyAPI\", \"PhysicsCollisionAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n    apply_api_schema(prim_path=\"/World/Cube_L\", schema_name=api)\nset_attribute(prim_path=\"/World/Cube_L\", attr_name=\"physics:mass\", value=0.1)\napply_physics_material(prim_path=\"/World/Cube_L\", material_name=\"rubber\")\n\ncreate_prim(prim_path=\"/World/Cube_M\", prim_type=\"Cube\", position=[-0.30, 0.30, 0.775], size=0.05)\nfor api in (\"PhysicsRigidBodyAPI\", \"PhysicsCollisionAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n    apply_api_schema(prim_path=\"/World/Cube_M\", schema_name=api)\nset_attribute(prim_path=\"/World/Cube_M\", attr_name=\"physics:mass\", value=0.1)\napply_physics_material(prim_path=\"/World/Cube_M\", material_name=\"rubber\")\n\ncreate_prim(prim_path=\"/World/Cube_R\", prim_type=\"Cube\", position=[-0.2495, 0.30, 0.775], size=0.05)\nfor api in (\"PhysicsRigidBodyAPI\", \"PhysicsCollisionAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n    apply_api_schema(prim_path=\"/World/Cube_R\", schema_name=api)\nset_attribute(prim_path=\"/World/Cube_R\", attr_name=\"physics:mass\", value=0.1)\napply_physics_material(prim_path=\"/World/Cube_R\", material_name=\"rubber\")\n\n# Tight bin: OUTER 6.5cm, walls 5mm \u2192 INNER 5.5cm = 2.5mm tolerance per side for 5cm cube\n# 2026-05-26: position IS CENTER (verified robot.py:2082-2095). But putting bin at drop_target causes EE-bin collisions during descent.\n# Keep bin at (0.2675, -0.3325) so EE approaches an EMPTY column above (0.30, -0.30). NEED: change drop_target to bin-center.\ncreate_bin(prim_path=\"/World/Bin\", position=[0.2675, -0.3325, 0.75], size=[0.065, 0.065, 0.06], wall_thickness=0.005)\n\n# Cube_Drop + SupportPillar commented out (pickup-tuning run, 2026-05-23)\n# Re-enable for drop-pose-specific work later\n\n# Controller enabled for autonomous pickup-tuning\nsetup_pick_place_controller(\n    robot_path=\"/World/Franka\",\n    target_source=\"curobo\",\n    grip_style=\"friction\",\n    belt_path=None,\n    source_paths=[\"/World/Cube_M\"],\n    destination_path=\"/World/Bin\",\n    drop_target=[0.2675, -0.3325, 0.94],\n    planning_obstacles=[\"/World/Cube_L\", \"/World/Cube_R\", \"/World/Bin\"],\n)\n",
+  "intent": {
+    "pattern_hint": "pick_place",
+    "structural_tags": [
+      "isaac:robot.fixed_base.arm",
+      "isaac:precision.test"
+    ]
+  },
+  "role_defaults": {
+    "primary_robot": {
+      "path": "/World/Franka",
+      "class": "franka_panda",
+      "position": [
+        0.0,
+        0,
+        0.75
+      ],
+      "orientation": [
+        1.0,
+        0,
+        0,
+        0
+      ]
+    },
+    "primary_destination": {
+      "path": "/World/Bin",
+      "position": [
+        0.265,
+        -0.335,
+        0.75
+      ],
+      "size": [
+        0.07,
+        0.07,
+        0.06
+      ]
+    },
+    "workpieces": [
+      {
+        "path": "/World/Cube_M",
+        "shape": "Cube",
+        "position": [
+          -0.3,
+          0.3,
+          0.775
+        ],
+        "size": 0.05
+      }
+    ]
+  },
+  "simulate_args": {
+    "cube_paths": [
+      "/World/Cube_M",
+      "/World/Cube_L",
+      "/World/Cube_R"
+    ],
+    "target_path": "/World/Bin",
+    "duration_s": 30
+  },
+  "rl_paradigm": {
+    "penalty_signals": [
+      {
+        "name": "adjacent_cube_displacement",
+        "description": "Sum of |Cube_L final XY - initial XY| + |Cube_R final XY - initial XY|. Should be ~0."
+      },
+      {
+        "name": "collision_events_non_middle",
+        "description": "Count of gripper-or-held-cube contacts with Cube_L/Cube_R. Should be 0."
+      },
+      {
+        "name": "drop_precision_error_m",
+        "description": "|Cube_M final XY - bin_center XY|. Should be < 0.005."
+      }
+    ],
+    "reward_signal": "Cube_M delivered AND adjacent_cube_displacement < 0.001 AND collision_events_non_middle == 0 AND drop_precision_error_m < 0.005"
+  }
+}

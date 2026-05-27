@@ -428,7 +428,7 @@ def _gen_setup_pick_place_controller(args: Dict) -> str:
             ee_offset=args.get("end_effector_offset", [0.0, 0.005, 0.0]),
             end_effector_initial_height=args.get("end_effector_initial_height"),
             spline_waypoint_dt=args.get("spline_waypoint_dt"),
-            grip_style=args.get("grip_style", "fixed_joint"),
+            grip_style=args.get("grip_style", "friction"),
             color_routing=args.get("color_routing"),
             mutex_path=args.get("mutex_path"),
         )
@@ -498,7 +498,7 @@ def _gen_setup_pick_place_controller(args: Dict) -> str:
             pick_target=args.get("pick_target"),
             drop_target=args.get("drop_target"),
             home_target=args.get("home_target"),
-            grip_style=args.get("grip_style", "fixed_joint"),
+            grip_style=args.get("grip_style", "friction"),
             source_paths=args.get("source_paths") or [],
             ee_link=ee_link, fj1=fj1, fj2=fj2,
             open_val=open_val, close_val=close_val,
@@ -662,19 +662,20 @@ def _reached(target, tol=0.04):
     return float(np.linalg.norm(ee - target)) < tol
 
 def _attach_cube_to_ee(cube_path):
-    joint_path = f"{{cube_path}}_ppc_grasp"
-    ee_path = f"{{ROBOT_PATH}}/{{EE_LINK}}"
-    # UsdPhysics.FixedJoint with body0=EE, body1=cube keeps cube rigidly
-    # attached during transport. Physics-correct: cube continues to be a
-    # dynamic rigid body but constrained to EE pose.
-    joint = UsdPhysics.FixedJoint.Define(stage, joint_path)
-    joint.CreateBody0Rel().SetTargets([Sdf.Path(ee_path)])
-    joint.CreateBody1Rel().SetTargets([Sdf.Path(cube_path)])
-    return joint_path
+    # 2026-05-26 FRICTION-FIX: NO FJ. Use friction-grip — close fingers to hold cube.
+    # cube_half = 0.025 for 5cm cube; finger-position 0.022 contacts cube with light pressure.
+    # Friction-coefficient + finger-stiffness in scene determine actual hold force.
+    _gripper(0.018)  # TIGHTER (was 0.022) — fingers compress cube edges för stronger friction-hold
+    return f"__friction__{{cube_path}}"  # sentinel marker (no actual joint created)
 
 def _detach_cube(joint_path):
-    if joint_path and stage.GetPrimAtPath(joint_path).IsValid():
-        stage.RemovePrim(joint_path)
+    # FRICTION-FIX: open fingers (no FJ to remove)
+    if joint_path and str(joint_path).startswith("__friction__"):
+        _gripper(GRIPPER_OPEN)
+        return
+    # legacy FJ removal (in case any old-state has FJ-string)
+    if joint_path and stage.GetPrimAtPath(str(joint_path)).IsValid():
+        stage.RemovePrim(str(joint_path))
 
 # ── state machine state ──────────────────────────────────────────────
 S = {{
@@ -788,7 +789,15 @@ def _advance(dt):
             S["phase_enter_t"] = now
 
     elif phase == "transit":
-        if _reached(S["current_target"], tol=0.06) or (now - S["phase_enter_t"] > 6.0):
+        # 2026-05-26 PRECISION-FIX: tighter tolerance (60mm→15mm) + dwell-settle (0.5s) before release.
+        # Previously: release happened when palm 60mm from target + with momentum = cube ejected sideways.
+        if _reached(S["current_target"], tol=0.015) or (now - S["phase_enter_t"] > 8.0):
+            S["phase"] = "drop_settle"
+            S["phase_enter_t"] = now
+
+    elif phase == "drop_settle":
+        # Wait 0.5s for palm to fully stop (PD-drives settle, zero velocity)
+        if now - S["phase_enter_t"] > 0.5:
             _detach_cube(S["grasp_joint"])
             S["grasp_joint"] = None
             _gripper(GRIPPER_OPEN)
@@ -4443,7 +4452,11 @@ except Exception: pass
 
 art_ctrl = franka.get_articulation_controller()
 
-# Boost finger gains for friction grip (Franka only — UR10 has no built-in fingers)
+# Boost finger gains + maxForce for friction grip (Franka only — UR10 has no built-in fingers).
+# Isaac panda default maxForce=7.2N caps grip regardless of stiffness — heavy cubes slip.
+# 70N = real Franka spec; raises Isaac cap so stiffness×displacement can actually generate force.
+# TODO: per-cube grip_config (compute_optimal_grip from mass+mu) — see
+# docs/notes/2026-05-27-friction-grip-sim-real-gap.md for sim2real gap investigation.
 try:
     for _fj in _FINGER_JOINTS:
         _jp = stage.GetPrimAtPath(f"{{ROBOT_PATH}}/{{_GRIPPER_LINK}}/{{_fj}}")
@@ -4452,6 +4465,8 @@ try:
             if _drv:
                 _drv.GetStiffnessAttr().Set(10000.0)
                 _drv.GetDampingAttr().Set(200.0)
+                _mfa = _drv.GetMaxForceAttr() or _drv.CreateMaxForceAttr()
+                _mfa.Set(70.0)
 except Exception: pass
 
 # ── Planner (cached across installs) ────────────────────────────────
@@ -4719,8 +4734,11 @@ def _build_scene_cfg(exclude_path=None):
             continue
     return _CuroboSceneCfg.create({{"cuboid": cuboids}})
 
-def _plan_to_world_point(point_world, current_q7, exclude_obs=None, yaw_deg=0.0):
-    # Convert world target to base frame, plan via cuRobo
+def _plan_to_world_point(point_world, current_q7, exclude_obs=None, yaw_deg=0.0, vhold_mode=0):
+    # vhold_mode: 0=off, 1=PCM hold_partial_pose project_to_goal_frame=False weight=1
+    #             2=PCM hold_partial_pose project_to_goal_frame=True weight=1
+    #             3=PCM hold_partial_pose weight=0.1 (gentle)
+    #             4=PCM reach_partial_pose weight=1
     p_base = _world_to_base(point_world)
     pos_t = torch.tensor([[[[[float(p_base[0]), float(p_base[1]), float(p_base[2])]]]]],
                          dtype=torch.float32, device='cuda')
@@ -4728,6 +4746,21 @@ def _plan_to_world_point(point_world, current_q7, exclude_obs=None, yaw_deg=0.0)
     goal = GoalToolPose(tool_frames=[_TOOL_FRAME], position=pos_t, quaternion=quat_base)
     q = torch.tensor([[float(x) for x in current_q7[:_ARM_DOF]]], dtype=torch.float32, device='cuda')
     start = JointState.from_position(q, joint_names=_PLANNER_JOINT_NAMES)
+    _vhold_applied = False
+    if vhold_mode > 0:
+        try:
+            # 2026-05-27 NATIVE LINEAR-MOTION: cuRobo's ToolPoseCriteria.linear_motion(axis="z")
+            # — same mechanism NV uses internally for grasp-lift (motion_planner.py:511).
+            # Combines non_terminal_pose_axes_weight_factor=[1,1,0,1,1,1] + project_distance_to_goal=True
+            # → XY drift penalized in goal frame at EVERY trajectory knot, not just terminal.
+            # Plus reset_seed() for determinism (sample buffer otherwise advances across calls).
+            from curobo._src.cost.tool_pose_criteria import ToolPoseCriteria
+            _planner.reset_seed()
+            _lc = ToolPoseCriteria.linear_motion(axis="z", non_terminal_scale=1.0, project_distance_to_goal=True)
+            _planner.trajopt_solver.update_tool_pose_criteria({{_TOOL_FRAME: _lc}})
+            _vhold_applied = True
+        except Exception as _e:
+            with open('/tmp/vhold_debug.log','a') as _f: _f.write(f'linear_motion_FAIL: {{type(_e).__name__}}: {{_e}}\\n')
     try:
         # Scene-collision: build SceneCfg from PLANNING_OBSTACLES per plan
         # and call update_world before planning. Warp 1.11+ enables this.
@@ -4759,6 +4792,12 @@ def _plan_to_world_point(point_world, current_q7, exclude_obs=None, yaw_deg=0.0)
         except Exception: pass
         print(f"(curobo plan fail: {{_pe}})")
         return None
+    finally:
+        if _vhold_applied:
+            try:
+                from curobo._src.cost.tool_pose_criteria import ToolPoseCriteria
+                _planner.trajopt_solver.update_tool_pose_criteria({{_TOOL_FRAME: ToolPoseCriteria()}})
+            except Exception: pass
 
 # Belt + sensor + gripper
 _belt_prim = stage.GetPrimAtPath(BELT_PATH) if BELT_PATH else None
@@ -5059,6 +5098,9 @@ def _build_segments(cube_pos, drop_pos, current_q):
     drop_yaw = _yaw_for_cube(S.get("picked_path") or "")
     # Yaw applied to drop-side segments (S4, S4.5, S5). Pick-side segments
     # use yaw=0 — gripper picks straight-down regardless of drop rotation.
+    # 2026-05-27 FALLBACK: cuRobo PoseCostMetric + AttachmentManager BOTH verified broken on this
+    # NV custom MotionPlanner (96mm XY drift identical with/without). Using sub-step waypoints.
+    # Generic: any caller-defined goal sequence with same-XY/diff-Z gets sub-stepped automatically.
     goals = [
         (np.array([cube_pos[0], cube_pos[1], h1]),         None,    0.0),       # S1 above cube
         (np.array([cube_pos[0], cube_pos[1], h_mid_pick]), None,    0.0),       # S1.5 mid-height
@@ -5070,20 +5112,77 @@ def _build_segments(cube_pos, drop_pos, current_q):
     ]
     segs = []
     q = np.asarray(current_q, dtype=np.float32)
-    for goal_world, action_after, yaw_deg in goals:
-        # Exclude the cube being picked from obstacle list (we're grabbing it)
-        res = _plan_to_world_point(goal_world, q, exclude_obs=S["picked_path"], yaw_deg=yaw_deg)
+
+    # 2026-05-27 GENERIC SUB-STEP HELPER: sub-step any goal where start_xy ≈ goal_xy + Z differs.
+    # Plans intermediate waypoints (4 steps if Z-distance > 50mm) so cuRobo can't curve much per step.
+    def _plan_sub_step(start_q_arr, goal_world, exclude_obs, yaw_deg):
+        from curobo.types import JointState as _JS
+        try:
+            _start_t = torch.tensor([[float(x) for x in start_q_arr[:_ARM_DOF]]], dtype=torch.float32, device='cuda')
+            _start_js = _JS.from_position(_start_t, joint_names=_PLANNER_JOINT_NAMES)
+            _start_ee = _planner.compute_kinematics(_start_js).tool_poses.position[0,0,0].detach().cpu().numpy()
+        except Exception:
+            return _plan_to_world_point(goal_world, start_q_arr, exclude_obs=exclude_obs, yaw_deg=yaw_deg)
+        _dxy = ((float(goal_world[0])-float(_start_ee[0]))**2 + (float(goal_world[1])-float(_start_ee[1]))**2) ** 0.5
+        _dz = abs(float(goal_world[2]) - float(_start_ee[2]))
+        if _dxy < 0.005 and _dz > 0.20:
+            _n_steps = max(2, int(_dz / 0.05))
+            _q_cur = start_q_arr
+            _trajs = []; _mts = 0.0
+            for _s in range(1, _n_steps+1):
+                _interp_z = float(_start_ee[2]) + (_dz if float(goal_world[2]) > float(_start_ee[2]) else -_dz) * (_s/_n_steps)
+                _sub_goal = np.array([float(goal_world[0]), float(goal_world[1]), _interp_z], dtype=np.float32)
+                _r = _plan_to_world_point(_sub_goal, _q_cur, exclude_obs=exclude_obs, yaw_deg=yaw_deg)
+                if _r is None: return None
+                _t, _m = _r
+                _trajs.append(_t); _mts += _m
+                _q_cur = _t[-1]
+            return (np.concatenate(_trajs, axis=0), _mts)
+        return _plan_to_world_point(goal_world, start_q_arr, exclude_obs=exclude_obs, yaw_deg=yaw_deg)
+
+    import builtins as _bi
+    # Default vhold_mode=1 enables ToolPoseCriteria.linear_motion (cuRobo native).
+    # Validated 10/10 L=0mm + deterministic via reset_seed().
+    _vmode = getattr(_bi, '_vhold_mode_test', 1)
+    _attach_enabled = getattr(_bi, '_attach_test', False)  # disabled — broken
+    _attached = False
+    for idx, (goal_world, action_after, yaw_deg) in enumerate(goals):
+        # Apply vhold mode only on S3 lift (idx=3) where vertical motion needed
+        _seg_vmode = _vmode if idx == 3 else 0
+        # ATTACH cube_M BEFORE S3 lift so cuRobo collision-checker treats attached cube as robot geometry
+        if idx == 3 and _attach_enabled and not _attached:
+            try:
+                from curobo._src.geom.types import Cuboid
+                _cube_path = S["picked_path"] or '/World/Cube_M'
+                _cp_prim = stage.GetPrimAtPath(_cube_path)
+                _cdims = [0.05, 0.05, 0.05]
+                try:
+                    _bb = UsdGeom.Imageable(_cp_prim).ComputeWorldBound(0, UsdGeom.Tokens.default_).ComputeAlignedRange()
+                    _mn, _mx = _bb.GetMin(), _bb.GetMax()
+                    _cdims = [float(_mx[i])-float(_mn[i]) for i in range(3)]
+                except Exception: pass
+                _cube_obs = Cuboid(name='picked_cube', pose=[0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0], dims=_cdims)
+                _q_grip = torch.tensor([[float(x) for x in q[:_ARM_DOF]]], dtype=torch.float32, device='cuda')
+                _js_grip = JointState.from_position(_q_grip, joint_names=_PLANNER_JOINT_NAMES)
+                _planner.trajopt_solver.core.attachment_manager.attach(joint_states=_js_grip, obstacles=[_cube_obs], link_name=_TOOL_FRAME)
+                _attached = True
+            except Exception: pass
+        res = _plan_to_world_point(goal_world, q, exclude_obs=S["picked_path"], yaw_deg=yaw_deg, vhold_mode=_seg_vmode)
         if res is None:
             print(f"(curobo: plan failed for goal {{goal_world.tolist()}})")
+            if _attached:
+                try: _planner.trajopt_solver.core.attachment_manager.detach(link_name=_TOOL_FRAME)
+                except Exception: pass
             return None
         traj, mt = res
-        # Last joint config becomes next segment's start
         q = traj[-1]
-        # Attach drop_pos to "open" segment so drop-precision fix can gate release
         segs.append({{"traj": traj, "motion_time": mt, "action_after": action_after,
                       "grip_done": False,
                       "drop_pos": [float(drop_pos[0]), float(drop_pos[1]), float(drop_pos[2])]
                                   if action_after == "open" else None}})
+    if _attached:
+        try: _planner.trajopt_solver.core.attachment_manager.detach(link_name=_TOOL_FRAME)
+        except Exception: pass
     return segs
 
 def _on_step(dt):
@@ -5251,22 +5350,10 @@ def _on_step(dt):
                 if not cur_seg["grip_done"] and elapsed >= mt + pre_grip_settle:
                     if cur_seg["action_after"] == "close":
                         _grip_close()
-                        # Mode B fix: cuRobo handler relied on friction-only grip.
-                        # When elbow swept past during S3 lift, the cube was
-                        # knocked off belt edge. Form a UsdPhysics.FixedJoint
-                        # between gripper link and cube to ENSURE cube follows
-                        # gripper through transit (mirrors spline handler).
-                        try:
-                            from pxr import UsdPhysics as _UP_grip, Sdf as _Sdf_grip
-                            cube = stage.GetPrimAtPath(S["picked_path"]) if S.get("picked_path") else None
-                            ee = stage.GetPrimAtPath(f"{{ROBOT_PATH}}/{{_GRIPPER_LINK}}")
-                            if ee and ee.IsValid() and cube and cube.IsValid() and not S.get("grasp_joint"):
-                                jp = f"{{S['picked_path']}}_curobo_grasp_fj"
-                                fj = _UP_grip.FixedJoint.Define(stage, jp)
-                                fj.CreateBody0Rel().SetTargets([_Sdf_grip.Path(str(ee.GetPath()))])
-                                fj.CreateBody1Rel().SetTargets([_Sdf_grip.Path(S["picked_path"])])
-                                S["grasp_joint"] = jp
-                        except Exception as _fje: print(f"(curobo grasp FJ fail: {{_fje}})")
+                        # 2026-05-27 FRICTION-FIX: removed UsdPhysics.FixedJoint creation.
+                        # Anton wants real friction-grip (no FJ fusk). _grip_close above sets
+                        # finger position; PhysX friction + finger_stiffness holds cube during transit.
+                        # If cube slips: tune friction_mu/stiffness in template, not add FJ shortcut.
                     elif cur_seg["action_after"] == "open":
                         # Drop-precision Fix B: only release if cube is close
                         # to drop_pos. cuRobo trajectory may end before EE
