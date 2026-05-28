@@ -702,7 +702,7 @@ def _gen_create_prim(args: Dict) -> str:
         "    )",
     ]
     if pos:
-        lines.append(f"_safe_set_translate(prim, ({pos[0]}, {pos[1]}, {pos[2]}))")
+        lines.append(f"_safe_set_world_translate(prim, ({pos[0]}, {pos[1]}, {pos[2]}))")
     if scale:
         lines.append(f"_safe_set_scale(prim, ({scale[0]}, {scale[1]}, {scale[2]}))")
     if rot:
@@ -1071,7 +1071,7 @@ def _gen_teleport_prim(args: Dict) -> str:
     pos = args.get("position")
     rot = args.get("rotation_euler")
     if pos:
-        lines.append(f"_safe_set_translate(prim, ({pos[0]}, {pos[1]}, {pos[2]}))")
+        lines.append(f"_safe_set_world_translate(prim, ({pos[0]}, {pos[1]}, {pos[2]}))")
     if rot:
         lines.append(f"_safe_set_rotate_xyz(prim, ({rot[0]}, {rot[1]}, {rot[2]}))")
     return "\n".join(lines)

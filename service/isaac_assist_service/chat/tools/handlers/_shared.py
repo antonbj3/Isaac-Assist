@@ -57,13 +57,24 @@ if TYPE_CHECKING:
 _SAFE_XFORM_SNIPPET = '''\
 
 def _safe_set_translate(prim, pos):
-    """Set translate to WORLD position; subtracts parent world-pos when prim is parented.
+    """Set translate as LOCAL position (reusing existing op if present).
 
-    Per create_prim docstring, position is documented as world coords.
-    Previously treated as local — broke templates spawning cubes inside
-    transformed parents (e.g. /World/SourceBin/Cube_N with parent at y=0.42
-    → cube ended up at y=0.84). Translation-only correction (assumes parent
-    has no rotation, which holds for 99% of axis-aligned scene primitives).
+    Sensor mounts (lidar/camera under robot frame) expect LOCAL offset semantics.
+    For WORLD coords use _safe_set_world_translate.
+    """
+    xf = UsdGeom.Xformable(prim)
+    for op in xf.GetOrderedXformOps():
+        if op.GetOpType() == UsdGeom.XformOp.TypeTranslate:
+            op.Set(Gf.Vec3d(*pos))
+            return
+    xf.AddTranslateOp().Set(Gf.Vec3d(*pos))
+
+def _safe_set_world_translate(prim, pos):
+    """Set translate to WORLD position; subtracts parent world-pos when parented.
+
+    Used by create_prim (where position is documented as world coords).
+    Translation-only correction (assumes parent has no rotation, which holds
+    for axis-aligned scene primitives in 99% of templates).
     """
     from pxr import Sdf as _Sdf
     xf = UsdGeom.Xformable(prim)
