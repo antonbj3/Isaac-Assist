@@ -938,6 +938,32 @@ class ReleaseComplianceArgs(BaseModel):
     dry_run: Optional[bool] = Field(None, description="If true (default), release in-memory state only (no Kit calls). Set false only when Kit RPC + ros2_control bridge teardown is provisioned.")
 
 
+class SetupInsertionControllerArgs(BaseModel):
+    """Tier D composite — install insertion-class impedance controller + run strategy-specific descent trajectory in one call. Replaces 50+ line manual blocks across narrow-clearance-insertion, screw-driving"""
+    model_config = ConfigDict(populate_by_name=True, extra='allow')
+
+    robot_path: str = Field(..., description="USD path to the robot articulation root, e.g. '/World/Franka'.")
+    strategy: str = Field(..., description="One of 'spiral_search', 'helical_screw', 'snap_fit', 'impedance_descent'.")
+    start_pose: List[float] = Field(..., description="[x, y, z] hover-above-target start position for descent.")
+    target_pose: List[float] = Field(..., description="[x, y, z] final seated position at end of descent.")
+    target_path: Optional[str] = Field(None, description="Optional USD path to insertion target for plan-dict traceability.")
+    target_frame: Optional[str] = Field(None, description="Tool/end-effector frame. Default 'tool0'.")
+    Kx: Optional[List[float]] = Field(None, description="Override translational stiffness [N/m].")
+    Kr: Optional[List[float]] = Field(None, description="Override rotational stiffness [N·m/rad].")
+    Dx: Optional[List[float]] = Field(None, description="Override translational damping [N·s/m].")
+    Dr: Optional[List[float]] = Field(None, description="Override rotational damping [N·m·s/rad].")
+    null_space_stiffness: Optional[float] = Field(None, description="Null-space stiffness scalar. Default 0.5.")
+    null_space_damping: Optional[float] = Field(None, description="Null-space damping scalar. Default 0.5.")
+    compliance_controller: Optional[str] = Field(None, description="Override compliance mode. Default 'cartesian_impedance'.")
+    compliance_handoff_at: Optional[float] = Field(None, description="Override rigid→compliant handoff fraction (per-strategy default).")
+    velocity_scaling: Optional[float] = Field(None, description="Override trajectory velocity multiplier (per-strategy default).")
+    timeout_s: Optional[float] = Field(None, description="Override live-mode watchdog timeout (per-strategy default).")
+    n_waypoints: Optional[int] = Field(None, description="Override waypoint count (per-strategy default).")
+    spiral_amplitude_m: Optional[float] = Field(None, description="spiral_search only — XY oscillation amplitude. Default 0.002.")
+    total_rotation_deg: Optional[float] = Field(None, description="helical_screw / impedance_descent only — total Z rotation over descent.")
+    dry_run: Optional[bool] = Field(None, description="If true (default), return composite plan dict without touching Kit.")
+
+
 class FollowTrajectoryWithComplianceArgs(BaseModel):
     """CRM-C4 — Phase 63b ↔ Layer 1 bridge. Executes a constrained trajectory with a rigid-to-compliant handoff: from t=0 to t=compliance_handoff_at, the robot follows the trajectory's waypoints as exact joi"""
     model_config = ConfigDict(populate_by_name=True, extra='allow')
@@ -2504,6 +2530,24 @@ class SetupContactSensorsArgs(BaseModel):
     track_air_time: Optional[bool] = Field(None, description="Track time-since-last-contact per body. Default: false")
 
 
+class SetupBimanualPickPlaceControllerArgs(BaseModel):
+    """Install TWO coordinated cuRobo pick-place state machines on a single humanoid articulation (one per arm). V0 supports G1 only (robot_family='g1_arm'). Sequential coordination only (Kit RPC is single-tenant). 2026-05-28 J1."""
+    model_config = ConfigDict(populate_by_name=True, extra='allow')
+
+    robot_path: str = Field(..., description="USD prim path of the humanoid articulation root (e.g. /World/G1).")
+    left_arm_sources: List[str] = Field(..., description="Cube prim paths for the LEFT arm to deliver, in pick order.")
+    right_arm_sources: List[str] = Field(..., description="Cube prim paths for the RIGHT arm to deliver, in pick order.")
+    left_destination: str = Field(..., description="Drop prim path for LEFT arm.")
+    right_destination: str = Field(..., description="Drop prim path for RIGHT arm.")
+    robot_family: Optional[str] = Field(None, description="Humanoid family. Only 'g1_arm' supported in V0.")
+    coordination_mode: Optional[str] = Field(None, description="sequential (default, V0 only) / parallel (falls back) / handoff.")
+    plant_feet: Optional[bool] = Field(None, description="Default True. USD FixedJoint between each ankle_roll_link and ground.")
+    planning_obstacles: Optional[List[str]] = Field(None, description="Extra obstacle prim paths.")
+    mutex_path: Optional[str] = Field(None, description="Shared coordination mutex prim path for handoff mode.")
+    ee_offset: Optional[List[float]] = Field(None, description="EE→fingertip offset (m). Default [0.0, 0.0, 0.10].")
+    scenario_profile: Optional[str] = Field(None, description="Forwarded to per-arm cuRobo handler.")
+
+
 class SetupWholeBodyControlArgs(BaseModel):
     """Generate one-shot whole-body control config combining a locomotion RL policy (lower body) with a Pink-IK QP arm planner (upper body), wired into an ActionGroupCfg. Pre-configured profiles available fo"""
     model_config = ConfigDict(populate_by_name=True, extra='allow')
@@ -4045,6 +4089,7 @@ MODEL_REGISTRY = {
     "set_compliance_params": SetComplianceParamsArgs,
     "release_compliance": ReleaseComplianceArgs,
     "follow_trajectory_with_compliance": FollowTrajectoryWithComplianceArgs,
+    "setup_insertion_controller": SetupInsertionControllerArgs,
     "setup_assembly_constraint": SetupAssemblyConstraintArgs,
     "setup_zone_partition": SetupZonePartitionArgs,
     "setup_cortex_behavior": SetupCortexBehaviorArgs,
@@ -4211,6 +4256,7 @@ MODEL_REGISTRY = {
     "validate_calibration": ValidateCalibrationArgs,
     "train_actuator_net": TrainActuatorNetArgs,
     "setup_contact_sensors": SetupContactSensorsArgs,
+    "setup_bimanual_pick_place_controller": SetupBimanualPickPlaceControllerArgs,
     "setup_whole_body_control": SetupWholeBodyControlArgs,
     "diagnose_whole_body": DiagnoseWholeBodyArgs,
     "setup_loco_manipulation_training": SetupLocoManipulationTrainingArgs,

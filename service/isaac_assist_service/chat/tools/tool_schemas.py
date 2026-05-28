@@ -2131,6 +2131,127 @@ ISAAC_SIM_TOOLS = [
     {
         "type": "function",
         "function": {
+            "name": "setup_insertion_controller",
+            "description": (
+                "Tier D composite — installs an insertion-class impedance controller and runs a "
+                "strategy-specific descent trajectory in one call. Replaces the 50+ line "
+                "setup_impedance_controller + set_compliance_params + follow_trajectory_with_compliance "
+                "blocks used by CP-NEW-narrow-clearance-insertion (spiral_search), "
+                "CP-NEW-screw-driving-impedance (helical_screw), CP-NEW-yrkesroll-assembler-snap-fit "
+                "(snap_fit), and CP-NEW-bottle-cap-tighten (impedance_descent). "
+                "Strategies select trajectory shape AND default impedance gains (the lateral-dominant "
+                "Kx=[15,15,200] for spiral_search, coupled soft-Z+soft-Rz Kx=[300,300,40]/Kr=[20,20,8] "
+                "for helical_screw, etc.); caller may override any default via the explicit gain args. "
+                "dry_run=True (default) returns a composite plan dict combining the three sub-call "
+                "results plus the generated trajectory waypoints; dry_run=False raises "
+                "NotImplementedError (sub-tools all require Kit RPC + ros2_control bridge + "
+                "torque-mode robot)."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "robot_path": {
+                        "type": "string",
+                        "description": "USD path to the robot articulation root, e.g. '/World/Franka'.",
+                    },
+                    "strategy": {
+                        "type": "string",
+                        "enum": ["spiral_search", "helical_screw", "snap_fit", "impedance_descent"],
+                        "description": (
+                            "spiral_search: planar XY oscillation on Z descent (narrow-clearance "
+                            "peg-in-hole). helical_screw: coupled Δz+Δrz, ~1.25 turns over descent "
+                            "(M3-M6 screw-driving). snap_fit: pure Z press, identity orientation, "
+                            "3 waypoints (clamshell snap-fit). impedance_descent: single-phase "
+                            "Z descent with optional rotational seat (bottle cap tighten, "
+                            "general compliant placement)."
+                        ),
+                    },
+                    "start_pose": {
+                        "type": "array",
+                        "items": {"type": "number"},
+                        "description": "[x, y, z] hover-above-target start position for descent.",
+                    },
+                    "target_pose": {
+                        "type": "array",
+                        "items": {"type": "number"},
+                        "description": "[x, y, z] final seated position at end of descent.",
+                    },
+                    "target_path": {
+                        "type": "string",
+                        "description": "Optional USD path to the insertion target (peg-hole, bottle neck, etc.) for plan-dict traceability.",
+                    },
+                    "target_frame": {
+                        "type": "string",
+                        "description": "Tool/end-effector frame name for impedance controller. Default 'tool0'; templates pass 'panda_hand' for Franka.",
+                    },
+                    "Kx": {
+                        "type": "array",
+                        "items": {"type": "number"},
+                        "description": "Override translational stiffness [N/m]. Default per strategy.",
+                    },
+                    "Kr": {
+                        "type": "array",
+                        "items": {"type": "number"},
+                        "description": "Override rotational stiffness [N·m/rad]. Default per strategy.",
+                    },
+                    "Dx": {
+                        "type": "array",
+                        "items": {"type": "number"},
+                        "description": "Override translational damping [N·s/m]. Default per strategy.",
+                    },
+                    "Dr": {
+                        "type": "array",
+                        "items": {"type": "number"},
+                        "description": "Override rotational damping [N·m·s/rad]. Default per strategy.",
+                    },
+                    "null_space_stiffness": {
+                        "type": "number",
+                        "description": "Null-space stiffness scalar. Default 0.5.",
+                    },
+                    "null_space_damping": {
+                        "type": "number",
+                        "description": "Null-space damping scalar. Default 0.5.",
+                    },
+                    "compliance_controller": {
+                        "type": "string",
+                        "description": "Override compliance mode. Default 'cartesian_impedance' for all four strategies.",
+                    },
+                    "compliance_handoff_at": {
+                        "type": "number",
+                        "description": "Override rigid→compliant handoff fraction. Defaults: 0.0 (spiral_search / helical_screw / snap_fit — entire trajectory compliant); 0.5 (impedance_descent).",
+                    },
+                    "velocity_scaling": {
+                        "type": "number",
+                        "description": "Override trajectory velocity multiplier. Defaults: 0.10 (spiral_search), 0.15 (snap_fit), 0.20 (helical_screw), 0.30 (impedance_descent).",
+                    },
+                    "timeout_s": {
+                        "type": "number",
+                        "description": "Override live-mode watchdog timeout (seconds). Defaults: 15 (snap_fit), 30 (helical_screw / impedance_descent), 45 (spiral_search).",
+                    },
+                    "n_waypoints": {
+                        "type": "integer",
+                        "description": "Override waypoint count. Defaults: 3 (snap_fit / impedance_descent), 6 (helical_screw), 10 (spiral_search).",
+                    },
+                    "spiral_amplitude_m": {
+                        "type": "number",
+                        "description": "spiral_search only — XY oscillation amplitude. Default 0.002 (2 mm).",
+                    },
+                    "total_rotation_deg": {
+                        "type": "number",
+                        "description": "helical_screw / impedance_descent only — total rotation about Z over the descent. Defaults: 450 deg (helical_screw, ~1.25 turns), 90 deg (impedance_descent).",
+                    },
+                    "dry_run": {
+                        "type": "boolean",
+                        "description": "If true (default), return the composite plan dict without touching Kit. Set false only when Kit RPC + ros2_control bridge + torque-mode robot is provisioned.",
+                    },
+                },
+                "required": ["robot_path", "strategy", "start_pose", "target_pose"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "follow_trajectory_with_compliance",
             "description": (
                 "CRM-C4 — Phase 63b ↔ Layer 1 bridge. Executes a constrained trajectory with a "
@@ -3823,8 +3944,10 @@ ISAAC_SIM_TOOLS = [
                         "color_routing": {"type": "object", "description": "curobo mode (SORT-01 enabler): dict mapping semantic class_name → destination prim path. When present, the controller looks up each picked cube's Semantics_color (or Semantics_class) class_name and routes to the matching bin instead of destination_path. Cubes must be labeled with set_semantic_label(prim_path, class_name='red'|'blue'|..., semantic_type='color') beforehand. Falls through to destination_path when no entry matches. Example: {\"red\": \"/World/RedBin\", \"blue\": \"/World/BlueBin\"}."},
                         "drop_targets": {"type": "object", "description": "curobo mode (stack-placement enabler): dict mapping cube_path → world drop position [x,y,z], OR list of [x,y,z] parallel to source_paths. When set, each cube is dropped at its specified position instead of destination_path's bbox center. Used by CP-08+ palletizing/stacking canonicals where each cube goes to a distinct grid/column position. Pair with compute_stack_placement to derive the positions. Falls through to drop_target then destination_path for cubes not listed. Example: {\"/World/Cube_1\": [0.4, -0.4, 0.13], \"/World/Cube_2\": [0.45, -0.4, 0.13]}."},
                         "gripper_rotation": {"type": "object", "description": "curobo mode (Tier B brick-pattern enabler): dict mapping cube_path → yaw_deg (degrees), OR list of yaw_deg parallel to source_paths, OR scalar yaw_deg for all cubes. Rotates gripper around world Z-axis at drop time. Used by brick-layer palletizers (CP-N: layer 0 yaw=0, layer 1 yaw=90 for interlocking) and mixed-SKU palletizers needing per-item orientation. Yaw applies to drop-side trajectory segments (S4-S5); pick-side stays gripper-down regardless. Example: {\"/World/Cube_10\": 90, \"/World/Cube_11\": 90} for layer-1 cubes in CP-20 brick pattern."},
-                        "robot_family": {"type": "string", "enum": ["franka", "ur10", "ur10e"], "description": "curobo mode: which robot family the controller targets. 'franka' (default) — 7-DOF Franka Panda + ParallelGripper, panda_hand tool frame, franka.yml cuRobo config. 'ur10'/'ur10e' — 6-DOF Universal Robots arm, tool0 tool frame, ur10e.yml cuRobo config; UR10 has NO built-in gripper (use create_gripper for surface_gripper or attach an external EE separately). Required for all non-Franka cuRobo canonicals (CP-69+ research scenarios #2, #3, #25, #27, #33). Default 'franka' preserves existing canonical behavior."},
+                        "robot_family": {"type": "string", "enum": ["franka", "ur10", "ur10e", "g1_arm", "g1_left_arm", "g1_right_arm"], "description": "curobo mode: which robot family the controller targets. 'franka' (default) — 7-DOF Franka Panda + ParallelGripper, panda_hand tool frame, franka.yml cuRobo config. 'ur10'/'ur10e' — 6-DOF Universal Robots arm, tool0 tool frame, ur10e.yml cuRobo config; UR10 has NO built-in gripper (use create_gripper for surface_gripper or attach an external EE separately). 'g1_arm' (2026-05-28 J0) — Unitree G1 humanoid, single-arm scope; requires arm_scope='left'|'right'. The cuRobo unitree_g1.yml carries all 29 DOF; we lock every non-arm joint via lock_joints. 'g1_left_arm'/'g1_right_arm' auto-set arm_scope. Required for all non-Franka cuRobo canonicals (CP-69+ research scenarios #2, #3, #25, #27, #33). Default 'franka' preserves existing canonical behavior."},
+                        "arm_scope": {"type": "string", "enum": ["left", "right"], "description": "curobo + g1_arm only: which G1 arm the planner controls. Required when robot_family='g1_arm'; auto-set when robot_family is 'g1_left_arm'/'g1_right_arm'. Per-arm planners are cached separately under builtins (cfg + arm_scope key)."},
                         "diffik_method": {"type": "string", "enum": ["dls", "svd", "pinv"], "description": "diffik mode: Jacobian inversion method. 'dls' (damped least-squares, default, λ=0.05) handles singularities gracefully; 'pinv' is Moore-Penrose pseudoinverse; 'svd' is truncated SVD. Use 'dls' unless you know you need the others."},
+                        "phase_id": {"type": "string", "description": "Track K (2026-05-28): per-phase subscription scoping for the same robot. Default 'default' preserves legacy single-PPC behaviour. Pass a unique string per call when the SAME robot needs multiple sequential controllers in one canonical (e.g. phase_id='phase1' picks blocks, phase_id='phase2' places stack to outfeed). Without this, the second install would clobber the first install's subscription (same-robot dual-PPC pattern). Robot-scoping across different robot prims already works via _ROBOT_TAG; phase_id extends that to same-robot sequential pipelines. Used by: planning-10step-retry (4 phases), yrkesroll-quality-tech-fixture-gauge (6 phases), yrkesroll-assembler-peg-bushing (3 phases), bin-picking-with-flip, machine-tender-door-interlock, machine-tender-load-unload, yrkesroll-machinist-cnc-load, yrkesroll-packer-box-seal."},
                     },
                     "required": ["robot_path", "target_source"],
                 },
@@ -5488,6 +5611,51 @@ ISAAC_SIM_TOOLS = [
                         "track_air_time": {"type": "boolean", "description": "Track time-since-last-contact per body. Default: false"},
                     },
                     "required": ["articulation_path", "body_names"],
+                },
+            },
+        },
+    {
+            "type": "function",
+            "function": {
+                "name": "setup_bimanual_pick_place_controller",
+                "description": (
+                    "Install TWO coordinated cuRobo pick-place state machines on a single "
+                    "humanoid articulation (one per arm). V0 supports G1 only "
+                    "(robot_family='g1_arm'). Both arms share one Articulation; per-arm "
+                    "cuRobo planners are cached separately under builtins keyed by "
+                    "(cfg, arm_scope). Sequential coordination only in V0 — Kit RPC is "
+                    "single-tenant, so LEFT runs to completion then RIGHT. Use this "
+                    "INSTEAD of two separate setup_pick_place_controller calls when both "
+                    "arms operate the same humanoid. Default plant_feet=True drops a USD "
+                    "FixedJoint between each ankle_roll_link and ground — sidesteps the "
+                    "WBC runtime which is a separate Phase (see "
+                    "docs/notes/2026-05-28-g1-humanoid-impl-scope.md P0+P1)."
+                ),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "robot_path": {"type": "string", "description": "USD prim path of the humanoid articulation root (e.g. /World/G1)."},
+                        "robot_family": {"type": "string", "enum": ["g1_arm"], "description": "Humanoid family. Only 'g1_arm' supported in V0."},
+                        "left_arm_sources": {"type": "array", "items": {"type": "string"}, "description": "Cube prim paths for the LEFT arm to deliver, in pick order."},
+                        "right_arm_sources": {"type": "array", "items": {"type": "string"}, "description": "Cube prim paths for the RIGHT arm to deliver, in pick order."},
+                        "left_destination": {"type": "string", "description": "Drop prim path for LEFT arm."},
+                        "right_destination": {"type": "string", "description": "Drop prim path for RIGHT arm."},
+                        "coordination_mode": {
+                            "type": "string",
+                            "enum": ["sequential", "parallel", "handoff"],
+                            "description": (
+                                "sequential: LEFT runs then RIGHT (V0 only). "
+                                "parallel: V0 falls back to sequential with warning. "
+                                "handoff: uses mutex_path for hold-zone hand-off (sequential-style)."
+                            ),
+                        },
+                        "plant_feet": {"type": "boolean", "description": "Default True. Drop a USD FixedJoint between each ankle_roll_link and ground so the humanoid lower body is rigidly anchored. V0 lacks WBC runtime — set False only if external anchor exists."},
+                        "planning_obstacles": {"type": "array", "items": {"type": "string"}, "description": "Extra USD prim paths to register as cuRobo collision obstacles. The OTHER arm is not auto-included as obstacle in V0; sequential coordination avoids overlap via state-machine timing."},
+                        "mutex_path": {"type": "string", "description": "Shared coordination mutex prim path for handoff mode."},
+                        "ee_offset": {"type": "array", "items": {"type": "number"}, "description": "EE→fingertip offset (m). Default [0.0, 0.0, 0.10]."},
+                        "scenario_profile": {"type": "string", "description": "Forwarded to per-arm cuRobo handler (e.g. 'single_belt_pick', 'obstacle_rich', or omit for default)."},
+                    },
+                    "required": ["robot_path", "left_arm_sources", "right_arm_sources", "left_destination", "right_destination"],
                 },
             },
         },
