@@ -2899,7 +2899,11 @@ def _cube_at_sensor():
         # floor-falls. Earlier hardcoded [0.83, 0.95] silently rejected
         # cubes resting directly on the table at z=0.775.
         if _cp[2] < base_z - 0.30 or _cp[2] > base_z + 0.50: continue
-        if float(np.linalg.norm(_cp[:2] - base_xy)) > 0.70: continue
+        # Family-aware reach (mirrors cuRobo _cube_to_pick): UR10 1.20m, Franka 0.85m.
+        # Previously hardcoded 0.70m unconditionally — filtered out cubes at ≥0.9m XY
+        # for forklift-handoff-arm and other native-mode templates beyond Franka reach.
+        _reach_native = (1.20 if ROBOT_FAMILY in ("ur10", "ur10e") else 0.85) - 0.05
+        if float(np.linalg.norm(_cp[:2] - base_xy)) > _reach_native: continue
         cands.append((float(np.linalg.norm(_cp[:2] - sxy)), _sp))
     if not cands: return None
     cands.sort()
