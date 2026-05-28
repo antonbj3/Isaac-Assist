@@ -758,10 +758,39 @@ print("flushed")
     if img is None:
         return {"success": False, "type": "error", "error": "Could not capture viewport image. Is Isaac Sim running?"}
 
-    # Run vision detection
+    # Run vision detection.
+    # Provider selection (env IA_VISION_PROVIDER) lives in _get_vision_provider:
+    # "auto" prefers local SAM+CLIP when the SAM2 weight is on disk;
+    # "sam_clip" forces local; "gemini" forces remote.
     vp = _get_vision_provider()
     detections = await vp.detect_objects(img, mime, labels=class_labels,
                                           max_objects=max(10, len(cube_paths)))
+    _vp_model = getattr(vp, "model", "?")
+    # Last-resort fallback: if the primary provider returned nothing
+    # (e.g. Gemini quota exhausted or network error) AND SAM+CLIP is
+    # not what we already used, retry with the local provider before
+    # giving up. Lets a forced IA_VISION_PROVIDER=gemini config still
+    # get a salvage attempt from the local stack.
+    if not detections and "sam2" not in (_vp_model or "").lower():
+        try:
+            from ....multimodal.vision_sam_clip import (
+                SAM_CHECKPOINT, SamClipVisionProvider,
+            )
+            if SAM_CHECKPOINT.exists():
+                _backup = SamClipVisionProvider()
+                detections = await _backup.detect_objects(
+                    img, mime, labels=class_labels,
+                    max_objects=max(10, len(cube_paths)),
+                )
+                if detections:
+                    vp = _backup
+                    _vp_model = _backup.model
+                    print(
+                        "add_vision_classifier_gate: primary provider empty; "
+                        f"local SAM+CLIP backup returned {len(detections)} detections"
+                    )
+        except Exception as _e:  # noqa: BLE001
+            print(f"add_vision_classifier_gate: SAM+CLIP backup failed ({type(_e).__name__}: {_e})")
 
     # Get cube world positions via Kit RPC
     pos_code = f"""\
@@ -832,7 +861,7 @@ print(json.dumps(positions))
         "cube_to_destination": cube_to_destination,
         "unmatched_cubes": unmatched_cubes,
         "raw_detections": detections,
-        "model": getattr(vp, "model", "?"),
+        "model": _vp_model,
     }
 
 

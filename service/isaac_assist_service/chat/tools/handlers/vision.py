@@ -538,9 +538,14 @@ async def _get_viewport_bytes() -> tuple:
 
 
 def _get_vision_provider():
-    """Return a singleton Gemini vision provider instance."""
-    from ...vision_gemini import GeminiVisionProvider
-    return GeminiVisionProvider()
+    """Return the active vision provider via the shared selection policy.
+
+    Delegates to ``_shared._get_vision_provider`` so the IA_VISION_PROVIDER
+    policy (auto / sam_clip / gemini) is enforced uniformly across handlers
+    (sensors.add_vision_classifier_gate + vision_detect_objects etc.).
+    """
+    from ._shared import _get_vision_provider as _shared_get
+    return _shared_get()
 
 
 def _parse_last_json_line(output: str):

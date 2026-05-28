@@ -509,13 +509,68 @@ async def _get_viewport_bytes() -> tuple:
     import base64
     return base64.b64decode(b64), "image/png"
 
+_VISION_PROVIDER_SINGLETON = None
+
+
 def _get_vision_provider():
-    """Return the singleton GeminiVisionProvider instance."""
-    # Round 3 repair (2026-05-17): module lives in chat/, not chat/tools/.
-    # `from ..vision_gemini` resolves to chat.tools.vision_gemini which
-    # doesn't exist — was broken for any vision-classifier canonical.
+    """Return a vision provider per the IA_VISION_PROVIDER policy.
+
+    Selection precedence (env-driven, set via ``IA_VISION_PROVIDER``):
+
+    - ``"sam_clip"``: force local SAM2+CLIP only (no Gemini fallback).
+        Use when quota is exhausted or for offline deployments.
+    - ``"gemini"``: force Gemini Vision only (legacy behaviour).
+    - ``"auto"`` (default): prefer local SAM2+CLIP if the SAM2 weight
+        file is present on disk, otherwise fall back to Gemini.
+
+    The colour-introspection USD fast path in
+    ``handlers/sensors.py:_handle_add_vision_classifier_gate`` is tried
+    independently before this provider is consulted (commit cee5cfcb),
+    so colour-shaped templates never reach either provider regardless
+    of this setting.
+
+    Round 3 repair (2026-05-17): the legacy import path
+    ``from ..vision_gemini`` resolved to ``chat.tools.vision_gemini``
+    which doesn't exist. Both branches here use ``...vision_gemini``
+    (one extra dot) so they resolve to ``chat.vision_gemini``.
+    """
+    global _VISION_PROVIDER_SINGLETON
+    if _VISION_PROVIDER_SINGLETON is not None:
+        return _VISION_PROVIDER_SINGLETON
+
+    import os as _os
+    policy = (_os.environ.get("IA_VISION_PROVIDER") or "auto").strip().lower()
+
+    # Local SAM+CLIP — try when policy allows AND weights are on disk.
+    if policy in ("sam_clip", "samclip", "local"):
+        try:
+            from ....multimodal.vision_sam_clip import SamClipVisionProvider
+            _VISION_PROVIDER_SINGLETON = SamClipVisionProvider()
+            return _VISION_PROVIDER_SINGLETON
+        except Exception as _e:  # noqa: BLE001
+            # Forced-local but module/weights missing — return a permissive
+            # error provider rather than silently dropping back to Gemini.
+            import logging as _lg
+            _lg.getLogger(__name__).error(
+                "IA_VISION_PROVIDER=sam_clip but SAM+CLIP init failed: %s — "
+                "falling back to Gemini", _e,
+            )
+
+    if policy == "auto":
+        try:
+            from ....multimodal.vision_sam_clip import (
+                SAM_CHECKPOINT, SamClipVisionProvider,
+            )
+            if SAM_CHECKPOINT.exists():
+                _VISION_PROVIDER_SINGLETON = SamClipVisionProvider()
+                return _VISION_PROVIDER_SINGLETON
+        except Exception:  # noqa: BLE001
+            pass  # Fall through to Gemini
+
+    # Default / explicit Gemini path.
     from ...vision_gemini import GeminiVisionProvider
-    return GeminiVisionProvider()
+    _VISION_PROVIDER_SINGLETON = GeminiVisionProvider()
+    return _VISION_PROVIDER_SINGLETON
 
 def _safe_robot_name(articulation_path: str) -> str:
     """Derive a filesystem-safe slug from a USD path, e.g. '/World/Franka' -> 'franka'."""
