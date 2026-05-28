@@ -2564,7 +2564,7 @@ EVENTS_DT = {_json.dumps(events_dt) if events_dt else 'None'}
 # unsubscribed ALL _native_pp_/_pick_place_/_sensor_gated_/_spline_/
 # _diffik_/_osc_/_curobo_ handles regardless of robot, so the second
 # call killed the first robot's controller. Now: handle is suffixed
-# with _ROBOT_TAG, and cross-mode sweep is guarded by `_ROBOT_TAG in _a`.
+# with _ROBOT_TAG, and cross-mode sweep is guarded by `_a.endswith("_" + _ROBOT_TAG)`.
 _ROBOT_TAG = ROBOT_PATH.replace("/", "_").strip("_")
 _SUB_ATTR = "_native_pp_sub_" + _ROBOT_TAG
 _old = getattr(builtins, _SUB_ATTR, None)
@@ -2578,7 +2578,7 @@ if _old is not None:
 for _a in list(vars(builtins).keys()):
     if _a.startswith(("_pick_place_", "_sensor_gated_", "_native_pp_tl_",
                        "_spline_pp_", "_diffik_pp_", "_osc_pp_", "_curobo_pp_tl_")) \
-       and _ROBOT_TAG in _a:
+       and _a.endswith("_" + _ROBOT_TAG):
         _s = getattr(builtins, _a, None)
         if _s:
             try: _s.unsubscribe()
@@ -3113,7 +3113,7 @@ def _native_pp_reset_hook():
         print(f"(native_pp reset exception: {{type(_re).__name__}}: {{_re}})")
         return False
 
-getattr(builtins, _MGR_ATTR).register("native_pp", _native_pp_reset_hook)
+getattr(builtins, _MGR_ATTR).register("native_pp_" + _ROBOT_TAG, _native_pp_reset_hook)
 
 print(json.dumps({{
     "ok": True,
@@ -3257,7 +3257,7 @@ if _old is not None:
 # Cross-mode sweep — this robot only. Other robots' subs are left alone.
 for _a in list(vars(builtins).keys()):
     if _a.startswith(("_native_pp_", "_pick_place_", "_sensor_gated_", "_spline_pp_tl_")) \
-       and _ROBOT_TAG in _a:
+       and _a.endswith("_" + _ROBOT_TAG):
         _s = getattr(builtins, _a, None)
         if _s:
             try: _s.unsubscribe()
@@ -3927,7 +3927,7 @@ def _spline_pp_reset_hook():
         print(f"(spline_pp reset exception: {{type(_re).__name__}}: {{_re}})")
         return False
 
-getattr(builtins, _MGR_ATTR).register("spline_pp", _spline_pp_reset_hook)
+getattr(builtins, _MGR_ATTR).register("spline_pp_" + _ROBOT_TAG, _spline_pp_reset_hook)
 
 print(json.dumps({{
     "ok": True,
@@ -4168,7 +4168,7 @@ for _a in list(vars(builtins).keys()):
 # Other-controller-flavor cleanup (different mode for same robot)
 for _a in list(vars(builtins).keys()):
     if _a.startswith(("_native_pp_", "_pick_place_", "_sensor_gated_",
-                       "_spline_pp_", "_diffik_pp_", "_osc_pp_")) and _ROBOT_TAG in _a:
+                       "_spline_pp_", "_diffik_pp_", "_osc_pp_")) and _a.endswith("_" + _ROBOT_TAG):
         _s = getattr(builtins, _a, None)
         if _s:
             try: _s.unsubscribe()
@@ -5611,7 +5611,7 @@ if _old is not None:
 # Cross-mode sweep — this robot only.
 for _a in list(vars(builtins).keys()):
     if _a.startswith(("_native_pp_", "_pick_place_", "_sensor_gated_", "_spline_pp_", "_diffik_pp_tl_", "_curobo_pp_")) \
-       and _ROBOT_TAG in _a:
+       and _a.endswith("_" + _ROBOT_TAG):
         _s = getattr(builtins, _a, None)
         if _s:
             try: _s.unsubscribe()
@@ -6051,7 +6051,7 @@ def _diffik_pp_reset_hook():
         print(f"(diffik_pp reset exception: {{type(_re).__name__}}: {{_re}})")
         return False
 
-getattr(builtins, _MGR_ATTR).register("diffik_pp", _diffik_pp_reset_hook)
+getattr(builtins, _MGR_ATTR).register("diffik_pp_" + _ROBOT_TAG, _diffik_pp_reset_hook)
 
 print(json.dumps({{
     "ok": True,
@@ -6146,7 +6146,7 @@ if _old is not None:
 for _a in list(vars(builtins).keys()):
     if _a.startswith(("_native_pp_", "_pick_place_", "_sensor_gated_", "_spline_pp_",
                        "_diffik_pp_", "_osc_pp_tl_", "_curobo_pp_")) \
-       and _ROBOT_TAG in _a:
+       and _a.endswith("_" + _ROBOT_TAG):
         _s = getattr(builtins, _a, None)
         if _s:
             try: _s.unsubscribe()
@@ -6554,7 +6554,7 @@ def _osc_pp_reset_hook():
     except Exception as _re:
         print(f"(osc_pp reset exception: {{_re}})"); return False
 
-getattr(builtins, _MGR_ATTR).register("osc_pp", _osc_pp_reset_hook)
+getattr(builtins, _MGR_ATTR).register("osc_pp_" + _ROBOT_TAG, _osc_pp_reset_hook)
 
 print(json.dumps({{
     "ok": True,

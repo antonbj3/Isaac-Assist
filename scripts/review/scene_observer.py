@@ -2076,6 +2076,7 @@ out = {{
     'cube_supports': cube_supports,
     'cube_max_speed': state['cube_max_speed'],
     'cube_in_target_ever': state['cube_in_target_ever'],
+    'spawn_pos': state['spawn_pos'],
     'fj_events': state['fj_events'],
     'telepathic_fjs': telepathic_fjs,
     'ee_min_z': ee_min_z,
