@@ -36,3 +36,42 @@
 ## Round log
 
 ### Round 1: Routing recognition — STARTED 01:15
+
+## Round 1: Routing-aware sweep_cpnew — DONE (~01:15)
+- Result: 3/40 → 7/40 (+4 unlocks: controller-shootout, inspect-reject, sorter-color-3lane, vision-depalletize). Templates were succeeding; my sweep tool was just too strict.
+- Commit: `adf84144 fix(sweep_cpnew): routing-aware success`
+
+## Round 2: World-translate fix — DONE (~03:35)
+- Hypothesis: `_safe_set_translate` set LOCAL despite docstring promising WORLD → cubes spawned inside transformed parents got double-translated.
+- Verified live: cube spawn at intended world (-0.08, 0.34, 0.95) under SourceBin at (0, 0.42, 0.80) ended up at (-0.08, 0.76, 1.75) = bin+bin+offset.
+- Fix: subtract parent's world translation when prim is parented.
+- Result: 7/40 → 8/40 (+1 unlock: 3station-oee). Physics improvements on bin-picking-random-pose (Cube_1 max_speed 4.33→0.59 m/s, settled in bin instead of ejected to Ground). Cubes 2-6 still don't get xform set — separate bug (possibly apply_api_schema resetting xformOpOrder).
+- Commit: `d6cda14b fix(_safe_set_translate)`
+
+## Round 3: Split world-aware / local-aware — DONE (~04:05)
+- Refined Round 2 to protect sensor mount semantics (lidar/camera offsets parented under robot frame want LOCAL, not WORLD).
+- Split into `_safe_set_translate` (local, default) + `_safe_set_world_translate` (subtracts parent). create_prim uses world variant.
+- Verified: CP-NEW-brick-stacking PASS after Kit restart (Round 2 result preserved, no sensor regression).
+- Commit: `f7df7901 refactor(_safe_set_translate): split`
+
+## Investigation: cube_under_table + curobo_planner_fail patterns (~04:10)
+- 6 templates flagged `cube_under_table`: scattered physics failures, cubes escaping containers to (x>1m, y>3m) or extreme positions (-626km!). Not unifiable per-template, requires individual debugging.
+- 5 templates flagged `curobo_planner_fail`: mislabeled — actually physics blowup not planner failure (Cube_1 at -626km is numerical explosion, not planner issue).
+- Pattern: virtual_eyes heuristics are imperfect. Need to verify with raw metrics before treating as ground truth.
+
+## Investigation: cube_floats_no_gravity (~04:15)
+- 5 templates flagged. Looked at bin-picking-random-pose: cubes 2-6 have NO transform (final_pos = parent_pos), support=None = no rigidBody apply succeeded.
+- Hypothesis: apply_api_schema in rapid succession (5×6=30 calls) might miss some, leaving cubes without physics. OR something in apply_api_schema resets xform ops.
+- Not investigated further this session.
+
+## Final status (overnight)
+- **Start: 3/40 PASS (7.5%)**
+- **End: 8/40 PASS (20%) — +5 templates / +12.5pp**
+- 3 commits applied (revertable)
+- Speedup mods + grip_config + friction-default + maxForce=70 already landed pre-night
+
+## Remaining work for tomorrow
+- Investigate why cubes 2-6 in bin-picking lack transforms (apply_api_schema interaction?)
+- Per-template debugging of remaining 32 fails
+- Vision-API quota templates (~10) require external service or local mock
+- Multi-stage canonicals (passive robot waiting for upstream signal) need orchestrator scenario-profile
