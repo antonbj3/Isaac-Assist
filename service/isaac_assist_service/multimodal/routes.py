@@ -29,6 +29,7 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
 
+from .binding_adapter import bindings_to_role_dict
 from .persistence import (
     DEFAULT_DB_PATH,
     MultimodalStore,
@@ -392,10 +393,13 @@ async def preview_render(session_id: str) -> Dict[str, Any]:
 
 @router.post("/{session_id}/build")
 async def build_canvas(session_id: str, body: BuildRequest) -> Dict[str, Any]:
-    """Ratify the LayoutSpec against the (matched or specified) template
-    and report ratify status. Actual Kit RPC execution is the existing
-    canonical-instantiator flow — wired in Block 1B alongside role-based
-    template refactor."""
+    """Ratify the LayoutSpec against the (matched or specified) template,
+    then — when ratify succeeds and a real canonical is loadable — invoke
+    the canonical-instantiator with LayoutSpec-sourced role_bindings
+    overriding the template's role_defaults. This is the Bridge-1
+    canvas→canonical wire per docs/notes/2026-05-28-multimodal-canonical-flow.md
+    §5. Falls back to ratify-only payload when no template_id supplied,
+    template_id is unknown, or ratify fails."""
     store = get_store()
     spec = store.get_latest(session_id)
     if spec is None:
@@ -418,10 +422,25 @@ async def build_canvas(session_id: str, body: BuildRequest) -> Dict[str, Any]:
             ),
         }
 
-    template = {"id": body.template_id or "<unspecified>"}
+    # Bridge-1: load the real canonical template when a template_id is
+    # supplied AND known. The legacy stub `{"id": template_id}` path is
+    # preserved for unknown ids so ratify still returns a meaningful
+    # legacy-mode response (no roles → trivial ok).
+    real_template: Optional[Dict[str, Any]] = None
+    if body.template_id:
+        try:
+            from ..chat.tools.template_retriever import _load_template
+            real_template = _load_template(body.template_id)
+        except Exception as exc:  # template retriever import / load failure
+            logger.warning(
+                f"[canvas-build] failed to load template {body.template_id!r}: {exc}"
+            )
+            real_template = None
+
+    template = real_template or {"id": body.template_id or "<unspecified>"}
     result = ratify(template, spec)
 
-    payload = {
+    payload: Dict[str, Any] = {
         "ratified": result.status == "ok",
         "status": result.status,
         "diagnostics": [
@@ -451,10 +470,39 @@ async def build_canvas(session_id: str, body: BuildRequest) -> Dict[str, Any]:
             for a in result.ambiguous_roles
         ]
 
+    # Bridge-1: when ratify ok AND we have a real canonical loaded, also
+    # invoke execute_template_canonical with LayoutSpec-sourced bindings.
+    # Stamp the LayoutSpec bindings (which are role_name → RoleBinding) onto
+    # the spec we pass to bindings_to_role_dict so the adapter sees the
+    # ratified mapping, not whatever the SPA may have shipped.
+    if (
+        result.status == "ok"
+        and real_template is not None
+        and real_template.get("code_template")
+        and real_template.get("roles")
+        and real_template.get("role_defaults")
+    ):
+        try:
+            spec_for_adapter = spec.model_copy(update={"bindings": result.bindings})
+            role_bindings_dict = bindings_to_role_dict(spec_for_adapter)
+            from ..chat.canonical_instantiator import execute_template_canonical
+            exec_result = await execute_template_canonical(
+                real_template, role_bindings=role_bindings_dict,
+            )
+            payload["execution"] = exec_result
+            payload["role_bindings"] = role_bindings_dict
+        except Exception as exc:
+            logger.exception(
+                f"[canvas-build] execute_template_canonical failed for "
+                f"{body.template_id!r}: {exc}"
+            )
+            payload["execution_error"] = f"{type(exc).__name__}: {exc}"
+
     store.append_event(session_id, "canvas_build", {
         "revision": spec.revision,
         "ratify_status": result.status,
         "template_id": body.template_id,
+        "executed": "execution" in payload,
     })
     return payload
 

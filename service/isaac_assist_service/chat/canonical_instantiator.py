@@ -763,8 +763,23 @@ def instantiate_role_based_code(
 async def execute_template_canonical(
     template: Dict[str, Any],
     param_overrides: Dict[str, Any] | None = None,
+    role_bindings: Dict[str, Any] | None = None,
 ) -> Dict[str, Any]:
     """Run a canonical template's `code` field as tool-call sequence.
+
+    Args:
+        template: Canonical template dict (task_id, code or code_template,
+            roles, role_defaults, ...).
+        param_overrides: Optional T2 ``{{name}}`` substitutions that override
+            ``template["parameters"]``.
+        role_bindings: Optional Bridge-1 LayoutSpec-sourced overrides for
+            role_defaults. When provided AND the template uses the role-based
+            ``code_template`` path, these bindings replace
+            ``template["role_defaults"]`` as the substitution source — so the
+            same template produces a scene anchored on the USER'S object
+            positions instead of the authored defaults. Shape mirrors
+            role_defaults: ``{role_name: {field: value, ...}, ...}``. See
+            ``multimodal/binding_adapter.bindings_to_role_dict``.
 
     Returns:
         {
@@ -785,8 +800,14 @@ async def execute_template_canonical(
     # Backward-compat: templates without code_template/roles/role_defaults fall
     # through to the legacy `code` field path below.
     if template.get("code_template") and template.get("roles") and template.get("role_defaults"):
-        logger.debug(f"[CanonicalInst] {task_id} using role-based code_template path")
-        raw_code = instantiate_role_based_code(template)
+        if role_bindings:
+            logger.debug(
+                f"[CanonicalInst] {task_id} using role-based code_template path "
+                f"with LayoutSpec role_bindings override ({len(role_bindings)} roles)"
+            )
+        else:
+            logger.debug(f"[CanonicalInst] {task_id} using role-based code_template path")
+        raw_code = instantiate_role_based_code(template, role_bindings)
     else:
         raw_code = template.get("code") or ""
 
