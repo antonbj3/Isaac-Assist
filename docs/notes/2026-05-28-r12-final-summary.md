@@ -118,3 +118,27 @@ Tip commit: `6aafed90` (Revert "fix(_ensure_attr): defensive re-acquire on expir
 - Kit RPC alive on port 8001
 - No sweeps running
 - All work committed to branch `refactor/2026-05-12-foundation-night-1`
+
+## Evening update (18:00-18:25)
+
+Attempted R13 + R14 to test if phase_id strip alone (without _ensure_attr defensive) would restore brick-stacking/controller-shootout.
+
+**R13 (PID 2346256, 18:10)**: 3station-oee FAIL. Killed early.
+- Discovery: Kit Sim had crashed silently during R12 — only launcher script alive, no actual kit.app process. /health endpoint responded OK from Kit RPC service shell, masked actual Kit death.
+
+**R14 (PID 2352942, 18:18) on FRESH Kit**: 3station-oee FAIL again.
+- Conclusion: phase_id strip is the regression cause, NOT _ensure_attr defensive, NOT Kit health.
+- Reverted strip permanently in commit 9487a003.
+
+**Final state: R12 8/40 = session baseline. No further handler experiments.**
+
+Tip commit: 9487a003
+
+## Open questions for next session
+
+1. WHY does stripping "_PHASE_ID" from subscription names break 3station-oee on fresh Kit? Logical analysis says it should be R6-equivalent behavior but empirically it breaks. Possible explanations:
+   - Some hidden dependency on the specific name format I haven't found
+   - PhysX caching keyed by sub name pattern
+   - The strip touched 27 lines but maybe one of them was load-bearing in unexpected way
+2. WHY does ctrl:phase=None for brick-stacking R7+? The install path looks correct but never reaches the subscribe call. Need instrumentation.
+3. Vision-depalletize + bin-picking-random-pose + 6dof-pose-estimate-pick: my CAT-D + CAT-B fixes had ZERO effect. Need deeper template analysis.
