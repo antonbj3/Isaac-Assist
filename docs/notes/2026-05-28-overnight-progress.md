@@ -75,3 +75,22 @@
 - Per-template debugging of remaining 32 fails
 - Vision-API quota templates (~10) require external service or local mock
 - Multi-stage canonicals (passive robot waiting for upstream signal) need orchestrator scenario-profile
+
+## Critical finding — apply_api_schema masks create_prim failures (~04:25)
+
+`_gen_apply_api_schema` at scene_authoring.py:1215-1222 has auto-create-placeholder
+fallback: if target prim doesn't exist, it walks the path and creates Xforms.
+This MASKS silent create_prim failures.
+
+For bin-picking-random-pose: cubes 2-6 likely had create_prim fail (timing? race?),
+then apply_api_schema(PhysicsRigidBodyAPI) created placeholder Xform with no
+translate/no Cube geometry. Hence final_pos=parent_pos and support=None.
+
+Diagnostic suggestion (next session):
+1. Wrap apply_api_schema with a "strict" mode that fails when prim missing
+2. Add diagnostic logging: every time placeholder is created, emit warning
+3. Identify which templates trigger placeholder creation in current sweep
+4. Find why create_prim fails on rapid-sequence nested paths
+
+Quick test (didn't run tonight): bin-picking-random-pose with just 2 cubes
+instead of 6 — does the rate of placeholder creation drop?
