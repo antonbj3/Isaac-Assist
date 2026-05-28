@@ -57,8 +57,25 @@ if TYPE_CHECKING:
 _SAFE_XFORM_SNIPPET = '''\
 
 def _safe_set_translate(prim, pos):
-    """Set translate, reusing existing op if present."""
+    """Set translate to WORLD position; subtracts parent world-pos when prim is parented.
+
+    Per create_prim docstring, position is documented as world coords.
+    Previously treated as local — broke templates spawning cubes inside
+    transformed parents (e.g. /World/SourceBin/Cube_N with parent at y=0.42
+    → cube ended up at y=0.84). Translation-only correction (assumes parent
+    has no rotation, which holds for 99% of axis-aligned scene primitives).
+    """
+    from pxr import Sdf as _Sdf
     xf = UsdGeom.Xformable(prim)
+    parent = prim.GetParent()
+    if parent and parent.IsValid() and parent.GetPath() != _Sdf.Path("/"):
+        try:
+            pxf = UsdGeom.Xformable(parent)
+            if pxf:
+                pw = pxf.ComputeLocalToWorldTransform(0).ExtractTranslation()
+                pos = (pos[0] - float(pw[0]), pos[1] - float(pw[1]), pos[2] - float(pw[2]))
+        except Exception:
+            pass
     for op in xf.GetOrderedXformOps():
         if op.GetOpType() == UsdGeom.XformOp.TypeTranslate:
             op.Set(Gf.Vec3d(*pos))
@@ -189,6 +206,13 @@ _ROBOT_WIZARD_REGISTRY = {
         "rel_path": "Isaac/Robots/UniversalRobots/ur10e/ur10e.usd",
         "cloud_url": "https://omniverse-content-production.s3-us-west-2.amazonaws.com/Assets/Isaac/5.1/Isaac/Robots/UniversalRobots/ur10e/ur10e.usd",
         "robot_type": "manipulator",
+        # 2026-05-20: Added after Anton observed 11 UR10 templates starting
+        # with arm horizontal at z=0 → physics yanks limbs around. UR-style
+        # default 0-joints = arm extended sideways. Standard Isaac "home"
+        # pose: shoulder up, elbow bent forward, wrists neutral.
+        # Joints: shoulder_pan, shoulder_lift, elbow, wrist_1, wrist_2, wrist_3
+        "home_joints": [0.0, -1.5708, 1.5708, -1.5708, -1.5708, 0.0],
+        "ee_link": "ee_link",
     },
     "allegro": {
         "rel_path": "Isaac/Robots/WonikRobotics/AllegroHand/allegro_hand.usd",
