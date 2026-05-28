@@ -5618,8 +5618,26 @@ def _on_step(dt):
 
 _physx = omni.physx.get_physx_interface()
 if _physx is None: raise RuntimeError("curobo: omni.physx unavailable")
-_sub = _physx.subscribe_physics_step_events(_on_step)
-setattr(builtins, _SUB_ATTR, _sub)
+# 2026-05-28 DIAGNOSTIC: brick-stacking R7+ has ctrl:phase=None despite install
+# reaching this point — capture which step in install fails. Append to log.
+try:
+    with open("/tmp/curobo_install_diag.log", "a") as _f:
+        import time as _t
+        _f.write(f"[{{_t.strftime('%H:%M:%S')}}] {{ROBOT_PATH}} _SUB_ATTR={{_SUB_ATTR}} before-subscribe\\n")
+except Exception: pass
+try:
+    _sub = _physx.subscribe_physics_step_events(_on_step)
+    setattr(builtins, _SUB_ATTR, _sub)
+    try:
+        with open("/tmp/curobo_install_diag.log", "a") as _f:
+            _f.write(f"  ok: sub={{_sub!r}} _on_step={{_on_step!r}}\\n")
+    except Exception: pass
+except Exception as _se:
+    try:
+        with open("/tmp/curobo_install_diag.log", "a") as _f:
+            _f.write(f"  SUBSCRIBE_FAIL: {{type(_se).__name__}}: {{_se}}\\n")
+    except Exception: pass
+    raise
 
 {_PP_SCENE_RESET_MGR_SNIPPET}
 
