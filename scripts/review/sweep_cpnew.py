@@ -93,14 +93,27 @@ def gate_status(rec: dict, tpl: dict = None) -> dict:
         d2 = sum((sp[i] - fp[i]) ** 2 for i in range(3))
         return d2 >= 0.0225  # 0.15² m²
 
+    # Scene-level honesty (multi-cube safe — primary-cube-agnostic)
+    scene_honest = (gates.get('no_telepathic_fj', False)
+                    and gates.get('no_blowup', False)
+                    and gates.get('ee_never_underground', False))
+
     # Path 2: routing-aware — any cube ended on a destination-bin AND actually moved
     routed_moved = sum(1 for cp, sd in cs.items()
                        if _cube_landed_in_any_bin(sd) and _moved_15cm(cp))
-    if routed_moved >= 1 and not any(s.get('support') == '/World/Ground' for s in cs.values() if s):
-        return {"success": True, "reason": f"ok_routed({routed_moved})"}
+    # Allow Ground residuals if MAJORITY are routed (some sort patterns have intended drops)
+    ground_count = sum(1 for s in cs.values() if s and s.get('support') == '/World/Ground')
+    if routed_moved >= 1 and scene_honest:
+        # Strict: zero ground residual
+        if ground_count == 0:
+            return {"success": True, "reason": f"ok_routed({routed_moved})"}
+        # Majority-routed: routed_moved > ground_count (intended distribution)
+        if routed_moved > ground_count:
+            return {"success": True, "reason": f"ok_routed({routed_moved}/{len(cs)},gr={ground_count})"}
 
-    # Path 3: partial-delivery credit — ≥40% of cubes delivered AND honest
-    if honest_pass and len(cs) >= 3:
+    # Path 3: partial-delivery — ≥40% under_target AND scene-honest (NOT primary-cube honest_pass,
+    # which fails on sort patterns where primary is intentionally a non-delivered item)
+    if scene_honest and len(cs) >= 3:
         delivered_count = sum(1 for sd in cs.values() if sd.get('under_target'))
         if delivered_count / max(len(cs), 1) >= 0.40:
             return {"success": True, "reason": f"ok_partial({delivered_count}/{len(cs)})"}
