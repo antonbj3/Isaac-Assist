@@ -375,6 +375,11 @@ def _gen_setup_pick_place_controller(args: Dict) -> str:
     approach_h = float(args.get("approach_height", 0.12))
     lift_h = float(args.get("lift_height", 0.20))
     drop_h = float(args.get("drop_height", 0.18))
+    # Track K (2026-05-28): per-phase subscription scoping. Same robot can host
+    # multiple sequential controllers (phase1 picks, phase2 places, phase3 transports
+    # to outfeed). Without phase_id, each install would clobber the previous one's
+    # subscription. Missing phase_id = "default" (legacy single-PPC templates).
+    phase_id = str(args.get("phase_id", "default"))
 
     if mode == "native":
         # Round 9 repair (2026-05-18): the native path is Franka-only
@@ -405,6 +410,7 @@ def _gen_setup_pick_place_controller(args: Dict) -> str:
                 destination_path=args.get("destination_path"),
                 drop_target=args.get("drop_target"),
                 ee_offset=args.get("end_effector_offset", [0.0, 0.0, 0.02]),
+                phase_id=phase_id,
             )
         return _gen_pick_place_native(
             robot_path=robot_path,
@@ -416,6 +422,7 @@ def _gen_setup_pick_place_controller(args: Dict) -> str:
             ee_offset=args.get("end_effector_offset", [0.0, 0.005, 0.0]),
             end_effector_initial_height=args.get("end_effector_initial_height"),
             events_dt=args.get("events_dt"),
+            phase_id=phase_id,
         )
     if mode == "spline":
         return _gen_pick_place_spline(
@@ -431,6 +438,7 @@ def _gen_setup_pick_place_controller(args: Dict) -> str:
             grip_style=args.get("grip_style", "friction"),
             color_routing=args.get("color_routing"),
             mutex_path=args.get("mutex_path"),
+            phase_id=phase_id,
         )
     if mode == "curobo":
         # Round 6 repair (2026-05-18): auto-detect robot_family from
@@ -438,13 +446,26 @@ def _gen_setup_pick_place_controller(args: Dict) -> str:
         # pass UR10 in robot_path but forget to set robot_family, then
         # the curobo gen-fn defaults to "franka" and creates a panda
         # gripper view on a UR10 articulation → ParallelGripper failure.
+        # 2026-05-28 J0: also auto-detect g1/g1_arm from path.
         _rf = args.get("robot_family")
         if not _rf:
             _rp_lc = (robot_path or "").lower()
             if "ur10" in _rp_lc or "ur5" in _rp_lc or "ur16" in _rp_lc:
                 _rf = "ur10"
+            elif "g1" in _rp_lc or "unitree" in _rp_lc:
+                _rf = "g1_arm"
             else:
                 _rf = "franka"
+        # 2026-05-28 J0: auto-derive arm_scope from family alias when callers
+        # pass robot_family="g1_left_arm" / "g1_right_arm" instead of the
+        # split (family="g1_arm", arm_scope="left"|"right").
+        _arm_scope = args.get("arm_scope")
+        if not _arm_scope and _rf:
+            _rfl = str(_rf).lower()
+            if _rfl == "g1_left_arm":
+                _arm_scope = "left"
+            elif _rfl == "g1_right_arm":
+                _arm_scope = "right"
         return _gen_pick_place_curobo(
             robot_path=robot_path,
             sensor_path=args.get("sensor_path"),
@@ -464,6 +485,8 @@ def _gen_setup_pick_place_controller(args: Dict) -> str:
             upright_dot_threshold=float(args.get("upright_dot_threshold", _UPRIGHT_DOT_THRESHOLD_DEFAULT)),
             mutex_path=args.get("mutex_path"),
             scenario_profile=args.get("scenario_profile"),
+            arm_scope=_arm_scope,
+            phase_id=phase_id,
         )
     if mode == "diffik":
         return _gen_pick_place_diffik(
@@ -476,6 +499,7 @@ def _gen_setup_pick_place_controller(args: Dict) -> str:
             ee_offset=args.get("end_effector_offset", [0.0, 0.005, 0.0]),
             end_effector_initial_height=args.get("end_effector_initial_height"),
             diffik_method=args.get("diffik_method", "dls"),
+            phase_id=phase_id,
         )
     if mode == "osc":
         return _gen_pick_place_osc(
@@ -486,6 +510,7 @@ def _gen_setup_pick_place_controller(args: Dict) -> str:
             destination_path=args.get("destination_path") or args.get("drop_target_path"),
             drop_target=args.get("drop_target"),
             ee_offset=args.get("end_effector_offset", [0.0, 0.005, 0.0]),
+            phase_id=phase_id,
         )
     if mode == "sensor_gated":
         return _gen_pick_place_sensor_gated(
@@ -502,6 +527,7 @@ def _gen_setup_pick_place_controller(args: Dict) -> str:
             source_paths=args.get("source_paths") or [],
             ee_link=ee_link, fj1=fj1, fj2=fj2,
             open_val=open_val, close_val=close_val,
+            phase_id=phase_id,
         )
     if mode == "fixed_poses":
         return _gen_pick_place_fixed_poses(
@@ -530,6 +556,7 @@ def _gen_setup_pick_place_controller(args: Dict) -> str:
             destination_path=args.get("destination_path"),
             drop_target=args.get("drop_target"),
             ee_offset=args.get("end_effector_offset", [0.0, 0.0, 0.02]),
+            phase_id=phase_id,
         )
 
     # Default / legacy: cube_tracking (uses source_paths + destination_path)
@@ -559,6 +586,7 @@ FJ1 = {fj1!r}
 FJ2 = {fj2!r}
 GRIPPER_OPEN = {open_val}
 GRIPPER_CLOSE = {close_val}
+_PHASE_ID = {phase_id!r}
 APPROACH_H = {approach_h}
 LIFT_H = {lift_h}
 DROP_H = {drop_h}
@@ -838,7 +866,8 @@ if _physx is None:
 # a robot-path tag so different robots get independent subscriptions.
 import builtins as _builtins
 _ROBOT_TAG = ROBOT_PATH.replace("/", "_").strip("_")
-_sub_attr = "_pick_place_controller_physx_sub_" + _ROBOT_TAG
+# Track K (2026-05-28): per-phase scoping.
+_sub_attr = "_pick_place_controller_physx_sub_" + _ROBOT_TAG + "_" + _PHASE_ID
 _old_sub = getattr(_builtins, _sub_attr, None)
 if _old_sub is not None:
     try:
@@ -862,7 +891,7 @@ print(json.dumps({{
 
 def _gen_pick_place_builtin(robot_path: str, robot_family: str, sensor_path: str, belt_path: str,
                              source_paths: list, destination_path: str, drop_target: str,
-                             ee_offset: list) -> str:
+                             ee_offset: list, phase_id: str = "default") -> str:
     """Robot-agnostic pick-place using Isaac Sim's bundled per-robot controllers.
 
     Wraps NVIDIA's pre-configured PickPlaceController classes:
@@ -923,6 +952,7 @@ DEST_PATH = {destination_path!r}
 DROP_TARGET = {drop_target!r}
 EE_OFFSET = {ee_offset!r}
 ROBOT_FAMILY = {robot_family!r}
+_PHASE_ID = {phase_id!r}
 
 stage = omni.usd.get_context().get_stage()
 
@@ -975,9 +1005,13 @@ if ROBOT_FAMILY == "auto":
 
 # Per-family imports + factory
 _ROBOT_TAG = ROBOT_PATH.replace("/", "_").strip("_")
-_SUB_ATTR = "_builtin_pp_sub_" + _ROBOT_TAG
+# Track K (2026-05-28): per-phase scoping so the same robot can run multiple
+# sequential PPC installs (e.g. phase1 picks, phase2 places to outfeed) without
+# clobbering each other's subscriptions. Default phase_id="default" preserves
+# legacy single-PPC behaviour.
+_SUB_ATTR = "_builtin_pp_sub_" + _ROBOT_TAG + "_" + _PHASE_ID
 
-# Tear down prior subscription for THIS robot if present
+# Tear down prior subscription for THIS robot + THIS phase if present
 _old = getattr(builtins, _SUB_ATTR, None)
 if _old is not None:
     try: _old.unsubscribe()
@@ -986,13 +1020,22 @@ if _old is not None:
     except Exception: pass
 
 # Stale-sub sweep — same pattern as cuRobo handler. Catches subscriptions
-# whose decoded robot path is no longer valid in current stage.
+# whose decoded robot path is no longer valid in current stage. We sweep
+# across ALL phases here because the decoded path validity is the gate.
 _pre_stage = stage
 for _a in list(vars(builtins).keys()):
     if not _a.startswith("_builtin_pp_sub_"):
         continue
-    _tag = _a[len("_builtin_pp_sub_"):]
-    if not _tag: continue
+    _suffix = _a[len("_builtin_pp_sub_"):]
+    if not _suffix: continue
+    # Suffix is "<ROBOT_TAG>_<PHASE_ID>". Strip the trailing _<PHASE_ID>
+    # if it matches a known phase; fall back to treating the whole suffix
+    # as a path tag (legacy installs without phase suffix).
+    _tag = _suffix
+    if "_" in _suffix:
+        _tag_candidate, _ = _suffix.rsplit("_", 1)
+        if _tag_candidate:
+            _tag = _tag_candidate
     _candidate = "/" + _tag.replace("_", "/").lstrip("/")
     try:
         if not _pre_stage.GetPrimAtPath(_candidate).IsValid():
@@ -1027,7 +1070,7 @@ world = World.instance() or World()
 if ROBOT_FAMILY == "franka":
     from isaacsim.robot.manipulators.examples.franka import Franka
     from isaacsim.robot.manipulators.examples.franka.controllers.pick_place_controller import PickPlaceController
-    _ROBOT_NAME = "builtin_pp_robot_" + _ROBOT_TAG
+    _ROBOT_NAME = "builtin_pp_robot_" + _ROBOT_TAG + "_" + _PHASE_ID
     _robot = Franka(prim_path=ROBOT_PATH, name=_ROBOT_NAME)
 elif ROBOT_FAMILY in ("ur10", "ur10e"):
     # The standalone ur10_pick_up.py example uses SingleManipulator with an
@@ -1039,7 +1082,7 @@ elif ROBOT_FAMILY in ("ur10", "ur10e"):
     from isaacsim.robot.manipulators import SingleManipulator
     from isaacsim.robot.manipulators.examples.universal_robots.controllers.pick_place_controller import PickPlaceController
     from isaacsim.robot.manipulators.grippers import SurfaceGripper
-    _ROBOT_NAME = "builtin_pp_robot_" + _ROBOT_TAG
+    _ROBOT_NAME = "builtin_pp_robot_" + _ROBOT_TAG + "_" + _PHASE_ID
     # Set the Short_Suction variant on the robot prim — this authors the
     # IsaacSurfaceGripper schema + suction joint under ee_link.
     _robot_prim = stage.GetPrimAtPath(ROBOT_PATH)
@@ -1082,7 +1125,7 @@ elif ROBOT_FAMILY in ("ur10", "ur10e"):
 elif ROBOT_FAMILY == "cobotta_pro_900":
     from isaacsim.robot.manipulators.examples.cobotta_900 import CobottaPro900
     from isaacsim.robot.manipulators.examples.cobotta_900.controllers.pick_place_controller import PickPlaceController
-    _ROBOT_NAME = "builtin_pp_robot_" + _ROBOT_TAG
+    _ROBOT_NAME = "builtin_pp_robot_" + _ROBOT_TAG + "_" + _PHASE_ID
     _robot = CobottaPro900(prim_path=ROBOT_PATH, name=_ROBOT_NAME)
 else:
     raise RuntimeError(
@@ -1196,14 +1239,14 @@ print(f"(builtin pp: end_effector_initial_height={{_h1:.3f}}m)")
 if not _pp_unsupported:
     try:
         _controller = PickPlaceController(
-            name="builtin_pp_ctrl_" + _ROBOT_TAG,
+            name="builtin_pp_ctrl_" + _ROBOT_TAG + "_" + _PHASE_ID,
             gripper=_robot.gripper,
             robot_articulation=_robot,
             end_effector_initial_height=_h1,
         )
     except TypeError:
         _controller = PickPlaceController(
-            name="builtin_pp_ctrl_" + _ROBOT_TAG,
+            name="builtin_pp_ctrl_" + _ROBOT_TAG + "_" + _PHASE_ID,
             gripper=_robot.gripper,
             robot_articulation=_robot,
         )
@@ -1266,7 +1309,7 @@ def _resume_belt():
 # (too late — PhysX has already cached old velocity for next step).
 # Reference: NVIDIA's PhysxInterfaceSimulationEvents.py uses this pattern.
 try:
-    _BELT_PRESTEP_SUB_ATTR = "_belt_prestep_sub_" + _ROBOT_TAG
+    _BELT_PRESTEP_SUB_ATTR = "_belt_prestep_sub_" + _ROBOT_TAG + "_" + _PHASE_ID
     _old_pre = getattr(builtins, _BELT_PRESTEP_SUB_ATTR, None)
     if _old_pre is not None:
         try: _old_pre.unsubscribe()
@@ -1780,7 +1823,8 @@ def _gen_pick_place_sensor_gated(robot_path: str, sensor_path: str, belt_path: s
                                   pick_target: str, drop_target: str, home_target: str,
                                   grip_style: str, source_paths: list,
                                   ee_link: str, fj1: str, fj2: str,
-                                  open_val: float, close_val: float) -> str:
+                                  open_val: float, close_val: float,
+                                  phase_id: str = "default") -> str:
     """Industrial-pattern controller: belt runs continuously until a proximity
     sensor triggers at a fixed pick station. On trigger, belt pauses; robot
     moves to PICK config; gripper closes; belt resumes (cube attached via
@@ -1925,6 +1969,7 @@ EE_LINK = {ee_link!r}
 FJ1, FJ2 = {fj1!r}, {fj2!r}
 GRIPPER_OPEN = {open_val}
 GRIPPER_CLOSE = {close_val}
+_PHASE_ID = {phase_id!r}
 
 {coord_header if use_coords else pose_loader_block}
 
@@ -2423,7 +2468,8 @@ def _step(dt):
 # the other robot's controller. Suffix handle with robot-path tag.
 import builtins as _builtins
 _ROBOT_TAG = ROBOT_PATH.replace("/", "_").strip("_")
-_sub_attr = "_pick_place_sensor_gated_physx_sub_" + _ROBOT_TAG
+# Track K (2026-05-28): per-phase scoping.
+_sub_attr = "_pick_place_sensor_gated_physx_sub_" + _ROBOT_TAG + "_" + _PHASE_ID
 _old_sub = getattr(_builtins, _sub_attr, None)
 if _old_sub is not None:
     try: _old_sub.unsubscribe()
@@ -2454,7 +2500,8 @@ def _gen_pick_place_native(robot_path: str, sensor_path: str, belt_path: str,
                            source_paths: list, destination_path: str,
                            drop_target: str, ee_offset: list,
                            end_effector_initial_height=None,
-                           events_dt=None) -> str:
+                           events_dt=None,
+                           phase_id: str = "default") -> str:
     """Canonical Isaac Sim pick-place — ports the 62-line standalone at
     `standalone_examples/api/isaacsim.robot.manipulators/franka/pick_place.py`
     into an embedded (Kit RPC) context, wrapped with sensor-gating.
@@ -2556,8 +2603,9 @@ DROP_TARGET = {_json.dumps(drop_target) if drop_target else 'None'}
 EE_OFFSET = np.array({_json.dumps(list(ee_offset))}, dtype=np.float32)
 EE_INIT_H_OVERRIDE = {end_effector_initial_height!r}
 EVENTS_DT = {_json.dumps(events_dt) if events_dt else 'None'}
+_PHASE_ID = {phase_id!r}
 
-# ── Clean up any prior subscription (scoped to THIS robot only) ───────
+# ── Clean up any prior subscription (scoped to THIS robot + THIS phase only) ──
 # Per-robot scoping (2026-05-28): templates like
 # CP-NEW-yrkesroll-packer-box-seal / CP-NEW-roco-bimanual-assembly
 # call setup_pick_place_controller TWICE — once per arm. The old code
@@ -2565,8 +2613,12 @@ EVENTS_DT = {_json.dumps(events_dt) if events_dt else 'None'}
 # _diffik_/_osc_/_curobo_ handles regardless of robot, so the second
 # call killed the first robot's controller. Now: handle is suffixed
 # with _ROBOT_TAG, and cross-mode sweep is guarded by `_a.endswith("_" + _ROBOT_TAG)`.
+#
+# Track K (2026-05-28): per-phase scoping. Same robot + different phase_id
+# coexist so sequential pick→place→outfeed pipelines don't clobber each other.
+# Default phase_id="default" preserves legacy single-PPC behaviour.
 _ROBOT_TAG = ROBOT_PATH.replace("/", "_").strip("_")
-_SUB_ATTR = "_native_pp_sub_" + _ROBOT_TAG
+_SUB_ATTR = "_native_pp_sub_" + _ROBOT_TAG + "_" + _PHASE_ID
 _old = getattr(builtins, _SUB_ATTR, None)
 if _old is not None:
     try: _old.unsubscribe()
@@ -2574,24 +2626,27 @@ if _old is not None:
     try: delattr(builtins, _SUB_ATTR)
     except Exception: pass
 # Also unsub any prior sensor-gated / pick-place / spline / diffik / osc / curobo / timeline callbacks
-# — but ONLY for THIS robot. Other robots' subs must survive.
+# — but ONLY for THIS robot AND THIS phase. Other robots'/phases' subs must survive.
 for _a in list(vars(builtins).keys()):
     if _a.startswith(("_pick_place_", "_sensor_gated_", "_native_pp_tl_",
                        "_spline_pp_", "_diffik_pp_", "_osc_pp_", "_curobo_pp_tl_")) \
-       and _a.endswith("_" + _ROBOT_TAG):
+       and _a.endswith("_" + _ROBOT_TAG + "_" + _PHASE_ID):
         _s = getattr(builtins, _a, None)
         if _s:
             try: _s.unsubscribe()
             except Exception: pass
         try: delattr(builtins, _a)
         except Exception: pass
-# Clear stale Scene Reset Manager hooks from prior controller installs (this robot only)
+# Clear stale Scene Reset Manager hooks from prior controller installs
+# (this robot + this phase only). Legacy un-tagged hooks also cleared.
 _mgr_pre = getattr(builtins, "_scene_reset_manager", None)
 if _mgr_pre is not None:
     for _hn in ("native_pp", "spline_pp", "diffik_pp", "osc_pp", "curobo_pp", "sensor_gated_pp"):
+        try: _mgr_pre.unregister(_hn + "_" + _ROBOT_TAG + "_" + _PHASE_ID)
+        except Exception: pass
+        # Also clear legacy hooks left by pre-multi-robot / pre-phase installs
         try: _mgr_pre.unregister(_hn + "_" + _ROBOT_TAG)
         except Exception: pass
-        # Also clear legacy un-tagged hooks left by pre-multi-robot installs
         try: _mgr_pre.unregister(_hn)
         except Exception: pass
 
@@ -3113,7 +3168,7 @@ def _native_pp_reset_hook():
         print(f"(native_pp reset exception: {{type(_re).__name__}}: {{_re}})")
         return False
 
-getattr(builtins, _MGR_ATTR).register("native_pp_" + _ROBOT_TAG, _native_pp_reset_hook)
+getattr(builtins, _MGR_ATTR).register("native_pp_" + _ROBOT_TAG + "_" + _PHASE_ID, _native_pp_reset_hook)
 
 print(json.dumps({{
     "ok": True,
@@ -3144,7 +3199,8 @@ def _gen_pick_place_spline(robot_path: str, sensor_path: str, belt_path: str,
                            spline_waypoint_dt=None,
                            grip_style: str = "friction",
                            color_routing=None,
-                           mutex_path=None) -> str:
+                           mutex_path=None,
+                           phase_id: str = "default") -> str:
     """Deterministic CPU-only pick-place: pre-plan 6-waypoint Cartesian
     trajectory per cube, warm-start IK chain for consistent redundancy
     branch, interpolate via scipy.CubicSpline (or numpy linear fallback).
@@ -3242,22 +3298,24 @@ MUTEX_PATH = {mutex_path!r}  # Multi-robot coordination — when set, robot must
 # the cube's Semantics_color (or Semantics_class) class_name. Falls
 # through to DEST_PATH when no entry matches.
 COLOR_ROUTING = {_json.dumps(color_routing or {})}
+_PHASE_ID = {phase_id!r}
 
 # ── Clean up any prior subscription + stale Scene Reset Manager hooks ─
 # Per-robot scoping (2026-05-28): see _gen_pick_place_native for full
 # explanation. dual-arm templates need independent subs per robot.
+# Track K (2026-05-28): per-phase scoping added.
 _ROBOT_TAG = ROBOT_PATH.replace("/", "_").strip("_")
-_SUB_ATTR = "_spline_pp_sub_" + _ROBOT_TAG
+_SUB_ATTR = "_spline_pp_sub_" + _ROBOT_TAG + "_" + _PHASE_ID
 _old = getattr(builtins, _SUB_ATTR, None)
 if _old is not None:
     try: _old.unsubscribe()
     except Exception: pass
     try: delattr(builtins, _SUB_ATTR)
     except Exception: pass
-# Cross-mode sweep — this robot only. Other robots' subs are left alone.
+# Cross-mode sweep — this robot + this phase only. Other robots' / phases' subs survive.
 for _a in list(vars(builtins).keys()):
     if _a.startswith(("_native_pp_", "_pick_place_", "_sensor_gated_", "_spline_pp_tl_")) \
-       and _a.endswith("_" + _ROBOT_TAG):
+       and _a.endswith("_" + _ROBOT_TAG + "_" + _PHASE_ID):
         _s = getattr(builtins, _a, None)
         if _s:
             try: _s.unsubscribe()
@@ -3265,10 +3323,12 @@ for _a in list(vars(builtins).keys()):
         try: delattr(builtins, _a)
         except Exception: pass
 # Any existing Scene Reset Manager has hooks referencing old (expired) prims.
-# Clear THIS robot's hooks + legacy un-tagged hooks. Other robots' tagged hooks survive.
+# Clear THIS robot's + THIS phase's hooks + legacy un-tagged hooks.
 _mgr_pre = getattr(builtins, "_scene_reset_manager", None)
 if _mgr_pre is not None:
     for _hn in ("native_pp", "spline_pp", "sensor_gated_pp", "fixed_poses_pp", "curobo_pp", "diffik_pp", "osc_pp"):
+        try: _mgr_pre.unregister(_hn + "_" + _ROBOT_TAG + "_" + _PHASE_ID)
+        except Exception: pass
         try: _mgr_pre.unregister(_hn + "_" + _ROBOT_TAG)
         except Exception: pass
         try: _mgr_pre.unregister(_hn)
@@ -3927,7 +3987,7 @@ def _spline_pp_reset_hook():
         print(f"(spline_pp reset exception: {{type(_re).__name__}}: {{_re}})")
         return False
 
-getattr(builtins, _MGR_ATTR).register("spline_pp_" + _ROBOT_TAG, _spline_pp_reset_hook)
+getattr(builtins, _MGR_ATTR).register("spline_pp_" + _ROBOT_TAG + "_" + _PHASE_ID, _spline_pp_reset_hook)
 
 print(json.dumps({{
     "ok": True,
@@ -3958,7 +4018,9 @@ def _gen_pick_place_curobo(robot_path: str, sensor_path: str, belt_path: str,
                            require_upright: bool = False,
                            upright_dot_threshold: float = 0.85,
                            mutex_path=None,
-                           scenario_profile=None) -> str:
+                           scenario_profile=None,
+                           arm_scope=None,
+                           phase_id: str = "default") -> str:
     """GPU-accelerated global trajectory optimization via cuRobo MotionPlanner.
 
     **Unlocked 2026-04-21** — four breakthroughs that enable cuRobo inside Kit:
@@ -4092,8 +4154,19 @@ _ROBOT_FAMILY_NORM = {{
     "frankarobotics": "franka",
     "frankaemika_panda": "franka",
     "ur10e": "ur10",
+    "g1": "g1_arm",
+    "unitree_g1": "g1_arm",
+    "g1_left_arm": "g1_arm",
+    "g1_right_arm": "g1_arm",
 }}.get(str(_ROBOT_FAMILY_RAW).lower(), str(_ROBOT_FAMILY_RAW).lower())
 ROBOT_FAMILY = _ROBOT_FAMILY_NORM
+ARM_SCOPE = {arm_scope!r}  # 2026-05-28 J0 — "left"/"right" for g1_arm; None for others
+# Note: _PHASE_ID is declared later (Track K convention) and used downstream
+# for subscription / hook naming — no need to redeclare here.
+if str(_ROBOT_FAMILY_RAW).lower() == "g1_left_arm" and not ARM_SCOPE:
+    ARM_SCOPE = "left"
+elif str(_ROBOT_FAMILY_RAW).lower() == "g1_right_arm" and not ARM_SCOPE:
+    ARM_SCOPE = "right"
 if ROBOT_FAMILY == "franka":
     from isaacsim.robot.manipulators.examples.franka import Franka as _RobotWrapper
     _ARM_DOF = 7
@@ -4111,8 +4184,57 @@ elif ROBOT_FAMILY in ("ur10", "ur10e"):
     _TOOL_FRAME = "tool0"
     _GRIPPER_LINK = "wrist_3_link"
     _FINGER_JOINTS = ()  # UR10 has no built-in gripper; use surface_gripper separately
+elif ROBOT_FAMILY == "g1_arm":
+    # 2026-05-28 J0 — Unitree G1 humanoid, single-arm scope.
+    # unitree_g1.yml holds the full 29-DOF model; we LOCK every non-arm
+    # joint via cuRobo's `lock_joints` so the planner optimizes only this
+    # arm's 7 joints. ARM_SCOPE must be "left"|"right"; defaults to "right".
+    # Per docs/notes/2026-05-28-g1-humanoid-impl-scope.md P0.
+    from isaacsim.core.prims import SingleArticulation as _RobotWrapper
+    if not ARM_SCOPE:
+        ARM_SCOPE = "right"
+    if ARM_SCOPE not in ("left", "right"):
+        raise RuntimeError(
+            f"g1_arm: arm_scope must be 'left' or 'right', got {{ARM_SCOPE!r}}")
+    _ARM_DOF = 7
+    _CUROBO_ROBOT_CFG = "unitree_g1.yml"
+    _TOOL_FRAME = ("right_hand_index_1_link" if ARM_SCOPE == "right"
+                    else "left_hand_index_1_link")
+    _GRIPPER_LINK = ("right_hand_palm_link" if ARM_SCOPE == "right"
+                      else "left_hand_palm_link")
+    # G1 dex hand has 7 joints per side; V0 uses surface-gripper FJ-attach.
+    _FINGER_JOINTS = ()
 else:
     raise RuntimeError(f"Unsupported robot_family: {{ROBOT_FAMILY!r}}")
+
+# 2026-05-28 J0: per-arm lock_joints for G1. Joint names sourced from
+# unitree_g1.yml cspace.joint_names.
+_G1_ALL_JOINTS = [
+    "base_j_x","base_j_y","base_j_z","base_j_xtheta","base_j_ytheta","base_j_ztheta",
+    "left_hip_pitch_joint","left_hip_roll_joint","left_hip_yaw_joint",
+    "left_knee_joint","left_ankle_pitch_joint","left_ankle_roll_joint",
+    "right_hip_pitch_joint","right_hip_roll_joint","right_hip_yaw_joint",
+    "right_knee_joint","right_ankle_pitch_joint","right_ankle_roll_joint",
+    "waist_yaw_joint","waist_roll_joint","waist_pitch_joint",
+    "left_shoulder_pitch_joint","left_shoulder_roll_joint","left_shoulder_yaw_joint",
+    "left_elbow_joint","left_wrist_roll_joint","left_wrist_pitch_joint","left_wrist_yaw_joint",
+    "left_hand_thumb_0_joint","left_hand_thumb_1_joint","left_hand_thumb_2_joint",
+    "left_hand_middle_0_joint","left_hand_middle_1_joint",
+    "left_hand_index_0_joint","left_hand_index_1_joint",
+    "right_shoulder_pitch_joint","right_shoulder_roll_joint","right_shoulder_yaw_joint",
+    "right_elbow_joint","right_wrist_roll_joint","right_wrist_pitch_joint","right_wrist_yaw_joint",
+    "right_hand_thumb_0_joint","right_hand_thumb_1_joint","right_hand_thumb_2_joint",
+    "right_hand_middle_0_joint","right_hand_middle_1_joint",
+    "right_hand_index_0_joint","right_hand_index_1_joint",
+]
+def _g1_active_arm_joints(scope):
+    pre = "left_" if scope == "left" else "right_"
+    return [pre+"shoulder_pitch_joint", pre+"shoulder_roll_joint", pre+"shoulder_yaw_joint",
+            pre+"elbow_joint", pre+"wrist_roll_joint", pre+"wrist_pitch_joint", pre+"wrist_yaw_joint"]
+_G1_LOCK_JOINTS = None
+if ROBOT_FAMILY == "g1_arm":
+    _g1_active = set(_g1_active_arm_joints(ARM_SCOPE))
+    _G1_LOCK_JOINTS = {{j: 0.0 for j in _G1_ALL_JOINTS if j not in _g1_active}}
 
 ROBOT_PATH = {robot_path!r}
 SENSOR_PATH = {sensor_path!r}
@@ -4144,31 +4266,36 @@ GRIPPER_ROTATION = {_json.dumps(gripper_rotation) if gripper_rotation is not Non
 # second robot in a multi-station pipeline) tore down the first
 # robot's controller. Now each install scopes its names to its
 # ROBOT_PATH so multiple curobo controllers coexist.
+# Track K (2026-05-28): per-phase scoping. Same robot + different phase_id
+# coexist so sequential pick→place→outfeed pipelines don't clobber each other.
 _ROBOT_TAG = "{robot_path}".replace("/", "_").strip("_")
-_SUB_ATTR = "_curobo_pp_sub_" + _ROBOT_TAG
-_MGR_HOOK_NAME = "curobo_pp_" + _ROBOT_TAG
+_PHASE_ID = {phase_id!r}
+_SUB_ATTR = "_curobo_pp_sub_" + _ROBOT_TAG + "_" + _PHASE_ID
+_MGR_HOOK_NAME = "curobo_pp_" + _ROBOT_TAG + "_" + _PHASE_ID
 
-# Tear down ONLY this robot's prior subscription. Other robots' subs
-# are left alone so a re-install of robot A doesn't kill robot B.
+# Tear down ONLY this robot + this phase's prior subscription. Other robots'
+# / phases' subs are left alone so a re-install of robot A doesn't kill robot B
+# (or phase 2's controller).
 _old = getattr(builtins, _SUB_ATTR, None)
 if _old is not None:
     try: _old.unsubscribe()
     except Exception: pass
     try: delattr(builtins, _SUB_ATTR)
     except Exception: pass
-# Stale per-robot tl-callback cleanup (keep narrow)
+# Stale per-robot+phase tl-callback cleanup (keep narrow)
 for _a in list(vars(builtins).keys()):
-    if _a == "_curobo_pp_tl_" + _ROBOT_TAG:
+    if _a == "_curobo_pp_tl_" + _ROBOT_TAG + "_" + _PHASE_ID:
         _s = getattr(builtins, _a, None)
         if _s:
             try: _s.unsubscribe()
             except Exception: pass
         try: delattr(builtins, _a)
         except Exception: pass
-# Other-controller-flavor cleanup (different mode for same robot)
+# Other-controller-flavor cleanup (different mode for same robot + same phase)
 for _a in list(vars(builtins).keys()):
     if _a.startswith(("_native_pp_", "_pick_place_", "_sensor_gated_",
-                       "_spline_pp_", "_diffik_pp_", "_osc_pp_")) and _a.endswith("_" + _ROBOT_TAG):
+                       "_spline_pp_", "_diffik_pp_", "_osc_pp_")) \
+       and _a.endswith("_" + _ROBOT_TAG + "_" + _PHASE_ID):
         _s = getattr(builtins, _a, None)
         if _s:
             try: _s.unsubscribe()
@@ -4231,8 +4358,11 @@ for _a in list(vars(builtins).keys()):
     except Exception: pass
 _mgr_pre = getattr(builtins, "_scene_reset_manager", None)
 if _mgr_pre is not None:
-    # Only unregister this robot's hooks across modes
+    # Only unregister this robot + this phase's hooks across modes
     for _mode in ("native_pp", "spline_pp", "diffik_pp", "osc_pp", "curobo_pp"):
+        try: _mgr_pre.unregister(_mode + "_" + _ROBOT_TAG + "_" + _PHASE_ID)
+        except Exception: pass
+        # Legacy un-phased per-robot hook
         try: _mgr_pre.unregister(_mode + "_" + _ROBOT_TAG)
         except Exception: pass
     # Also unregister the legacy un-tagged "curobo_pp" if present
@@ -4245,16 +4375,24 @@ if _mgr_pre is not None:
     # `(curobo_pp reset exception: ...)` Tracebacks that pollute
     # diagnostic output. Decoded path-validity check mirrors the
     # stale-subscription scan a few lines below for `_*_pp_sub_*`.
+    # Hooks now include trailing `_<PHASE_ID>` suffix; strip if present
+    # before decoding the path tag.
     _pre_stage = omni.usd.get_context().get_stage()
     for _hn in list(getattr(_mgr_pre, 'hooks', {{}}).keys()):
-        # Hook names: <mode>_<TAG> where TAG = path with / replaced by _
+        # Hook names: <mode>_<TAG>_<PHASE_ID> where TAG = path with / replaced by _
         for _mode_pre in ("native_pp_", "spline_pp_", "diffik_pp_",
                           "osc_pp_", "curobo_pp_", "sensor_gated_pp_"):
             if not _hn.startswith(_mode_pre):
                 continue
-            _tag = _hn[len(_mode_pre):]
-            if not _tag:
+            _suffix = _hn[len(_mode_pre):]
+            if not _suffix:
                 break
+            # Strip trailing _<PHASE_ID> if present
+            _tag = _suffix
+            if "_" in _suffix:
+                _tc, _ = _suffix.rsplit("_", 1)
+                if _tc:
+                    _tag = _tc
             _candidate = "/" + _tag.replace("_", "/").lstrip("/")
             try:
                 if not _pre_stage.GetPrimAtPath(_candidate).IsValid():
@@ -4395,7 +4533,7 @@ if not _has_articulation_init:
     raise SystemExit(0)
 
 world = World.instance() or World()
-_ROBOT_NAME = f"curobo_pp_{{ROBOT_FAMILY}}_" + _ROBOT_TAG
+_ROBOT_NAME = f"curobo_pp_{{ROBOT_FAMILY}}_" + _ROBOT_TAG + "_" + _PHASE_ID
 # UR10 wrapped without attach_gripper for now — attach_gripper=True triggers
 # a SingleRigidPrim init on /ee_link which raises "Failed to get rigid body
 # velocities from backend" before world.reset() makes the variant's rigid-
@@ -4506,25 +4644,55 @@ except Exception: pass
 # on stochastic CUDA IK. Earlier 4 seeds caused stuck-controller pattern
 # in CP-10/11/26-style canonicals — IK failed transiently, controller
 # retried infinitely on same cube (Mode A controller-stuck bug fix 2026-05-09).
-_PLANNER_ATTR = "_curobo_pp_planner_v21"
+# 2026-05-28 J0: per-(robot_cfg, arm_scope) planner cache so Franka + G1-left +
+# G1-right coexist in one Kit session without clobbering each other's kinematics.
+# Scope suffix is "all" for single-arm robots (Franka, UR10) which have no scope.
+_PLANNER_SCOPE_TAG = (ARM_SCOPE or "all")
+_PLANNER_ATTR = "_curobo_pp_planner_v22_{{}}_{{}}".format(
+    _CUROBO_ROBOT_CFG.replace(".yml", "").replace(".", "_"), _PLANNER_SCOPE_TAG)
 _planner = getattr(builtins, _PLANNER_ATTR, None)
 if _planner is None:
-    for _old in ("_curobo_pp_planner", "_curobo_pp_planner_v2", "_curobo_pp_planner_v3", "_curobo_pp_planner_v4", "_curobo_pp_planner_v5", "_curobo_pp_planner_v6", "_curobo_pp_planner_v7", "_curobo_pp_planner_v8", "_curobo_pp_planner_v9", "_curobo_pp_planner_v10", "_curobo_pp_planner_v11", "_curobo_pp_planner_v16", "_curobo_pp_planner_v13"):
+    # Old global planner names — keep cleanup for backwards-compat with
+    # pre-J0 sessions that may have cached planners under v21 etc.
+    for _old in ("_curobo_pp_planner", "_curobo_pp_planner_v2", "_curobo_pp_planner_v3", "_curobo_pp_planner_v4", "_curobo_pp_planner_v5", "_curobo_pp_planner_v6", "_curobo_pp_planner_v7", "_curobo_pp_planner_v8", "_curobo_pp_planner_v9", "_curobo_pp_planner_v10", "_curobo_pp_planner_v11", "_curobo_pp_planner_v16", "_curobo_pp_planner_v13", "_curobo_pp_planner_v21"):
         try: delattr(builtins, _old)
         except Exception: pass
-    print("(curobo: building MotionPlanner v10 — Warp 1.11+, scene-collision)")
+    print(f"(curobo: building MotionPlanner v22 — cfg={{_CUROBO_ROBOT_CFG}} scope={{_PLANNER_SCOPE_TAG}})")
     # Scene-collision active. Table is excluded from runtime scene_cfg
     # because robot sits ON the table (panda_link0 z=0.75 = table top z),
     # registering it caused planner to consider robot in collision → no
     # plan attempts succeed. Other obstacles (pillar, packed bins) properly
     # avoided. CP-22 also benefits from cuda_graph=False + collision distance
     # tuning that lets dynamic update_world reconfigure between cubes.
+    # 2026-05-28 J0: G1 needs the robot config as a DICT so we can inject
+    # `lock_joints` (cuRobo's MotionPlannerCfg.create accepts a dict via
+    # resolve_config). For Franka/UR10 we keep the string path (unchanged).
+    if ROBOT_FAMILY == "g1_arm":
+        from curobo._src.util.config_io import resolve_config as _resolve_cfg
+        from curobo._src.util.config_io import join_path as _join_path
+        from curobo.content import get_robot_configs_path as _robot_cfg_path
+        _robot_dict = _resolve_cfg(_join_path(_robot_cfg_path(), _CUROBO_ROBOT_CFG))
+        # Inject per-arm lock_joints into kinematics block.
+        if isinstance(_robot_dict, dict):
+            _kin = _robot_dict.get("robot_cfg", _robot_dict).get("kinematics", _robot_dict.get("kinematics"))
+            if isinstance(_kin, dict):
+                _kin["lock_joints"] = dict(_G1_LOCK_JOINTS)
+            else:
+                # Top-level kinematics key
+                _robot_dict["kinematics"]["lock_joints"] = dict(_G1_LOCK_JOINTS)
+        _robot_arg = _robot_dict
+        # R1 (scope-doc) — self_collision_check False for V0 to keep
+        # G1's 49-link self-collision budget from exploding trajopt.
+        _self_coll = False
+    else:
+        _robot_arg = _CUROBO_ROBOT_CFG
+        _self_coll = True
     _pcfg = MotionPlannerCfg.create(
-        robot=_CUROBO_ROBOT_CFG,
+        robot=_robot_arg,
         use_cuda_graph=False,
         num_ik_seeds=16,
         num_trajopt_seeds=2,
-        self_collision_check=True,
+        self_collision_check=_self_coll,
         position_tolerance=0.003,
         orientation_tolerance=0.05,
         scene_model="collision_primitives_3d.yml",
@@ -4534,7 +4702,7 @@ if _planner is None:
     setattr(builtins, _PLANNER_ATTR, _planner)
     print(f"(curobo: planner cached in builtins.{{_PLANNER_ATTR}})")
 else:
-    print("(curobo: reusing cached planner v6)")
+    print(f"(curobo: reusing cached planner {{_PLANNER_ATTR}})")
 
 _PLANNER_JOINT_NAMES = list(_planner.joint_names)
 
@@ -4857,7 +5025,7 @@ def _resume_belt():
     if _belt_sv: _belt_sv.Set(_nominal_belt)
     _belt_pause_request_curobo[0] = False
 try:
-    _BELT_PRESTEP_CUROBO_ATTR = "_belt_prestep_curobo_" + _ROBOT_TAG
+    _BELT_PRESTEP_CUROBO_ATTR = "_belt_prestep_curobo_" + _ROBOT_TAG + "_" + _PHASE_ID
     _old_pre_c = getattr(builtins, _BELT_PRESTEP_CUROBO_ATTR, None)
     if _old_pre_c is not None:
         try: _old_pre_c.unsubscribe()
@@ -5521,7 +5689,8 @@ def _gen_pick_place_diffik(robot_path: str, sensor_path: str, belt_path: str,
                             source_paths: list, destination_path: str,
                             drop_target: str, ee_offset: list,
                             end_effector_initial_height=None,
-                            diffik_method: str = "dls") -> str:
+                            diffik_method: str = "dls",
+                            phase_id: str = "default") -> str:
     """Isaac Lab DifferentialIKController-based pick-place.
 
     Env-bridge: sys.path.insert(0, isaac_lab_env/site-packages) +
@@ -5598,20 +5767,22 @@ DROP_TARGET = {_json.dumps(drop_target) if drop_target else 'None'}
 EE_OFFSET = np.array({_json.dumps(list(ee_offset))}, dtype=np.float32)
 EE_INIT_H_OVERRIDE = {end_effector_initial_height!r}
 DIFFIK_METHOD = {diffik_method!r}
+_PHASE_ID = {phase_id!r}
 
 # Per-robot scoping (2026-05-28): see _gen_pick_place_native for explanation.
+# Track K (2026-05-28): per-phase scoping added.
 _ROBOT_TAG = ROBOT_PATH.replace("/", "_").strip("_")
-_SUB_ATTR = "_diffik_pp_sub_" + _ROBOT_TAG
+_SUB_ATTR = "_diffik_pp_sub_" + _ROBOT_TAG + "_" + _PHASE_ID
 _old = getattr(builtins, _SUB_ATTR, None)
 if _old is not None:
     try: _old.unsubscribe()
     except Exception: pass
     try: delattr(builtins, _SUB_ATTR)
     except Exception: pass
-# Cross-mode sweep — this robot only.
+# Cross-mode sweep — this robot + this phase only.
 for _a in list(vars(builtins).keys()):
     if _a.startswith(("_native_pp_", "_pick_place_", "_sensor_gated_", "_spline_pp_", "_diffik_pp_tl_", "_curobo_pp_")) \
-       and _a.endswith("_" + _ROBOT_TAG):
+       and _a.endswith("_" + _ROBOT_TAG + "_" + _PHASE_ID):
         _s = getattr(builtins, _a, None)
         if _s:
             try: _s.unsubscribe()
@@ -5621,6 +5792,8 @@ for _a in list(vars(builtins).keys()):
 _mgr_pre = getattr(builtins, "_scene_reset_manager", None)
 if _mgr_pre is not None:
     for _hn in ("native_pp", "spline_pp", "diffik_pp", "osc_pp", "curobo_pp"):
+        try: _mgr_pre.unregister(_hn + "_" + _ROBOT_TAG + "_" + _PHASE_ID)
+        except Exception: pass
         try: _mgr_pre.unregister(_hn + "_" + _ROBOT_TAG)
         except Exception: pass
         try: _mgr_pre.unregister(_hn)
@@ -6051,7 +6224,7 @@ def _diffik_pp_reset_hook():
         print(f"(diffik_pp reset exception: {{type(_re).__name__}}: {{_re}})")
         return False
 
-getattr(builtins, _MGR_ATTR).register("diffik_pp_" + _ROBOT_TAG, _diffik_pp_reset_hook)
+getattr(builtins, _MGR_ATTR).register("diffik_pp_" + _ROBOT_TAG + "_" + _PHASE_ID, _diffik_pp_reset_hook)
 
 print(json.dumps({{
     "ok": True,
@@ -6068,7 +6241,8 @@ print(json.dumps({{
 
 def _gen_pick_place_osc(robot_path: str, sensor_path: str, belt_path: str,
                          source_paths: list, destination_path: str,
-                         drop_target: str, ee_offset: list) -> str:
+                         drop_target: str, ee_offset: list,
+                         phase_id: str = "default") -> str:
     """Isaac Lab OperationalSpaceController-based pick-place.
 
     Simplified config (no inertial decoupling, no gravity comp, fixed
@@ -6132,21 +6306,23 @@ SOURCE_PATHS = {_json.dumps(list(source_paths))}
 DEST_PATH = {destination_path!r}
 DROP_TARGET = {_json.dumps(drop_target) if drop_target else 'None'}
 EE_OFFSET = np.array({_json.dumps(list(ee_offset))}, dtype=np.float32)
+_PHASE_ID = {phase_id!r}
 
 # Per-robot scoping (2026-05-28): see _gen_pick_place_native for explanation.
+# Track K (2026-05-28): per-phase scoping added.
 _ROBOT_TAG = ROBOT_PATH.replace("/", "_").strip("_")
-_SUB_ATTR = "_osc_pp_sub_" + _ROBOT_TAG
+_SUB_ATTR = "_osc_pp_sub_" + _ROBOT_TAG + "_" + _PHASE_ID
 _old = getattr(builtins, _SUB_ATTR, None)
 if _old is not None:
     try: _old.unsubscribe()
     except Exception: pass
     try: delattr(builtins, _SUB_ATTR)
     except Exception: pass
-# Cross-mode sweep — this robot only.
+# Cross-mode sweep — this robot + this phase only.
 for _a in list(vars(builtins).keys()):
     if _a.startswith(("_native_pp_", "_pick_place_", "_sensor_gated_", "_spline_pp_",
                        "_diffik_pp_", "_osc_pp_tl_", "_curobo_pp_")) \
-       and _a.endswith("_" + _ROBOT_TAG):
+       and _a.endswith("_" + _ROBOT_TAG + "_" + _PHASE_ID):
         _s = getattr(builtins, _a, None)
         if _s:
             try: _s.unsubscribe()
@@ -6156,6 +6332,8 @@ for _a in list(vars(builtins).keys()):
 _mgr_pre = getattr(builtins, "_scene_reset_manager", None)
 if _mgr_pre is not None:
     for _hn in ("native_pp", "spline_pp", "diffik_pp", "osc_pp", "curobo_pp"):
+        try: _mgr_pre.unregister(_hn + "_" + _ROBOT_TAG + "_" + _PHASE_ID)
+        except Exception: pass
         try: _mgr_pre.unregister(_hn + "_" + _ROBOT_TAG)
         except Exception: pass
         try: _mgr_pre.unregister(_hn)
@@ -6554,7 +6732,7 @@ def _osc_pp_reset_hook():
     except Exception as _re:
         print(f"(osc_pp reset exception: {{_re}})"); return False
 
-getattr(builtins, _MGR_ATTR).register("osc_pp_" + _ROBOT_TAG, _osc_pp_reset_hook)
+getattr(builtins, _MGR_ATTR).register("osc_pp_" + _ROBOT_TAG + "_" + _PHASE_ID, _osc_pp_reset_hook)
 
 print(json.dumps({{
     "ok": True,

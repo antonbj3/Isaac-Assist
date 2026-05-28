@@ -33,15 +33,31 @@
     "motion_controllers honesty: curobo via setup_pick_place_controller for the pick + transit phase (untested), cartesian_impedance via follow_trajectory_with_compliance for the insert phase (untested). Same as A14 which used curobo + impedance. No verified runs for production cadence — production cadence requires a ros2_control bridge for live impedance and physics live for 3 sequential pegs without drift; both are pending function-gate sign-off.",
     "verified_status: drafted on 2026-05-16; form-gate-schema pending lint; function-gate pending Kit RPC + ros2_control bridge for live impedance press + live 3-peg cadence."
   ],
-  "code": "# ── Scene skeleton ──────────────────────────────────────────────────────────\ncreate_prim(prim_path=\"/World/DomeLight\", prim_type=\"DomeLight\")\nset_attribute(prim_path=\"/World/DomeLight\", attr_name=\"inputs:intensity\", value=1000.0)\ncreate_prim(prim_path=\"/World/Ground\", prim_type=\"Cube\", position=[0, 0, -0.5], scale=[20, 20, 1])\napply_api_schema(prim_path=\"/World/Ground\", schema_name=\"PhysicsCollisionAPI\")\n\n# Physics: CPU deterministic for reproducible 3-peg cadence.\nset_physics_scene_config(config={\"enable_gpu_dynamics\": False, \"broadphase_type\": \"MBP\"})\n\n# Worktable\ncreate_prim(prim_path=\"/World/Table\", prim_type=\"Cube\", position=[0, 0, 0.375], scale=[1.0, 0.6, 0.375])\napply_api_schema(prim_path=\"/World/Table\", schema_name=\"PhysicsCollisionAPI\")\n\n# ── Robot ────────────────────────────────────────────────────────────────────\nrobot_wizard(\n    robot_name=\"franka_panda\",\n    dest_path=\"/World/Franka\",\n    position=[0, 0, 0.75],\n    orientation=[0.7071068, 0, 0, 0.7071068],\n)\n\n# ── Bushing fixture (Cube housing block, static, pinned by absence of RigidBodyAPI) ──\n# Bore top rim z = 0.795 + 0.04/2 = 0.815. Peg seated centre z = 0.810 (5 mm below rim).\ncreate_prim(\n    prim_path=\"/World/Bushing\",\n    prim_type=\"Cube\",\n    position=[0.0, -0.25, 0.795],\n    scale=[0.10, 0.10, 0.04],\n)\napply_api_schema(prim_path=\"/World/Bushing\", schema_name=\"PhysicsCollisionAPI\")\nset_attribute(prim_path=\"/World/Bushing\", attr_name=\"primvars:displayColor\", value=[[0.40, 0.30, 0.20]])\n\n# ── Infeed tray (production-cadence pallet, 3 pegs in a row) ─────────────────\ncreate_prim(\n    prim_path=\"/World/InfeedTray\",\n    prim_type=\"Cube\",\n    position=[0.30, 0.10, 0.755],\n    scale=[0.20, 0.15, 0.005],\n)\napply_api_schema(prim_path=\"/World/InfeedTray\", schema_name=\"PhysicsCollisionAPI\")\nset_attribute(prim_path=\"/World/InfeedTray\", attr_name=\"primvars:displayColor\", value=[[0.55, 0.55, 0.55]])\n\n# ── Three pegs on the infeed tray (production batch) ─────────────────────────\n# Each peg: Cylinder r=0.012, h=0.07. Centre z = tray top (0.7575) + h/2 (0.035) = 0.7925.\n# Pegs spaced along +Y axis at y = 0.05, 0.10, 0.15 within the tray footprint.\npeg_positions = [\n    [0.30, 0.05, 0.7925],\n    [0.30, 0.10, 0.7925],\n    [0.30, 0.15, 0.7925],\n]\npeg_paths = []\nfor idx, pos in enumerate(peg_positions):\n    peg_path = f\"/World/Peg_{idx + 1}\"\n    peg_paths.append(peg_path)\n    create_prim(\n        prim_path=peg_path,\n        prim_type=\"Cylinder\",\n        position=pos,\n        radius=0.012,\n        height=0.07,\n    )\n    for api in (\"PhysicsRigidBodyAPI\", \"PhysicsCollisionAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n        apply_api_schema(prim_path=peg_path, schema_name=api)\n    set_attribute(prim_path=peg_path, attr_name=\"physics:mass\", value=0.025)\n    set_attribute(prim_path=peg_path, attr_name=\"primvars:displayColor\", value=[[0.20, 0.50, 0.65]])\n    apply_physics_material(prim_path=peg_path, material_name=\"rubber\")\n\n# Sleep-threshold zero on pegs so the press signal is not lost to sleep.\nbulk_set_attribute(\n    prim_paths=peg_paths,\n    attr=\"physxRigidBody:sleepThreshold\",\n    value=0.0,\n)\nbulk_set_attribute(\n    prim_paths=peg_paths + [\"/World/Bushing\"],\n    attr=\"physxRigidBody:solverPositionIterationCount\",\n    value=16,\n)\n\n# ── Force / torque sensor — 20 N insertion force cap (shared across all 3 pegs) ─\nadd_force_torque_sensor(\n    sensor_path=\"/World/Franka/FtSensor\",\n    parent_path=\"/World/Franka/panda_hand\",\n    threshold=20.0,\n    noise_std=0.05,\n)\n\n# ── Proximity sensor for pick detection (covers all 3 peg slots on the tray) ──\nadd_proximity_sensor(\n    sensor_path=\"/World/PickSensor\",\n    position=[0.30, 0.10, 0.815],\n    size=[0.20, 0.15, 0.10],\n)\n\n# ── Impedance controller — installed ONCE, reused across all 3 pegs ──────────\n# Kx=[300, 300, 80] — X/Y rigid centering, Z soft for 20 N descent.\n# Kr=[30, 30, 30] — all rotation stiff (peg-into-round-bore: no twist needed).\nsetup_impedance_controller(\n    robot_path=\"/World/Franka\",\n    target_frame=\"panda_hand\",\n    Kx=[300.0, 300.0, 80.0],\n    Kr=[30.0, 30.0, 30.0],\n    Dx=[30.0, 30.0, 10.0],\n    Dr=[3.0, 3.0, 3.0],\n    null_space_stiffness=0.5,\n    null_space_damping=0.5,\n    torque_mode=True,\n    dry_run=True,\n)\nset_compliance_params(\n    robot_path=\"/World/Franka\",\n    stiffness_xyz=[300.0, 300.0, 80.0],\n    damping_xyz=[30.0, 30.0, 10.0],\n    stiffness_rot=[30.0, 30.0, 30.0],\n    damping_rot=[3.0, 3.0, 3.0],\n    dry_run=True,\n)\n\n# ── PRODUCTION CADENCE: 3 pegs in sequence, each pick + transit + insert ─────\n# Peg 1 of 3 ────────────────────────────────────────────────────────────────\ndefine_grasp_pose(\n    robot_path=\"/World/Franka\",\n    object_path=\"/World/Peg_1\",\n    approach_direction=[0, 0, -1],\n    gripper_offset=[0, 0, 0],\n)\nsetup_pick_place_controller(\n    robot_path=\"/World/Franka\",\n    target_source=\"curobo\",\n    sensor_path=\"/World/PickSensor\",\n    source_paths=[\"/World/Peg_1\"],\n    destination_path=\"/World/Bushing\",\n    drop_target=[0.0, -0.25, 0.835],\n    planning_obstacles=[\"/World/Table\", \"/World/Bushing\", \"/World/InfeedTray\"],\n    approach_height=0.12,\n    lift_height=0.12,\n)\nfollow_trajectory_with_compliance(\n    trajectory=[\n        {\"pose\": {\"position\": [0.0, -0.25, 0.835], \"orientation\": [1.0, 0.0, 0.0, 0.0]}},\n        {\"pose\": {\"position\": [0.0, -0.25, 0.820], \"orientation\": [1.0, 0.0, 0.0, 0.0]}},\n        {\"pose\": {\"position\": [0.0, -0.25, 0.810], \"orientation\": [1.0, 0.0, 0.0, 0.0]}}\n    ],\n    robot_path=\"/World/Franka\",\n    compliance_handoff_at=0.33,\n    compliance_controller=\"cartesian_impedance\",\n    timeout_s=15.0,\n    velocity_scaling=0.15,\n    dry_run=True,\n)\nget_joint_torques(articulation=\"/World/Franka\")\nget_world_transform(prim_path=\"/World/Peg_1\")\n\n# Peg 2 of 3 ────────────────────────────────────────────────────────────────\ndefine_grasp_pose(\n    robot_path=\"/World/Franka\",\n    object_path=\"/World/Peg_2\",\n    approach_direction=[0, 0, -1],\n    gripper_offset=[0, 0, 0],\n)\nsetup_pick_place_controller(\n    robot_path=\"/World/Franka\",\n    target_source=\"curobo\",\n    sensor_path=\"/World/PickSensor\",\n    source_paths=[\"/World/Peg_2\"],\n    destination_path=\"/World/Bushing\",\n    drop_target=[0.0, -0.25, 0.835],\n    planning_obstacles=[\"/World/Table\", \"/World/Bushing\", \"/World/InfeedTray\"],\n    approach_height=0.12,\n    lift_height=0.12,\n)\nfollow_trajectory_with_compliance(\n    trajectory=[\n        {\"pose\": {\"position\": [0.0, -0.25, 0.835], \"orientation\": [1.0, 0.0, 0.0, 0.0]}},\n        {\"pose\": {\"position\": [0.0, -0.25, 0.820], \"orientation\": [1.0, 0.0, 0.0, 0.0]}},\n        {\"pose\": {\"position\": [0.0, -0.25, 0.810], \"orientation\": [1.0, 0.0, 0.0, 0.0]}}\n    ],\n    robot_path=\"/World/Franka\",\n    compliance_handoff_at=0.33,\n    compliance_controller=\"cartesian_impedance\",\n    timeout_s=15.0,\n    velocity_scaling=0.15,\n    dry_run=True,\n)\nget_joint_torques(articulation=\"/World/Franka\")\nget_world_transform(prim_path=\"/World/Peg_2\")\n\n# Peg 3 of 3 ────────────────────────────────────────────────────────────────\ndefine_grasp_pose(\n    robot_path=\"/World/Franka\",\n    object_path=\"/World/Peg_3\",\n    approach_direction=[0, 0, -1],\n    gripper_offset=[0, 0, 0],\n)\nsetup_pick_place_controller(\n    robot_path=\"/World/Franka\",\n    target_source=\"curobo\",\n    sensor_path=\"/World/PickSensor\",\n    source_paths=[\"/World/Peg_3\"],\n    destination_path=\"/World/Bushing\",\n    drop_target=[0.0, -0.25, 0.835],\n    planning_obstacles=[\"/World/Table\", \"/World/Bushing\", \"/World/InfeedTray\"],\n    approach_height=0.12,\n    lift_height=0.12,\n)\nfollow_trajectory_with_compliance(\n    trajectory=[\n        {\"pose\": {\"position\": [0.0, -0.25, 0.835], \"orientation\": [1.0, 0.0, 0.0, 0.0]}},\n        {\"pose\": {\"position\": [0.0, -0.25, 0.820], \"orientation\": [1.0, 0.0, 0.0, 0.0]}},\n        {\"pose\": {\"position\": [0.0, -0.25, 0.810], \"orientation\": [1.0, 0.0, 0.0, 0.0]}}\n    ],\n    robot_path=\"/World/Franka\",\n    compliance_handoff_at=0.33,\n    compliance_controller=\"cartesian_impedance\",\n    timeout_s=15.0,\n    velocity_scaling=0.15,\n    dry_run=True,\n)\nget_joint_torques(articulation=\"/World/Franka\")\nget_world_transform(prim_path=\"/World/Peg_3\")",
+  "code": "# ── Scene skeleton ──────────────────────────────────────────────────────────\ncreate_prim(prim_path=\"/World/DomeLight\", prim_type=\"DomeLight\")\nset_attribute(prim_path=\"/World/DomeLight\", attr_name=\"inputs:intensity\", value=1000.0)\ncreate_prim(prim_path=\"/World/Ground\", prim_type=\"Cube\", position=[0, 0, -0.5], scale=[20, 20, 1])\napply_api_schema(prim_path=\"/World/Ground\", schema_name=\"PhysicsCollisionAPI\")\n\n# Physics: CPU deterministic for reproducible 3-peg cadence.\nset_physics_scene_config(config={\"enable_gpu_dynamics\": False, \"broadphase_type\": \"MBP\"})\n\n# Worktable\ncreate_prim(prim_path=\"/World/Table\", prim_type=\"Cube\", position=[0, 0, 0.375], scale=[1.0, 0.6, 0.375])\napply_api_schema(prim_path=\"/World/Table\", schema_name=\"PhysicsCollisionAPI\")\n\n# ── Robot ────────────────────────────────────────────────────────────────────\nrobot_wizard(\n    robot_name=\"franka_panda\",\n    dest_path=\"/World/Franka\",\n    position=[0, 0, 0.75],\n    orientation=[0.7071068, 0, 0, 0.7071068],\n)\n\n# ── Bushing fixture (Cube housing block, static, pinned by absence of RigidBodyAPI) ──\n# Bore top rim z = 0.795 + 0.04/2 = 0.815. Peg seated centre z = 0.810 (5 mm below rim).\ncreate_prim(\n    prim_path=\"/World/Bushing\",\n    prim_type=\"Cube\",\n    position=[0.0, -0.25, 0.795],\n    scale=[0.10, 0.10, 0.04],\n)\napply_api_schema(prim_path=\"/World/Bushing\", schema_name=\"PhysicsCollisionAPI\")\nset_attribute(prim_path=\"/World/Bushing\", attr_name=\"primvars:displayColor\", value=[[0.40, 0.30, 0.20]])\n\n# ── Infeed tray (production-cadence pallet, 3 pegs in a row) ─────────────────\ncreate_prim(\n    prim_path=\"/World/InfeedTray\",\n    prim_type=\"Cube\",\n    position=[0.30, 0.10, 0.755],\n    scale=[0.20, 0.15, 0.005],\n)\napply_api_schema(prim_path=\"/World/InfeedTray\", schema_name=\"PhysicsCollisionAPI\")\nset_attribute(prim_path=\"/World/InfeedTray\", attr_name=\"primvars:displayColor\", value=[[0.55, 0.55, 0.55]])\n\n# ── Three pegs on the infeed tray (production batch) ─────────────────────────\n# Each peg: Cylinder r=0.012, h=0.07. Centre z = tray top (0.7575) + h/2 (0.035) = 0.7925.\n# Pegs spaced along +Y axis at y = 0.05, 0.10, 0.15 within the tray footprint.\npeg_positions = [\n    [0.30, 0.05, 0.7925],\n    [0.30, 0.10, 0.7925],\n    [0.30, 0.15, 0.7925],\n]\npeg_paths = []\nfor idx, pos in enumerate(peg_positions):\n    peg_path = f\"/World/Peg_{idx + 1}\"\n    peg_paths.append(peg_path)\n    create_prim(\n        prim_path=peg_path,\n        prim_type=\"Cylinder\",\n        position=pos,\n        radius=0.012,\n        height=0.07,\n    )\n    for api in (\"PhysicsRigidBodyAPI\", \"PhysicsCollisionAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n        apply_api_schema(prim_path=peg_path, schema_name=api)\n    set_attribute(prim_path=peg_path, attr_name=\"physics:mass\", value=0.025)\n    set_attribute(prim_path=peg_path, attr_name=\"primvars:displayColor\", value=[[0.20, 0.50, 0.65]])\n    apply_physics_material(prim_path=peg_path, material_name=\"rubber\")\n\n# Sleep-threshold zero on pegs so the press signal is not lost to sleep.\nbulk_set_attribute(\n    prim_paths=peg_paths,\n    attr=\"physxRigidBody:sleepThreshold\",\n    value=0.0,\n)\nbulk_set_attribute(\n    prim_paths=peg_paths + [\"/World/Bushing\"],\n    attr=\"physxRigidBody:solverPositionIterationCount\",\n    value=16,\n)\n\n# ── Force / torque sensor — 20 N insertion force cap (shared across all 3 pegs) ─\nadd_force_torque_sensor(\n    sensor_path=\"/World/Franka/FtSensor\",\n    parent_path=\"/World/Franka/panda_hand\",\n    threshold=20.0,\n    noise_std=0.05,\n)\n\n# ── Proximity sensor for pick detection (covers all 3 peg slots on the tray) ──\nadd_proximity_sensor(\n    sensor_path=\"/World/PickSensor\",\n    position=[0.30, 0.10, 0.815],\n    size=[0.20, 0.15, 0.10],\n)\n\n# ── Impedance controller — installed ONCE, reused across all 3 pegs ──────────\n# Kx=[300, 300, 80] — X/Y rigid centering, Z soft for 20 N descent.\n# Kr=[30, 30, 30] — all rotation stiff (peg-into-round-bore: no twist needed).\nsetup_impedance_controller(\n    robot_path=\"/World/Franka\",\n    target_frame=\"panda_hand\",\n    Kx=[300.0, 300.0, 80.0],\n    Kr=[30.0, 30.0, 30.0],\n    Dx=[30.0, 30.0, 10.0],\n    Dr=[3.0, 3.0, 3.0],\n    null_space_stiffness=0.5,\n    null_space_damping=0.5,\n    torque_mode=True,\n    dry_run=True,\n)\nset_compliance_params(\n    robot_path=\"/World/Franka\",\n    stiffness_xyz=[300.0, 300.0, 80.0],\n    damping_xyz=[30.0, 30.0, 10.0],\n    stiffness_rot=[30.0, 30.0, 30.0],\n    damping_rot=[3.0, 3.0, 3.0],\n    dry_run=True,\n)\n\n# ── PRODUCTION CADENCE: 3 pegs in sequence, each pick + transit + insert ─────\n# Peg 1 of 3 ────────────────────────────────────────────────────────────────\ndefine_grasp_pose(\n    robot_path=\"/World/Franka\",\n    object_path=\"/World/Peg_1\",\n    approach_direction=[0, 0, -1],\n    gripper_offset=[0, 0, 0],\n)\nsetup_pick_place_controller(\n    robot_path=\"/World/Franka\",\n    target_source=\"curobo\",\n    sensor_path=\"/World/PickSensor\",\n    source_paths=[\"/World/Peg_1\"],\n    destination_path=\"/World/Bushing\",\n    drop_target=[0.0, -0.25, 0.835],\n    planning_obstacles=[\"/World/Table\", \"/World/Bushing\", \"/World/InfeedTray\"],\n    approach_height=0.12,\n    lift_height=0.12,\n phase_id=\"phase1\")\nfollow_trajectory_with_compliance(\n    trajectory=[\n        {\"pose\": {\"position\": [0.0, -0.25, 0.835], \"orientation\": [1.0, 0.0, 0.0, 0.0]}},\n        {\"pose\": {\"position\": [0.0, -0.25, 0.820], \"orientation\": [1.0, 0.0, 0.0, 0.0]}},\n        {\"pose\": {\"position\": [0.0, -0.25, 0.810], \"orientation\": [1.0, 0.0, 0.0, 0.0]}}\n    ],\n    robot_path=\"/World/Franka\",\n    compliance_handoff_at=0.33,\n    compliance_controller=\"cartesian_impedance\",\n    timeout_s=15.0,\n    velocity_scaling=0.15,\n    dry_run=True,\n)\nget_joint_torques(articulation=\"/World/Franka\")\nget_world_transform(prim_path=\"/World/Peg_1\")\n\n# Peg 2 of 3 ────────────────────────────────────────────────────────────────\ndefine_grasp_pose(\n    robot_path=\"/World/Franka\",\n    object_path=\"/World/Peg_2\",\n    approach_direction=[0, 0, -1],\n    gripper_offset=[0, 0, 0],\n)\nsetup_pick_place_controller(\n    robot_path=\"/World/Franka\",\n    target_source=\"curobo\",\n    sensor_path=\"/World/PickSensor\",\n    source_paths=[\"/World/Peg_2\"],\n    destination_path=\"/World/Bushing\",\n    drop_target=[0.0, -0.25, 0.835],\n    planning_obstacles=[\"/World/Table\", \"/World/Bushing\", \"/World/InfeedTray\"],\n    approach_height=0.12,\n    lift_height=0.12,\n phase_id=\"phase2\")\nfollow_trajectory_with_compliance(\n    trajectory=[\n        {\"pose\": {\"position\": [0.0, -0.25, 0.835], \"orientation\": [1.0, 0.0, 0.0, 0.0]}},\n        {\"pose\": {\"position\": [0.0, -0.25, 0.820], \"orientation\": [1.0, 0.0, 0.0, 0.0]}},\n        {\"pose\": {\"position\": [0.0, -0.25, 0.810], \"orientation\": [1.0, 0.0, 0.0, 0.0]}}\n    ],\n    robot_path=\"/World/Franka\",\n    compliance_handoff_at=0.33,\n    compliance_controller=\"cartesian_impedance\",\n    timeout_s=15.0,\n    velocity_scaling=0.15,\n    dry_run=True,\n)\nget_joint_torques(articulation=\"/World/Franka\")\nget_world_transform(prim_path=\"/World/Peg_2\")\n\n# Peg 3 of 3 ────────────────────────────────────────────────────────────────\ndefine_grasp_pose(\n    robot_path=\"/World/Franka\",\n    object_path=\"/World/Peg_3\",\n    approach_direction=[0, 0, -1],\n    gripper_offset=[0, 0, 0],\n)\nsetup_pick_place_controller(\n    robot_path=\"/World/Franka\",\n    target_source=\"curobo\",\n    sensor_path=\"/World/PickSensor\",\n    source_paths=[\"/World/Peg_3\"],\n    destination_path=\"/World/Bushing\",\n    drop_target=[0.0, -0.25, 0.835],\n    planning_obstacles=[\"/World/Table\", \"/World/Bushing\", \"/World/InfeedTray\"],\n    approach_height=0.12,\n    lift_height=0.12,\n phase_id=\"phase3\")\nfollow_trajectory_with_compliance(\n    trajectory=[\n        {\"pose\": {\"position\": [0.0, -0.25, 0.835], \"orientation\": [1.0, 0.0, 0.0, 0.0]}},\n        {\"pose\": {\"position\": [0.0, -0.25, 0.820], \"orientation\": [1.0, 0.0, 0.0, 0.0]}},\n        {\"pose\": {\"position\": [0.0, -0.25, 0.810], \"orientation\": [1.0, 0.0, 0.0, 0.0]}}\n    ],\n    robot_path=\"/World/Franka\",\n    compliance_handoff_at=0.33,\n    compliance_controller=\"cartesian_impedance\",\n    timeout_s=15.0,\n    velocity_scaling=0.15,\n    dry_run=True,\n)\nget_joint_torques(articulation=\"/World/Franka\")\nget_world_transform(prim_path=\"/World/Peg_3\")",
   "settle_state": {
     "pegs_seated": {
-      "/World/Peg_1": [0.0, -0.25, 0.810],
-      "/World/Peg_2": [0.0, -0.25, 0.810],
-      "/World/Peg_3": [0.0, -0.25, 0.810]
+      "/World/Peg_1": [
+        0.0,
+        -0.25,
+        0.81
+      ],
+      "/World/Peg_2": [
+        0.0,
+        -0.25,
+        0.81
+      ],
+      "/World/Peg_3": [
+        0.0,
+        -0.25,
+        0.81
+      ]
     },
     "bushing_static": {
-      "/World/Bushing": [0.0, -0.25, 0.795]
+      "/World/Bushing": [
+        0.0,
+        -0.25,
+        0.795
+      ]
     },
     "phase_sequence": [
       "install_impedance",
@@ -114,7 +130,11 @@
       "/World/InfeedTray"
     ],
     "sensor_path": "/World/PickSensor",
-    "robot_base": [0.0, 0.0, 0.75],
+    "robot_base": [
+      0.0,
+      0.0,
+      0.75
+    ],
     "peg_paths": [
       "/World/Peg_1",
       "/World/Peg_2",
@@ -177,35 +197,47 @@
   },
   "roles": {
     "primary_robot": {
-      "constraints": ["franka_panda"],
+      "constraints": [
+        "franka_panda"
+      ],
       "expected_count": 1,
       "required": true,
       "disambiguator": "torque_mode_capable"
     },
     "bushing": {
-      "constraints": ["cube"],
+      "constraints": [
+        "cube"
+      ],
       "expected_count": 1,
       "required": true,
       "disambiguator": "static_fixture_with_implied_bore"
     },
     "infeed_tray": {
-      "constraints": ["cube"],
+      "constraints": [
+        "cube"
+      ],
       "expected_count": 1,
       "required": true,
       "disambiguator": "production_cadence_pallet"
     },
     "pick_sensor": {
-      "constraints": ["proximity_sensor"],
+      "constraints": [
+        "proximity_sensor"
+      ],
       "expected_count": 1,
       "required": true
     },
     "ft_sensor": {
-      "constraints": ["force_torque_sensor"],
+      "constraints": [
+        "force_torque_sensor"
+      ],
       "expected_count": 1,
       "required": true
     },
     "workpieces": {
-      "constraints": ["cylinder"],
+      "constraints": [
+        "cylinder"
+      ],
       "min": 3,
       "max": 3,
       "unordered": false,
@@ -217,25 +249,58 @@
       "path": "/World/Franka",
       "class": "franka_panda",
       "family": "franka",
-      "position": [0, 0, 0.75],
-      "orientation": [0.7071068, 0, 0, 0.7071068]
+      "position": [
+        0,
+        0,
+        0.75
+      ],
+      "orientation": [
+        0.7071068,
+        0,
+        0,
+        0.7071068
+      ]
     },
     "bushing": {
       "path": "/World/Bushing",
-      "position": [0.0, -0.25, 0.795],
-      "scale": [0.10, 0.10, 0.04],
+      "position": [
+        0.0,
+        -0.25,
+        0.795
+      ],
+      "scale": [
+        0.1,
+        0.1,
+        0.04
+      ],
       "bore_radius_m": 0.015,
       "top_rim_z": 0.815
     },
     "infeed_tray": {
       "path": "/World/InfeedTray",
-      "position": [0.30, 0.10, 0.755],
-      "scale": [0.20, 0.15, 0.005]
+      "position": [
+        0.3,
+        0.1,
+        0.755
+      ],
+      "scale": [
+        0.2,
+        0.15,
+        0.005
+      ]
     },
     "pick_sensor": {
       "path": "/World/PickSensor",
-      "position": [0.30, 0.10, 0.815],
-      "size": [0.20, 0.15, 0.10]
+      "position": [
+        0.3,
+        0.1,
+        0.815
+      ],
+      "size": [
+        0.2,
+        0.15,
+        0.1
+      ]
     },
     "ft_sensor": {
       "path": "/World/Franka/FtSensor",
@@ -243,9 +308,42 @@
       "threshold": 20.0
     },
     "workpieces": [
-      {"path": "/World/Peg_1", "position": [0.30, 0.05, 0.7925], "radius": 0.012, "height": 0.07, "mass": 0.025, "material": "rubber"},
-      {"path": "/World/Peg_2", "position": [0.30, 0.10, 0.7925], "radius": 0.012, "height": 0.07, "mass": 0.025, "material": "rubber"},
-      {"path": "/World/Peg_3", "position": [0.30, 0.15, 0.7925], "radius": 0.012, "height": 0.07, "mass": 0.025, "material": "rubber"}
+      {
+        "path": "/World/Peg_1",
+        "position": [
+          0.3,
+          0.05,
+          0.7925
+        ],
+        "radius": 0.012,
+        "height": 0.07,
+        "mass": 0.025,
+        "material": "rubber"
+      },
+      {
+        "path": "/World/Peg_2",
+        "position": [
+          0.3,
+          0.1,
+          0.7925
+        ],
+        "radius": 0.012,
+        "height": 0.07,
+        "mass": 0.025,
+        "material": "rubber"
+      },
+      {
+        "path": "/World/Peg_3",
+        "position": [
+          0.3,
+          0.15,
+          0.7925
+        ],
+        "radius": 0.012,
+        "height": 0.07,
+        "mass": 0.025,
+        "material": "rubber"
+      }
     ],
     "insert_trajectory": {
       "compliance_controller": "cartesian_impedance",
@@ -253,12 +351,28 @@
       "velocity_scaling": 0.15,
       "timeout_s": 15.0,
       "waypoint_hover_z": 0.835,
-      "waypoint_rim_z": 0.820,
-      "waypoint_seated_z": 0.810,
-      "Kx_xyz": [300.0, 300.0, 80.0],
-      "Kr_xyz": [30.0, 30.0, 30.0],
-      "Dx_xyz": [30.0, 30.0, 10.0],
-      "Dr_xyz": [3.0, 3.0, 3.0]
+      "waypoint_rim_z": 0.82,
+      "waypoint_seated_z": 0.81,
+      "Kx_xyz": [
+        300.0,
+        300.0,
+        80.0
+      ],
+      "Kr_xyz": [
+        30.0,
+        30.0,
+        30.0
+      ],
+      "Dx_xyz": [
+        30.0,
+        30.0,
+        10.0
+      ],
+      "Dr_xyz": [
+        3.0,
+        3.0,
+        3.0
+      ]
     },
     "production_metrics": {
       "n_pegs": 3,
@@ -285,10 +399,14 @@
       ]
     }
   },
-  "code_template": "create_prim(prim_path=\"/World/DomeLight\", prim_type=\"DomeLight\")\nset_attribute(prim_path=\"/World/DomeLight\", attr_name=\"inputs:intensity\", value=1000.0)\ncreate_prim(prim_path=\"/World/Ground\", prim_type=\"Cube\", position=[0, 0, -0.5], scale=[20, 20, 1])\napply_api_schema(prim_path=\"/World/Ground\", schema_name=\"PhysicsCollisionAPI\")\nset_physics_scene_config(config={\"enable_gpu_dynamics\": False, \"broadphase_type\": \"MBP\"})\ncreate_prim(prim_path=\"/World/Table\", prim_type=\"Cube\", position=[0, 0, 0.375], scale=[1.0, 0.6, 0.375])\napply_api_schema(prim_path=\"/World/Table\", schema_name=\"PhysicsCollisionAPI\")\nrobot_wizard(robot_name={{primary_robot.class}}, dest_path={{primary_robot.path}}, position={{primary_robot.position}}, orientation={{primary_robot.orientation}})\ncreate_prim(prim_path={{bushing.path}}, prim_type=\"Cube\", position={{bushing.position}}, scale={{bushing.scale}})\napply_api_schema(prim_path={{bushing.path}}, schema_name=\"PhysicsCollisionAPI\")\ncreate_prim(prim_path={{infeed_tray.path}}, prim_type=\"Cube\", position={{infeed_tray.position}}, scale={{infeed_tray.scale}})\napply_api_schema(prim_path={{infeed_tray.path}}, schema_name=\"PhysicsCollisionAPI\")\ncreate_prim(prim_path={{workpieces[0].path}}, prim_type=\"Cylinder\", position={{workpieces[0].position}}, radius={{workpieces[0].radius}}, height={{workpieces[0].height}})\nfor api in (\"PhysicsRigidBodyAPI\", \"PhysicsCollisionAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n    apply_api_schema(prim_path={{workpieces[0].path}}, schema_name=api)\nset_attribute(prim_path={{workpieces[0].path}}, attr_name=\"physics:mass\", value={{workpieces[0].mass}})\napply_physics_material(prim_path={{workpieces[0].path}}, material_name={{workpieces[0].material}})\ncreate_prim(prim_path={{workpieces[1].path}}, prim_type=\"Cylinder\", position={{workpieces[1].position}}, radius={{workpieces[1].radius}}, height={{workpieces[1].height}})\nfor api in (\"PhysicsRigidBodyAPI\", \"PhysicsCollisionAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n    apply_api_schema(prim_path={{workpieces[1].path}}, schema_name=api)\nset_attribute(prim_path={{workpieces[1].path}}, attr_name=\"physics:mass\", value={{workpieces[1].mass}})\napply_physics_material(prim_path={{workpieces[1].path}}, material_name={{workpieces[1].material}})\ncreate_prim(prim_path={{workpieces[2].path}}, prim_type=\"Cylinder\", position={{workpieces[2].position}}, radius={{workpieces[2].radius}}, height={{workpieces[2].height}})\nfor api in (\"PhysicsRigidBodyAPI\", \"PhysicsCollisionAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n    apply_api_schema(prim_path={{workpieces[2].path}}, schema_name=api)\nset_attribute(prim_path={{workpieces[2].path}}, attr_name=\"physics:mass\", value={{workpieces[2].mass}})\napply_physics_material(prim_path={{workpieces[2].path}}, material_name={{workpieces[2].material}})\nbulk_set_attribute(prim_paths=[{{workpieces[0].path}}, {{workpieces[1].path}}, {{workpieces[2].path}}], attr=\"physxRigidBody:sleepThreshold\", value=0.0)\nbulk_set_attribute(prim_paths=[{{workpieces[0].path}}, {{workpieces[1].path}}, {{workpieces[2].path}}, {{bushing.path}}], attr=\"physxRigidBody:solverPositionIterationCount\", value=16)\nadd_force_torque_sensor(sensor_path={{ft_sensor.path}}, parent_path={{ft_sensor.parent_path}}, threshold={{ft_sensor.threshold}}, noise_std=0.05)\nadd_proximity_sensor(sensor_path={{pick_sensor.path}}, position={{pick_sensor.position}}, size={{pick_sensor.size}})\nsetup_impedance_controller(robot_path={{primary_robot.path}}, target_frame=\"panda_hand\", Kx={{insert_trajectory.Kx_xyz}}, Kr={{insert_trajectory.Kr_xyz}}, Dx={{insert_trajectory.Dx_xyz}}, Dr={{insert_trajectory.Dr_xyz}}, null_space_stiffness=0.5, null_space_damping=0.5, torque_mode=True, dry_run=True)\nset_compliance_params(robot_path={{primary_robot.path}}, stiffness_xyz={{insert_trajectory.Kx_xyz}}, damping_xyz={{insert_trajectory.Dx_xyz}}, stiffness_rot={{insert_trajectory.Kr_xyz}}, damping_rot={{insert_trajectory.Dr_xyz}}, dry_run=True)\ndefine_grasp_pose(robot_path={{primary_robot.path}}, object_path={{workpieces[0].path}}, approach_direction=[0, 0, -1], gripper_offset=[0, 0, 0])\nsetup_pick_place_controller(robot_path={{primary_robot.path}}, target_source=\"curobo\", sensor_path={{pick_sensor.path}}, source_paths=[{{workpieces[0].path}}], destination_path={{bushing.path}}, drop_target=[0.0, -0.25, {{insert_trajectory.waypoint_hover_z}}], planning_obstacles=[\"/World/Table\", {{bushing.path}}, {{infeed_tray.path}}], approach_height=0.12, lift_height=0.12)\nfollow_trajectory_with_compliance(trajectory=[{\"pose\": {\"position\": [0.0, -0.25, {{insert_trajectory.waypoint_hover_z}}], \"orientation\": [1.0, 0.0, 0.0, 0.0]}}, {\"pose\": {\"position\": [0.0, -0.25, {{insert_trajectory.waypoint_rim_z}}], \"orientation\": [1.0, 0.0, 0.0, 0.0]}}, {\"pose\": {\"position\": [0.0, -0.25, {{insert_trajectory.waypoint_seated_z}}], \"orientation\": [1.0, 0.0, 0.0, 0.0]}}], robot_path={{primary_robot.path}}, compliance_handoff_at={{insert_trajectory.compliance_handoff_at}}, compliance_controller={{insert_trajectory.compliance_controller}}, timeout_s={{insert_trajectory.timeout_s}}, velocity_scaling={{insert_trajectory.velocity_scaling}}, dry_run=True)\nget_joint_torques(articulation={{primary_robot.path}})\nget_world_transform(prim_path={{workpieces[0].path}})\ndefine_grasp_pose(robot_path={{primary_robot.path}}, object_path={{workpieces[1].path}}, approach_direction=[0, 0, -1], gripper_offset=[0, 0, 0])\nsetup_pick_place_controller(robot_path={{primary_robot.path}}, target_source=\"curobo\", sensor_path={{pick_sensor.path}}, source_paths=[{{workpieces[1].path}}], destination_path={{bushing.path}}, drop_target=[0.0, -0.25, {{insert_trajectory.waypoint_hover_z}}], planning_obstacles=[\"/World/Table\", {{bushing.path}}, {{infeed_tray.path}}], approach_height=0.12, lift_height=0.12)\nfollow_trajectory_with_compliance(trajectory=[{\"pose\": {\"position\": [0.0, -0.25, {{insert_trajectory.waypoint_hover_z}}], \"orientation\": [1.0, 0.0, 0.0, 0.0]}}, {\"pose\": {\"position\": [0.0, -0.25, {{insert_trajectory.waypoint_rim_z}}], \"orientation\": [1.0, 0.0, 0.0, 0.0]}}, {\"pose\": {\"position\": [0.0, -0.25, {{insert_trajectory.waypoint_seated_z}}], \"orientation\": [1.0, 0.0, 0.0, 0.0]}}], robot_path={{primary_robot.path}}, compliance_handoff_at={{insert_trajectory.compliance_handoff_at}}, compliance_controller={{insert_trajectory.compliance_controller}}, timeout_s={{insert_trajectory.timeout_s}}, velocity_scaling={{insert_trajectory.velocity_scaling}}, dry_run=True)\nget_joint_torques(articulation={{primary_robot.path}})\nget_world_transform(prim_path={{workpieces[1].path}})\ndefine_grasp_pose(robot_path={{primary_robot.path}}, object_path={{workpieces[2].path}}, approach_direction=[0, 0, -1], gripper_offset=[0, 0, 0])\nsetup_pick_place_controller(robot_path={{primary_robot.path}}, target_source=\"curobo\", sensor_path={{pick_sensor.path}}, source_paths=[{{workpieces[2].path}}], destination_path={{bushing.path}}, drop_target=[0.0, -0.25, {{insert_trajectory.waypoint_hover_z}}], planning_obstacles=[\"/World/Table\", {{bushing.path}}, {{infeed_tray.path}}], approach_height=0.12, lift_height=0.12)\nfollow_trajectory_with_compliance(trajectory=[{\"pose\": {\"position\": [0.0, -0.25, {{insert_trajectory.waypoint_hover_z}}], \"orientation\": [1.0, 0.0, 0.0, 0.0]}}, {\"pose\": {\"position\": [0.0, -0.25, {{insert_trajectory.waypoint_rim_z}}], \"orientation\": [1.0, 0.0, 0.0, 0.0]}}, {\"pose\": {\"position\": [0.0, -0.25, {{insert_trajectory.waypoint_seated_z}}], \"orientation\": [1.0, 0.0, 0.0, 0.0]}}], robot_path={{primary_robot.path}}, compliance_handoff_at={{insert_trajectory.compliance_handoff_at}}, compliance_controller={{insert_trajectory.compliance_controller}}, timeout_s={{insert_trajectory.timeout_s}}, velocity_scaling={{insert_trajectory.velocity_scaling}}, dry_run=True)\nget_joint_torques(articulation={{primary_robot.path}})\nget_world_transform(prim_path={{workpieces[2].path}})",
+  "code_template": "create_prim(prim_path=\"/World/DomeLight\", prim_type=\"DomeLight\")\nset_attribute(prim_path=\"/World/DomeLight\", attr_name=\"inputs:intensity\", value=1000.0)\ncreate_prim(prim_path=\"/World/Ground\", prim_type=\"Cube\", position=[0, 0, -0.5], scale=[20, 20, 1])\napply_api_schema(prim_path=\"/World/Ground\", schema_name=\"PhysicsCollisionAPI\")\nset_physics_scene_config(config={\"enable_gpu_dynamics\": False, \"broadphase_type\": \"MBP\"})\ncreate_prim(prim_path=\"/World/Table\", prim_type=\"Cube\", position=[0, 0, 0.375], scale=[1.0, 0.6, 0.375])\napply_api_schema(prim_path=\"/World/Table\", schema_name=\"PhysicsCollisionAPI\")\nrobot_wizard(robot_name={{primary_robot.class}}, dest_path={{primary_robot.path}}, position={{primary_robot.position}}, orientation={{primary_robot.orientation}})\ncreate_prim(prim_path={{bushing.path}}, prim_type=\"Cube\", position={{bushing.position}}, scale={{bushing.scale}})\napply_api_schema(prim_path={{bushing.path}}, schema_name=\"PhysicsCollisionAPI\")\ncreate_prim(prim_path={{infeed_tray.path}}, prim_type=\"Cube\", position={{infeed_tray.position}}, scale={{infeed_tray.scale}})\napply_api_schema(prim_path={{infeed_tray.path}}, schema_name=\"PhysicsCollisionAPI\")\ncreate_prim(prim_path={{workpieces[0].path}}, prim_type=\"Cylinder\", position={{workpieces[0].position}}, radius={{workpieces[0].radius}}, height={{workpieces[0].height}})\nfor api in (\"PhysicsRigidBodyAPI\", \"PhysicsCollisionAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n    apply_api_schema(prim_path={{workpieces[0].path}}, schema_name=api)\nset_attribute(prim_path={{workpieces[0].path}}, attr_name=\"physics:mass\", value={{workpieces[0].mass}})\napply_physics_material(prim_path={{workpieces[0].path}}, material_name={{workpieces[0].material}})\ncreate_prim(prim_path={{workpieces[1].path}}, prim_type=\"Cylinder\", position={{workpieces[1].position}}, radius={{workpieces[1].radius}}, height={{workpieces[1].height}})\nfor api in (\"PhysicsRigidBodyAPI\", \"PhysicsCollisionAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n    apply_api_schema(prim_path={{workpieces[1].path}}, schema_name=api)\nset_attribute(prim_path={{workpieces[1].path}}, attr_name=\"physics:mass\", value={{workpieces[1].mass}})\napply_physics_material(prim_path={{workpieces[1].path}}, material_name={{workpieces[1].material}})\ncreate_prim(prim_path={{workpieces[2].path}}, prim_type=\"Cylinder\", position={{workpieces[2].position}}, radius={{workpieces[2].radius}}, height={{workpieces[2].height}})\nfor api in (\"PhysicsRigidBodyAPI\", \"PhysicsCollisionAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n    apply_api_schema(prim_path={{workpieces[2].path}}, schema_name=api)\nset_attribute(prim_path={{workpieces[2].path}}, attr_name=\"physics:mass\", value={{workpieces[2].mass}})\napply_physics_material(prim_path={{workpieces[2].path}}, material_name={{workpieces[2].material}})\nbulk_set_attribute(prim_paths=[{{workpieces[0].path}}, {{workpieces[1].path}}, {{workpieces[2].path}}], attr=\"physxRigidBody:sleepThreshold\", value=0.0)\nbulk_set_attribute(prim_paths=[{{workpieces[0].path}}, {{workpieces[1].path}}, {{workpieces[2].path}}, {{bushing.path}}], attr=\"physxRigidBody:solverPositionIterationCount\", value=16)\nadd_force_torque_sensor(sensor_path={{ft_sensor.path}}, parent_path={{ft_sensor.parent_path}}, threshold={{ft_sensor.threshold}}, noise_std=0.05)\nadd_proximity_sensor(sensor_path={{pick_sensor.path}}, position={{pick_sensor.position}}, size={{pick_sensor.size}})\nsetup_impedance_controller(robot_path={{primary_robot.path}}, target_frame=\"panda_hand\", Kx={{insert_trajectory.Kx_xyz}}, Kr={{insert_trajectory.Kr_xyz}}, Dx={{insert_trajectory.Dx_xyz}}, Dr={{insert_trajectory.Dr_xyz}}, null_space_stiffness=0.5, null_space_damping=0.5, torque_mode=True, dry_run=True)\nset_compliance_params(robot_path={{primary_robot.path}}, stiffness_xyz={{insert_trajectory.Kx_xyz}}, damping_xyz={{insert_trajectory.Dx_xyz}}, stiffness_rot={{insert_trajectory.Kr_xyz}}, damping_rot={{insert_trajectory.Dr_xyz}}, dry_run=True)\ndefine_grasp_pose(robot_path={{primary_robot.path}}, object_path={{workpieces[0].path}}, approach_direction=[0, 0, -1], gripper_offset=[0, 0, 0])\nsetup_pick_place_controller(robot_path={{primary_robot.path}}, target_source=\"curobo\", sensor_path={{pick_sensor.path}}, source_paths=[{{workpieces[0].path}}], destination_path={{bushing.path}}, drop_target=[0.0, -0.25, {{insert_trajectory.waypoint_hover_z}}], planning_obstacles=[\"/World/Table\", {{bushing.path}}, {{infeed_tray.path}}], approach_height=0.12, lift_height=0.12, phase_id=\"phase1\")\nfollow_trajectory_with_compliance(trajectory=[{\"pose\": {\"position\": [0.0, -0.25, {{insert_trajectory.waypoint_hover_z}}], \"orientation\": [1.0, 0.0, 0.0, 0.0]}}, {\"pose\": {\"position\": [0.0, -0.25, {{insert_trajectory.waypoint_rim_z}}], \"orientation\": [1.0, 0.0, 0.0, 0.0]}}, {\"pose\": {\"position\": [0.0, -0.25, {{insert_trajectory.waypoint_seated_z}}], \"orientation\": [1.0, 0.0, 0.0, 0.0]}}], robot_path={{primary_robot.path}}, compliance_handoff_at={{insert_trajectory.compliance_handoff_at}}, compliance_controller={{insert_trajectory.compliance_controller}}, timeout_s={{insert_trajectory.timeout_s}}, velocity_scaling={{insert_trajectory.velocity_scaling}}, dry_run=True)\nget_joint_torques(articulation={{primary_robot.path}})\nget_world_transform(prim_path={{workpieces[0].path}})\ndefine_grasp_pose(robot_path={{primary_robot.path}}, object_path={{workpieces[1].path}}, approach_direction=[0, 0, -1], gripper_offset=[0, 0, 0])\nsetup_pick_place_controller(robot_path={{primary_robot.path}}, target_source=\"curobo\", sensor_path={{pick_sensor.path}}, source_paths=[{{workpieces[1].path}}], destination_path={{bushing.path}}, drop_target=[0.0, -0.25, {{insert_trajectory.waypoint_hover_z}}], planning_obstacles=[\"/World/Table\", {{bushing.path}}, {{infeed_tray.path}}], approach_height=0.12, lift_height=0.12, phase_id=\"phase2\")\nfollow_trajectory_with_compliance(trajectory=[{\"pose\": {\"position\": [0.0, -0.25, {{insert_trajectory.waypoint_hover_z}}], \"orientation\": [1.0, 0.0, 0.0, 0.0]}}, {\"pose\": {\"position\": [0.0, -0.25, {{insert_trajectory.waypoint_rim_z}}], \"orientation\": [1.0, 0.0, 0.0, 0.0]}}, {\"pose\": {\"position\": [0.0, -0.25, {{insert_trajectory.waypoint_seated_z}}], \"orientation\": [1.0, 0.0, 0.0, 0.0]}}], robot_path={{primary_robot.path}}, compliance_handoff_at={{insert_trajectory.compliance_handoff_at}}, compliance_controller={{insert_trajectory.compliance_controller}}, timeout_s={{insert_trajectory.timeout_s}}, velocity_scaling={{insert_trajectory.velocity_scaling}}, dry_run=True)\nget_joint_torques(articulation={{primary_robot.path}})\nget_world_transform(prim_path={{workpieces[1].path}})\ndefine_grasp_pose(robot_path={{primary_robot.path}}, object_path={{workpieces[2].path}}, approach_direction=[0, 0, -1], gripper_offset=[0, 0, 0])\nsetup_pick_place_controller(robot_path={{primary_robot.path}}, target_source=\"curobo\", sensor_path={{pick_sensor.path}}, source_paths=[{{workpieces[2].path}}], destination_path={{bushing.path}}, drop_target=[0.0, -0.25, {{insert_trajectory.waypoint_hover_z}}], planning_obstacles=[\"/World/Table\", {{bushing.path}}, {{infeed_tray.path}}], approach_height=0.12, lift_height=0.12, phase_id=\"phase3\")\nfollow_trajectory_with_compliance(trajectory=[{\"pose\": {\"position\": [0.0, -0.25, {{insert_trajectory.waypoint_hover_z}}], \"orientation\": [1.0, 0.0, 0.0, 0.0]}}, {\"pose\": {\"position\": [0.0, -0.25, {{insert_trajectory.waypoint_rim_z}}], \"orientation\": [1.0, 0.0, 0.0, 0.0]}}, {\"pose\": {\"position\": [0.0, -0.25, {{insert_trajectory.waypoint_seated_z}}], \"orientation\": [1.0, 0.0, 0.0, 0.0]}}], robot_path={{primary_robot.path}}, compliance_handoff_at={{insert_trajectory.compliance_handoff_at}}, compliance_controller={{insert_trajectory.compliance_controller}}, timeout_s={{insert_trajectory.timeout_s}}, velocity_scaling={{insert_trajectory.velocity_scaling}}, dry_run=True)\nget_joint_torques(articulation={{primary_robot.path}})\nget_world_transform(prim_path={{workpieces[2].path}})",
   "simulate_args_template": {
     "target_path": "{{bushing.path}}",
-    "cube_paths": ["{{workpieces[0].path}}", "{{workpieces[1].path}}", "{{workpieces[2].path}}"],
+    "cube_paths": [
+      "{{workpieces[0].path}}",
+      "{{workpieces[1].path}}",
+      "{{workpieces[2].path}}"
+    ],
     "duration_s": 240,
     "xy_tolerance": 0.01
   }
