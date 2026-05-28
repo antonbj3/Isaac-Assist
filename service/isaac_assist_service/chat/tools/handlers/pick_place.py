@@ -4282,16 +4282,13 @@ if _old is not None:
     except Exception: pass
     try: delattr(builtins, _SUB_ATTR)
     except Exception: pass
-# Stale per-robot tl-callback cleanup — match ANY phase for same robot.
-# Phases are SEQUENTIAL per template (phase1 done → phase2 starts), so killing
-# prior phase subs at new install is safe. Cross-template cleanup is the primary
-# concern: prior template's leftover subs MUST die before new template begins
-# or they fight the new controller for the same joints. (2026-05-28 regression
-# fix: phase_id commit made cleanup endswith("_TAG_PHASE") too narrow; default-
-# phase install left phase1/phase2 subs from prior template alive.)
+# Stale per-robot+phase tl-callback cleanup (narrow per-phase — broader
+# cross-phase cleanup is dangerous: killing prior-template timeline callbacks
+# corrupted brick-stacking install in R8/R9, made ctrl:phase=None worse than
+# R7's wait_sensor. Cross-template stale subs are caught by the path-validity
+# scan below at line 4325+.)
 for _a in list(vars(builtins).keys()):
-    if _a.startswith("_curobo_pp_tl_") and (
-        _a.endswith("_" + _ROBOT_TAG) or ("_" + _ROBOT_TAG + "_") in _a):
+    if _a == "_curobo_pp_tl_" + _ROBOT_TAG + "_" + _PHASE_ID:
         _s = getattr(builtins, _a, None)
         if _s:
             try: _s.unsubscribe()
