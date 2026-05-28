@@ -2630,7 +2630,7 @@ if _old is not None:
 for _a in list(vars(builtins).keys()):
     if _a.startswith(("_pick_place_", "_sensor_gated_", "_native_pp_tl_",
                        "_spline_pp_", "_diffik_pp_", "_osc_pp_", "_curobo_pp_tl_")) \
-       and _a.endswith("_" + _ROBOT_TAG + "_" + _PHASE_ID):
+       and (_a.endswith("_" + _ROBOT_TAG) or ("_" + _ROBOT_TAG + "_") in _a):
         _s = getattr(builtins, _a, None)
         if _s:
             try: _s.unsubscribe()
@@ -3315,7 +3315,7 @@ if _old is not None:
 # Cross-mode sweep — this robot + this phase only. Other robots' / phases' subs survive.
 for _a in list(vars(builtins).keys()):
     if _a.startswith(("_native_pp_", "_pick_place_", "_sensor_gated_", "_spline_pp_tl_")) \
-       and _a.endswith("_" + _ROBOT_TAG + "_" + _PHASE_ID):
+       and (_a.endswith("_" + _ROBOT_TAG) or ("_" + _ROBOT_TAG + "_") in _a):
         _s = getattr(builtins, _a, None)
         if _s:
             try: _s.unsubscribe()
@@ -4282,20 +4282,40 @@ if _old is not None:
     except Exception: pass
     try: delattr(builtins, _SUB_ATTR)
     except Exception: pass
-# Stale per-robot+phase tl-callback cleanup (keep narrow)
+# Stale per-robot tl-callback cleanup — match ANY phase for same robot.
+# Phases are SEQUENTIAL per template (phase1 done → phase2 starts), so killing
+# prior phase subs at new install is safe. Cross-template cleanup is the primary
+# concern: prior template's leftover subs MUST die before new template begins
+# or they fight the new controller for the same joints. (2026-05-28 regression
+# fix: phase_id commit made cleanup endswith("_TAG_PHASE") too narrow; default-
+# phase install left phase1/phase2 subs from prior template alive.)
 for _a in list(vars(builtins).keys()):
-    if _a == "_curobo_pp_tl_" + _ROBOT_TAG + "_" + _PHASE_ID:
+    if _a.startswith("_curobo_pp_tl_") and (
+        _a.endswith("_" + _ROBOT_TAG) or ("_" + _ROBOT_TAG + "_") in _a):
         _s = getattr(builtins, _a, None)
         if _s:
             try: _s.unsubscribe()
             except Exception: pass
         try: delattr(builtins, _a)
         except Exception: pass
-# Other-controller-flavor cleanup (different mode for same robot + same phase)
+# Other-controller-flavor cleanup — match ANY phase for same robot (same reason).
+# Substring uses bounded form "_<TAG>_" to avoid Robot vs Robot2 trap; suffix-
+# only form "_<TAG>" catches pre-phase_id legacy subs.
 for _a in list(vars(builtins).keys()):
     if _a.startswith(("_native_pp_", "_pick_place_", "_sensor_gated_",
                        "_spline_pp_", "_diffik_pp_", "_osc_pp_")) \
-       and _a.endswith("_" + _ROBOT_TAG + "_" + _PHASE_ID):
+       and (_a.endswith("_" + _ROBOT_TAG) or ("_" + _ROBOT_TAG + "_") in _a):
+        _s = getattr(builtins, _a, None)
+        if _s:
+            try: _s.unsubscribe()
+            except Exception: pass
+        try: delattr(builtins, _a)
+        except Exception: pass
+# Cross-phase same-mode cleanup: kill any other-phase curobo sub for this robot.
+# (The explicit `_old = getattr(_SUB_ATTR)` above only kills SAME phase.)
+for _a in list(vars(builtins).keys()):
+    if _a.startswith("_curobo_pp_sub_") and _a != _SUB_ATTR and (
+        _a.endswith("_" + _ROBOT_TAG) or ("_" + _ROBOT_TAG + "_") in _a):
         _s = getattr(builtins, _a, None)
         if _s:
             try: _s.unsubscribe()
@@ -5782,7 +5802,7 @@ if _old is not None:
 # Cross-mode sweep — this robot + this phase only.
 for _a in list(vars(builtins).keys()):
     if _a.startswith(("_native_pp_", "_pick_place_", "_sensor_gated_", "_spline_pp_", "_diffik_pp_tl_", "_curobo_pp_")) \
-       and _a.endswith("_" + _ROBOT_TAG + "_" + _PHASE_ID):
+       and (_a.endswith("_" + _ROBOT_TAG) or ("_" + _ROBOT_TAG + "_") in _a):
         _s = getattr(builtins, _a, None)
         if _s:
             try: _s.unsubscribe()
@@ -6322,7 +6342,7 @@ if _old is not None:
 for _a in list(vars(builtins).keys()):
     if _a.startswith(("_native_pp_", "_pick_place_", "_sensor_gated_", "_spline_pp_",
                        "_diffik_pp_", "_osc_pp_tl_", "_curobo_pp_")) \
-       and _a.endswith("_" + _ROBOT_TAG + "_" + _PHASE_ID):
+       and (_a.endswith("_" + _ROBOT_TAG) or ("_" + _ROBOT_TAG + "_") in _a):
         _s = getattr(builtins, _a, None)
         if _s:
             try: _s.unsubscribe()
