@@ -5126,12 +5126,33 @@ def _grip_close():
         try:
             from pxr import UsdPhysics as _UP_grip
             ee = stage.GetPrimAtPath(f"{{ROBOT_PATH}}/ee_link")
-            # Gate via overlap_sphere from suction_cup world position.
+            # Gate via overlap_sphere from suction tip world position.
+            # Surface_gripper handler creates /<ee_link>/SurfaceGripper, marks
+            # robot prim with isaac_assist:surface_gripper_path. Read marker
+            # first (cleaner), fall back to common sub-prim names, then ee_link
+            # itself if nothing exists.
             _gate_ok = False
             try:
-                _sc = stage.GetPrimAtPath(f"{{ROBOT_PATH}}/ee_link/suction_cup")
-                if _sc and _sc.IsValid():
-                    _scm = UsdGeom.Xformable(_sc).ComputeLocalToWorldTransform(0)
+                _sg_origin_prim = None
+                _rp = stage.GetPrimAtPath(ROBOT_PATH)
+                if _rp and _rp.IsValid():
+                    _sgm = _rp.GetAttribute("isaac_assist:surface_gripper_path")
+                    if _sgm and _sgm.IsDefined():
+                        _v = _sgm.Get()
+                        if _v:
+                            _cand = stage.GetPrimAtPath(_v)
+                            if _cand and _cand.IsValid():
+                                _sg_origin_prim = _cand
+                for _name in ("suction_cup", "SurfaceGripper"):
+                    if _sg_origin_prim is not None: break
+                    _cand = stage.GetPrimAtPath(f"{{ROBOT_PATH}}/ee_link/{{_name}}")
+                    if _cand and _cand.IsValid():
+                        _sg_origin_prim = _cand
+                if _sg_origin_prim is None:
+                    # Fall back to ee_link itself — origin is the flange center.
+                    _sg_origin_prim = stage.GetPrimAtPath(f"{{ROBOT_PATH}}/ee_link")
+                if _sg_origin_prim and _sg_origin_prim.IsValid():
+                    _scm = UsdGeom.Xformable(_sg_origin_prim).ComputeLocalToWorldTransform(0)
                     _sct = _scm.ExtractTranslation()
                     _origin = [float(_sct[0]), float(_sct[1]), float(_sct[2])]
                     _radius = 0.40  # builtin path uses 0.40 — large enough to catch cubes after partial descent
