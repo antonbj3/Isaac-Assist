@@ -104,12 +104,29 @@ _PP_OBSERVABILITY_SNIPPET = """
 # without controller-specific knowledge.
 _robot_prim = stage.GetPrimAtPath(ROBOT_PATH)
 def _ensure_attr(name, type_name, default):
-    a = _robot_prim.GetAttribute(name)
+    # 2026-05-28: re-acquire prim each call. Closure-captured _robot_prim may
+    # be a soon-expired Xform handle (Boost.Python "Accessed invalid attribute
+    # on expired Xform prim" symptom). Brick-stacking R7+ shows ctrl:phase=None
+    # despite default="wait_sensor" — _robot_prim expired between create + set.
+    p = stage.GetPrimAtPath(ROBOT_PATH)
+    if not p or not p.IsValid():
+        p = _robot_prim  # fallback
+    a = p.GetAttribute(name)
     if not a or not a.IsDefined():
-        a = _robot_prim.CreateAttribute(name, type_name)
+        a = p.CreateAttribute(name, type_name)
     try:
         if a.Get() is None: a.Set(default)
-    except Exception: pass
+    except Exception:
+        # Set failed (likely expired handle) — re-acquire + retry
+        try:
+            p2 = stage.GetPrimAtPath(ROBOT_PATH)
+            if p2 and p2.IsValid():
+                a2 = p2.GetAttribute(name)
+                if not a2 or not a2.IsDefined():
+                    a2 = p2.CreateAttribute(name, type_name)
+                a2.Set(default)
+                return a2
+        except Exception: pass
     return a
 
 _a_mode = _ensure_attr("ctrl:mode", Sdf.ValueTypeNames.String, "")
