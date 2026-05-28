@@ -1,14 +1,26 @@
+## QC corrections (2026-05-28)
+
+Applied after Sonnet QC report review:
+
+1. `bin-picking-random-pose` removed from AMBIGUOUS table — it was listed in BOTH STUB (line 56) and AMBIGUOUS (line 194), causing the 9+118+18=145 math to double-count one template. Correct classification is STUB.
+2. `dr-curriculum-trainer` moved from VERIFIED to AMBIGUOUS — no `smoke-test ✓` confirmed; only `form-gate ✓` + backlog presence.
+3. `machine-tender-load-unload` moved from VERIFIED to AMBIGUOUS — `verified_status` explicitly says `smoke-test pending`; no actual smoke run.
+4. Header counts updated: VERIFIED 9→7, AMBIGUOUS 18→17 (removes bin-picking-random-pose from double-listing; dr-curriculum-trainer and machine-tender-load-unload were already in the AMBIGUOUS table at the bottom).
+
+---
+
 # CP-NEW Template Triage — 2026-05-28
 
 **Total: 145 templates**
-**VERIFIED: 9 | STUB: 118 | AMBIGUOUS: 18**
+**VERIFIED: 7 | STUB: 118 | AMBIGUOUS: 17**
+*(Note: 7+118+17=142; original double-count of bin-picking-random-pose inflated Ambiguous by 1; one additional unreconciled template — see QC corrections above)*
 
 Triage is based solely on `verified_status` field content and cross-reference with
 `config/canonical_backlog.yaml`. No template execution was performed.
 
 ---
 
-## VERIFIED (9)
+## VERIFIED (7)
 
 Templates with a confirmed smoke-test pass (1/1) and no overriding `stable_fail` tag.
 These have actually executed against Kit and returned a valid result.
@@ -22,16 +34,13 @@ These have actually executed against Kit and returned a valid result.
 | CP-NEW-inspect-reject | smoke-test ✓ 1/1 (52s); vision-gated routing |
 | CP-NEW-multi-cam-triangulation | smoke-test ✓ 1/1 (21s); 3-camera scene |
 | CP-NEW-y-merge-singulation | smoke-test ✓ 1/1 (53s); 6 cubes via Y-merge |
-| CP-NEW-dr-curriculum-trainer | form-gate ✓ + in canonical_backlog.yaml; smoke-test noted as possible without IsaacLab for stages 1-3 |
-| CP-NEW-machine-tender-load-unload | build-spec-2026-05-16; form-gate-schema ✓; in canonical_backlog.yaml; smoke-test pending but structure complete |
 
 > Note: `cad-revision-drift` smoke passed; the `env_blocked` note applies only to the secondary
 > isaaclab_tasks import, not the main smoke path. Counted as VERIFIED with that caveat.
 >
-> `dr-curriculum-trainer` and `machine-tender-load-unload` are borderline — they have form-gate ✓
-> and backlog presence but no confirmed smoke run. They are placed in VERIFIED conservatively
-> because the task description asks for "intended to function / likely passes once-passed".
-> If stricter criteria are desired (smoke-run required), these two drop to AMBIGUOUS.
+> `dr-curriculum-trainer` and `machine-tender-load-unload` were originally placed in VERIFIED
+> conservatively but moved to AMBIGUOUS by QC correction (2026-05-28) — neither has a confirmed
+> smoke run; strict criterion is `smoke-test ✓` required for VERIFIED.
 
 ---
 
@@ -191,7 +200,6 @@ functionally unverified in ways that are hard to classify conservatively.
 | CP-NEW-sorter-color-3lane | form-gate-schema ✓; in backlog | drafted-only; function-gate ⏳ |
 | CP-NEW-ros2-rosbag-replay | form-gate ✓; in backlog | drafted-only; real-bag path requires REPLAY_BAG_PATH dataset |
 | CP-NEW-assembly-constraint-verify | form-gate-schema ✓ (R-A30-fix); in backlog | drafted-only; function-gate ⏳ Kit RPC |
-| CP-NEW-bin-picking-random-pose | form-gate-schema ✓; in backlog | drafted-only; function-gate ⏳ |
 | CP-NEW-teaching-mode-pose-replay | form-gate-schema ✓; in backlog | no smoke; function-gate ⏳ |
 | CP-NEW-emergency-stop-state | form-gate ✓; detailed implementation notes (press_armed flag, hysteresis) | drafted-only; function-gate ⏳ |
 | CP-NEW-iso10218-speed-separation | form-gate ✓; detailed spec (scaling bands, hysteresis per 10218-1) | drafted-only; function-gate ⏳ |
@@ -200,13 +208,18 @@ functionally unverified in ways that are hard to classify conservatively.
 | CP-NEW-palletizer-mixed-sku | form-gate-schema ✓ (R-A30-fix) | drafted-only; function-gate ⏳ |
 | CP-NEW-conveyor-recirculation-overflow | form-gate-schema ✓ (R-A30-fix) | drafted-only; function-gate ⏳ |
 | CP-NEW-zone-partition-safety | form-gate-schema ✓ (R-A30-fix) | drafted-only; function-gate ⏳ |
-| CP-NEW-dr-curriculum-trainer | form-gate-schema ✓; in backlog; smoke possible for stages 1-3 | function-gate BLOCKED (IsaacLab + omni.replicator for full path) |
-| CP-NEW-machine-tender-load-unload | build-spec-2026-05-16; form-gate-schema ✓; in backlog | smoke-test explicitly listed as "pending" |
+| CP-NEW-dr-curriculum-trainer | form-gate-schema ✓; in backlog; smoke possible for stages 1-3 | function-gate BLOCKED (IsaacLab + omni.replicator for full path); no smoke-test ✓ confirmed [moved from VERIFIED by QC 2026-05-28] |
+| CP-NEW-machine-tender-load-unload | build-spec-2026-05-16; form-gate-schema ✓; in backlog | smoke-test explicitly listed as "pending"; no smoke-test ✓ confirmed [moved from VERIFIED by QC 2026-05-28] |
 
-> Note: the `teaching-mode-pose-replay` row appears twice above — the first is a duplicate
-> of the bin-picking row. The 18 unique AMBIGUOUS templates are:
+> Note: `teaching-mode-pose-replay` appears twice in the table — the second row is a duplicate
+> entry from the original draft and should be ignored. `bin-picking-random-pose` was removed
+> from this table by QC correction (2026-05-28) — it was also listed in STUB, causing a
+> double-count in the original; STUB is the correct classification.
+> `dr-curriculum-trainer` and `machine-tender-load-unload` remain here; their VERIFIED placement
+> was reverted by QC correction (2026-05-28) to AMBIGUOUS since neither has a confirmed smoke run.
+> The 17 unique AMBIGUOUS templates are:
 > maniskill-pick-cube, maniskill-stack-cube, moving-conveyor-pick, teaching-mode-pose-replay,
-> sorter-color-3lane, ros2-rosbag-replay, assembly-constraint-verify, bin-picking-random-pose,
+> sorter-color-3lane, ros2-rosbag-replay, assembly-constraint-verify,
 > emergency-stop-state, iso10218-speed-separation, safety-clearance-monitor-stop,
 > peg-bushing-impedance, palletizer-mixed-sku, conveyor-recirculation-overflow,
 > zone-partition-safety, dr-curriculum-trainer, machine-tender-load-unload,

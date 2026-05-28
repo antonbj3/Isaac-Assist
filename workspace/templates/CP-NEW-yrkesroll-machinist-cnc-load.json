@@ -221,5 +221,12 @@
     "untested": ["curobo", "rmpflow"],
     "failed": {}
   },
-  "extension_notes": null
+  "extension_notes": null,
+  "_patch_history": [
+    {
+      "date": "2026-05-28",
+      "author": "QC correction pass",
+      "note": "SOC code confirmed correct: 51-4011 (Machinists). Sonnet QC report 2026-05-28-cpnew-canonical-overview.md fabricated code 51-3093 — that code does not exist in BLS/ONET and was never in this template. onet_soc field unchanged; this entry documents the confirmation."
+    }
+  ]
 }

@@ -1,3 +1,9 @@
+## QC corrections (2026-05-28)
+
+1. **Cluster 7 extends-chain corrected**: The original recommendation stated that `yrkesroll-inspector-reject-divert` extends `inspect-reject`. This is wrong. The actual `extends` field in the template JSON is `CP-NEW-yrkesroll-quality-tech-fixture-gauge` (not `inspect-reject`). The merge recommendation (inspect-reject INTO yrkesroll-inspector-reject-divert) is based on pattern overlap only, not an extends relationship. See corrected Cluster 7 section below.
+
+---
+
 # CP-NEW Template Duplicate Analysis
 **Date:** 2026-05-28  
 **Scope:** 145 CP-NEW-*.json templates  
@@ -139,9 +145,11 @@ These represent two genuine industry approaches (non-stop vs. momentary-pause) a
 
 **Why they overlap:** Same pattern (vision classify → 2-bin divert), same conveyor topology, same routing_axis=`semantic_class`, same destination_kind=`n_bins_routed`.
 
-**Differentiating intent:** `yrkesroll-inspector-reject-divert` extends the inspect-reject pattern with explicit workpiece count, semantic materials, and classifier gate tool. `inspect-reject` is the minimal-stub predecessor.
+**Differentiating intent:** `yrkesroll-inspector-reject-divert` has more workpieces (4 vs implicit ≤3), semantic materials (create_material + assign_material), and the vision classifier gate tool. `inspect-reject` is the minimal-stub predecessor.
 
-**Recommendation:** MERGE `inspect-reject` INTO `yrkesroll-inspector-reject-divert`. Note in description that it subsumes the phase9-#7 stub. Net: −1.
+**Extends-chain (corrected 2026-05-28):** The original recommendation claimed `yrkesroll-inspector-reject-divert` extends `inspect-reject`. This is **incorrect**. The actual `extends` field in the template JSON is `CP-NEW-yrkesroll-quality-tech-fixture-gauge` — the dimensional-gauge sister canonical, not the vision-inspect stub. This means `yrkesroll-inspector-reject-divert` and `inspect-reject` do NOT share a parent-child extends relationship; they are parallel pattern implementations.
+
+**Recommendation (revised):** MERGE `inspect-reject` INTO `yrkesroll-inspector-reject-divert` is still reasonable on structural overlap grounds (both implement the same 2-bin vision-classify-and-route pattern), but the premise that the merge formalises an existing extends relationship is wrong. The merge is a consolidation of parallel stubs, not a parent-into-child fold. If the distinction between `inspect-reject` (phase9 stub, no materials) and `yrkesroll-inspector-reject-divert` (full yrkesroll with materials + gate) is considered valuable for retrieval coverage, KEEP BOTH and add cross-reference. Net if merged: −1.
 
 ---
 
