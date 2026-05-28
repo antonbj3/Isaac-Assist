@@ -5117,14 +5117,51 @@ def _grip_close():
             _surface_gripper.close()
     except Exception: pass
     # UR10 fallback: schema-level suction doesn't engage with articulation-link
-    # body0. Snap a UsdPhysics.FixedJoint between ee_link and S["picked_path"]
-    # at the current relative pose. Released on _grip_open().
+    # body0. Snap a UsdPhysics.FixedJoint between ee_link and cube — but ONLY
+    # if cube is actually under suction_cup (raycast/overlap_sphere validation
+    # ported from builtin path at lines 1565-1620 per Opus RCA 2026-05-28).
+    # Without this gate, FJ snaps at long distance → cube hangs on rigid link
+    # 20-40cm offset → released far from drop pose → R12 UR10 templates fail.
     if ROBOT_FAMILY in ("ur10", "ur10e") and S.get("picked_path") and not _UR10_FJ_PATH[0]:
         try:
             from pxr import UsdPhysics as _UP_grip
             ee = stage.GetPrimAtPath(f"{{ROBOT_PATH}}/ee_link")
+            # Gate via overlap_sphere from suction_cup world position.
+            _gate_ok = False
+            try:
+                _sc = stage.GetPrimAtPath(f"{{ROBOT_PATH}}/ee_link/suction_cup")
+                if _sc and _sc.IsValid():
+                    _scm = UsdGeom.Xformable(_sc).ComputeLocalToWorldTransform(0)
+                    _sct = _scm.ExtractTranslation()
+                    _origin = [float(_sct[0]), float(_sct[1]), float(_sct[2])]
+                    _radius = 0.40  # builtin path uses 0.40 — large enough to catch cubes after partial descent
+                    _hits = []
+                    def _grip_report_fn(hit):
+                        try:
+                            p = getattr(hit, "rigid_body", None) or getattr(hit, "collision", None)
+                            if p is None and isinstance(hit, dict):
+                                p = hit.get("rigidBody") or hit.get("collision")
+                            if p is not None: _hits.append(str(p))
+                        except Exception: pass
+                        return True
+                    try:
+                        from omni.physx import get_physx_scene_query_interface as _gsqi
+                        _gsqi().overlap_sphere(_radius, _origin, _grip_report_fn, False)
+                    except Exception: pass
+                    _picked = S["picked_path"]
+                    for _h in _hits:
+                        if _h == _picked or _h.startswith(_picked + "/"):
+                            _gate_ok = True; break
+                else:
+                    # No suction_cup sub-prim — fall back to unconditional snap
+                    # (matches pre-2026-05-28 behavior; CP-NEW templates without
+                    # explicit suction_cup author still need SOME grip mechanism).
+                    _gate_ok = True
+            except Exception as _ge:
+                print(f"(curobo UR10 gate eval fail: {{_ge}} — falling back to unconditional snap)")
+                _gate_ok = True
             cube = stage.GetPrimAtPath(S["picked_path"])
-            if ee and ee.IsValid() and cube and cube.IsValid():
+            if _gate_ok and ee and ee.IsValid() and cube and cube.IsValid():
                 jp = f"{{S['picked_path']}}_curobo_ur10_fj"
                 fj = _UP_grip.FixedJoint.Define(stage, jp)
                 fj.CreateBody0Rel().SetTargets([Sdf.Path(str(ee.GetPath()))])
