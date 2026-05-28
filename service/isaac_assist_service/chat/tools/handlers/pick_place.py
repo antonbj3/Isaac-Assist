@@ -5362,8 +5362,16 @@ def _build_segments(cube_pos, drop_pos, current_q):
 
     import builtins as _bi
     # Default vhold_mode=1 enables ToolPoseCriteria.linear_motion (cuRobo native).
-    # Validated 10/10 L=0mm + deterministic via reset_seed().
-    _vmode = getattr(_bi, '_vhold_mode_test', 1)
+    # Validated 10/10 L=0mm + deterministic via reset_seed() FOR FRANKA.
+    # 2026-05-28: gate to franka-only — UR10 tool0 local +Z is the flange normal
+    # (outward, not vertical), so linear_motion(axis="z") does not constrain the
+    # world-vertical lift. Worse, R6 data shows 100% plan_pose ValueError on UR10
+    # templates with vhold enabled. Hypothesis: trajopt cost-state corruption from
+    # update_tool_pose_criteria not being applied at MotionPlanner level (only
+    # trajopt_solver level); restored value differs from build-time default →
+    # subsequent plans fail. Restoring pre-vhold behavior for UR10/G1 unblocks
+    # CP-78/79/69/70/75 patterns. G1 also disabled until per-family axis logic added.
+    _vmode = getattr(_bi, '_vhold_mode_test', 1) if ROBOT_FAMILY == "franka" else 0
     _attach_enabled = getattr(_bi, '_attach_test', False)  # disabled — broken
     _attached = False
     for idx, (goal_world, action_after, yaw_deg) in enumerate(goals):
