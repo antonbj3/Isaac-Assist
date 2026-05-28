@@ -94,3 +94,32 @@ Diagnostic suggestion (next session):
 
 Quick test (didn't run tonight): bin-picking-random-pose with just 2 cubes
 instead of 6 — does the rate of placeholder creation drop?
+
+## Update: silent create_prim failure hypothesis REFUTED (~04:11)
+
+Re-ran bin-picking-random-pose with placeholder-warning diagnostic. ZERO WARN
+lines logged → all create_prim calls succeeded.
+
+So cubes 2-6 ARE in the stage. But final_pos = parent center, support=None →
+they exist as prims but lack physics body / lack translate op.
+
+New hypothesis: apply_api_schema for PhysicsRigidBodyAPI on subsequent cubes
+might fail SILENTLY (the verify check raises RuntimeError, but observe_one
+might catch exceptions silently and continue). OR PhysX subsystem isn't fully
+synced when apply runs on 6 cubes in rapid succession.
+
+Diagnostic suggestion (next session):
+1. Add print to apply_api_schema BEFORE the verify check to see what schemas
+   are present
+2. Try sleeping 100ms between apply calls in template
+3. Or wrap each cube's apply sequence in a try/except that logs failures
+
+## End of night (~04:15)
+
+Final tally:
+- Start: 3/40 (7.5%)
+- End: 8/40 (20%) — +5 PASS, +12.5 percentage points
+- 8 commits applied during night, all revertable
+- Documentation: progress doc + investigation notes preserved
+
+Branch `refactor/2026-05-12-foundation-night-1` at `65309def` (or later).
