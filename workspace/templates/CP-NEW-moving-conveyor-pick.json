@@ -228,19 +228,19 @@
     "workpieces": [
       {
         "path": "/World/Cube_1",
-        "spawn_x": -0.8
+        "spawn_x": -0.9
       },
       {
         "path": "/World/Cube_2",
-        "spawn_x": -0.95
+        "spawn_x": -0.72
       },
       {
         "path": "/World/Cube_3",
-        "spawn_x": -1.1
+        "spawn_x": -0.54
       },
       {
         "path": "/World/Cube_4",
-        "spawn_x": -1.25
+        "spawn_x": -0.36
       }
     ]
   },
