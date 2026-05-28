@@ -4311,17 +4311,15 @@ for _a in list(vars(builtins).keys()):
             except Exception: pass
         try: delattr(builtins, _a)
         except Exception: pass
-# Cross-phase same-mode cleanup: kill any other-phase curobo sub for this robot.
-# (The explicit `_old = getattr(_SUB_ATTR)` above only kills SAME phase.)
-for _a in list(vars(builtins).keys()):
-    if _a.startswith("_curobo_pp_sub_") and _a != _SUB_ATTR and (
-        _a.endswith("_" + _ROBOT_TAG) or ("_" + _ROBOT_TAG + "_") in _a):
-        _s = getattr(builtins, _a, None)
-        if _s:
-            try: _s.unsubscribe()
-            except Exception: pass
-        try: delattr(builtins, _a)
-        except Exception: pass
+# Cross-phase same-mode cleanup: REVERTED 2026-05-28. R8 showed brick-stacking
+# went from ctrl:phase=wait_sensor (R7, install OK but stuck) to ctrl:phase=None
+# (R8, install NEVER completed) after I added aggressive cleanup that killed
+# prior template's phased subs. Suspected mechanism: unsub of stale phased sub
+# leaves Boost.Python state corrupt OR cached planner state from prior template
+# carries over to brick-stacking install and breaks something downstream.
+# Pre-phase_id cleanup loops above (lines 4292, 4304) handle cross-mode safely;
+# leaving cross-phase same-mode cleanup OUT for now. Stale phased subs will
+# self-cleanup via the reset hook (decoded-path-validity check).
 # Stale-subscription scan: subs from prior installs against deleted
 # robots still fire on each physics step and emit Boost.Python errors
 # from inside _on_step. Decode the robot path from each sub-attribute's
