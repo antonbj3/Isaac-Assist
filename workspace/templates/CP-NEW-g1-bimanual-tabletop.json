@@ -36,13 +36,14 @@
     "Bimanual coordination: cuRobo/WBC may not parallelize arms; one-arm-at-a-time fallback",
     "G1 hand frame name conventions vary (left_hand vs L_hand_link); template may need name fixup"
   ],
-  "verified_status": "build-spec-2026-05-10; build 20/21 (G1 SimReady asset missing on local Nucleus); gate stable_fail (no controller engagement without WBC stub); patched-r-a-enum-fix; env_blocked: isaaclab_envs — ActionGroupCfg not exported from isaaclab.envs in current IsaacLab build",
+  "verified_status": "build-spec-2026-05-10; build 20/21 (G1 SimReady asset missing on local Nucleus); gate stable_fail (no controller engagement without WBC stub); patched-r-a-enum-fix; env_blocked: isaaclab_envs — ActionGroupCfg not exported from isaaclab.envs in current IsaacLab build; PICK-CONTROLLER-SKIP 2026-05-28: setup_pick_place_controller has NO humanoid branch — franka/ur10/ur10e/cobotta_pro_900 only (verified in handlers/pick_place.py builtin dispatcher). Adding a pick_place call here would unconditionally raise 'unsupported robot_family'. WBC-as-pick-controller is pre-MVP (setup_whole_body_control emits ActionGroupCfg config, not a runtime callback). Function-gate intentionally remains stable_fail until a humanoid family is added to the pick_place dispatcher or a setup_humanoid_pick_place tool is authored.",
   "intent": {
     "pattern_hint": "pick_place"
   },
   "migration_deferred": {
-    "reason": "asset_blocked",
-    "details": "Requires Unitree G1 humanoid USD from Nucleus (NVIDIA robot assets); not available locally",
-    "added_date": "2026-05-15"
+    "reason": "asset_blocked_plus_controller_unsupported",
+    "details": "Two independent blockers: (1) Unitree G1 humanoid USD from Nucleus not available locally; (2) setup_pick_place_controller has no humanoid robot_family branch (only franka/ur10/ur10e/cobotta_pro_900) — verified 2026-05-28 in handlers/pick_place.py. WBC is config-only, not a pick callback. Skip pick-controller wiring until humanoid pick-place is implemented as a tool.",
+    "added_date": "2026-05-15",
+    "controller_skip_date": "2026-05-28"
   }
 }
