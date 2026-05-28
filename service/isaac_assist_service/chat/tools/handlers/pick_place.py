@@ -832,8 +832,13 @@ if _physx is None:
         "ensure the PhysX extension is loaded (omni.physx, omni.physx.flatcache)."
     )
 # Cache the subscription so repeated calls replace rather than stack.
+# Per-robot scoping: dual-arm / multi-call templates (e.g. packer-box-seal
+# calls setup_pick_place_controller twice — once for items, once for lid)
+# must NOT clobber the other robot's controller. Suffix the handle with
+# a robot-path tag so different robots get independent subscriptions.
 import builtins as _builtins
-_sub_attr = "_pick_place_controller_physx_sub"
+_ROBOT_TAG = ROBOT_PATH.replace("/", "_").strip("_")
+_sub_attr = "_pick_place_controller_physx_sub_" + _ROBOT_TAG
 _old_sub = getattr(_builtins, _sub_attr, None)
 if _old_sub is not None:
     try:
@@ -2414,8 +2419,11 @@ def _step(dt):
 # Subscribe via omni.physx directly (World.add_physics_callback hits
 # NoneType._physx_interface in exec_sync contexts where SimulationContext
 # didn't fully initialize). Same pattern as cube_tracking mode.
+# Per-robot scoping: dual-arm / multi-call templates must not clobber
+# the other robot's controller. Suffix handle with robot-path tag.
 import builtins as _builtins
-_sub_attr = "_pick_place_sensor_gated_physx_sub"
+_ROBOT_TAG = ROBOT_PATH.replace("/", "_").strip("_")
+_sub_attr = "_pick_place_sensor_gated_physx_sub_" + _ROBOT_TAG
 _old_sub = getattr(_builtins, _sub_attr, None)
 if _old_sub is not None:
     try: _old_sub.unsubscribe()
@@ -2549,8 +2557,16 @@ EE_OFFSET = np.array({_json.dumps(list(ee_offset))}, dtype=np.float32)
 EE_INIT_H_OVERRIDE = {end_effector_initial_height!r}
 EVENTS_DT = {_json.dumps(events_dt) if events_dt else 'None'}
 
-# ── Clean up any prior subscription ──────────────────────────────────
-_SUB_ATTR = "_native_pp_sub"
+# ── Clean up any prior subscription (scoped to THIS robot only) ───────
+# Per-robot scoping (2026-05-28): templates like
+# CP-NEW-yrkesroll-packer-box-seal / CP-NEW-roco-bimanual-assembly
+# call setup_pick_place_controller TWICE — once per arm. The old code
+# unsubscribed ALL _native_pp_/_pick_place_/_sensor_gated_/_spline_/
+# _diffik_/_osc_/_curobo_ handles regardless of robot, so the second
+# call killed the first robot's controller. Now: handle is suffixed
+# with _ROBOT_TAG, and cross-mode sweep is guarded by `_ROBOT_TAG in _a`.
+_ROBOT_TAG = ROBOT_PATH.replace("/", "_").strip("_")
+_SUB_ATTR = "_native_pp_sub_" + _ROBOT_TAG
 _old = getattr(builtins, _SUB_ATTR, None)
 if _old is not None:
     try: _old.unsubscribe()
@@ -2558,19 +2574,24 @@ if _old is not None:
     try: delattr(builtins, _SUB_ATTR)
     except Exception: pass
 # Also unsub any prior sensor-gated / pick-place / spline / diffik / osc / curobo / timeline callbacks
+# — but ONLY for THIS robot. Other robots' subs must survive.
 for _a in list(vars(builtins).keys()):
     if _a.startswith(("_pick_place_", "_sensor_gated_", "_native_pp_tl_",
-                       "_spline_pp_", "_diffik_pp_", "_osc_pp_", "_curobo_pp_tl_")):
+                       "_spline_pp_", "_diffik_pp_", "_osc_pp_", "_curobo_pp_tl_")) \
+       and _ROBOT_TAG in _a:
         _s = getattr(builtins, _a, None)
         if _s:
             try: _s.unsubscribe()
             except Exception: pass
         try: delattr(builtins, _a)
         except Exception: pass
-# Clear stale Scene Reset Manager hooks from prior controller installs
+# Clear stale Scene Reset Manager hooks from prior controller installs (this robot only)
 _mgr_pre = getattr(builtins, "_scene_reset_manager", None)
 if _mgr_pre is not None:
     for _hn in ("native_pp", "spline_pp", "diffik_pp", "osc_pp", "curobo_pp", "sensor_gated_pp"):
+        try: _mgr_pre.unregister(_hn + "_" + _ROBOT_TAG)
+        except Exception: pass
+        # Also clear legacy un-tagged hooks left by pre-multi-robot installs
         try: _mgr_pre.unregister(_hn)
         except Exception: pass
 
@@ -3223,15 +3244,20 @@ MUTEX_PATH = {mutex_path!r}  # Multi-robot coordination — when set, robot must
 COLOR_ROUTING = {_json.dumps(color_routing or {})}
 
 # ── Clean up any prior subscription + stale Scene Reset Manager hooks ─
-_SUB_ATTR = "_spline_pp_sub"
+# Per-robot scoping (2026-05-28): see _gen_pick_place_native for full
+# explanation. dual-arm templates need independent subs per robot.
+_ROBOT_TAG = ROBOT_PATH.replace("/", "_").strip("_")
+_SUB_ATTR = "_spline_pp_sub_" + _ROBOT_TAG
 _old = getattr(builtins, _SUB_ATTR, None)
 if _old is not None:
     try: _old.unsubscribe()
     except Exception: pass
     try: delattr(builtins, _SUB_ATTR)
     except Exception: pass
+# Cross-mode sweep — this robot only. Other robots' subs are left alone.
 for _a in list(vars(builtins).keys()):
-    if _a.startswith(("_native_pp_", "_pick_place_", "_sensor_gated_", "_spline_pp_tl_")):
+    if _a.startswith(("_native_pp_", "_pick_place_", "_sensor_gated_", "_spline_pp_tl_")) \
+       and _ROBOT_TAG in _a:
         _s = getattr(builtins, _a, None)
         if _s:
             try: _s.unsubscribe()
@@ -3239,10 +3265,12 @@ for _a in list(vars(builtins).keys()):
         try: delattr(builtins, _a)
         except Exception: pass
 # Any existing Scene Reset Manager has hooks referencing old (expired) prims.
-# Clear all known hooks so they don't fire with stale references on next Play.
+# Clear THIS robot's hooks + legacy un-tagged hooks. Other robots' tagged hooks survive.
 _mgr_pre = getattr(builtins, "_scene_reset_manager", None)
 if _mgr_pre is not None:
     for _hn in ("native_pp", "spline_pp", "sensor_gated_pp", "fixed_poses_pp", "curobo_pp", "diffik_pp", "osc_pp"):
+        try: _mgr_pre.unregister(_hn + "_" + _ROBOT_TAG)
+        except Exception: pass
         try: _mgr_pre.unregister(_hn)
         except Exception: pass
 
@@ -5571,15 +5599,19 @@ EE_OFFSET = np.array({_json.dumps(list(ee_offset))}, dtype=np.float32)
 EE_INIT_H_OVERRIDE = {end_effector_initial_height!r}
 DIFFIK_METHOD = {diffik_method!r}
 
-_SUB_ATTR = "_diffik_pp_sub"
+# Per-robot scoping (2026-05-28): see _gen_pick_place_native for explanation.
+_ROBOT_TAG = ROBOT_PATH.replace("/", "_").strip("_")
+_SUB_ATTR = "_diffik_pp_sub_" + _ROBOT_TAG
 _old = getattr(builtins, _SUB_ATTR, None)
 if _old is not None:
     try: _old.unsubscribe()
     except Exception: pass
     try: delattr(builtins, _SUB_ATTR)
     except Exception: pass
+# Cross-mode sweep — this robot only.
 for _a in list(vars(builtins).keys()):
-    if _a.startswith(("_native_pp_", "_pick_place_", "_sensor_gated_", "_spline_pp_", "_diffik_pp_tl_", "_curobo_pp_")):
+    if _a.startswith(("_native_pp_", "_pick_place_", "_sensor_gated_", "_spline_pp_", "_diffik_pp_tl_", "_curobo_pp_")) \
+       and _ROBOT_TAG in _a:
         _s = getattr(builtins, _a, None)
         if _s:
             try: _s.unsubscribe()
@@ -5589,6 +5621,8 @@ for _a in list(vars(builtins).keys()):
 _mgr_pre = getattr(builtins, "_scene_reset_manager", None)
 if _mgr_pre is not None:
     for _hn in ("native_pp", "spline_pp", "diffik_pp", "osc_pp", "curobo_pp"):
+        try: _mgr_pre.unregister(_hn + "_" + _ROBOT_TAG)
+        except Exception: pass
         try: _mgr_pre.unregister(_hn)
         except Exception: pass
 
@@ -6099,16 +6133,20 @@ DEST_PATH = {destination_path!r}
 DROP_TARGET = {_json.dumps(drop_target) if drop_target else 'None'}
 EE_OFFSET = np.array({_json.dumps(list(ee_offset))}, dtype=np.float32)
 
-_SUB_ATTR = "_osc_pp_sub"
+# Per-robot scoping (2026-05-28): see _gen_pick_place_native for explanation.
+_ROBOT_TAG = ROBOT_PATH.replace("/", "_").strip("_")
+_SUB_ATTR = "_osc_pp_sub_" + _ROBOT_TAG
 _old = getattr(builtins, _SUB_ATTR, None)
 if _old is not None:
     try: _old.unsubscribe()
     except Exception: pass
     try: delattr(builtins, _SUB_ATTR)
     except Exception: pass
+# Cross-mode sweep — this robot only.
 for _a in list(vars(builtins).keys()):
     if _a.startswith(("_native_pp_", "_pick_place_", "_sensor_gated_", "_spline_pp_",
-                       "_diffik_pp_", "_osc_pp_tl_", "_curobo_pp_")):
+                       "_diffik_pp_", "_osc_pp_tl_", "_curobo_pp_")) \
+       and _ROBOT_TAG in _a:
         _s = getattr(builtins, _a, None)
         if _s:
             try: _s.unsubscribe()
@@ -6118,6 +6156,8 @@ for _a in list(vars(builtins).keys()):
 _mgr_pre = getattr(builtins, "_scene_reset_manager", None)
 if _mgr_pre is not None:
     for _hn in ("native_pp", "spline_pp", "diffik_pp", "osc_pp", "curobo_pp"):
+        try: _mgr_pre.unregister(_hn + "_" + _ROBOT_TAG)
+        except Exception: pass
         try: _mgr_pre.unregister(_hn)
         except Exception: pass
 
