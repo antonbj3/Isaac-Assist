@@ -366,6 +366,23 @@ def _gen_setup_pick_place_controller(args: Dict) -> str:
                      "native", "spline", "curobo", "diffik", "osc"}:
         raise ValueError(f"setup_pick_place_controller: unknown target_source {mode!r}")
 
+    # 2026-05-28: empty-source-paths guard. CAT-A templates (kit-prep-vision-gate,
+    # kitting-station-6sku, etc.) silently install with source_paths=[] when vision
+    # filter eliminates all candidates or template never creates cubes. Controller
+    # then sits in wait_sensor forever → plan_calls=0 → indistinguishable from
+    # other install failures. Early-return with explicit log surfaces the cause.
+    _src = args.get("source_paths") or []
+    _has_pick_target = args.get("pick_target") or args.get("drop_target")
+    if mode in {"native", "builtin", "spline", "curobo", "diffik", "osc", "cube_tracking"} \
+            and not _src and not _has_pick_target:
+        return (
+            'print("[setup_pick_place_controller] EARLY-RETURN: source_paths=[] in mode='
+            + repr(mode) + ' robot=' + repr(args.get("robot_path", "?")) + ' — '
+            'no cubes to pick. Template did not create workpieces, vision filter removed '
+            'all candidates, or solve_ik returned no valid IK seeds. Check template '
+            'code_template for cube create_prim ordering or vision/IK gate filtering.")'
+        )
+
     robot_path = args["robot_path"]
     ee_link = args.get("end_effector_link", "panda_hand")
     fj1 = args.get("gripper_joint_1", "panda_finger_joint1")
