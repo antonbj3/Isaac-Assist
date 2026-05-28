@@ -612,6 +612,124 @@ async def _handle_add_vision_classifier_gate(args: Dict) -> Dict:
     if not class_labels:
         return {"success": False, "type": "error", "error": "class_labels is required (list of expected class names)"}
 
+    # FAST PATH: if class_labels look color-shaped (e.g. "red cube", "blue cube"),
+    # read each cube's bound material's diffuseColor directly from USD instead of
+    # round-tripping through the VLM. Deterministic, no API quota, no GPU.
+    # Falls back to vision path if labels don't look color-coded or if any cube
+    # has no bound material.
+    _CANON_COLORS = {
+        "red":    (1.0, 0.0, 0.0),
+        "green":  (0.0, 1.0, 0.0),
+        "blue":   (0.0, 0.0, 1.0),
+        "yellow": (1.0, 1.0, 0.0),
+        "cyan":   (0.0, 1.0, 1.0),
+        "magenta":(1.0, 0.0, 1.0),
+        "white":  (1.0, 1.0, 1.0),
+        "black":  (0.0, 0.0, 0.0),
+        "orange": (1.0, 0.5, 0.0),
+        "purple": (0.5, 0.0, 0.5),
+    }
+    _label_tokens = []
+    for lbl in class_labels:
+        _tok = (lbl or "").lower().replace(" cube", "").replace(" box", "").strip()
+        if _tok in _CANON_COLORS:
+            _label_tokens.append((_tok, lbl))
+    _color_shaped = len(_label_tokens) == len(class_labels) and _label_tokens
+    if _color_shaped:
+        from .. import kit_tools as _kt
+        introspect_code = f"""
+import omni.usd, json
+from pxr import Usd, UsdShade
+stage = omni.usd.get_context().get_stage()
+out = {{}}
+for cp in {cube_paths!r}:
+    p = stage.GetPrimAtPath(cp)
+    if not (p and p.IsValid()):
+        continue
+    mb = UsdShade.MaterialBindingAPI(p)
+    rel = mb.GetDirectBindingRel()
+    color = None
+    if rel and rel.GetTargets():
+        for mp in rel.GetTargets():
+            m = stage.GetPrimAtPath(mp)
+            if not (m and m.IsValid()): continue
+            # Walk shader: material.outputs:surface -> shader.inputs:diffuse_color
+            mat = UsdShade.Material(m)
+            surf_out = mat.GetSurfaceOutput()
+            if surf_out and surf_out.HasConnectedSource():
+                src = surf_out.GetConnectedSources()[0]
+                if src:
+                    shader_prim = stage.GetPrimAtPath(src[0].source.GetPath())
+                    if shader_prim and shader_prim.IsValid():
+                        sh = UsdShade.Shader(shader_prim)
+                        # Try common color input names
+                        for inp_name in ("diffuse_color", "diffuseColor", "diffuse_color_constant", "baseColor", "base_color"):
+                            inp = sh.GetInput(inp_name)
+                            if inp:
+                                val = inp.Get()
+                                if val is not None:
+                                    try:
+                                        color = [float(val[0]), float(val[1]), float(val[2])]
+                                    except Exception:
+                                        pass
+                                    if color: break
+            if color: break
+    out[cp] = color
+print("COLOR_INTROSPECT_BEGIN", json.dumps(out), "COLOR_INTROSPECT_END")
+"""
+        try:
+            r = await _kt.exec_sync(introspect_code, timeout=15)
+            _out_lines = (r.get("output") or "").splitlines()
+            _color_data = {}
+            for _ln in _out_lines:
+                if "COLOR_INTROSPECT_BEGIN" in _ln and "COLOR_INTROSPECT_END" in _ln:
+                    import json as _j
+                    _start = _ln.index("COLOR_INTROSPECT_BEGIN") + len("COLOR_INTROSPECT_BEGIN")
+                    _end = _ln.index("COLOR_INTROSPECT_END")
+                    _color_data = _j.loads(_ln[_start:_end].strip())
+                    break
+            # Resolve each cube to nearest canonical color from class_labels
+            _cube_to_class = {}
+            _all_have_color = True
+            for cp in cube_paths:
+                rgb = _color_data.get(cp)
+                if rgb is None or not isinstance(rgb, (list, tuple)) or len(rgb) < 3:
+                    _all_have_color = False
+                    break
+                # Nearest color among label tokens
+                best_lbl = None
+                best_d2 = float("inf")
+                for tok, lbl in _label_tokens:
+                    cr, cg, cb = _CANON_COLORS[tok]
+                    d2 = (rgb[0]-cr)**2 + (rgb[1]-cg)**2 + (rgb[2]-cb)**2
+                    if d2 < best_d2:
+                        best_d2 = d2
+                        best_lbl = lbl
+                _cube_to_class[cp] = best_lbl
+            if _all_have_color and _cube_to_class:
+                # Build destination map
+                _cube_to_dest = {}
+                if destination_map:
+                    for cube, lbl in _cube_to_class.items():
+                        dest = destination_map.get(lbl)
+                        if dest is None:
+                            for k, v in destination_map.items():
+                                if k.lower() in lbl.lower() or lbl.lower() in k.lower():
+                                    dest = v; break
+                        if dest:
+                            _cube_to_dest[cube] = dest
+                print(f"add_vision_classifier_gate: USD-color introspection succeeded for {len(_cube_to_class)} cubes — bypassed VLM")
+                return {
+                    "success": True,
+                    "cube_to_class": _cube_to_class,
+                    "cube_to_destination": _cube_to_dest,
+                    "unmatched_cubes": [],
+                    "raw_detections": [],
+                    "model": "usd-color-introspection",
+                }
+        except Exception as _e:
+            print(f"add_vision_classifier_gate: USD-color introspection failed ({type(_e).__name__}: {_e}), falling back to VLM")
+
     # Optionally set viewport to the requested camera before capture.
     if camera_path:
         try:
