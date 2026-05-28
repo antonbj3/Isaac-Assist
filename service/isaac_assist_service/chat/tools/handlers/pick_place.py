@@ -4574,10 +4574,13 @@ _ROBOT_NAME = f"curobo_pp_{{ROBOT_FAMILY}}_" + _ROBOT_TAG + "_" + _PHASE_ID
 # create_gripper(suction) on a separate prim path. _grip_open/_grip_close
 # fall through to a no-op (hasattr(franka, "gripper") guard).
 franka = _RobotWrapper(prim_path=ROBOT_PATH, name=_ROBOT_NAME)
-# world.scene.add can throw if a stale wrapper from a prior run already
-# claimed _ROBOT_NAME. We use the local `franka` instance regardless —
-# cuRobo planning doesn't need scene registration. Falling through to
-# get_object would surface the stale (potentially broken) wrapper.
+# 2026-05-28: pre-remove stale wrapper before add. Without this, a prior
+# template's wrapper persists in World.scene under same name, our add()
+# soft-fails, and franka.get_world_pose() may return stale wrapper's pose
+# (identity quat for prior identity-rotation template) — corrupts downstream
+# _DOWN_Q_BASE for rotated-base templates like brick-stacking.
+try: world.scene.remove(_ROBOT_NAME, registry_only=False)
+except Exception: pass
 try: world.scene.add(franka)
 except Exception as _se:
     print(f"(curobo: world.scene.add soft-fail (using fresh wrapper): {{_se}})")
