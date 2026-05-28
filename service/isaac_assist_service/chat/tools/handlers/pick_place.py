@@ -4625,19 +4625,27 @@ except Exception as _sge:
 
 for _ in range(20): _app.update()
 
-# Sync USD pose
+# Sync USD pose. CRITICAL: USD-based extraction MUST succeed first; if it errors
+# we cannot fall back to identity (downstream _DOWN_Q_BASE + _world_to_base use
+# _usd_quat to transform world targets into base frame — wrong quat = trajectory
+# planned in wrong frame = 90° off for rotated-base templates like brick-stacking).
+# Bug 2026-05-28: when franka.get_world_pose() raises (stale wrapper from prior
+# template whose World.scene.add silently kept the old entry), the broad except
+# wiped _usd_quat to identity, breaking ALL rotated-base Franka templates after
+# any prior template.
+_robot_xf0 = UsdGeom.Xformable(stage.GetPrimAtPath(ROBOT_PATH))
+_mtx0 = _robot_xf0.ComputeLocalToWorldTransform(0)
+_usd_pos = np.array([float(_mtx0.ExtractTranslation()[i]) for i in range(3)], dtype=np.float32)
+_usd_q = _mtx0.ExtractRotationQuat()
+_usd_quat = np.array([float(_usd_q.GetReal())] +
+                     [float(_usd_q.GetImaginary()[i]) for i in range(3)], dtype=np.float32)
 try:
-    _robot_xf0 = UsdGeom.Xformable(stage.GetPrimAtPath(ROBOT_PATH))
-    _mtx0 = _robot_xf0.ComputeLocalToWorldTransform(0)
-    _usd_pos = np.array([float(_mtx0.ExtractTranslation()[i]) for i in range(3)], dtype=np.float32)
-    _usd_q = _mtx0.ExtractRotationQuat()
-    _usd_quat = np.array([float(_usd_q.GetReal())] +
-                         [float(_usd_q.GetImaginary()[i]) for i in range(3)], dtype=np.float32)
     _phys_pos, _phys_quat = franka.get_world_pose()
     if (float(np.linalg.norm(_usd_pos - np.asarray(_phys_pos, dtype=np.float32))) > 1e-3 or
             float(np.linalg.norm(_usd_quat - np.asarray(_phys_quat, dtype=np.float32))) > 1e-3):
         franka.set_world_pose(position=_usd_pos, orientation=_usd_quat)
-except Exception: _usd_pos, _usd_quat = np.zeros(3), np.array([1,0,0,0])
+except Exception as _pe:
+    print(f"(curobo: franka.get_world_pose soft-fail (USD-derived pose retained): {{_pe}})")
 
 if ROBOT_FAMILY == "franka":
     _HOME_Q = np.array([0.0, -0.785, 0.0, -2.356, 0.0, 1.571, 0.785, 0.04, 0.04], dtype=np.float32)
