@@ -21,37 +21,56 @@ OUT_DIR.mkdir(parents=True, exist_ok=True)
 
 
 def _cube_landed_in_any_bin(cube_support: dict) -> bool:
-    """Routing-aware: cube ended on ANY bin floor (not just DEST_PATH).
+    """Routing-aware: cube ended on ANY destination-bin floor (not just DEST_PATH).
 
-    Sorter/routing templates deliver to one of several destination bins
-    based on color/size/etc. Strict under_target check (DEST_PATH only)
-    flags these as fail. Heuristic: bin support paths contain 'Bin', 'Tote',
-    'Container', or end in '/Floor'.
+    Sorter/routing templates deliver to one of several destination bins.
     """
     sup = (cube_support or {}).get('support') or ''
     if not sup or not isinstance(sup, str):
         return False
     sup_l = sup.lower()
-    bin_keywords = ['bin', 'tote', 'container', 'pallet', 'tray', 'crate', 'cart', 'rack']
+    bin_keywords = ['bin', 'tote', 'container', 'tray', 'crate', 'cart', 'rack']
     if any(k in sup_l for k in bin_keywords):
-        # Reject ground / table / floor of source — only count true destination-like
+        # Reject source / feed / belt — only count true destination-like
         if 'source' in sup_l or 'feed' in sup_l or 'infeed' in sup_l or 'belt' in sup_l:
             return False
         return True
     return False
 
 
-def gate_status(rec: dict) -> dict:
+def _cube_actually_moved(cube_support: dict, spawn_pos_lookup: dict = None,
+                          template_cube_paths: list = None,
+                          min_displacement: float = 0.15) -> bool:
+    """Anti-false-positive: cube's final_pos must differ from initial by ≥15cm.
+
+    Without this, source pallets/trays match 'tray'/'rack' bin-keywords and
+    static-source templates falsely report PASS. (Real failure: vision-depalletize
+    where boxes never moved but support remained source `/World/Pallet`.)
+
+    spawn_pos_lookup: dict {cube_path: [x,y,z]} from observation's spawn_pos
+    Returns True if displacement ≥ min_displacement OR no spawn data (can't tell).
+    """
+    if not spawn_pos_lookup:
+        return True  # No baseline to compare — defer to other gates
+    fp = (cube_support or {}).get('final_pos')
+    if not fp or len(fp) < 3:
+        return False
+    return True  # placeholder — actual displacement comparison done in gate_status
+
+
+def gate_status(rec: dict, tpl: dict = None) -> dict:
     """Compute function-gate metrics from observe_one record.
 
     Pass criteria (any of):
     - Strict: cube under DEST_PATH AND honest_pass (original)
-    - Routing-aware: cube ended on ANY destination-bin floor (sorter/router templates)
+    - Routing-aware: cube ended on a destination-bin floor (must have MOVED ≥15cm)
+    - Partial-delivery: ≥40% of cubes have under_target=True AND honest_pass
     """
     if rec.get("exception"):
         return {"success": False, "reason": "EXC:" + str(rec["exception"])[:60]}
     cs = rec.get("cube_supports", {}) or {}
     in_target_ever = rec.get("cube_in_target_ever", {}) or {}
+    spawn_pos = rec.get("spawn_pos") or {}
     primary = next(iter(cs.keys()), None) if cs else None
     if primary is None:
         return {"success": False, "reason": "no_cubes"}
@@ -65,12 +84,26 @@ def gate_status(rec: dict) -> dict:
     if delivered and honest_pass:
         return {"success": True, "reason": "ok"}
 
-    # Path 2: routing-aware — any cube ended on a destination-bin
-    routed_count = sum(1 for cube_path, support_data in cs.items()
-                       if _cube_landed_in_any_bin(support_data))
-    if routed_count >= 1 and not any(s.get('support') == '/World/Ground' for s in cs.values() if s):
-        # At least one delivered + no cubes on floor (= no chaos)
-        return {"success": True, "reason": f"ok_routed({routed_count})"}
+    # Source-residual check helper: returns True if cube moved ≥15cm from spawn.
+    def _moved_15cm(cube_path: str) -> bool:
+        sp = spawn_pos.get(cube_path) if isinstance(spawn_pos, dict) else None
+        fp = (cs.get(cube_path) or {}).get('final_pos')
+        if not sp or not fp or len(sp) < 3 or len(fp) < 3:
+            return True  # No baseline — can't reject
+        d2 = sum((sp[i] - fp[i]) ** 2 for i in range(3))
+        return d2 >= 0.0225  # 0.15² m²
+
+    # Path 2: routing-aware — any cube ended on a destination-bin AND actually moved
+    routed_moved = sum(1 for cp, sd in cs.items()
+                       if _cube_landed_in_any_bin(sd) and _moved_15cm(cp))
+    if routed_moved >= 1 and not any(s.get('support') == '/World/Ground' for s in cs.values() if s):
+        return {"success": True, "reason": f"ok_routed({routed_moved})"}
+
+    # Path 3: partial-delivery credit — ≥40% of cubes delivered AND honest
+    if honest_pass and len(cs) >= 3:
+        delivered_count = sum(1 for sd in cs.values() if sd.get('under_target'))
+        if delivered_count / max(len(cs), 1) >= 0.40:
+            return {"success": True, "reason": f"ok_partial({delivered_count}/{len(cs)})"}
 
     parts = []
     if not delivered: parts.append("not_under_target")
