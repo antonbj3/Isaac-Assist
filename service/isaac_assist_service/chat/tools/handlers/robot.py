@@ -6312,14 +6312,27 @@ if sg_prim and sg_prim.IsValid():
             # author purpose=render + collisionEnabled=False over it so it can never fight the D6 grip. Franka excluded
             # via _has_parallel_jaw -> the 37 Franka passes + grip-FJ=0 are byte-identical.
             try:
-                # 2026-06-03 v3: the full NVIDIA gripper (0.1585 long) STICKS UP 15cm past the wrist because the grip-point
-                # (cone) sits AT the flange (ee-0.005), not 15cm out like a real gripper (probe: gripper meshes worldZ
-                # 0.798-0.963 vs ee_link 0.811). The real extended gripper needs a deeper rig change (move the grip-point out)
-                # that also wouldn't fix the telepathy. For now keep the simple Cylinder cone VISIBLE = a connected cup at the
-                # flange (no float, no stick-up, no disc/shadow lag). Real-gripper-mesh + extended-grip-point = backlog.
+                # 2026-06-03 v4 CUP RENDER (Anton GUI: "ingen mellandel renderas, det längst ner ser pyttelitet").
+                # The cone (r=0.0125,h=0.01) is the SOLE physics body + SG raycast origin (KEEP it visible), but at
+                # runtime it tracks 8cm BELOW the flange (ee-_SG_TOOL_L) -> an empty 8cm "mellandel" + a tiny bare cone.
+                # Add TWO render-only CHILDREN of the cone (visible since the cone is visible; default purpose; NO
+                # CollisionAPI/RigidBodyAPI -> NOT in the PhysX scene -> cannot block the SG raycast or fight the D6
+                # grip, ZERO physics change). Franka excluded via _has_parallel_jaw -> 37 passes byte-identical. No
+                # material/light/shadow authored (the earlier lag was the heavy NVIDIA gripper mesh + disc shadow,
+                # NOT lightweight primitives). The wide cup pad (r=0.024) covers the tiny cone in the view.
                 _UG.Imageable(_cp).MakeVisible()
+                # gripper SHAFT — fills the 8cm mellandel from the cone up to the flange (cone-local +Z 0.005..0.08).
+                _shaft = stage.DefinePrim(_S.Path(_cone + "/VisShaft"), "Cylinder")
+                _shg = _UG.Cylinder(_shaft); _shg.GetRadiusAttr().Set(0.016); _shg.GetHeightAttr().Set(0.075); _shg.GetAxisAttr().Set("Z")
+                _UG.Xformable(_shaft).AddTranslateOp().Set(_G.Vec3d(0.0, 0.0, 0.0425))
+                # suction CUP pad at the cone tip — wide (r=0.024 ~ the 5cm cube) flat pad = an unmistakable suction cup.
+                _cup = stage.DefinePrim(_S.Path(_cone + "/VisCup"), "Cylinder")
+                _cug = _UG.Cylinder(_cup); _cug.GetRadiusAttr().Set(0.024); _cug.GetHeightAttr().Set(0.012); _cug.GetAxisAttr().Set("Z")
+                _UG.Xformable(_cup).AddTranslateOp().Set(_G.Vec3d(0.0, 0.0, -0.001))
             except Exception as _cupe:
-                print("(surface_gripper: visual-cup reference soft-fail (kept Cylinder render): " + str(_cupe) + ")")
+                print("(surface_gripper: visual-cup render-children soft-fail (kept bare cone): " + str(_cupe) + ")")
+                try: _UG.Imageable(_cp).MakeVisible()
+                except Exception: pass
             # Mount: cone --FixedJoint(ENABLED)--> follower (gripper STRUCTURE, NOT an EE<->cube grip-FJ)
             _mnt = stage.DefinePrim(_S.Path(_cone + "/Mount"), "PhysicsFixedJoint")
             _mnt.CreateRelationship("physics:body0").SetTargets([_S.Path(_follower)])

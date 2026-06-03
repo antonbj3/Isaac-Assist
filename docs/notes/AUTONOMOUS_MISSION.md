@@ -1,3 +1,34 @@
+# 🟢 ACTIVE (2026-06-03 ~22:45) — UR10 SUCTION QUALITY fix-set (telepathy + soft-place + cup-render) — cron mission, deadline 06-04 12:00
+Post-crash, Anton's GUI: UR10 "kastar runt kuberna, planeringsfel, ingen mellandel renderas, pyttelitet, telepati" — FIX UR10 AT THE ROOT.
+DIAGNOSTIC-FIRST: added cone-tracking to scene_timeseries (EE col = _SGCone). DECISIVE finding: cube rides the cone at a CONSTANT 51mm gap
+-> NOT a grip explosion; the "fling to 1.5" is the TOOL PATH. Velocity-scaling ruled OUT (no effect on peak). Full RCA + fixes in
+function_gate_ledger.md (2026-06-03 ~22:30 entry). FIXES landed (uncommitted; all suction-gated -> Franka 37 byte-identical, grip-FJ=0):
+  1. TELEPATHY: grasp pz offset 0.045->0.026 -> gap 51mm->30mm (cube flush at cup).
+  2. SOFT-PLACE/anti-topple: self-calibrating virtual TOOL-EXTEND telescopes the cup down to ~3cm above the bin FLOOR (dest-bbox) before
+     release. CP-70: impact_vz -1.32->-0.36, tilt 90°(TOPPLED)->4°(OK).
+  3. CUP RENDER: render-only SHAFT (fills the 8cm mellandel, stretches through the telescope) + wide suction PAD (replaces tiny cone).
+  4. drop_yaw=0 for suction (axisymmetric cup, faithful); follower clamp 0.15->0.04 (gentler tracking).
+CP-70 VERIFIED fresh-Kit: OK, seated, err 0.0, gap 29.7mm, impact_vz -0.36, tilt 4°. Backups: /tmp/{pick_place,robot}.py.pre_*.
+IN FLIGHT: verify_ur10_fixset.sh (fresh-Kit-each) = UR10 cluster CP-69/82/75/79/86 (must still deliver upright) + Franka CP-01/41/13/22
+(must be byte-identical). On clean -> COMMIT. REMAINING (NOT a regression, cube delivers through it, gate passes): the transit SWING (z~1.5)
+= cuRobo 6-DOF IK-branch reconfiguration at the near bin; baseline behavior. Real fix = move bin farther (ANTON'S CALL) or cuRobo IK-seed
+work (risky vs the 6 deliveries) — NOT attempted unilaterally. Optional next: height-ceiling collision-plane experiment, or mild velscale.
+
+# ✅ SESSION OUTCOME (2026-06-03 ~20:10) — UR10 cluster: 6 deliver + reliability fixed; tip b5c2ccba
+The 2026-06-03 afternoon/evening arc (read full detail in function_gate_ledger.md 16:20→20:00 + GUI_REVIEW3_FEEDBACK):
+1. CORRUPT WARP CACHE found+cleared (was poisoning the whole UR10 "deep reach" picture) -> CP-69 delivered for free.
+2. reset_seed() (UR10-gated, pick_place ~5089) = THE fix for the UR10 "Kit-session degradation" (clean 1st run, fling/spin on
+   repeat = cuRobo SEED-DRIFT). VERIFIED CP-69 x5 in one session all deliver. UR10 now RELIABLE EVERY CYCLE. Commit c4990f6b.
+3. builtin->curobo conversion = THE fix for the never-pick UR10s (builtin PickPlaceController can't grip the faithful UR10 SurfaceGripper;
+   only passed before via the banned raycast->FJ workaround). CP-75/79/86 VERIFIED deliver. CP-80/84/85 converted+build but don't deliver
+   (deep conveyor-pick / can't-grade-metadata) = deferred. Commits a1cf7acc, b5c2ccba.
+VERIFIED UR10 DELIVER: CP-70/69/82/75/79/86 (6). Franka 37 intact, grip-FJ=0.
+UR10 QUALITY (Anton GUI) = DEEP/DEFERRED, Anton's-call: (a) collision-brush (6-DOF must fold low for the near 0.64m bin; collar didn't
+beat the sphere-plan-vs-real-mesh; cube delivers err 1mm anyway) -> lever: move bin farther OR bias IK elbow-up. (b) real cup mesh sticks
+15cm past the wrist (grip-point at flange not extended) -> reverted to connected cylinder; real gripper needs extended-grip-point rig change.
+(c) telepathy (cube ~5cm below cup = SG grab-offset) = open SG-research item. NEXT: dual-Franka (theme 2; OOB-fix CONFIRMED no-op on clean
+cache; real issue = FrankaB grasp fails after descending = deep shared-planner) OR other clusters.
+
 # 🔑 ROOT-CAUSE: corrupt Warp cache poisoned the WHOLE failure picture (2026-06-03 ~16:30) — Anton: go for 100%, drop "low-risk"
 Anton (2026-06-03 ~16:10): "Glöm low-risk, vi ska nå 100% function gate på alla templates innan vi utökar. git commit är säkerhet."
 => Made checkpoint commit 81f5f725 (whole multi-day session was UNCOMMITTED). Then diagnostic-first found the live Kit's launch log

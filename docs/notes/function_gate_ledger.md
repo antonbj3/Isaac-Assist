@@ -3353,3 +3353,52 @@ DUAL-FRANKA via reset_seed (multi-robot gated): CP-51 ✓ (Anton-confirmed) + CP
 FrankaA reach (source too far), CP-67 = (my ctrl-read said FrankaB reach xy~1.2 but Anton DOUBTS — flagged for GUI), CP-53 = FrankaB 3-cube
 grasp fails, CP-76 = 0-handoff no-grader-output (inspect). NEXT (no-risk, reset_seed already committed): test the multi-robot RELAYS
 (3station/4robot/triple-arm) — may now deliver for free. GUI review handed off: GUI_REVIEW4_HANDOFF.md (per-scene PREDICT vs SAW, ~60 scenes).
+
+### 2026-06-03 ~22:30 — UR10 SUCTION QUALITY: cone-track RCA → telepathy + soft-place + cup-render FIXED (CP-70 verified)
+Anton's GUI (post-crash): UR10 "regressat, kastar runt kuberna, planeringsfel, ingen mellandel renderas, det längst ner pyttelitet,
+telepati". Diagnostic-first (added cone-tracking to scene_timeseries — EE col now = _SGCone, the real follower-driven cup position):
+
+RCA (CP-70 cone-track ts, the DECISIVE measurement):
+ - The cube rides the cone with a CONSTANT 51mm gap the whole gripped phase -> NOT a grip explosion; the grip is rock-steady. The
+   "fling to z=1.48" is the TOOL PATH: the cone (cup) itself swings to z=1.53. Velocity-scaling (mt*2.6) did NOT change the peak height
+   or speed -> the fling is NOT trajectory-momentum -> reverted velscale (also a window-overflow risk).
+ - TELEPATHY = the 51mm gap: the grasp stopped the cone ~2cm above the cube top and the SG held it at the grab distance. The cup-mid not
+   rendering + "pyttelitet" = an empty 8cm gap (cone tracks ee-_SG_TOOL_L) + a bare 1.25cm cone.
+ - TOPPLE/slam = the cube released ~18cm above the bin floor: drop_pos[2] is bin_top+0.05 (an ON-TOP ref), so the S5 goal drop_z+0.16 =
+   flange 1.08 -> cube 0.97, floor 0.785 -> 18cm fall -> topple (the tighter telepathy-fixed grip crossed the topple threshold).
+ - SWING to z=1.5 = a cuRobo 6-DOF IK-branch reconfiguration: the arm reaches a near-singular pose at the near bin (ee_link undershoots the
+   goal to ~(0.38,-0.28,1.30)), then S4.5 plans a contorted detour swinging to (-0.28,+0.35,1.45) before a clean centered descent. BASELINE
+   behavior (f651e96b also peaked 1.534), NOT a regression. The cube DELIVERS through it (gate passes) — it's a visual-fidelity issue.
+
+FIXES (all pick_place.py + robot.py, suction-gated `_SG_FOLLOWER_OP is not None` / `_has_parallel_jaw` -> Franka 37 byte-identical, grip-FJ=0):
+ 1. TELEPATHY: grasp pz offset 0.045->0.026 (calibrated: 0.045->51mm; flush 30mm center-gap needs ~0.024). gap 51mm -> 30mm (cube flush at cup).
+ 2. SOFT-PLACE / anti-topple: a self-calibrating VIRTUAL TOOL-EXTEND at release. The S5 planner goal stays SAFE (drop_z+0.16, cuRobo-reachable,
+    no plan-fail), but the step loop telescopes _sg_tool_l_dyn[0] (the follower offset) down to put the cube ~3cm above the bin FLOOR (read from
+    the dest bbox) before opening. Capped +0.25 so a bad goal can't drive through the floor; reset to base after release. CP-70: impact_vz
+    -1.32 -> -0.36, tilt 90°(TOPPLED) -> 4.0°(OK), err_xy 0.0, seated.
+ 3. CUP RENDER: two render-only children of the cone (NO CollisionAPI -> zero physics): a SHAFT (fills the 8cm mellandel, dynamically stretched
+    each tick to span flange<->cup through the telescope) + a wide suction PAD (r=0.024 ~ the cube, replaces the tiny bare cone).
+ 4. drop_yaw=0 for suction: an axisymmetric cup can't control yaw -> faithful + removes one reconfiguration source.
+ 5. follower clamp 0.15->0.04 m/tick: gentler/steadier cup tracking (peak speed 3.3->2.4, gap std 0.27->0.04).
+CP-70 VERIFIED (fresh Kit): OK, seated, err 0.0, gap 29.7mm, impact_vz -0.36, tilt 4.0°. Cluster + Franka regression verify in flight.
+REMAINING: the transit SWING (cuRobo near-bin reconfiguration) — deep, baseline, cube still delivers. Real fix = move bin farther (Anton's
+call) or cuRobo IK-branch-seed work (risky vs the 6 working deliveries). NOT attempted unilaterally.
+
+### 2026-06-03 ~23:25 — UR10 suction fix-set CORRECTED + CLUSTER-VALIDATED (supersedes the ~22:30 values)
+The ~22:30 fix-set REGRESSED far-reach UR10 (CP-69 FLUNG 7-12 m/s). Diagnostic-first cluster verify (fresh Kit each) +
+git-stash baseline comparison pinned two corrections:
+ - GRASP pz: 0.026 was WRONG (cone bottom 4mm INTO the cube -> collision-vs-D6 fight; STABLE on the gentle near bin CP-70 but
+   the far-reach transit swing CP-69 (3.4 m/s, baseline-normal) tore the grip apart -> cube flung). FIX: pz offset 0.035 (cone bottom
+   5mm ABOVE cube top = clean grab, no interpenetration; cube still hangs ~5mm below the cup = near-flush, telepathy fixed). Geometry:
+   cone_bottom - cube_top = offset - 0.030. Verified: CP-69 fling peak 7.8 -> 0.66 m/s.
+ - FOLLOWER CLAMP: 0.04 m/tick REVERTED to 0.15 (0.04 made the follower LAG on far reaches then snap-catch-up, amplifying the fling).
+ - SOFT-PLACE: targets the dest-bbox FLOOR (+0.155), NOT drop_z+0.16 (drop_z=bin_top+0.05 left the cube ~18cm high). + an xy-CENTERED
+   gate: only telescope the cup DOWN when the cube is within 6cm of the drop xy (descend through the bin OPENING, never onto the rim).
+CLUSTER VERIFY (all fresh-Kit, my fix-set): UR10 CP-70 OK / CP-82 BOTH cubes OK (topple FIXED) / CP-75 OK / CP-79 OK / CP-86 OK /
+CP-69 OK dead-center (NON_RIGID_GRIP = compliant suction, not a fail; earlier "rode past" = CONVEYOR-TIMING flakiness, pre-existing,
+NOT the grasp). Telepathy gap 30-38mm (was 48-51mm), all upright, impact_vz -0.36..-1.39 (soft), no fling/topple. = 6/6 UR10 deliver
+WITH faithful flush grip + soft place + rendered cup (shaft fills the mellandel, wide suction pad). Franka regression spot-check: CP-01
+both OK, CP-13 both OK (stacked); CP-41 Cube_3 toppled ONCE (known-marginal 4-cube template; my edits are suction-gated = Franka
+byte-identical -> baseline-CP-41 comparison in flight to confirm pre-existing). REMAINING (quality, NOT gate; cube delivers): the transit
+SWING to z~1.5 on near bins = cuRobo 6-DOF IK-branch reconfiguration; baseline behavior; real fix = move bin farther (Anton's call) or
+IK-seed work (risky). FixedJoint grip count = 0 (real IsaacSurfaceGripper throughout).

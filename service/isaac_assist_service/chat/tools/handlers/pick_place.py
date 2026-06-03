@@ -5327,6 +5327,8 @@ _SG_TOOL_L = 0.08  # virtual suction tool length: the cone sits this far BELOW t
 # grasp descends the flange to cube_top+0.02+_SG_TOOL_L so the flange+wrist clear the cube and the cone
 # (flange-_SG_TOOL_L) lands just above the cube top — a downward raycast then hits the cube, NOT the robot's
 # own wrist_3_link (root cause CP-70: cone at ee+0.04 was buried in wrist_3_link -> raycast hit the wrist@0.000).
+_sg_tool_l_dyn = [_SG_TOOL_L]  # DYNAMIC tool length: stays _SG_TOOL_L for pick/transit; the S5 release ramps it UP
+# to descend the cup+cube (via the follower) the extra distance cuRobo can't reach at the near bin (anti-topple).
 try:
     _sgm_attr = stage.GetPrimAtPath(ROBOT_PATH).GetAttribute("isaac_assist:surface_gripper_path")
     _SG_PATH_RAW = _sgm_attr.Get() if (_sgm_attr and _sgm_attr.IsDefined()) else None
@@ -5339,6 +5341,15 @@ try:
         print("(curobo: suction follower-track + raw-grip wiring active for " + str(_SG_PATH_RAW) + ")")
 except Exception as _se:
     print("(curobo: suction follower-track setup soft-fail: " + str(_se) + ")")
+# render-shaft (gripper body) handle — stretched each tick to bridge flange<->cup so the "mellandel" stays
+# rendered even while the release tool-extend telescopes the cup deep into the bin (Anton's render complaint).
+_SG_SHAFT = [None, None]
+try:
+    _shaftp = stage.GetPrimAtPath(Sdf.Path(ROBOT_PATH + "_SGCone/VisShaft"))
+    if _shaftp and _shaftp.IsValid():
+        _sh_ops = [o for o in UsdGeom.Xformable(_shaftp).GetOrderedXformOps() if o.GetOpName() == "xformOp:translate"]
+        _SG_SHAFT = [UsdGeom.Cylinder(_shaftp).GetHeightAttr(), (_sh_ops[0] if _sh_ops else None)]
+except Exception: pass
 _sg_track_last = [None]
 _sg_grip_intent = [False]  # True between a suction _grip_close and the next _grip_open; re-asserts close each tick
 # 2026-06-02 (Agent B RCA): drive the kinematic follower via the physics-tensor set_kinematic_targets (=
@@ -5376,18 +5387,29 @@ def _track_suction_follower():
         from curobo.types import JointState as _JS_fk
         _t = torch.tensor([[float(x) for x in np.asarray(_jq)[:_ARM_DOF]]], dtype=torch.float32, device="cuda")
         _ee = _planner.compute_kinematics(_JS_fk.from_position(_t, joint_names=_PLANNER_JOINT_NAMES)).tool_poses.position[0, 0, 0].detach().cpu().numpy()
-        _tx = float(_usd_pos[0]) + float(_ee[0]); _ty = float(_usd_pos[1]) + float(_ee[1]); _tz = float(_usd_pos[2]) + float(_ee[2]) - _SG_TOOL_L
+        _tx = float(_usd_pos[0]) + float(_ee[0]); _ty = float(_usd_pos[1]) + float(_ee[1]); _tz = float(_usd_pos[2]) + float(_ee[2]) - _sg_tool_l_dyn[0]
         _cur = _sg_track_last[0]
         if _cur is not None:
             _ddx = _tx - _cur[0]; _ddy = _ty - _cur[1]; _ddz = _tz - _cur[2]
             _dl = (_ddx * _ddx + _ddy * _ddy + _ddz * _ddz) ** 0.5
-            if _dl > 0.15:
+            if _dl > 0.15:  # m/tick teleport clamp. 2026-06-03: TRIED 0.04 (gentler peak on the near CP-70 bin) but it
+                # REGRESSED far-reach picks (CP-69 cube@x=-1.0): the fast lift->transit makes the tightly-clamped follower
+                # LAG, then snap-catch-up at the clamp rate, ejecting the gripped cube at 11 m/s. 0.15 keeps the follower
+                # with the ee (no lag-snap). The CP-70 peak height is the cuRobo path, not this clamp -> 0.15 loses nothing real.
                 _sc = 0.15 / _dl; _tx = _cur[0] + _ddx * _sc; _ty = _cur[1] + _ddy * _sc; _tz = _cur[2] + _ddz * _sc
         # USD-xform driving (the set_kinematic_targets path froze the follower — view didn't bind the mid-build
         # prim). With the RIGID grip (Agent A) the USD-xform driving is STABLE — the rigid-grip test tracked
         # smoothly to the bin center (0.004) with NO explosion; the explosion Agent B diagnosed was the SOFT-grip
         # case, now fixed. Keep USD-xform; the residual release-fling is a PLACEMENT issue (Agent C dwell/lower-release).
         _SG_FOLLOWER_OP.Set(Gf.Vec3d(_tx, _ty, _tz)); _sg_track_last[0] = (_tx, _ty, _tz)
+        # stretch the render shaft to span cone->flange (= tool length) so the gripper body stays rendered
+        # through the release telescope (no reappearing empty "mellandel" when the cup descends into the bin).
+        if _SG_SHAFT[0] is not None:
+            _tl = _sg_tool_l_dyn[0]
+            try:
+                _SG_SHAFT[0].Set(max(0.01, _tl - 0.005))
+                if _SG_SHAFT[1] is not None: _SG_SHAFT[1].Set(Gf.Vec3d(0.0, 0.0, (0.005 + _tl) / 2.0))
+            except Exception: pass
         # re-assert the suction close EVERY tick while gripping — a single close_gripper() call only
         # flickers "Closing" for one step then reverts to "Open"; re-asserting keeps it raycasting until
         # the tracked cone is over the cube (-> "Closed"), then HOLDS through lift/transport (validated CP-70).
@@ -5731,7 +5753,13 @@ def _build_segments(cube_pos, drop_pos, current_q):
     # SUCTION: descend the FLANGE to cube_top+0.02+tool_L (not into the cube) so the cone (flange-tool_L)
     # lands just above the cube top and the wrist clears it (CP-70 root-cause fix). Gated to suction.
     if _SG_FOLLOWER_OP is not None:
-        pz = float(cube_pos[2]) + 0.045 + _SG_TOOL_L
+        # 2026-06-03 TELEPATHY fix: descend the flange so the cone bottom lands JUST ABOVE the cube top (was +0.045
+        # -> cone 15mm above -> SG grabs across a gap -> cube held 51mm below = Anton's "osynliga gap"). Geometry:
+        # cone_bottom - cube_top = offset - 0.030. offset 0.026 put the cone 4mm INTO the cube -> the collision push
+        # fights the D6 grip -> STABLE on the gentle near bin (CP-70) but the far-reach swing (CP-69, 3.4 m/s) tears
+        # the grip apart -> cube FLUNG. 0.035 = cone bottom 5mm ABOVE the cube top: clean grab (no interpenetration),
+        # cube hangs ~5mm below the cup (still near-flush, telepathy fixed) AND the grip is stable like baseline (0.045).
+        pz = float(cube_pos[2]) + 0.035 + _SG_TOOL_L
     # 2026-05-30 drop-symmetry fix: the DROP goal (S5) is on the planner's
     # tool_frame (panda_hand), exactly like the PICK descend goal (pz above).
     # Without the same tool-tip lift, panda_hand is commanded straight TO
@@ -5753,9 +5781,38 @@ def _build_segments(cube_pos, drop_pos, current_q):
     # just above the bin floor -> tiny fall on release (no overshoot/bounce). The bin is excluded from cuRobo
     # collision for S5 (below) so the planner can descend over it. Transit/mid stay high (_drop_tip=0.45).
     _drop_tip_release = 0.16 if _SG_FOLLOWER_OP is not None else _drop_tip
+    # SUCTION soft-place target (anti-topple): the S5 planner goal stays SAFE at drop_z+0.16 (cuRobo-reachable, no
+    # bin-wall plan-fail), but the step-loop tool-extend telescopes the cup+cube down to ~3cm above the bin FLOOR
+    # before releasing. drop_pos[2] is bin_top+0.05 (an ON-TOP ref) so the cube would otherwise release ~18cm high
+    # -> TOPPLE (CP-70). Read the dest-bbox floor; target flange = floor + cube_half(.025)+clear(.03)+hang(.11) ~ floor+.165.
+    _sg_release_target = float(drop_pos[2]) + _drop_tip_release  # safe fallback = the planner goal (no extend)
+    if _SG_FOLLOWER_OP is not None:
+        _floor_z = float(drop_pos[2]) - 0.13  # fallback: empirical bin-floor offset below the drop ref
+        try:
+            if DEST_PATH:
+                _dprim = stage.GetPrimAtPath(DEST_PATH)
+                if _dprim and _dprim.IsValid():
+                    _dbb = UsdGeom.Imageable(_dprim).ComputeWorldBound(0, UsdGeom.Tokens.default_).ComputeAlignedRange()
+                    _floor_z = float(_dbb.GetMin()[2])
+        except Exception: pass
+        _sg_release_target = _floor_z + 0.165
     h_mid_pick = float(cube_pos[2]) + 0.18  # 18cm above cube
     h_mid_drop = float(drop_pos[2]) + _drop_tip + 0.18  # 18cm above lifted drop goal
+    if _SG_FOLLOWER_OP is not None:
+        # 2026-06-03 SWING fix (cone-track RCA): the suction _drop_tip=0.45 made h_mid_drop=drop_z+0.63 (flange 1.42),
+        # ABOVE the S4 transit (h1~1.03) -> the arm transited low then SWUNG UP to 1.42 before descending, riding
+        # the cup+cube to z=1.53 = Anton's "kastar runt / planeringsfel". The "mid" must be a DESCENT step just above
+        # the release, not above the transit. drop_z+0.22 (flange ~1.0) stays above the bin top (0.80) -> no bin-wall
+        # plan-fail, no up-swing; the cube (hanging ~32mm below the cone) clears the bin rim on the descent.
+        h_mid_drop = float(drop_pos[2]) + 0.22
     drop_yaw = _yaw_for_cube(S.get("picked_path") or "")
+    if _SG_FOLLOWER_OP is not None:
+        # 2026-06-03 SWING ROOT (cone-track RCA): an axisymmetric suction cup CANNOT control the cube's yaw (single-
+        # point grip, no friction couple) -> a commanded drop-yaw is physically meaningless AND forces a violent UR10
+        # wrist reconfiguration on the drop-side segments: the arm reached the bin (0.38,-0.28,1.22) then swung AWAY to
+        # (-0.27,+0.55) and UP to z=1.52 @ 2.3 m/s before descending = Anton's "kastar runt / planeringsfel". Zeroing
+        # it for suction is both faithful and removes the swing. Gated -> Franka (parallel-jaw, yaw IS meaningful) intact.
+        drop_yaw = 0.0
     # Yaw applied to drop-side segments (S4, S4.5, S5). Pick-side segments
     # use yaw=0 — gripper picks straight-down regardless of drop rotation.
     # 2026-05-27 FALLBACK: cuRobo PoseCostMetric + AttachmentManager BOTH verified broken on this
@@ -5903,7 +5960,11 @@ def _build_segments(cube_pos, drop_pos, current_q):
         segs.append({{"traj": traj, "motion_time": mt, "action_after": action_after,
                       "grip_done": False,
                       "drop_pos": [float(drop_pos[0]), float(drop_pos[1]), float(drop_pos[2])]
-                                  if action_after == "open" else None}})
+                                  if action_after == "open" else None,
+                      # the DESIGNED soft-place flange-z (bin-floor based); the step-loop telescopes the virtual tool
+                      # to make the cup+cube reach this even when cuRobo under-descends the arm at the near bin.
+                      "release_flange_z": _sg_release_target
+                                  if (action_after == "open" and _SG_FOLLOWER_OP is not None) else None}})
     if _attached:
         try: _planner.trajopt_solver.core.attachment_manager.detach(link_name=_TOOL_FRAME)
         except Exception: pass
@@ -6228,6 +6289,33 @@ def _on_step(dt):
                         # finger position; PhysX friction + finger_stiffness holds cube during transit.
                         # If cube slips: tune friction_mu/stiffness in template, not add FJ shortcut.
                     elif cur_seg["action_after"] == "open":
+                        # 2026-06-03 SOFT-PLACE / anti-topple (suction): cuRobo under-descends the near-bin S5 flange
+                        # goal (CP-70 cone-track: reached 1.079 vs goal 0.945 = 13cm short -> cube released ~18cm high
+                        # -> TOPPLED). Self-calibrating: extend the VIRTUAL tool length by exactly the flange shortfall
+                        # so the cup+cube descend (via the kinematic follower, ramped gently under the 0.04 clamp) to the
+                        # DESIGNED release height before opening -> ~5cm soft drop, no topple. No magic numbers (uses the
+                        # planner's own drop_pos); capped at +0.18 so a bad goal can't drive the cube through the floor.
+                        _rfz = cur_seg.get("release_flange_z")
+                        if _rfz is not None:
+                            try:
+                                _conp2 = _world_pos(ROBOT_PATH + "_SGCone")
+                                _cubp_sp = _world_pos(S["picked_path"]) if S.get("picked_path") else None
+                                _drop_sp = cur_seg.get("drop_pos")
+                                # SAFETY GATE: only telescope the cup DOWN when the cube is CENTERED over the bin opening
+                                # (within 6cm of the drop xy) so it descends through free interior space — never onto the
+                                # rim/wall (an off-center forced descent squirts the gripped cube out at >10 m/s; the swing
+                                # can leave the cube off-center). If not centered, skip the descent -> release at the
+                                # current height (may topple, but never explodes off the rim).
+                                _sp_centered = True
+                                if _cubp_sp is not None and _drop_sp is not None:
+                                    _sp_centered = (((_cubp_sp[0]-_drop_sp[0])**2 + (_cubp_sp[1]-_drop_sp[1])**2) ** 0.5) < 0.06
+                                if _conp2 is not None and _sp_centered:
+                                    _act_flange = float(_conp2[2]) + _sg_tool_l_dyn[0]
+                                    _want_tool = min(_SG_TOOL_L + 0.25, _SG_TOOL_L + max(0.0, _act_flange - float(_rfz)))
+                                    if _sg_tool_l_dyn[0] < _want_tool - 0.003:
+                                        _sg_tool_l_dyn[0] = min(_want_tool, _sg_tool_l_dyn[0] + 0.006)  # ramp ~0.36 m/s
+                                        return  # keep lowering the cup into the bin; do NOT open yet
+                            except Exception: pass
                         # Drop-precision Fix B: only release if cube is close
                         # to drop_pos. cuRobo trajectory may end before EE
                         # converges due to PD drive lag — releasing then
@@ -6247,6 +6335,8 @@ def _on_step(dt):
                         _hold_cap = elapsed > mt + pre_grip_settle + 4.0
                         if _drop_close or _hold_cap:
                             _grip_open()
+                            _sg_tool_l_dyn[0] = _SG_TOOL_L  # reset the release tool-extend; the cube is free now,
+                            # so the cone snapping back up (clamped) can't drag it. Next cube picks at base length.
                             # Remove the grasp FJ at release
                             if S.get("grasp_joint"):
                                 try:
