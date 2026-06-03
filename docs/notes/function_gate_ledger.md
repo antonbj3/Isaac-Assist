@@ -3341,3 +3341,15 @@ plan_fails=0 -> the full FrankaA->handoff->FrankaB->bin completes (FIRST dual-Fr
 CLUSTER IS HETEROGENEOUS (not all seed-drift): CP-52 = FrankaA REACH fail (Cube_1:xy_0.98 m, beyond reach; FrankaB never engages) = move
 source closer / reach. CP-53 = FrankaB 3-cube grasp still fails (FrankaA hands off 3, FrankaB plan_calls=24 all failed) = 3-cube handoff
 harder than CP-51's 1-cube. NEXT: test CP-65/67/76 (may be 1-cube-handoff like CP-51 -> reset_seed should deliver).
+
+### 2026-06-03 ~20:45 — Anton GUI-review confirmations (GUI_REVIEW4_HANDOFF.md) + dual-Franka tally
+Anton's eyes (filled GUI_REVIEW4_HANDOFF.md):
+ - CP-51 dual-Franka = "FUNGERAR ✓" — CONFIRMED delivers (validates the multi-robot reset_seed fix by Anton's eyes).
+ - ALL UR10 deliver BUT share the SAME quality issues (universal, "ingen anledning att granska individuellt"): telepathic grip (gap kvar),
+   the MIDDLE of the cup doesn't render, and the arm COLLIDES with the bin (mid-axis) + SPINS before the drop. These = the deep/Anton's-call
+   items: collision = 6-DOF fold for the near bin (lever: move bin farther = Anton's call, NOT done unilaterally); telepathy = SG grab-offset
+   research; cup-mid-render = the cylinder render gap (deferred).
+DUAL-FRANKA via reset_seed (multi-robot gated): CP-51 ✓ (Anton-confirmed) + CP-65 ✓ (grader: FrankaB delivered all 4) = +2 NEW. CP-52 =
+FrankaA reach (source too far), CP-67 = (my ctrl-read said FrankaB reach xy~1.2 but Anton DOUBTS — flagged for GUI), CP-53 = FrankaB 3-cube
+grasp fails, CP-76 = 0-handoff no-grader-output (inspect). NEXT (no-risk, reset_seed already committed): test the multi-robot RELAYS
+(3station/4robot/triple-arm) — may now deliver for free. GUI review handed off: GUI_REVIEW4_HANDOFF.md (per-scene PREDICT vs SAW, ~60 scenes).
