@@ -6312,29 +6312,12 @@ if sg_prim and sg_prim.IsValid():
             # author purpose=render + collisionEnabled=False over it so it can never fight the D6 grip. Franka excluded
             # via _has_parallel_jaw -> the 37 Franka passes + grip-FJ=0 are byte-identical.
             try:
-                _UG.Imageable(_cp).MakeInvisible()  # hide the bare Cylinder render; the real cup mesh below is what's drawn
-                _cupxf = stage.DefinePrim(_S.Path(_cone + "/VisualCup"), "Xform")
-                # wrapper Xform carries ONLY the placement: +90deg about Y maps the disc's gripper-body local +X -> cone
-                # -Z (cup faces DOWN, suction approach); seat the face at the cone contact tip (cone center Z - half 0.005).
-                _UG.Xformable(_cupxf).AddTranslateOp().Set(_G.Vec3d(0.0, 0.0, -0.005))
-                _UG.Xformable(_cupxf).AddRotateXYZOp().Set(_G.Vec3f(0.0, 90.0, 0.0))
-                _cup_asset = "/mnt/shared_data/isaac-sim-assets-complete-5.0.0/Assets/Isaac/5.0/Isaac/Robots/UniversalRobots/ur10/grippers/short_gripper.usd"
-                # CRITICAL USD composition (verified Kit-free w/ usd-core): reference the Mesh onto a CHILD prim with NO
-                # type arg so the referenced "Mesh" type composes (referencing onto the typed Xform wrapper makes the local
-                # Xform type win -> Hydra won't draw it = invisible). And EDIT the referenced prim's EXISTING xformOp:translate
-                # (do NOT AddTranslateOp, which overrides the referenced xformOpOrder and DROPS the disc's scale -> 100m slab).
-                # Keeps scale(0.0005)+rotateZYX -> real 25mm-radius/5mm-thick cup at the cone tip.
-                _disc = stage.DefinePrim(_S.Path(_cone + "/VisualCup/Disc"))
-                _disc.GetReferences().AddReference(_cup_asset, "/Root/gripper_tip")
-                _cup_t = _disc.GetAttribute("xformOp:translate")
-                if _cup_t and _cup_t.IsDefined(): _cup_t.Set(_G.Vec3d(0.0, 0.0, 0.0))
-                # render-only: disable the convex-hull collider that rides in on gripper_tip (it carries PhysicsCollisionAPI)
-                # so it can never be hit by the SG raycast or fight the cone's D6 grip.
-                _cup_ce = _disc.GetAttribute("physics:collisionEnabled")
-                if not (_cup_ce and _cup_ce.IsDefined()):
-                    _cup_ce = _disc.CreateAttribute("physics:collisionEnabled", _S.ValueTypeNames.Bool)
-                _cup_ce.Set(False)
-                _disc.CreateAttribute("purpose", _S.ValueTypeNames.Token).Set("render")
+                # 2026-06-03 v3: the full NVIDIA gripper (0.1585 long) STICKS UP 15cm past the wrist because the grip-point
+                # (cone) sits AT the flange (ee-0.005), not 15cm out like a real gripper (probe: gripper meshes worldZ
+                # 0.798-0.963 vs ee_link 0.811). The real extended gripper needs a deeper rig change (move the grip-point out)
+                # that also wouldn't fix the telepathy. For now keep the simple Cylinder cone VISIBLE = a connected cup at the
+                # flange (no float, no stick-up, no disc/shadow lag). Real-gripper-mesh + extended-grip-point = backlog.
+                _UG.Imageable(_cp).MakeVisible()
             except Exception as _cupe:
                 print("(surface_gripper: visual-cup reference soft-fail (kept Cylinder render): " + str(_cupe) + ")")
             # Mount: cone --FixedJoint(ENABLED)--> follower (gripper STRUCTURE, NOT an EE<->cube grip-FJ)

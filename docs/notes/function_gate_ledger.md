@@ -3308,3 +3308,24 @@ used (fix works) or if code_template needs the PPC added. CP-86 fully converted 
 end_effector_offset with drop_target=[bin_xy,0.92]+planning_obstacles=["/World/Table"] (+belt_path for conveyor ones). Backups in ~/.isaac_qa/*.pre_curobo_*.
 RUNNING UR10 DELIVER COUNT (post all fixes): CP-70/69/82/75/79 = 5 confirmed; CP-80/84/85/86 pending batch; CP-71 multi-item topple; CP-81
 already-curobo-but-fails (separate, 2-cube); CP-73 no-output. Franka 37 intact.
+
+### 2026-06-03 ~20:00 — UR10 quality (collision/cup) = deep/documented; CP-86 +1; CP-80/84/85 conversion-bug fixes
+Anton GUI live-review of the converted UR10s: "kör en axel in i bin, snurrar" (collision/spin) + "koppen flyter fritt, inget mellan
+renderas" (floating cup) + "telepati". Agent-rounds (wjfcrlv5a) RCA'd all 3:
+ - COLLISION/SPIN: the catastrophic spin was seed-drift (FIXED by reset_seed). The RESIDUAL = the 6-DOF UR10 must FOLD its elbow low to
+   reach the NEAR 0.64m bin, so upper_arm_link sweeps the z~0.80-0.90 wall band and BRUSHES WallX1/WallY2 (bin walls). A taller keep-out
+   COLLAR over the wall ring was tried (pick_place _build_scene_cfg, UR10-gated) — built+in-world but DID NOT stop the brush (cuRobo plans
+   with sphere-approx; real mesh still brushes; arm geometrically MUST be there). REVERTED. The cube DELIVERS err 1mm regardless — it's a
+   path-quality brush, NOT a gate fail. Deeper levers (Anton's call): move the bin farther (task change) OR bias the IK branch elbow-up.
+ - CUP VISUAL: referencing the real NVIDIA short_gripper /Root/gripper_tip alone = a FLOATING disc (nothing connects it to the wrist).
+   Referencing the WHOLE /Root gripper STICKS UP 15cm past the wrist (probe: gripper meshes worldZ 0.798-0.963 vs ee_link 0.811) because
+   my grip-point (cone) sits AT the flange, but a real gripper's cup is 15cm OUT. Real connected gripper needs moving the grip-point out =
+   deep rig change (also wouldn't fix telepathy). REVERTED to the simple VISIBLE CYLINDER cone (connected at flange, no float/stick-up, no
+   disc/shadow lag — Anton's "skuggor laggar" was the disc render). Real-gripper-mesh = backlog.
+ - TELEPATHY: cube held ~5cm below the cup = SG raycast grab-at-distance; FIX 3 (descend cone to contact + tighten close-gate) NOT applied
+   (riskier, changes grasp kinematics) — queued, may be the open SG-research item.
+CONVERSION-BUG FIXES (my hasty conv script): CP-80 had DUPLICATE belt_path kwarg, CP-84 had DUPLICATE drop_target -> broke the PPC tool-call
+-> no controller (that, not 504, was their batch TS_PARSE_FAIL). Fixed both; CP-85 was clean (its fail was a cold-504). All 3 code_template
+EMPTY -> instantiator uses `code` (the converted version). Re-verifying CP-80/84/85 fresh now (conv2). CP-86 verified DELIVERS (err 1mm).
+HONEST STATE: UR10 GATE largely won (6 deliver: CP-70/69/82/75/79/86; CP-80/84/85 pending), reliable every cycle (reset_seed), Franka 37
+intact, grip-FJ=0. UR10 QUALITY (clean path / real cup / flush grip) = deep, documented, Anton's-call levers noted.

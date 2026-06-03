@@ -5066,6 +5066,11 @@ def _build_scene_cfg(exclude_path=None):
         except Exception as _ce:
             print(f"(scene_cfg: skip {{path}}: {{_ce}})")
             continue
+    # 2026-06-03 NOTE: a bin-wall keep-out COLLAR was tried here (force the folded 6-DOF UR10 upper_arm above the
+    # z~0.80-0.90 wall band) but did NOT stop the upper_arm|WallX1/WallY2 brush (CP-86) — the arm MUST fold low to
+    # reach the near 0.64m bin, and cuRobo plans with sphere approximations so the real mesh still brushes. Reverted
+    # (the cube delivers err 1mm regardless; it's a path-quality brush, not a gate fail). Deeper levers = move the bin
+    # farther (task change, Anton's call) or bias the IK branch elbow-up. See ledger 2026-06-03.
     # 2026-05-31 arm-arm fix: merge sibling-robot keep-out cuboids (current pose).
     # GATED: _sibling_keepout_cuboids() is {{}} for single-robot → byte-identical.
     try:
