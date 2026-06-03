@@ -6280,7 +6280,7 @@ if sg_prim and sg_prim.IsValid():
             # the cone is ejected (validated 2026-06-02: coincident-start physx-callback tracking is stable).
             try:
                 _em0 = _UG.Xformable(stage.GetPrimAtPath(_S.Path(_ee))).ComputeLocalToWorldTransform(0)
-                _et0 = _em0.ExtractTranslation(); _ex0, _ey0, _ez0 = float(_et0[0]), float(_et0[1]), float(_et0[2]) - 0.02
+                _et0 = _em0.ExtractTranslation(); _ex0, _ey0, _ez0 = float(_et0[0]), float(_et0[1]), float(_et0[2]) - 0.005  # 2026-06-03 gap-fix: seat cup at contact plane (was -0.02 = 2cm air); follower+cone still coincident
             except Exception: _ex0, _ey0, _ez0 = 0.0, 0.0, 0.0
             # kinematic follower (separate body, NOT in the articulation) — tracks ee_link via the callback
             _fp = stage.DefinePrim(_S.Path(_follower), "Cube")
@@ -6301,6 +6301,42 @@ if sg_prim and sg_prim.IsValid():
             _setj(_cp, "physxRigidBody:disableGravity", _S.ValueTypeNames.Bool, True)
             _setj(_cp, "physxRigidBody:solverPositionIterationCount", _S.ValueTypeNames.Int, 32)
             _setj(_cp, "physxRigidBody:solverVelocityIterationCount", _S.ValueTypeNames.Int, 8)
+            # 2026-06-03 RENDERED CUP = NVIDIA's REAL UR10 short_gripper cup mesh (render-only, ZERO physics change).
+            # The Cylinder _cp stays the SOLE physics body (RigidBody+Collision+Mass+D6-grip body0 + SG raycast origin)
+            # but its RENDER is HIDDEN; a child Xform references the asset's /Root/gripper_tip disc as a purpose=render
+            # visual only. Asset (Kit-free inspected): /Root identity, gripper_tip is a 25mm-radius/5mm-thick disc whose
+            # flat face = gripper-body LOCAL +X; we rotate +X->cone -Z (rotateXYZ Y=+90) so the cup faces DOWN (suction
+            # approach) and seat the disc face at the cone contact tip (cone center Z - half-height 0.005). The reference
+            # carries NO rigid body / collision / joint into the cone frame (gripper_tip is geometry-only; its sibling
+            # rigid/joint/SG prims under /Root are NOT pulled by a targeted gripper_tip reference), and we additionally
+            # author purpose=render + collisionEnabled=False over it so it can never fight the D6 grip. Franka excluded
+            # via _has_parallel_jaw -> the 37 Franka passes + grip-FJ=0 are byte-identical.
+            try:
+                _UG.Imageable(_cp).MakeInvisible()  # hide the bare Cylinder render; the real cup mesh below is what's drawn
+                _cupxf = stage.DefinePrim(_S.Path(_cone + "/VisualCup"), "Xform")
+                # wrapper Xform carries ONLY the placement: +90deg about Y maps the disc's gripper-body local +X -> cone
+                # -Z (cup faces DOWN, suction approach); seat the face at the cone contact tip (cone center Z - half 0.005).
+                _UG.Xformable(_cupxf).AddTranslateOp().Set(_G.Vec3d(0.0, 0.0, -0.005))
+                _UG.Xformable(_cupxf).AddRotateXYZOp().Set(_G.Vec3f(0.0, 90.0, 0.0))
+                _cup_asset = "/mnt/shared_data/isaac-sim-assets-complete-5.0.0/Assets/Isaac/5.0/Isaac/Robots/UniversalRobots/ur10/grippers/short_gripper.usd"
+                # CRITICAL USD composition (verified Kit-free w/ usd-core): reference the Mesh onto a CHILD prim with NO
+                # type arg so the referenced "Mesh" type composes (referencing onto the typed Xform wrapper makes the local
+                # Xform type win -> Hydra won't draw it = invisible). And EDIT the referenced prim's EXISTING xformOp:translate
+                # (do NOT AddTranslateOp, which overrides the referenced xformOpOrder and DROPS the disc's scale -> 100m slab).
+                # Keeps scale(0.0005)+rotateZYX -> real 25mm-radius/5mm-thick cup at the cone tip.
+                _disc = stage.DefinePrim(_S.Path(_cone + "/VisualCup/Disc"))
+                _disc.GetReferences().AddReference(_cup_asset, "/Root/gripper_tip")
+                _cup_t = _disc.GetAttribute("xformOp:translate")
+                if _cup_t and _cup_t.IsDefined(): _cup_t.Set(_G.Vec3d(0.0, 0.0, 0.0))
+                # render-only: disable the convex-hull collider that rides in on gripper_tip (it carries PhysicsCollisionAPI)
+                # so it can never be hit by the SG raycast or fight the cone's D6 grip.
+                _cup_ce = _disc.GetAttribute("physics:collisionEnabled")
+                if not (_cup_ce and _cup_ce.IsDefined()):
+                    _cup_ce = _disc.CreateAttribute("physics:collisionEnabled", _S.ValueTypeNames.Bool)
+                _cup_ce.Set(False)
+                _disc.CreateAttribute("purpose", _S.ValueTypeNames.Token).Set("render")
+            except Exception as _cupe:
+                print("(surface_gripper: visual-cup reference soft-fail (kept Cylinder render): " + str(_cupe) + ")")
             # Mount: cone --FixedJoint(ENABLED)--> follower (gripper STRUCTURE, NOT an EE<->cube grip-FJ)
             _mnt = stage.DefinePrim(_S.Path(_cone + "/Mount"), "PhysicsFixedJoint")
             _mnt.CreateRelationship("physics:body0").SetTargets([_S.Path(_follower)])
@@ -6335,11 +6371,11 @@ if sg_prim and sg_prim.IsValid():
                     try: _ap.AddAppliedSchema(_api)
                     except Exception: pass
                 _setj(_ap, "isaac:forwardAxis", _S.ValueTypeNames.Token, "Z")
-                _setj(_ap, "isaac:clearanceOffset", _S.ValueTypeNames.Float, 0.008)
+                _setj(_ap, "isaac:clearanceOffset", _S.ValueTypeNames.Float, 0.002)  # 2026-06-03 gap-fix: was 0.008 (latched cube 8mm early); 0.002 min that clears the 0.0125 cone collider
                 _setj(_ap, "drive:transZ:physics:stiffness", _S.ValueTypeNames.Float, 50000.0)
                 _setj(_ap, "drive:transZ:physics:damping", _S.ValueTypeNames.Float, 2000.0)
                 _setj(_ap, "limit:transZ:physics:low", _S.ValueTypeNames.Float, 0.0)
-                _setj(_ap, "limit:transZ:physics:high", _S.ValueTypeNames.Float, 0.004)
+                _setj(_ap, "limit:transZ:physics:high", _S.ValueTypeNames.Float, 0.0)  # 2026-06-03 gap-fix: zero suction-axis standoff (was 0.004 air-gap); rot compliance untouched (ring still faithful/breakable)
                 # FAITHFUL: near-free rotation (was weld-lock 1e5/+/-0.02rad). The 4-point ring resists tilt by GEOMETRY
                 # (force couple across the 18mm span); small rot stiffness only damps jitter -> slight compliance, not weld.
                 for _rax in ("rotX", "rotY", "rotZ"):
@@ -6380,7 +6416,7 @@ if sg_prim and sg_prim.IsValid():
                     except Exception: pass
                 _bi._ia_sg_follower_sub = None
             except Exception: pass
-            print("(surface_gripper: FJ-free follower+cone+D6 authored (controller drives follower); maxGripDistance=0.05; SG=" + sg_path + " follower=" + _follower + ")")
+            print("(surface_gripper: FJ-free follower+cone+D6 authored (controller drives follower); maxGripDistance=0.30; SG=" + sg_path + " follower=" + _follower + ")")
         except Exception as _ce:
             print("(surface_gripper: cone authoring soft-fail: " + str(_ce) + ")")
 

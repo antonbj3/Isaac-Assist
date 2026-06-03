@@ -1,3 +1,24 @@
+# 🔑 ROOT-CAUSE: corrupt Warp cache poisoned the WHOLE failure picture (2026-06-03 ~16:30) — Anton: go for 100%, drop "low-risk"
+Anton (2026-06-03 ~16:10): "Glöm low-risk, vi ska nå 100% function gate på alla templates innan vi utökar. git commit är säkerhet."
+=> Made checkpoint commit 81f5f725 (whole multi-day session was UNCOMMITTED). Then diagnostic-first found the live Kit's launch log
+FULL of `CuboidDataWarp_59dd2b4a ... undefined` + `NVRTC_ERROR_COMPILATION` in BOTH cuRobo collision kernels = memory[warp_cache_planfail]
+signature: stale ~/.cache/warp/1.11.0 PCH breaks cuRobo collision GLOBALLY -> every collision plan_pose fails -> masquerades as template
+"deep reach"/"deep planner" failures. Killed Kit by PID (side-task spared), nuked 340M cache, relaunched clean (0 NVRTC post-plan).
+  **CP-69 (canonical UR10 "deep-reach planfail") now DELIVERS** at the ORIGINAL bin pos, no edit (Cube_1 [0.5,-0.4,0.785] in Bin, OK).
+  CP-70 still OK. => The "EXHAUSTED / everything-supervised" verdict from ~16:00 was POISONED by the broken cache and is INVALID.
+LESSON RE-CONFIRMED: a serial batch in ONE Kit session degrades (CP-69 FLUNG as 2nd-in-batch vs OK fresh) — use restart-before-each
+(scene_timeseries via ~/.isaac_qa/restart_kit.sh per template; ur10_robust.sh). NEVER trust a batch FAIL.
+IN FLIGHT: (1) ur10_robust.sh = restart-before-each re-measure of UR10 cluster (CP-69/71/73/75/79/81/82/85/86) + CP-70 control +
+CP-28/CP-03 Franka regression — finds how many the cache-clear unlocked for free.
+  (2) DUAL-FRANKA OOB FIX prepped (NOT yet applied — confirm-first): pick_place.py ~5664 `_oob_lim = 6.30 if ROBOT_FAMILY in (ur10,ur10e)
+  else 5.0`. The cron RCA: FrankaB plan_fails=0 but its descend joints are SILENTLY SKIPPED by this 5.0 gate — the shared planner (biased by
+  the other Franka's seed) emits a wrapped-2pi branch |q|~6.28. FIX (gated multi-robot-only via `len(_curobo_pp_sub_)>1` -> 37 byte-identical):
+  add `_multi_oob = >1 live _curobo_pp_sub_; _oob_lim = 6.30 if (ur10 or _multi_oob) else 5.0`. CONFIRM FIRST via cp51_faithful: FrankaB
+  ctrl:last_error must show "Out-of-bounds q...skipped" on the CLEAN cache (RCA may have been on the corrupt cache). If no OOB-skip -> no-op,
+  real blocker is elsewhere. After apply: measure CP-51 OUTCOME (delivers vs flings); revert if it flings or regresses a Franka pass.
+  (3) THEN broad re-sweep of remaining stale-"failed" non-asset templates (broad_resweep.sh) for the TRUE failure set. Lever-b UR10 reposition
+  workflow (CP-69/73/81 apply, CP-71/75/79/82 revise, CP-85/86 reject) is a FALLBACK, probably unneeded now.
+
 # 🟢 SUCTION SOLVED (2026-06-03 ~15:15) — Anton's priority; the "architectural" suction blocker is CRACKED
 The UR10 suction is now FAITHFUL (was weld-equiv kinematic-mount). Fix (robot.py _handle_surface_gripper, suction-gated -> 37 Franka
 byte-identical): replaced the SINGLE over-stiffened AttachmentPoint (rot 1e5/+-0.02rad = weld) with NVIDIA's OWN shipped pattern — a

@@ -3227,3 +3227,41 @@ sensor candidate sort + reach gating at pick_place.py:5489-5532 that ALL 37 belt
 -> Anton's supervised call. Single-robot belt-hold extension also risks deadlock (CP-01). The multi-robot standing-hold already exists
 (solved CP-53; 3station Cube_7 needs HOLD_R widened + the claim-logic). NOT applying autonomously. => Autonomous SAFE gate progress is
 now EXHAUSTED — every remaining failure is supervised/risks-the-37/assets/delicate-physics. Building the supervised action playbook.
+
+### 2026-06-03 ~16:20 — CORRECTION: the "EXHAUSTED" verdict was POISONED by a corrupt Warp cache (root-cause found)
+Anton steered: forget "low-risk only", go for 100% gate; git commit is the (coarse) safety net. Made checkpoint commit 81f5f725
+(whole multi-day session was UNCOMMITTED). Then diagnostic-first on the live Kit (up 3h48m) found the launch log FULL of
+`CuboidDataWarp_59dd2b4a ... is undefined` -> `NVRTC_ERROR_COMPILATION` in BOTH wp_collision_kernel AND wp_sweep_collision_kernel
++ incompatible-PCH warnings. This is EXACTLY the memory[warp_cache_planfail] signature: stale ~/.cache/warp/1.11.0 PCH breaks
+cuRobo COLLISION kernels GLOBALLY -> every collision-dependent plan_pose fails -> masquerades as template "deep reach" failures.
+The entire UR10 "deep reach" RCA (and likely much of the stacking/dual-Franka/conveyor failure picture) was measured against this
+broken cache. FIX (documented): killed Kit by explicit PID (side-task 460078/629912/648324 spared), nuked 340M stale cache,
+relaunched clean (health 200, recompile clean: 0 NVRTC errors post-plan). RESULT: **CP-69 (the canonical UR10 "deep-reach
+planfail") now DELIVERS** — Cube_1 final=[0.5,-0.4,0.785] in Bin, err_xy=0.0, contained, tilt 0deg, OK — at the ORIGINAL bin pos,
+NO reposition edit. The cure was the cache, not moving bins (bota inte lindra symptom). The lever-b reposition workflow (CP-69/73/81
+apply, CP-71/75/79/82 revise, CP-85/86 reject) is now a FALLBACK, probably unneeded. STRATEGY: re-measure the whole UR10 cluster +
+all previously-"failed" non-asset templates on the CLEAN cache to find the TRUE failure set before attacking. The 46-stale-failed and
+the "exhausted" conclusion are both invalid. Tools: scene_timeseries (single-robot), grade_play (multi-robot/conveyor).
+
+### 2026-06-03 ~17:55 — UR10 suction: real cup + gap-fix + collision-spheres LANDED & VERIFIED (Anton GUI-driven session)
+Anton GUI-reviewed CP-69: telepathic gap PERSISTS + "kör en axel in i bin, kolliderar, snurrar, levererar" (drives a joint into the bin,
+collides, spins, then delivers). Three fixes landed, all UR10/suction-gated (Franka + 37 byte-identical, grip-FJ=0):
+ (1) CUP-GAP (robot.py ~6283/6338/6342/6383): clearanceOffset 0.008->0.002 + transZ-standoff 0.004->0.0 + cup seat -0.02->-0.005
+     => standoff ~12mm->~2mm; grip FIRMER (CP-70 transit tilt 19deg->7deg, CP-69 5.3deg).
+ (2) REAL CUP (robot.py ~6315): replaced my hand-made Cylinder RENDER with NVIDIA's real UR10 short_gripper.usd gripper_tip disc
+     (/mnt/shared_data/.../ur10/grippers/short_gripper.usd). Cylinder stays the SOLE physics body (hidden render); the disc is a
+     purpose=render child. usd-core + live-Kit verified: composes as Mesh, 130 pts, world extent (0.050,0.050,0.005)=real 25mm/5mm cup,
+     faces down. NOTE: a workflow design-agent wrote a BUGGY version first (referenced Mesh onto the typed Xform -> invisible/100m slab);
+     corrected = reference onto a CHILD prim with NO type + EDIT the existing xformOp (keep scale). Anton wanted "den riktiga" cup.
+ (3) COLLISION SPHERES (ur10_scene.yml, repo + synced to cuRobo content dir): added wrist_3_link spheres at +Z 0.11(r0.04) & 0.158(r0.045)
+     = the cup location (ee_link +X 0.158 maps to wrist_3 +Z via the ee_joint rpy). Makes the cup VISIBLE to cuRobo so it routes around the
+     bin instead of driving a joint through it (RCA root: ee_link/tool had ZERO collision spheres -> plan succeeds clean -> physics collision
+     -> spin). HELD the risky global collision_sphere_buffer 0.0->0.02. ee_link approach avoided (would add a new collision link).
+VERIFIED: CP-70 delivers err 1mm (no regression); CP-69 delivers err 1mm tilt 0deg, NO upper_arm|Wall contacts. **A CP-69 explosion on the
+2nd-warm-run was KIT-SESSION DEGRADATION, NOT the spheres** — fresh/warm-1st delivers clean (drift-gating discipline: never revert on a
+2nd-run verdict; re-verified fresh). DUAL-FRANKA OOB FIX (cron theme 2) **NOT applied**: cp51_faithful CP-51 on clean cache shows FrankaB
+LAST_ERROR empty + NO oob_skipped -> the OOB-skip mechanism does NOT fire (was a corrupt-cache artifact) -> per the cron's own "else no-op"
+guard, applying it is a no-op. CP-51 real issue: FrankaB descends to MINZ 0.88 (fingers AT cube) but pick_reject=Cube_1:failed = the grasp
+(diagonal-approach/timing/parallel-jaw), deferred. RESTART NOTE: 1st plan after a Kit restart 504s (cold warp recompile) then warm runs work
+— warm-up before measuring. REMAINING UR10: confirm the collision/spin is visibly reduced (Anton GUI); re-measure CP-71/73/75/79/81/82
+fresh (drift-gated) for cluster gate count.
