@@ -3265,3 +3265,17 @@ guard, applying it is a no-op. CP-51 real issue: FrankaB descends to MINZ 0.88 (
 (diagonal-approach/timing/parallel-jaw), deferred. RESTART NOTE: 1st plan after a Kit restart 504s (cold warp recompile) then warm runs work
 — warm-up before measuring. REMAINING UR10: confirm the collision/spin is visibly reduced (Anton GUI); re-measure CP-71/73/75/79/81/82
 fresh (drift-gated) for cluster gate count.
+
+### 2026-06-03 ~18:15 — ROOT of the UR10 "Kit-session degradation": cuRobo SEED-DRIFT — FIXED + VERIFIED (4 consecutive clean deliveries)
+Anton GUI on the repeated CP-69: "plockar telepatiskt med axeln näst längst upp (wrist_2), snurrar, beter sig konstigt" — the 2nd+ run
+flings/spins. RCA (wfy5ers0q): `reset_seed()` is gated to the vhold>0 path (Franka only); UR10 `_vmode=0` so it NEVER resets -> cuRobo's
+sample buffer ADVANCES across plan calls in a session -> consecutive plans on the same goal pick DIFFERENT IK branches -> the 2nd+ pick
+cycle contorts (the wrist/cone region collapses near wrist_2 = the "telepathic wrist_2 pickup") -> fling. This is what was misdiagnosed as
+generic "Kit-session degradation" for UR10. FIX (pick_place.py _plan_to_world_point ~5089, UR10-GATED): `if ROBOT_FAMILY in ("ur10","ur10e"):
+_planner.reset_seed()` per plan -> deterministic. Franka skips it (already resets in vhold) -> the 37 byte-identical, grip-FJ=0.
+VERIFIED (resetseed_test.sh, CP-69 x5 in ONE session): run1=cold-504-warmup, runs 2/3/4/5 ALL deliver err 1mm tilt 0deg. Pre-fix: 2nd run
+flung/exploded every time. => UR10 is now RELIABLE EVERY CYCLE, not just fresh-Kit-1st-run. This likely makes the whole UR10 cluster
+one-session-measurable (running ur10_cluster_resetseed.sh now: CP-70/69/71/73/75/79/81/82 + CP-28/CP-03 Franka regression). The cure was
+the seed (root), not restart-before-each (symptom-relief). Combined UR10 fix stack now: cup-gap + real NVIDIA cup + collision-spheres +
+reset_seed. NOTE for [[feedback_isaac_assist_kit_session_degradation]]: UR10 "degradation" was seed-drift (fixable in-handler); restart-
+before-each was masking it.

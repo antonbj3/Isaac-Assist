@@ -5087,6 +5087,15 @@ def _plan_to_world_point(point_world, current_q7, exclude_obs=None, yaw_deg=0.0,
     q = torch.tensor([[float(x) for x in current_q7[:_ARM_DOF]]], dtype=torch.float32, device='cuda')
     start = JointState.from_position(q, joint_names=_PLANNER_JOINT_NAMES)
     _vhold_applied = False
+    # 2026-06-03 UR10 SEED-DRIFT fix: reset_seed() is otherwise only called in the vhold>0 path
+    # (Franka). For UR10 (_vmode=0) the cuRobo sample buffer ADVANCES across plan calls within a
+    # Kit session -> consecutive plans on the same goal resolve to DIFFERENT IK branches -> the
+    # 2nd+ pick cycle contorts/spins/flings (the Kit-session "degradation": CP-69 1st-run clean,
+    # 2nd-run flung, reproducibly). Reset per-plan for determinism. Gated to UR10 -> Franka already
+    # resets in the vhold path, so the 37 single-robot Franka passes are byte-identical.
+    if ROBOT_FAMILY in ("ur10", "ur10e"):
+        try: _planner.reset_seed()
+        except Exception: pass
     if vhold_mode > 0:
         try:
             # 2026-05-27 NATIVE LINEAR-MOTION: cuRobo's ToolPoseCriteria.linear_motion(axis="z")
