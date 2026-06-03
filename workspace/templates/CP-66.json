@@ -1,6 +1,6 @@
 {
   "task_id": "CP-66",
-  "goal": "Build a recycling multi-sensor station: 4 cubes (different materials — plastic/metal/glass/cardboard) flow on conveyor past barcode_reader + nir_material_sensor; routed to material-specific bins. Realizes #18 Recycling Multi-Sensor.",
+  "goal": "Build a recycling multi-sensor station: 4 cubes (different materials \u2014 plastic/metal/glass/cardboard) flow on conveyor past barcode_reader + nir_material_sensor; routed to material-specific bins. Realizes #18 Recycling Multi-Sensor.",
   "tools_used": [
     "create_prim",
     "set_attribute",
@@ -19,8 +19,8 @@
     "nir_material_sensor",
     "setup_pick_place_controller"
   ],
-  "thoughts": "Six recycling-multi-sensor specifics for CP-66:\n1) 4 cubes representing 4 materials: plastic (gray), metal (silver), glass (cyan-tint), cardboard (brown).\n2) Each cube has set_semantic_label semantic_type='material' with class_name matching material.\n3) Barcode reader at conveyor pre-pick zone — reads cube identity.\n4) NIR material sensor at conveyor pick zone — reads material:type attr.\n5) 4 destination bins (one per material). color_routing matches material-class to bin.\n6) Realizes #18 multi-sensor recycling station.",
-  "code": "create_prim(prim_path=\"/World/DomeLight\", prim_type=\"DomeLight\")\nset_attribute(prim_path=\"/World/DomeLight\", attr_name=\"inputs:intensity\", value=1500.0)\ncreate_prim(prim_path=\"/World/Ground\", prim_type=\"Cube\", position=[0, 0, -0.5], scale=[20, 20, 1])\napply_api_schema(prim_path=\"/World/Ground\", schema_name=\"PhysicsCollisionAPI\")\ncreate_prim(prim_path=\"/World/Cell\", prim_type=\"Xform\")\ncreate_prim(prim_path=\"/World/Table\", prim_type=\"Cube\", position=[0, 0, 0.375], scale=[1.5, 0.5, 0.375])\napply_api_schema(prim_path=\"/World/Table\", schema_name=\"PhysicsCollisionAPI\")\n\nset_physics_scene_config(config={\"enable_gpu_dynamics\": False, \"broadphase_type\": \"MBP\"})\n\nrobot_wizard(\n    robot_name=\"franka_panda\",\n    dest_path=\"/World/Franka\",\n    position=[0, 0, 0.75],\n    orientation=[0.7071068, 0, 0, 0.7071068],\n)\n\ncreate_conveyor(\n    prim_path=\"/World/ConveyorBelt\",\n    position=[0.0, 0.4, 0.78],\n    size=[3.0, 0.4, 0.05],\n    surface_velocity=[0.2, 0, 0],\n)\n\ncreate_material(material_path=\"/World/Mats/Plastic\",   shader_type=\"OmniPBR\", diffuse_color=[0.6, 0.6, 0.6])\ncreate_material(material_path=\"/World/Mats/Metal\",     shader_type=\"OmniPBR\", diffuse_color=[0.85, 0.85, 0.85])\ncreate_material(material_path=\"/World/Mats/Glass\",     shader_type=\"OmniPBR\", diffuse_color=[0.7, 0.95, 0.95])\ncreate_material(material_path=\"/World/Mats/Cardboard\", shader_type=\"OmniPBR\", diffuse_color=[0.5, 0.35, 0.2])\n\nmaterial_specs = [\n    (\"/World/Cube_1\", -1.4,  \"plastic\",   \"Plastic\"),\n    (\"/World/Cube_2\", -1.15, \"metal\",     \"Metal\"),\n    (\"/World/Cube_3\", -0.9,  \"glass\",     \"Glass\"),\n    (\"/World/Cube_4\", -0.65, \"cardboard\", \"Cardboard\"),\n]\nfor path, x, mat_class, mat_name in material_specs:\n    create_prim(prim_path=path, prim_type=\"Cube\", position=[x, 0.4, 0.835], size=0.05)\n    for api in (\"PhysicsRigidBodyAPI\", \"PhysicsCollisionAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n        apply_api_schema(prim_path=path, schema_name=api)\n    assign_material(prim_path=path, material_path=f\"/World/Mats/{mat_name}\")\n    set_semantic_label(prim_path=path, class_name=mat_class, semantic_type=\"material\")\n\nbulk_set_attribute(prim_paths=[c[0] for c in material_specs], attr=\"physxRigidBody:sleepThreshold\", value=0.0)\nfor c in material_specs:\n    apply_physics_material(prim_path=c[0], material_name=\"rubber\")\n\n# Pre-pick sensors\nbarcode_reader_sensor(\n    sensor_path=\"/World/BarcodeReader\",\n    position=[-0.3, 0.4, 0.85],\n    scan_radius=0.05,\n)\nnir_material_sensor(\n    sensor_path=\"/World/NirSensor\",\n    position=[0.0, 0.4, 0.85],\n    scan_radius=0.05,\n)\n\n# 4 destination bins\nbin_specs = [\n    (\"/World/PlasticBin\",  -0.45, \"Plastic\"),\n    (\"/World/MetalBin\",    -0.15, \"Metal\"),\n    (\"/World/GlassBin\",     0.15, \"Glass\"),\n    (\"/World/CardboardBin\", 0.45, \"Cardboard\"),\n]\nfor path, x, mat in bin_specs:\n    create_bin(prim_path=path, position=[x, -0.5, 0.75], size=[0.18, 0.18, 0.15])\n    assign_material(prim_path=path, material_path=f\"/World/Mats/{mat}\")\n\nadd_proximity_sensor(sensor_path=\"/World/PickSensor\", position=[0.4, 0.4, 0.835], size=[0.06, 0.06, 0.06])\n\nsetup_pick_place_controller(\n    robot_path=\"/World/Franka\",\n    target_source=\"curobo\",\n    sensor_path=\"/World/PickSensor\",\n    belt_path=\"/World/ConveyorBelt\",\n    source_paths=[c[0] for c in material_specs],\n    destination_path=\"/World/PlasticBin\",\n    color_routing={\n        \"plastic\":   \"/World/PlasticBin\",\n        \"metal\":     \"/World/MetalBin\",\n        \"glass\":     \"/World/GlassBin\",\n        \"cardboard\": \"/World/CardboardBin\",\n    },\n    planning_obstacles=[\"/World/Table\", \"/World/ConveyorBelt\", \"/World/PlasticBin\", \"/World/MetalBin\", \"/World/GlassBin\", \"/World/CardboardBin\"],\n)",
+  "thoughts": "Six recycling-multi-sensor specifics for CP-66:\n1) 4 cubes representing 4 materials: plastic (gray), metal (silver), glass (cyan-tint), cardboard (brown).\n2) Each cube has set_semantic_label semantic_type='material' with class_name matching material.\n3) Barcode reader at conveyor pre-pick zone \u2014 reads cube identity.\n4) NIR material sensor at conveyor pick zone \u2014 reads material:type attr.\n5) 4 destination bins (one per material). color_routing matches material-class to bin.\n6) Realizes #18 multi-sensor recycling station.",
+  "code": "create_prim(prim_path=\"/World/DomeLight\", prim_type=\"DomeLight\")\nset_attribute(prim_path=\"/World/DomeLight\", attr_name=\"inputs:intensity\", value=1500.0)\ncreate_prim(prim_path=\"/World/Ground\", prim_type=\"Cube\", position=[0, 0, -0.5], scale=[20, 20, 1])\napply_api_schema(prim_path=\"/World/Ground\", schema_name=\"PhysicsCollisionAPI\")\ncreate_prim(prim_path=\"/World/Cell\", prim_type=\"Xform\")\ncreate_prim(prim_path=\"/World/Table\", prim_type=\"Cube\", position=[0, 0, 0.375], scale=[1.5, 0.5, 0.375])\napply_api_schema(prim_path=\"/World/Table\", schema_name=\"PhysicsCollisionAPI\")\n\nset_physics_scene_config(config={\"enable_gpu_dynamics\": False, \"broadphase_type\": \"MBP\"})\n\nrobot_wizard(\n    robot_name=\"franka_panda\",\n    dest_path=\"/World/Franka\",\n    position=[0, 0, 0.75],\n    orientation=[0.7071068, 0, 0, 0.7071068],\n)\n\ncreate_conveyor(\n    prim_path=\"/World/ConveyorBelt\",\n    position=[0.0, 0.4, 0.78],\n    size=[3.0, 0.4, 0.05],\n    surface_velocity=[0.2, 0, 0],\n)\n\ncreate_material(material_path=\"/World/Mats/Plastic\",   shader_type=\"OmniPBR\", diffuse_color=[0.6, 0.6, 0.6])\ncreate_material(material_path=\"/World/Mats/Metal\",     shader_type=\"OmniPBR\", diffuse_color=[0.85, 0.85, 0.85])\ncreate_material(material_path=\"/World/Mats/Glass\",     shader_type=\"OmniPBR\", diffuse_color=[0.7, 0.95, 0.95])\ncreate_material(material_path=\"/World/Mats/Cardboard\", shader_type=\"OmniPBR\", diffuse_color=[0.5, 0.35, 0.2])\n\nmaterial_specs = [\n    (\"/World/Cube_1\", -1.4,  \"plastic\",   \"Plastic\"),\n    (\"/World/Cube_2\", -1.15, \"metal\",     \"Metal\"),\n    (\"/World/Cube_3\", -0.9,  \"glass\",     \"Glass\"),\n    (\"/World/Cube_4\", -0.65, \"cardboard\", \"Cardboard\"),\n]\nfor path, x, mat_class, mat_name in material_specs:\n    create_prim(prim_path=path, prim_type=\"Cube\", position=[x, 0.4, 0.835], size=0.05)\n    for api in (\"PhysicsRigidBodyAPI\", \"PhysicsCollisionAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n        apply_api_schema(prim_path=path, schema_name=api)\n    assign_material(prim_path=path, material_path=f\"/World/Mats/{mat_name}\")\n    set_semantic_label(prim_path=path, class_name=mat_class, semantic_type=\"class\")\n\nbulk_set_attribute(prim_paths=[c[0] for c in material_specs], attr=\"physxRigidBody:sleepThreshold\", value=0.0)\nfor c in material_specs:\n    apply_physics_material(prim_path=c[0], material_name=\"rubber\")\n\n# Pre-pick sensors\nbarcode_reader_sensor(\n    sensor_path=\"/World/BarcodeReader\",\n    position=[-0.3, 0.4, 0.85],\n    scan_radius=0.05,\n)\nnir_material_sensor(\n    sensor_path=\"/World/NirSensor\",\n    position=[0.0, 0.4, 0.85],\n    scan_radius=0.05,\n)\n\n# 4 destination bins\nbin_specs = [\n    (\"/World/PlasticBin\",  -0.45, \"Plastic\"),\n    (\"/World/MetalBin\",    -0.15, \"Metal\"),\n    (\"/World/GlassBin\",     0.15, \"Glass\"),\n    (\"/World/CardboardBin\", 0.45, \"Cardboard\"),\n]\nfor path, x, mat in bin_specs:\n    create_bin(prim_path=path, position=[x, -0.5, 0.75], size=[0.18, 0.18, 0.15])\n    assign_material(prim_path=path, material_path=f\"/World/Mats/{mat}\")\n\nadd_proximity_sensor(sensor_path=\"/World/PickSensor\", position=[0.4, 0.4, 0.835], size=[0.06, 0.06, 0.06])\n\nsetup_pick_place_controller(\n    robot_path=\"/World/Franka\",\n    target_source=\"curobo\",\n    sensor_path=\"/World/PickSensor\",\n    belt_path=\"/World/ConveyorBelt\",\n    source_paths=[c[0] for c in material_specs],\n    destination_path=\"/World/PlasticBin\",\n    color_routing={\n        \"plastic\":   \"/World/PlasticBin\",\n        \"metal\":     \"/World/MetalBin\",\n        \"glass\":     \"/World/GlassBin\",\n        \"cardboard\": \"/World/CardboardBin\",\n    },\n    planning_obstacles=[\"/World/Table\", \"/World/ConveyorBelt\", \"/World/PlasticBin\", \"/World/MetalBin\", \"/World/GlassBin\", \"/World/CardboardBin\"],\n)",
   "settle_state": {
     "cubes": {
       "/World/Cube_1": [
@@ -66,16 +66,28 @@
   "simulate_args": {
     "cube_path": "/World/Cube_1",
     "target_path": "/World/PlasticBin",
-    "duration_s": 180
+    "duration_s": 180,
+    "cube_paths": [
+      "/World/Cube_1",
+      "/World/Cube_2",
+      "/World/Cube_3",
+      "/World/Cube_4"
+    ],
+    "color_routing": {
+      "plastic": "/World/PlasticBin",
+      "metal": "/World/MetalBin",
+      "glass": "/World/GlassBin",
+      "cardboard": "/World/CardboardBin"
+    }
   },
   "extends": "CP-17",
   "extension_notes": "CP-66 combines barcode_reader_sensor + nir_material_sensor with 4-class semantic routing. Uses semantic_type='material' instead of 'color'. cuRobo's color_routing dispatches per material class (Semantics_class API). Realizes #18 Recycling Multi-Sensor.",
   "failure_modes": [
-    "Sensors are scaffolding — no runtime read logic. color_routing reads pre-set Semantics_class.",
-    "4 bins arranged tightly — 0.30m spacing; planning_obstacles avoids each.",
+    "Sensors are scaffolding \u2014 no runtime read logic. color_routing reads pre-set Semantics_class.",
+    "4 bins arranged tightly \u2014 0.30m spacing; planning_obstacles avoids each.",
     "Same physics gotchas as CP-17."
   ],
-  "verified_status": "build-spec-2026-04-XX; form-gate ✓; function-gate ✓ (120s sim. cube_final=(-0.49, -0.46, 0.824) in Bin)",
+  "verified_status": "build-spec-2026-04-XX; form-gate \u2713; function-gate \u2713 (120s sim. cube_final=(-0.49, -0.46, 0.824) in Bin)",
   "intent": {
     "pattern_hint": "pick_place",
     "structural_features": {
@@ -95,28 +107,40 @@
   },
   "roles": {
     "primary_robot": {
-      "constraints": ["franka_panda", "ur5e", "kinova_gen3"],
+      "constraints": [
+        "franka_panda",
+        "ur5e",
+        "kinova_gen3"
+      ],
       "expected_count": 1,
       "required": true
     },
     "input_conveyor": {
-      "constraints": ["conveyor"],
+      "constraints": [
+        "conveyor"
+      ],
       "expected_count": 1,
       "required": true
     },
     "pick_sensor": {
-      "constraints": ["proximity_sensor"],
+      "constraints": [
+        "proximity_sensor"
+      ],
       "expected_count": 1,
       "required": true
     },
     "workpieces": {
-      "constraints": ["cube"],
+      "constraints": [
+        "cube"
+      ],
       "min": 4,
       "max": 4,
       "unordered": false
     },
     "destinations": {
-      "constraints": ["bin"],
+      "constraints": [
+        "bin"
+      ],
       "min": 4,
       "max": 4,
       "unordered": false
@@ -126,31 +150,128 @@
     "primary_robot": {
       "path": "/World/Franka",
       "class": "franka_panda",
-      "position": [0, 0, 0.75],
-      "orientation": [0.7071068, 0, 0, 0.7071068]
+      "position": [
+        0,
+        0,
+        0.75
+      ],
+      "orientation": [
+        0.7071068,
+        0,
+        0,
+        0.7071068
+      ]
     },
     "input_conveyor": {
       "path": "/World/ConveyorBelt",
-      "position": [0.0, 0.4, 0.78],
-      "size": [3.0, 0.4, 0.05],
-      "surface_velocity": [0.2, 0, 0]
+      "position": [
+        0.0,
+        0.4,
+        0.78
+      ],
+      "size": [
+        3.0,
+        0.4,
+        0.05
+      ],
+      "surface_velocity": [
+        0.2,
+        0,
+        0
+      ]
     },
     "pick_sensor": {
       "path": "/World/PickSensor",
-      "position": [0.4, 0.4, 0.835],
-      "size": [0.06, 0.06, 0.06]
+      "position": [
+        0.4,
+        0.4,
+        0.835
+      ],
+      "size": [
+        0.06,
+        0.06,
+        0.06
+      ]
     },
     "workpieces": [
-      {"path": "/World/Cube_1", "position": [-1.4,  0.4, 0.835], "mat_class": "plastic",   "mat_name": "Plastic"},
-      {"path": "/World/Cube_2", "position": [-1.15, 0.4, 0.835], "mat_class": "metal",     "mat_name": "Metal"},
-      {"path": "/World/Cube_3", "position": [-0.9,  0.4, 0.835], "mat_class": "glass",     "mat_name": "Glass"},
-      {"path": "/World/Cube_4", "position": [-0.65, 0.4, 0.835], "mat_class": "cardboard", "mat_name": "Cardboard"}
+      {
+        "path": "/World/Cube_1",
+        "position": [
+          -1.4,
+          0.4,
+          0.835
+        ],
+        "mat_class": "plastic",
+        "mat_name": "Plastic"
+      },
+      {
+        "path": "/World/Cube_2",
+        "position": [
+          -1.15,
+          0.4,
+          0.835
+        ],
+        "mat_class": "metal",
+        "mat_name": "Metal"
+      },
+      {
+        "path": "/World/Cube_3",
+        "position": [
+          -0.9,
+          0.4,
+          0.835
+        ],
+        "mat_class": "glass",
+        "mat_name": "Glass"
+      },
+      {
+        "path": "/World/Cube_4",
+        "position": [
+          -0.65,
+          0.4,
+          0.835
+        ],
+        "mat_class": "cardboard",
+        "mat_name": "Cardboard"
+      }
     ],
     "destinations": [
-      {"path": "/World/PlasticBin",   "position": [-0.45, -0.5, 0.75], "routing_key": "plastic"},
-      {"path": "/World/MetalBin",     "position": [-0.15, -0.5, 0.75], "routing_key": "metal"},
-      {"path": "/World/GlassBin",     "position": [0.15,  -0.5, 0.75], "routing_key": "glass"},
-      {"path": "/World/CardboardBin", "position": [0.45,  -0.5, 0.75], "routing_key": "cardboard"}
+      {
+        "path": "/World/PlasticBin",
+        "position": [
+          -0.45,
+          -0.5,
+          0.75
+        ],
+        "routing_key": "plastic"
+      },
+      {
+        "path": "/World/MetalBin",
+        "position": [
+          -0.15,
+          -0.5,
+          0.75
+        ],
+        "routing_key": "metal"
+      },
+      {
+        "path": "/World/GlassBin",
+        "position": [
+          0.15,
+          -0.5,
+          0.75
+        ],
+        "routing_key": "glass"
+      },
+      {
+        "path": "/World/CardboardBin",
+        "position": [
+          0.45,
+          -0.5,
+          0.75
+        ],
+        "routing_key": "cardboard"
+      }
     ]
   },
   "code_template": "create_prim(prim_path=\"/World/DomeLight\", prim_type=\"DomeLight\")\nset_attribute(prim_path=\"/World/DomeLight\", attr_name=\"inputs:intensity\", value=1500.0)\ncreate_prim(prim_path=\"/World/Ground\", prim_type=\"Cube\", position=[0, 0, -0.5], scale=[20, 20, 1])\napply_api_schema(prim_path=\"/World/Ground\", schema_name=\"PhysicsCollisionAPI\")\ncreate_prim(prim_path=\"/World/Cell\", prim_type=\"Xform\")\ncreate_prim(prim_path=\"/World/Table\", prim_type=\"Cube\", position=[0, 0, 0.375], scale=[1.5, 0.5, 0.375])\napply_api_schema(prim_path=\"/World/Table\", schema_name=\"PhysicsCollisionAPI\")\n\nset_physics_scene_config(config={\"enable_gpu_dynamics\": False, \"broadphase_type\": \"MBP\"})\n\nrobot_wizard(\n    robot_name={{primary_robot.class}},\n    dest_path={{primary_robot.path}},\n    position={{primary_robot.position}},\n    orientation={{primary_robot.orientation}},\n)\n\ncreate_conveyor(\n    prim_path={{input_conveyor.path}},\n    position={{input_conveyor.position}},\n    size={{input_conveyor.size}},\n    surface_velocity={{input_conveyor.surface_velocity}},\n)\n\ncreate_material(material_path=\"/World/Mats/Plastic\",   shader_type=\"OmniPBR\", diffuse_color=[0.6, 0.6, 0.6])\ncreate_material(material_path=\"/World/Mats/Metal\",     shader_type=\"OmniPBR\", diffuse_color=[0.85, 0.85, 0.85])\ncreate_material(material_path=\"/World/Mats/Glass\",     shader_type=\"OmniPBR\", diffuse_color=[0.7, 0.95, 0.95])\ncreate_material(material_path=\"/World/Mats/Cardboard\", shader_type=\"OmniPBR\", diffuse_color=[0.5, 0.35, 0.2])\n\ncreate_prim(prim_path={{workpieces[0].path}}, prim_type=\"Cube\", position={{workpieces[0].position}}, size=0.05)\nfor api in (\"PhysicsRigidBodyAPI\", \"PhysicsCollisionAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n    apply_api_schema(prim_path={{workpieces[0].path}}, schema_name=api)\nassign_material(prim_path={{workpieces[0].path}}, material_path=\"/World/Mats/Plastic\")\nset_semantic_label(prim_path={{workpieces[0].path}}, class_name=\"plastic\", semantic_type=\"material\")\n\ncreate_prim(prim_path={{workpieces[1].path}}, prim_type=\"Cube\", position={{workpieces[1].position}}, size=0.05)\nfor api in (\"PhysicsRigidBodyAPI\", \"PhysicsCollisionAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n    apply_api_schema(prim_path={{workpieces[1].path}}, schema_name=api)\nassign_material(prim_path={{workpieces[1].path}}, material_path=\"/World/Mats/Metal\")\nset_semantic_label(prim_path={{workpieces[1].path}}, class_name=\"metal\", semantic_type=\"material\")\n\ncreate_prim(prim_path={{workpieces[2].path}}, prim_type=\"Cube\", position={{workpieces[2].position}}, size=0.05)\nfor api in (\"PhysicsRigidBodyAPI\", \"PhysicsCollisionAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n    apply_api_schema(prim_path={{workpieces[2].path}}, schema_name=api)\nassign_material(prim_path={{workpieces[2].path}}, material_path=\"/World/Mats/Glass\")\nset_semantic_label(prim_path={{workpieces[2].path}}, class_name=\"glass\", semantic_type=\"material\")\n\ncreate_prim(prim_path={{workpieces[3].path}}, prim_type=\"Cube\", position={{workpieces[3].position}}, size=0.05)\nfor api in (\"PhysicsRigidBodyAPI\", \"PhysicsCollisionAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n    apply_api_schema(prim_path={{workpieces[3].path}}, schema_name=api)\nassign_material(prim_path={{workpieces[3].path}}, material_path=\"/World/Mats/Cardboard\")\nset_semantic_label(prim_path={{workpieces[3].path}}, class_name=\"cardboard\", semantic_type=\"material\")\n\nbulk_set_attribute(prim_paths=[{{workpieces[0].path}}, {{workpieces[1].path}}, {{workpieces[2].path}}, {{workpieces[3].path}}], attr=\"physxRigidBody:sleepThreshold\", value=0.0)\nfor path in [{{workpieces[0].path}}, {{workpieces[1].path}}, {{workpieces[2].path}}, {{workpieces[3].path}}]:\n    apply_physics_material(prim_path=path, material_name=\"rubber\")\n\n# Pre-pick sensors\nbarcode_reader_sensor(\n    sensor_path=\"/World/BarcodeReader\",\n    position=[-0.3, 0.4, 0.85],\n    scan_radius=0.05,\n)\nnir_material_sensor(\n    sensor_path=\"/World/NirSensor\",\n    position=[0.0, 0.4, 0.85],\n    scan_radius=0.05,\n)\n\n# 4 destination bins\ncreate_bin(prim_path={{destinations[0].path}}, position={{destinations[0].position}}, size=[0.18, 0.18, 0.15])\nassign_material(prim_path={{destinations[0].path}}, material_path=\"/World/Mats/Plastic\")\ncreate_bin(prim_path={{destinations[1].path}}, position={{destinations[1].position}}, size=[0.18, 0.18, 0.15])\nassign_material(prim_path={{destinations[1].path}}, material_path=\"/World/Mats/Metal\")\ncreate_bin(prim_path={{destinations[2].path}}, position={{destinations[2].position}}, size=[0.18, 0.18, 0.15])\nassign_material(prim_path={{destinations[2].path}}, material_path=\"/World/Mats/Glass\")\ncreate_bin(prim_path={{destinations[3].path}}, position={{destinations[3].position}}, size=[0.18, 0.18, 0.15])\nassign_material(prim_path={{destinations[3].path}}, material_path=\"/World/Mats/Cardboard\")\n\nadd_proximity_sensor(sensor_path={{pick_sensor.path}}, position={{pick_sensor.position}}, size={{pick_sensor.size}})\n\nsetup_pick_place_controller(\n    robot_path={{primary_robot.path}},\n    target_source=\"curobo\",\n    sensor_path={{pick_sensor.path}},\n    belt_path={{input_conveyor.path}},\n    source_paths=[{{workpieces[0].path}}, {{workpieces[1].path}}, {{workpieces[2].path}}, {{workpieces[3].path}}],\n    destination_path={{destinations[0].path}},\n    color_routing={\n        \"plastic\":   {{destinations[0].path}},\n        \"metal\":     {{destinations[1].path}},\n        \"glass\":     {{destinations[2].path}},\n        \"cardboard\": {{destinations[3].path}},\n    },\n    planning_obstacles=[\"/World/Table\", {{input_conveyor.path}}, {{destinations[0].path}}, {{destinations[1].path}}, {{destinations[2].path}}, {{destinations[3].path}}],\n)",

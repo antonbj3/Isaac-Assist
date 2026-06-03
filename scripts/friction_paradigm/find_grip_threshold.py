@@ -199,6 +199,7 @@ async def run_one(mu: float, stiff: float, mass: float, iter_id: str, run_dir: P
     obs_code = OBSERVE_CODE.format(
         robot_path=robot_path, ee_link=ee_link,
         cube_paths=cube_paths, target_path=target_path,
+        color_routing=(sa.get("color_routing") or sa.get("destination_map") or {}),
         duration_s=duration_s, table_top_z=0.75,
         require_upright=False, upright_dot_threshold=0.85,
         expected_scene_elements=[],

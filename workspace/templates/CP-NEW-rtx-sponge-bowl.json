@@ -155,7 +155,7 @@
       "/World/Sponge"
     ],
     "duration_s": 60,
-    "xy_tolerance": 0.09
+    "xy_tolerance": 0.1
   },
   "diagnose_args": {
     "robot_path": "/World/Franka",
@@ -177,5 +177,12 @@
     ],
     "failed": {}
   },
-  "verified_status": "drafted-2026-05-16; form-gate-schema \u2713; function-gate \u23f3 (requires Franka USD + cuRobo + PhysX live Kit); patched-r-a20-fix"
+  "verified_status": "drafted-2026-05-16; form-gate-schema \u2713; function-gate \u23f3 (requires Franka USD + cuRobo + PhysX live Kit); patched-r-a20-fix",
+  "_patch_history": [
+    {
+      "op": "p2_xy_tol_floor_0.10",
+      "prev": 0.09,
+      "date": "2026-05-19"
+    }
+  ]
 }

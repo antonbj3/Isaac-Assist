@@ -9,7 +9,10 @@
     "create_conveyor",
     "create_bin",
     "setup_pick_place_controller",
-    "add_proximity_sensor"
+    "add_proximity_sensor",
+    "set_physics_scene_config",
+    "bulk_set_attribute",
+    "apply_physics_material"
   ],
   "thoughts": [
     "This canonical is intentionally controller-mode-parameterized via target_source.",
@@ -17,7 +20,7 @@
     "Output: row in controller_shootout_report.md showing 'curobo: X cycles, spline: Y cycles, native: Z cycles, builtin: W cycles'.",
     "For canonical-build-time, just pick one target_source. The shootout sweep is run via scripts/qa/controller_shootout_report.py."
   ],
-  "code": "create_prim(prim_path=\"/World/DomeLight\", prim_type=\"DomeLight\")\nset_attribute(prim_path=\"/World/DomeLight\", attr_name=\"inputs:intensity\", value=1000.0)\ncreate_prim(prim_path=\"/World/Ground\", prim_type=\"Cube\", position=[0, 0, -0.5], scale=[20, 20, 1])\napply_api_schema(prim_path=\"/World/Ground\", schema_name=\"PhysicsCollisionAPI\")\n\nset_physics_scene_config(config={\"enable_gpu_dynamics\": False, \"broadphase_type\": \"MBP\"})\n\ncreate_prim(prim_path=\"/World/Table\", prim_type=\"Cube\", position=[0, 0, 0.375], scale=[1.5, 0.5, 0.375])\napply_api_schema(prim_path=\"/World/Table\", schema_name=\"PhysicsCollisionAPI\")\n\nrobot_wizard(\n    robot_name=\"franka_panda\",\n    dest_path=\"/World/Franka\",\n    position=[0, 0, 0.75],\n    orientation=[0.7071068, 0, 0, 0.7071068],\n)\n\ncreate_conveyor(\n    prim_path=\"/World/ConveyorBelt\",\n    position=[0.0, 0.4, 0.78],\n    size=[2.0, 0.4, 0.05],\n    surface_velocity=[0.20, 0, 0],\n)\n\nfor i, x in enumerate([-1.0, -0.7, -0.4, -0.1]):\n    path = f\"/World/Cube_{i+1}\"\n    create_prim(prim_path=path, prim_type=\"Cube\", position=[x, 0.4, 0.835], size=0.05)\n    for api in (\"PhysicsRigidBodyAPI\", \"PhysicsCollisionAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n        apply_api_schema(prim_path=path, schema_name=api)\n    bulk_set_attribute(prim_paths=[path], attr=\"physxRigidBody:sleepThreshold\", value=0.0)\n    apply_physics_material(prim_path=path, material_name=\"rubber\")\n\ncreate_bin(prim_path=\"/World/Bin\", position=[0.5, -0.4, 0.75], size=[0.30, 0.30, 0.15])\n\nadd_proximity_sensor(sensor_path=\"/World/PickSensor\", position=[0.4, 0.4, 0.835], size=[0.06, 0.06, 0.06])\n\nsetup_pick_place_controller(\n    robot_path=\"/World/Franka\",\n    target_source=\"curobo\",\n    sensor_path=\"/World/PickSensor\",\n    belt_path=\"/World/ConveyorBelt\",\n    source_paths=[f\"/World/Cube_{i+1}\" for i in range(4)],\n    destination_path=\"/World/Bin\",\n    planning_obstacles=[\"/World/Table\", \"/World/ConveyorBelt\", \"/World/Bin\"],\n)",
+  "code": "create_prim(prim_path=\"/World/DomeLight\", prim_type=\"DomeLight\")\nset_attribute(prim_path=\"/World/DomeLight\", attr_name=\"inputs:intensity\", value=1000.0)\ncreate_prim(prim_path=\"/World/Ground\", prim_type=\"Cube\", position=[0, 0, -0.5], scale=[20, 20, 1])\napply_api_schema(prim_path=\"/World/Ground\", schema_name=\"PhysicsCollisionAPI\")\ncreate_prim(prim_path=\"/World/Cell\", prim_type=\"Xform\")\ncreate_prim(prim_path=\"/World/Table\", prim_type=\"Cube\", position=[0, 0, 0.375], scale=[1.5, 0.5, 0.375])\napply_api_schema(prim_path=\"/World/Table\", schema_name=\"PhysicsCollisionAPI\")\n\nset_physics_scene_config(config={\"enable_gpu_dynamics\": False, \"broadphase_type\": \"MBP\"})\n\nrobot_wizard(\n    robot_name=\"franka_panda\",\n    dest_path=\"/World/Franka\",\n    position=[0, 0, 0.75],\n    orientation=[0.7071068, 0, 0, 0.7071068],\n)\n\ncreate_conveyor(\n    prim_path=\"/World/ConveyorBelt\",\n    position=[0.0, 0.4, 0.78],\n    size=[2.0, 0.4, 0.05],\n    surface_velocity=[0.20, 0, 0],\n)\n\nfor i, x in enumerate([-1.0, -0.7, -0.4, -0.1]):\n    path = f\"/World/Cube_{i+1}\"\n    create_prim(prim_path=path, prim_type=\"Cube\", position=[x, 0.4, 0.835], size=0.05)\n    for api in (\"PhysicsRigidBodyAPI\", \"PhysicsCollisionAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n        apply_api_schema(prim_path=path, schema_name=api)\n    bulk_set_attribute(prim_paths=[path], attr=\"physxRigidBody:sleepThreshold\", value=0.0)\n    apply_physics_material(prim_path=path, material_name=\"rubber\")\n\ncreate_bin(prim_path=\"/World/Bin\", position=[0.5, -0.4, 0.75], size=[0.30, 0.30, 0.15])\n\nadd_proximity_sensor(sensor_path=\"/World/PickSensor\", position=[0.4, 0.4, 0.835], size=[0.06, 0.06, 0.06])\n\nsetup_pick_place_controller(\n    robot_path=\"/World/Franka\",\n    target_source=\"curobo\",\n    sensor_path=\"/World/PickSensor\",\n    belt_path=\"/World/ConveyorBelt\",\n    source_paths=[f\"/World/Cube_{i+1}\" for i in range(4)],\n    destination_path=\"/World/Bin\",\n    planning_obstacles=[\"/World/Table\", \"/World/ConveyorBelt\", \"/World/Bin\"],\n)",
   "verify_args": null,
   "simulate_args": {
     "cube_paths": [
@@ -54,27 +57,39 @@
   },
   "roles": {
     "primary_robot": {
-      "constraints": ["franka_panda", "ur5e", "kinova_gen3"],
+      "constraints": [
+        "franka_panda",
+        "ur5e",
+        "kinova_gen3"
+      ],
       "expected_count": 1,
       "required": true
     },
     "input_conveyor": {
-      "constraints": ["conveyor"],
+      "constraints": [
+        "conveyor"
+      ],
       "expected_count": 1,
       "required": true
     },
     "primary_destination": {
-      "constraints": ["bin"],
+      "constraints": [
+        "bin"
+      ],
       "expected_count": 1,
       "required": true
     },
     "pick_sensor": {
-      "constraints": ["proximity_sensor"],
+      "constraints": [
+        "proximity_sensor"
+      ],
       "expected_count": 1,
       "required": true
     },
     "workpieces": {
-      "constraints": ["cube"],
+      "constraints": [
+        "cube"
+      ],
       "min": 1,
       "max": 8,
       "param_name": "n_cubes",
@@ -85,39 +100,109 @@
     "primary_robot": {
       "path": "/World/Franka",
       "class": "franka_panda",
-      "position": [0, 0, 0.75],
-      "orientation": [0.7071068, 0, 0, 0.7071068]
+      "position": [
+        0,
+        0,
+        0.75
+      ],
+      "orientation": [
+        0.7071068,
+        0,
+        0,
+        0.7071068
+      ]
     },
     "input_conveyor": {
       "path": "/World/ConveyorBelt",
-      "position": [0.0, 0.4, 0.78],
-      "size": [2.0, 0.4, 0.05],
-      "surface_velocity": [0.20, 0, 0]
+      "position": [
+        0.0,
+        0.4,
+        0.78
+      ],
+      "size": [
+        2.0,
+        0.4,
+        0.05
+      ],
+      "surface_velocity": [
+        0.2,
+        0,
+        0
+      ]
     },
     "primary_destination": {
       "path": "/World/Bin",
-      "position": [0.5, -0.4, 0.75],
-      "size": [0.30, 0.30, 0.15]
+      "position": [
+        0.5,
+        -0.4,
+        0.75
+      ],
+      "size": [
+        0.3,
+        0.3,
+        0.15
+      ]
     },
     "pick_sensor": {
       "path": "/World/PickSensor",
-      "position": [0.4, 0.4, 0.835],
-      "size": [0.06, 0.06, 0.06]
+      "position": [
+        0.4,
+        0.4,
+        0.835
+      ],
+      "size": [
+        0.06,
+        0.06,
+        0.06
+      ]
     },
     "workpieces": [
-      {"path": "/World/Cube_1", "position": [-1.0, 0.4, 0.835]},
-      {"path": "/World/Cube_2", "position": [-0.7, 0.4, 0.835]},
-      {"path": "/World/Cube_3", "position": [-0.4, 0.4, 0.835]},
-      {"path": "/World/Cube_4", "position": [-0.1, 0.4, 0.835]}
+      {
+        "path": "/World/Cube_1",
+        "position": [
+          -0.92,
+          0.4,
+          0.835
+        ]
+      },
+      {
+        "path": "/World/Cube_2",
+        "position": [
+          -0.7,
+          0.4,
+          0.835
+        ]
+      },
+      {
+        "path": "/World/Cube_3",
+        "position": [
+          -0.4,
+          0.4,
+          0.835
+        ]
+      },
+      {
+        "path": "/World/Cube_4",
+        "position": [
+          -0.1,
+          0.4,
+          0.835
+        ]
+      }
     ]
   },
-  "code_template": "create_prim(prim_path=\"/World/DomeLight\", prim_type=\"DomeLight\")\nset_attribute(prim_path=\"/World/DomeLight\", attr_name=\"inputs:intensity\", value=1000.0)\ncreate_prim(prim_path=\"/World/Ground\", prim_type=\"Cube\", position=[0, 0, -0.5], scale=[20, 20, 1])\napply_api_schema(prim_path=\"/World/Ground\", schema_name=\"PhysicsCollisionAPI\")\n\nset_physics_scene_config(config={\"enable_gpu_dynamics\": False, \"broadphase_type\": \"MBP\"})\n\ncreate_prim(prim_path=\"/World/Table\", prim_type=\"Cube\", position=[0, 0, 0.375], scale=[1.5, 0.5, 0.375])\napply_api_schema(prim_path=\"/World/Table\", schema_name=\"PhysicsCollisionAPI\")\n\nrobot_wizard(\n    robot_name={{primary_robot.class}},\n    dest_path={{primary_robot.path}},\n    position={{primary_robot.position}},\n    orientation={{primary_robot.orientation}},\n)\n\ncreate_conveyor(\n    prim_path={{input_conveyor.path}},\n    position={{input_conveyor.position}},\n    size={{input_conveyor.size}},\n    surface_velocity={{input_conveyor.surface_velocity}},\n)\n\ncreate_prim(prim_path={{workpieces[0].path}}, prim_type=\"Cube\", position={{workpieces[0].position}}, size=0.05)\nfor api in (\"PhysicsRigidBodyAPI\", \"PhysicsCollisionAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n    apply_api_schema(prim_path={{workpieces[0].path}}, schema_name=api)\nbulk_set_attribute(prim_paths=[{{workpieces[0].path}}], attr=\"physxRigidBody:sleepThreshold\", value=0.0)\napply_physics_material(prim_path={{workpieces[0].path}}, material_name=\"rubber\")\n\ncreate_prim(prim_path={{workpieces[1].path}}, prim_type=\"Cube\", position={{workpieces[1].position}}, size=0.05)\nfor api in (\"PhysicsRigidBodyAPI\", \"PhysicsCollisionAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n    apply_api_schema(prim_path={{workpieces[1].path}}, schema_name=api)\nbulk_set_attribute(prim_paths=[{{workpieces[1].path}}], attr=\"physxRigidBody:sleepThreshold\", value=0.0)\napply_physics_material(prim_path={{workpieces[1].path}}, material_name=\"rubber\")\n\ncreate_prim(prim_path={{workpieces[2].path}}, prim_type=\"Cube\", position={{workpieces[2].position}}, size=0.05)\nfor api in (\"PhysicsRigidBodyAPI\", \"PhysicsCollisionAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n    apply_api_schema(prim_path={{workpieces[2].path}}, schema_name=api)\nbulk_set_attribute(prim_paths=[{{workpieces[2].path}}], attr=\"physxRigidBody:sleepThreshold\", value=0.0)\napply_physics_material(prim_path={{workpieces[2].path}}, material_name=\"rubber\")\n\ncreate_prim(prim_path={{workpieces[3].path}}, prim_type=\"Cube\", position={{workpieces[3].position}}, size=0.05)\nfor api in (\"PhysicsRigidBodyAPI\", \"PhysicsCollisionAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n    apply_api_schema(prim_path={{workpieces[3].path}}, schema_name=api)\nbulk_set_attribute(prim_paths=[{{workpieces[3].path}}], attr=\"physxRigidBody:sleepThreshold\", value=0.0)\napply_physics_material(prim_path={{workpieces[3].path}}, material_name=\"rubber\")\n\ncreate_bin(prim_path={{primary_destination.path}}, position={{primary_destination.position}}, size={{primary_destination.size}})\n\nadd_proximity_sensor(sensor_path={{pick_sensor.path}}, position={{pick_sensor.position}}, size={{pick_sensor.size}})\n\nsetup_pick_place_controller(\n    robot_path={{primary_robot.path}},\n    target_source=\"curobo\",\n    sensor_path={{pick_sensor.path}},\n    belt_path={{input_conveyor.path}},\n    source_paths=[{{workpieces[0].path}}, {{workpieces[1].path}}, {{workpieces[2].path}}, {{workpieces[3].path}}],\n    destination_path={{primary_destination.path}},\n    planning_obstacles=[\"/World/Table\", {{input_conveyor.path}}, {{primary_destination.path}}],\n)",
+  "code_template": "create_prim(prim_path=\"/World/DomeLight\", prim_type=\"DomeLight\")\nset_attribute(prim_path=\"/World/DomeLight\", attr_name=\"inputs:intensity\", value=1000.0)\ncreate_prim(prim_path=\"/World/Ground\", prim_type=\"Cube\", position=[0, 0, -0.5], scale=[20, 20, 1])\napply_api_schema(prim_path=\"/World/Ground\", schema_name=\"PhysicsCollisionAPI\")\ncreate_prim(prim_path=\"/World/Cell\", prim_type=\"Xform\")\ncreate_prim(prim_path=\"/World/Table\", prim_type=\"Cube\", position=[0, 0, 0.375], scale=[1.5, 0.5, 0.375])\napply_api_schema(prim_path=\"/World/Table\", schema_name=\"PhysicsCollisionAPI\")\n\nset_physics_scene_config(config={\"enable_gpu_dynamics\": False, \"broadphase_type\": \"MBP\"})\n\nrobot_wizard(\n    robot_name={{primary_robot.class}},\n    dest_path={{primary_robot.path}},\n    position={{primary_robot.position}},\n    orientation={{primary_robot.orientation}},\n)\n\ncreate_conveyor(\n    prim_path={{input_conveyor.path}},\n    position={{input_conveyor.position}},\n    size={{input_conveyor.size}},\n    surface_velocity={{input_conveyor.surface_velocity}},\n)\n\ncreate_prim(prim_path={{workpieces[0].path}}, prim_type=\"Cube\", position={{workpieces[0].position}}, size=0.05)\nfor api in (\"PhysicsRigidBodyAPI\", \"PhysicsCollisionAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n    apply_api_schema(prim_path={{workpieces[0].path}}, schema_name=api)\nbulk_set_attribute(prim_paths=[{{workpieces[0].path}}], attr=\"physxRigidBody:sleepThreshold\", value=0.0)\napply_physics_material(prim_path={{workpieces[0].path}}, material_name=\"rubber\")\n\ncreate_prim(prim_path={{workpieces[1].path}}, prim_type=\"Cube\", position={{workpieces[1].position}}, size=0.05)\nfor api in (\"PhysicsRigidBodyAPI\", \"PhysicsCollisionAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n    apply_api_schema(prim_path={{workpieces[1].path}}, schema_name=api)\nbulk_set_attribute(prim_paths=[{{workpieces[1].path}}], attr=\"physxRigidBody:sleepThreshold\", value=0.0)\napply_physics_material(prim_path={{workpieces[1].path}}, material_name=\"rubber\")\n\ncreate_prim(prim_path={{workpieces[2].path}}, prim_type=\"Cube\", position={{workpieces[2].position}}, size=0.05)\nfor api in (\"PhysicsRigidBodyAPI\", \"PhysicsCollisionAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n    apply_api_schema(prim_path={{workpieces[2].path}}, schema_name=api)\nbulk_set_attribute(prim_paths=[{{workpieces[2].path}}], attr=\"physxRigidBody:sleepThreshold\", value=0.0)\napply_physics_material(prim_path={{workpieces[2].path}}, material_name=\"rubber\")\n\ncreate_prim(prim_path={{workpieces[3].path}}, prim_type=\"Cube\", position={{workpieces[3].position}}, size=0.05)\nfor api in (\"PhysicsRigidBodyAPI\", \"PhysicsCollisionAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n    apply_api_schema(prim_path={{workpieces[3].path}}, schema_name=api)\nbulk_set_attribute(prim_paths=[{{workpieces[3].path}}], attr=\"physxRigidBody:sleepThreshold\", value=0.0)\napply_physics_material(prim_path={{workpieces[3].path}}, material_name=\"rubber\")\n\ncreate_bin(prim_path={{primary_destination.path}}, position={{primary_destination.position}}, size={{primary_destination.size}})\n\nadd_proximity_sensor(sensor_path={{pick_sensor.path}}, position={{pick_sensor.position}}, size={{pick_sensor.size}})\n\nsetup_pick_place_controller(\n    robot_path={{primary_robot.path}},\n    target_source=\"curobo\",\n    sensor_path={{pick_sensor.path}},\n    belt_path={{input_conveyor.path}},\n    source_paths=[{{workpieces[0].path}}, {{workpieces[1].path}}, {{workpieces[2].path}}, {{workpieces[3].path}}],\n    destination_path={{primary_destination.path}},\n    planning_obstacles=[\"/World/Table\", {{input_conveyor.path}}, {{primary_destination.path}}],\n)",
   "simulate_args_template": {
-    "cube_paths": ["{{workpieces[0].path}}", "{{workpieces[1].path}}", "{{workpieces[2].path}}", "{{workpieces[3].path}}"],
+    "cube_paths": [
+      "{{workpieces[0].path}}",
+      "{{workpieces[1].path}}",
+      "{{workpieces[2].path}}",
+      "{{workpieces[3].path}}"
+    ],
     "target_path": "{{primary_destination.path}}",
     "duration_s": 180
   },
-  "verified_status": "build-spec-2026-05-10; smoke-test ✓ 1/1 (47s); ready for N=5",
+  "verified_status": "build-spec-2026-05-10; smoke-test \u2713 1/1 (47s); ready for N=5; 2026-05-20 misc-rewrite: moved Table+CollisionAPI creation before set_physics_scene_config (was after, causing Franka to fall through table at spawn); added Cell Xform; added missing tools to tools_used",
   "motion_controllers": {
     "verified": [],
     "untested": [

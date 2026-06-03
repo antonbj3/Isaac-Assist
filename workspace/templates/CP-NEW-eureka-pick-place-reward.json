@@ -34,7 +34,7 @@
     "env_name": "FrankaPickPlace-EurekaTarget-v0",
     "expected_reward_id": "non-null string",
     "result_file": "/tmp/eureka_pp_result.json",
-    "success_threshold": 0.50
+    "success_threshold": 0.5
   },
   "verify_args": {
     "stages": []
@@ -42,8 +42,12 @@
   "simulate_args": null,
   "diagnose_args": {
     "reward_id": "from_generate_reward_return",
-    "expected_keys": ["score", "mean_return", "std_return"],
-    "success_threshold": 0.50,
+    "expected_keys": [
+      "score",
+      "mean_return",
+      "std_return"
+    ],
+    "success_threshold": 0.5,
     "result_file": "/tmp/eureka_pp_result.json"
   },
   "verified_status": "drafted-2026-05-16-patched-r-a-fix-2; form-gate ⏳ (schema-OK after 2 patch rounds); function-gate ⏳",
@@ -76,21 +80,30 @@
   "motion_controllers": {
     "verified": [],
     "failed": {},
-    "untested": ["direct_joint"]
+    "untested": [
+      "direct_joint"
+    ]
   },
   "roles": {
     "primary_robot": {
-      "constraints": ["franka_panda", "ur5e"],
+      "constraints": [
+        "franka_panda",
+        "ur5e"
+      ],
       "expected_count": 1,
       "required": true
     },
     "training_environment": {
-      "constraints": ["FrankaPickPlace-EurekaTarget-v0"],
+      "constraints": [
+        "FrankaPickPlace-EurekaTarget-v0"
+      ],
       "expected_count": 1,
       "required": true
     },
     "success_metric": {
-      "constraints": ["evaluate_reward_score_gte_0.50"],
+      "constraints": [
+        "evaluate_reward_score_gte_0.50"
+      ],
       "expected_count": 1,
       "required": true
     }
@@ -99,16 +112,31 @@
     "primary_robot": {
       "path": "/World/Franka",
       "class": "franka_panda",
-      "position": [0, 0, 0.75],
-      "orientation": [0.7071068, 0, 0, 0.7071068]
+      "position": [
+        0,
+        0,
+        0.75
+      ],
+      "orientation": [
+        0.7071068,
+        0,
+        0,
+        0.7071068
+      ]
     },
     "training_environment": {
       "env_name": "FrankaPickPlace-EurekaTarget-v0",
       "n_envs": 1,
-      "obs_keys": ["joint_pos", "joint_vel", "ee_pos", "cube_pos", "target_pos"]
+      "obs_keys": [
+        "joint_pos",
+        "joint_vel",
+        "ee_pos",
+        "cube_pos",
+        "target_pos"
+      ]
     },
     "success_metric": {
-      "threshold": 0.50,
+      "threshold": 0.5,
       "metric_key": "score",
       "result_file": "/tmp/eureka_pp_result.json"
     }

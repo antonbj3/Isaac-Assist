@@ -1,0 +1,1036 @@
+{
+  "mode": "soft (production default)",
+  "thresholds": {
+    "min_sim": 0.45,
+    "min_margin": 0.2
+  },
+  "index": {
+    "n_indexed": 447,
+    "n_with_intent": 235
+  },
+  "n_prompts": 28,
+  "n_gate_fires": 0,
+  "pattern_hint_dist": {
+    "pick_place": 21,
+    "navigate": 2,
+    "sort": 2,
+    "train": 2,
+    "reorient": 1
+  },
+  "results": [
+    {
+      "id": "A01",
+      "axis": "multi-robot line",
+      "prompt": "Build a 6-station automotive sub-assembly line with 4 fixed Franka arms, one UR10 on a 7th-axis rail, and a Nova Carter AMR feeding parts, with WIP buffers between stations, station-blocking back-pressure, and a line-balancing report giving cycle time per station and the bottleneck.",
+      "pattern_hint": "navigate",
+      "counts_nonzero": {},
+      "features_on": [
+        "uses_navigation"
+      ],
+      "structural_tags": [],
+      "top3": [
+        {
+          "task_id": "CP-NEW-assembly-line-4robot-handoff",
+          "similarity": 0.4345,
+          "similarity_boosted": 0.4345,
+          "boost_applied": false
+        },
+        {
+          "task_id": "CP-NEW-wire-harness-route",
+          "similarity": 0.3106,
+          "similarity_boosted": 0.3106,
+          "boost_applied": false
+        },
+        {
+          "task_id": "CP-NEW-multi-amr-corridor",
+          "similarity": 0.3093,
+          "similarity_boosted": 0.3093,
+          "boost_applied": false
+        }
+      ],
+      "top1_sim": 0.4345,
+      "top2_sim": 0.3106,
+      "margin": 0.1239,
+      "gate_fires": false,
+      "action": "few_shot",
+      "latency_ms": 125.3
+    },
+    {
+      "id": "A02",
+      "axis": "bimanual hold+fasten",
+      "prompt": "Two Franka arms perform a true bimanual assembly: the left arm holds a bracket under continuous 5 N press force while the right arm drives four M4 screws into it in a cross pattern, keeping the hold force throughout all four screw cycles with no per-cycle release.",
+      "pattern_hint": "pick_place",
+      "counts_nonzero": {
+        "robots": 2
+      },
+      "features_on": [],
+      "structural_tags": [],
+      "top3": [
+        {
+          "task_id": "CP-NEW-roco-bimanual-assembly",
+          "similarity": 0.4639,
+          "similarity_boosted": 0.5335,
+          "boost_applied": true
+        },
+        {
+          "task_id": "CP-NEW-assembly-line-4robot-handoff",
+          "similarity": 0.3949,
+          "similarity_boosted": 0.4541,
+          "boost_applied": true
+        },
+        {
+          "task_id": "CP-NEW-screw-driving-impedance",
+          "similarity": 0.3653,
+          "similarity_boosted": 0.3653,
+          "boost_applied": false
+        }
+      ],
+      "top1_sim": 0.4639,
+      "top2_sim": 0.3949,
+      "margin": 0.069,
+      "gate_fires": false,
+      "action": "few_shot",
+      "latency_ms": 106.4
+    },
+    {
+      "id": "A03",
+      "axis": "pipelined 3-arm cell",
+      "prompt": "Set up a three-arm circular cell where arm A picks, arm B inspects and regrips, and arm C inserts, running as a continuously pipelined flow with all three arms active at once, sustaining at least one part per second steady state.",
+      "pattern_hint": "pick_place",
+      "counts_nonzero": {
+        "robots": 3,
+        "cubes": 1
+      },
+      "features_on": [],
+      "structural_tags": [],
+      "top3": [
+        {
+          "task_id": "CP-NEW-triple-arm-cell-handoff",
+          "similarity": 0.3299,
+          "similarity_boosted": 0.3794,
+          "boost_applied": true
+        },
+        {
+          "task_id": "CP-NEW-g1-bimanual-tabletop",
+          "similarity": 0.2763,
+          "similarity_boosted": 0.3177,
+          "boost_applied": true
+        },
+        {
+          "task_id": "CP-NEW-conveyor-recirculation-overflow",
+          "similarity": 0.2659,
+          "similarity_boosted": 0.3058,
+          "boost_applied": true
+        }
+      ],
+      "top1_sim": 0.3299,
+      "top2_sim": 0.2763,
+      "margin": 0.0536,
+      "gate_fires": false,
+      "action": "few_shot",
+      "latency_ms": 92.1
+    },
+    {
+      "id": "A04",
+      "axis": "mobile manipulation",
+      "prompt": "A Carter AMR with a UR10 mounted on its deck navigates to three shelf bays, picks an SKU from each at different heights, and returns to a packing station, coordinating its base pose so each target stays inside the arm's dexterous workspace.",
+      "pattern_hint": "navigate",
+      "counts_nonzero": {},
+      "features_on": [
+        "uses_navigation"
+      ],
+      "structural_tags": [],
+      "top3": [
+        {
+          "task_id": "CP-NEW-amr-pickup-handoff",
+          "similarity": 0.3969,
+          "similarity_boosted": 0.3969,
+          "boost_applied": false
+        },
+        {
+          "task_id": "CP-64",
+          "similarity": 0.2859,
+          "similarity_boosted": 0.3288,
+          "boost_applied": true
+        },
+        {
+          "task_id": "CP-NEW-multi-amr-corridor",
+          "similarity": 0.316,
+          "similarity_boosted": 0.316,
+          "boost_applied": false
+        }
+      ],
+      "top1_sim": 0.3969,
+      "top2_sim": 0.2859,
+      "margin": 0.111,
+      "gate_fires": false,
+      "action": "few_shot",
+      "latency_ms": 103.8
+    },
+    {
+      "id": "A05",
+      "axis": "spiral-search insertion",
+      "prompt": "Insert a splined shaft into a mating hub with 0.05 mm clearance using a spiral-search plus force-feedback strategy, aborting and re-approaching if axial force exceeds 15 N before seating, and report the insertion depth versus force curve.",
+      "pattern_hint": "pick_place",
+      "counts_nonzero": {},
+      "features_on": [],
+      "structural_tags": [],
+      "top3": [
+        {
+          "task_id": "CP-NEW-narrow-clearance-insertion",
+          "similarity": 0.3228,
+          "similarity_boosted": 0.3228,
+          "boost_applied": false
+        },
+        {
+          "task_id": "CP-58",
+          "similarity": 0.2956,
+          "similarity_boosted": 0.2956,
+          "boost_applied": false
+        },
+        {
+          "task_id": "CP-NEW-assembly-constraint-verify",
+          "similarity": 0.2182,
+          "similarity_boosted": 0.2182,
+          "boost_applied": false
+        }
+      ],
+      "top1_sim": 0.3228,
+      "top2_sim": 0.2956,
+      "margin": 0.0272,
+      "gate_fires": false,
+      "action": "few_shot",
+      "latency_ms": 98.1
+    },
+    {
+      "id": "A06",
+      "axis": "torque-controlled threading",
+      "prompt": "Thread an M8 bolt six full turns into a tapped hole with a helical-screw motion and torque-controlled tightening to a 5 N\u00b7m target, detecting cross-threading from the torque-spike signature in the first half turn.",
+      "pattern_hint": "pick_place",
+      "counts_nonzero": {},
+      "features_on": [],
+      "structural_tags": [],
+      "top3": [
+        {
+          "task_id": "CP-NEW-screw-driving-impedance",
+          "similarity": 0.313,
+          "similarity_boosted": 0.313,
+          "boost_applied": false
+        },
+        {
+          "task_id": "CP-58",
+          "similarity": 0.2305,
+          "similarity_boosted": 0.2305,
+          "boost_applied": false
+        },
+        {
+          "task_id": "CP-NEW-wire-harness-route",
+          "similarity": 0.1416,
+          "similarity_boosted": 0.1416,
+          "boost_applied": false
+        }
+      ],
+      "top1_sim": 0.313,
+      "top2_sim": 0.2305,
+      "margin": 0.0825,
+      "gate_fires": false,
+      "action": "few_shot",
+      "latency_ms": 106.1
+    },
+    {
+      "id": "A07",
+      "axis": "snap-fit assembly",
+      "prompt": "Press a plastic clip into a housing as a snap-fit, detect the click from the force-drop signature, verify full engagement, and retry up to three times with re-orientation on a failed snap.",
+      "pattern_hint": "pick_place",
+      "counts_nonzero": {},
+      "features_on": [],
+      "structural_tags": [],
+      "top3": [
+        {
+          "task_id": "CP-NEW-yrkesroll-assembler-snap-fit",
+          "similarity": 0.1949,
+          "similarity_boosted": 0.1949,
+          "boost_applied": false
+        },
+        {
+          "task_id": "E-11",
+          "similarity": 0.155,
+          "similarity_boosted": 0.155,
+          "boost_applied": false
+        },
+        {
+          "task_id": "CP-NEW-tactile-insertion",
+          "similarity": 0.1261,
+          "similarity_boosted": 0.1261,
+          "boost_applied": false
+        }
+      ],
+      "top1_sim": 0.1949,
+      "top2_sim": 0.155,
+      "margin": 0.0399,
+      "gate_fires": false,
+      "action": "few_shot",
+      "latency_ms": 106.1
+    },
+    {
+      "id": "A08",
+      "axis": "gear-mesh assembly",
+      "prompt": "Place a spur gear onto a shaft and rotate it to mesh with a mating gear, using contact-torque feedback to find the tooth-engagement angle.",
+      "pattern_hint": "pick_place",
+      "counts_nonzero": {},
+      "features_on": [],
+      "structural_tags": [],
+      "top3": [
+        {
+          "task_id": "CP-NEW-robohive-relocate-pen",
+          "similarity": 0.2683,
+          "similarity_boosted": 0.2683,
+          "boost_applied": false
+        },
+        {
+          "task_id": "CP-NEW-turn-faucet",
+          "similarity": 0.2492,
+          "similarity_boosted": 0.2492,
+          "boost_applied": false
+        },
+        {
+          "task_id": "CP-58",
+          "similarity": 0.2228,
+          "similarity_boosted": 0.2228,
+          "boost_applied": false
+        }
+      ],
+      "top1_sim": 0.2683,
+      "top2_sim": 0.2492,
+      "margin": 0.0192,
+      "gate_fires": false,
+      "action": "few_shot",
+      "latency_ms": 106.1
+    },
+    {
+      "id": "A09",
+      "axis": "clutter bin-pick (local vision)",
+      "prompt": "Run closed-loop bin-picking from a cluttered tote of 20 mixed parts in random 6-DOF poses with mutual occlusion, using a local segmentation and pose pipeline with no cloud API, collision-aware grasp selection, and a re-perceive-after-each-pick loop.",
+      "pattern_hint": "pick_place",
+      "counts_nonzero": {},
+      "features_on": [],
+      "structural_tags": [],
+      "top3": [
+        {
+          "task_id": "CP-NEW-bin-picking-random-pose",
+          "similarity": 0.4704,
+          "similarity_boosted": 0.4704,
+          "boost_applied": false
+        },
+        {
+          "task_id": "CP-NEW-6dof-pose-estimate-pick",
+          "similarity": 0.3968,
+          "similarity_boosted": 0.3968,
+          "boost_applied": false
+        },
+        {
+          "task_id": "K-08",
+          "similarity": 0.3802,
+          "similarity_boosted": 0.3802,
+          "boost_applied": false
+        }
+      ],
+      "top1_sim": 0.4704,
+      "top2_sim": 0.3968,
+      "margin": 0.0736,
+      "gate_fires": false,
+      "action": "few_shot",
+      "latency_ms": 104.5
+    },
+    {
+      "id": "A10",
+      "axis": "deformable sheet handling",
+      "prompt": "Pick a limp gasket sheet from a stack with a vacuum array, detect its sag, and lay it flat into a fixture without folding, using real soft-body physics rather than a rigid proxy.",
+      "pattern_hint": "pick_place",
+      "counts_nonzero": {},
+      "features_on": [],
+      "structural_tags": [],
+      "top3": [
+        {
+          "task_id": "L-11",
+          "similarity": 0.1274,
+          "similarity_boosted": 0.1274,
+          "boost_applied": false
+        },
+        {
+          "task_id": "CP-NEW-vacuum-gripper-sheet-pick",
+          "similarity": 0.0939,
+          "similarity_boosted": 0.0939,
+          "boost_applied": false
+        },
+        {
+          "task_id": "CP-21",
+          "similarity": 0.0932,
+          "similarity_boosted": 0.0932,
+          "boost_applied": false
+        }
+      ],
+      "top1_sim": 0.1274,
+      "top2_sim": 0.0939,
+      "margin": 0.0335,
+      "gate_fires": false,
+      "action": "few_shot",
+      "latency_ms": 92.2
+    },
+    {
+      "id": "A11",
+      "axis": "trained-detector defect loop",
+      "prompt": "Run defect inspection with a YOLO model trained on this scene's own SDG output, then close the loop so items the live detector flags as scratched get diverted, and report precision and recall against the ground-truth semantic labels.",
+      "pattern_hint": "pick_place",
+      "counts_nonzero": {},
+      "features_on": [],
+      "structural_tags": [],
+      "top3": [
+        {
+          "task_id": "CP-NEW-defect-sdg",
+          "similarity": 0.4509,
+          "similarity_boosted": 0.4509,
+          "boost_applied": false
+        },
+        {
+          "task_id": "CP-NEW-yrkesroll-inspector-reject-divert",
+          "similarity": 0.4201,
+          "similarity_boosted": 0.4201,
+          "boost_applied": false
+        },
+        {
+          "task_id": "CP-NEW-scene-sdg-full-pipeline",
+          "similarity": 0.3848,
+          "similarity_boosted": 0.3848,
+          "boost_applied": false
+        }
+      ],
+      "top1_sim": 0.4509,
+      "top2_sim": 0.4201,
+      "margin": 0.0308,
+      "gate_fires": false,
+      "action": "few_shot",
+      "latency_ms": 103.3
+    },
+    {
+      "id": "A12",
+      "axis": "multi-cam hand-eye pose",
+      "prompt": "Estimate 6-DOF object poses from multiple hand-eye-calibrated cameras and feed them to the grasp planner, validated end-to-end against known fiducial poses with a reprojection-error report.",
+      "pattern_hint": "pick_place",
+      "counts_nonzero": {},
+      "features_on": [],
+      "structural_tags": [],
+      "top3": [
+        {
+          "task_id": "CP-NEW-hand-eye-calibration",
+          "similarity": 0.5328,
+          "similarity_boosted": 0.5328,
+          "boost_applied": false
+        },
+        {
+          "task_id": "CP-NEW-6dof-pose-estimate-pick",
+          "similarity": 0.4728,
+          "similarity_boosted": 0.4728,
+          "boost_applied": false
+        },
+        {
+          "task_id": "K-08",
+          "similarity": 0.3432,
+          "similarity_boosted": 0.3432,
+          "boost_applied": false
+        }
+      ],
+      "top1_sim": 0.5328,
+      "top2_sim": 0.4728,
+      "margin": 0.0599,
+      "gate_fires": false,
+      "action": "few_shot",
+      "latency_ms": 97.3
+    },
+    {
+      "id": "A13",
+      "axis": "long-horizon kit-build + rollback",
+      "prompt": "Run a 12-step kit build that places a base, inserts three fasteners, mounts a cover, applies a label, boxes and seals, with per-step verification, automatic retry on failure, and a checkpoint-rollback to the last good state if a step fails twice.",
+      "pattern_hint": "pick_place",
+      "counts_nonzero": {},
+      "features_on": [],
+      "structural_tags": [],
+      "top3": [
+        {
+          "task_id": "E-10",
+          "similarity": 0.3772,
+          "similarity_boosted": 0.3772,
+          "boost_applied": false
+        },
+        {
+          "task_id": "CP-NEW-planning-10step-retry",
+          "similarity": 0.2696,
+          "similarity_boosted": 0.2696,
+          "boost_applied": false
+        },
+        {
+          "task_id": "CP-NEW-brick-stacking",
+          "similarity": 0.2365,
+          "similarity_boosted": 0.2365,
+          "boost_applied": false
+        }
+      ],
+      "top1_sim": 0.3772,
+      "top2_sim": 0.2696,
+      "margin": 0.1076,
+      "gate_fires": false,
+      "action": "few_shot",
+      "latency_ms": 93.4
+    },
+    {
+      "id": "A14",
+      "axis": "palletize-then-verify",
+      "prompt": "Build a three-layer mixed-SKU pallet and, after each layer, run an overhead scan to confirm placement within plus or minus 5 mm, re-placing any item that drifted before starting the next layer.",
+      "pattern_hint": "pick_place",
+      "counts_nonzero": {},
+      "features_on": [],
+      "structural_tags": [],
+      "top3": [
+        {
+          "task_id": "CP-NEW-palletizer-mixed-sku",
+          "similarity": 0.3882,
+          "similarity_boosted": 0.3882,
+          "boost_applied": false
+        },
+        {
+          "task_id": "CP-12",
+          "similarity": 0.3771,
+          "similarity_boosted": 0.3771,
+          "boost_applied": false
+        },
+        {
+          "task_id": "CP-20",
+          "similarity": 0.3569,
+          "similarity_boosted": 0.3569,
+          "boost_applied": false
+        }
+      ],
+      "top1_sim": 0.3882,
+      "top2_sim": 0.3771,
+      "margin": 0.0111,
+      "gate_fires": false,
+      "action": "few_shot",
+      "latency_ms": 104.0
+    },
+    {
+      "id": "A15",
+      "axis": "composed cross-domain workflow",
+      "prompt": "As one runnable scenario, pick from a conveyor, vision-inspect, sort defects to a reject lane, palletize the good parts, and emit an OEE and defect-rate dashboard.",
+      "pattern_hint": "sort",
+      "counts_nonzero": {
+        "conveyors": 1
+      },
+      "features_on": [
+        "uses_conveyor_transport"
+      ],
+      "structural_tags": [],
+      "top3": [
+        {
+          "task_id": "CP-NEW-yrkesroll-inspector-reject-divert",
+          "similarity": 0.3486,
+          "similarity_boosted": 0.4009,
+          "boost_applied": true
+        },
+        {
+          "task_id": "CP-NEW-inspect-reject",
+          "similarity": 0.3133,
+          "similarity_boosted": 0.3603,
+          "boost_applied": true
+        },
+        {
+          "task_id": "CP-NEW-yrkesroll-quality-tech-fixture-gauge",
+          "similarity": 0.3017,
+          "similarity_boosted": 0.347,
+          "boost_applied": true
+        }
+      ],
+      "top1_sim": 0.3486,
+      "top2_sim": 0.3133,
+      "margin": 0.0353,
+      "gate_fires": false,
+      "action": "few_shot",
+      "latency_ms": 98.4
+    },
+    {
+      "id": "A16",
+      "axis": "precision place + Cpk",
+      "prompt": "Precision-place a part into a 0.5 mm-clearance fixture pocket with vision-servo final alignment, then report the placement-error distribution over 20 cycles and a Cpk against a plus or minus 0.3 mm spec.",
+      "pattern_hint": "pick_place",
+      "counts_nonzero": {
+        "cubes": 1
+      },
+      "features_on": [],
+      "structural_tags": [],
+      "top3": [
+        {
+          "task_id": "L-06",
+          "similarity": 0.3567,
+          "similarity_boosted": 0.3567,
+          "boost_applied": false
+        },
+        {
+          "task_id": "L-03",
+          "similarity": 0.3168,
+          "similarity_boosted": 0.3168,
+          "boost_applied": false
+        },
+        {
+          "task_id": "L-10",
+          "similarity": 0.3102,
+          "similarity_boosted": 0.3102,
+          "boost_applied": false
+        }
+      ],
+      "top1_sim": 0.3567,
+      "top2_sim": 0.3168,
+      "margin": 0.0398,
+      "gate_fires": false,
+      "action": "few_shot",
+      "latency_ms": 104.2
+    },
+    {
+      "id": "A17",
+      "axis": "tolerance stack-up report",
+      "prompt": "Verify a five-fixture stack-up by computing the cumulative tolerance, flag whether the worst-case assembly still clears a 2 mm guard, and produce an auditable tolerance-stack report.",
+      "pattern_hint": "pick_place",
+      "counts_nonzero": {},
+      "features_on": [],
+      "structural_tags": [],
+      "top3": [
+        {
+          "task_id": "L-10",
+          "similarity": 0.3382,
+          "similarity_boosted": 0.3382,
+          "boost_applied": false
+        },
+        {
+          "task_id": "L-02",
+          "similarity": 0.2862,
+          "similarity_boosted": 0.2862,
+          "boost_applied": false
+        },
+        {
+          "task_id": "L-11",
+          "similarity": 0.2616,
+          "similarity_boosted": 0.2616,
+          "boost_applied": false
+        }
+      ],
+      "top1_sim": 0.3382,
+      "top2_sim": 0.2862,
+      "margin": 0.052,
+      "gate_fires": false,
+      "action": "few_shot",
+      "latency_ms": 91.9
+    },
+    {
+      "id": "A18",
+      "axis": "mid-task EE changeover",
+      "prompt": "Have a UR10 start with a parallel-jaw gripper and palletize four boxes, then auto-swap to a vacuum cup at a tool stand and de-palletize flat sheets, verifying tool engagement after each swap.",
+      "pattern_hint": "pick_place",
+      "counts_nonzero": {},
+      "features_on": [
+        "has_orientation_requirement"
+      ],
+      "structural_tags": [],
+      "top3": [
+        {
+          "task_id": "CP-70",
+          "similarity": 0.3986,
+          "similarity_boosted": 0.4583,
+          "boost_applied": true
+        },
+        {
+          "task_id": "CP-NEW-tool-changer-swap",
+          "similarity": 0.3984,
+          "similarity_boosted": 0.3984,
+          "boost_applied": false
+        },
+        {
+          "task_id": "CP-54",
+          "similarity": 0.3031,
+          "similarity_boosted": 0.3485,
+          "boost_applied": true
+        }
+      ],
+      "top1_sim": 0.3986,
+      "top2_sim": 0.3984,
+      "margin": 0.0002,
+      "gate_fires": false,
+      "action": "few_shot",
+      "latency_ms": 105.8
+    },
+    {
+      "id": "A19",
+      "axis": "adaptive 3-finger grasp",
+      "prompt": "Use an adaptive three-finger gripper to handle five different geometries \u2014 cube, cylinder, sphere, thin plate, and irregular casting \u2014 selecting the grasp topology of parallel, tripod, or power per object.",
+      "pattern_hint": "pick_place",
+      "counts_nonzero": {},
+      "features_on": [],
+      "structural_tags": [],
+      "top3": [
+        {
+          "task_id": "CP-NEW-adaptive-3finger-gripper",
+          "similarity": 0.6501,
+          "similarity_boosted": 0.6501,
+          "boost_applied": false
+        },
+        {
+          "task_id": "CP-54",
+          "similarity": 0.4702,
+          "similarity_boosted": 0.4702,
+          "boost_applied": false
+        },
+        {
+          "task_id": "CP-41",
+          "similarity": 0.4337,
+          "similarity_boosted": 0.4337,
+          "boost_applied": false
+        }
+      ],
+      "top1_sim": 0.6501,
+      "top2_sim": 0.4702,
+      "margin": 0.1798,
+      "gate_fires": false,
+      "action": "few_shot",
+      "latency_ms": 104.2
+    },
+    {
+      "id": "A20",
+      "axis": "humanoid bimanual clear",
+      "prompt": "Have a Unitree G1 humanoid do a bimanual table-clear, picking objects with both hands and placing them in a bin while maintaining whole-body balance, using a real humanoid pick controller rather than one arm at a time.",
+      "pattern_hint": "pick_place",
+      "counts_nonzero": {
+        "robots": 1,
+        "bins": 1
+      },
+      "features_on": [],
+      "structural_tags": [],
+      "top3": [
+        {
+          "task_id": "CP-NEW-g1-bimanual-tabletop",
+          "similarity": 0.5216,
+          "similarity_boosted": 0.5999,
+          "boost_applied": true
+        },
+        {
+          "task_id": "CP-NEW-bin-picking-random-pose",
+          "similarity": 0.347,
+          "similarity_boosted": 0.399,
+          "boost_applied": true
+        },
+        {
+          "task_id": "CP-NEW-bin-picking-with-flip",
+          "similarity": 0.3302,
+          "similarity_boosted": 0.3302,
+          "boost_applied": false
+        }
+      ],
+      "top1_sim": 0.5216,
+      "top2_sim": 0.347,
+      "margin": 0.1746,
+      "gate_fires": false,
+      "action": "few_shot",
+      "latency_ms": 92.0
+    },
+    {
+      "id": "A21",
+      "axis": "in-hand reorient + handoff",
+      "prompt": "Reorient a cube 180 degrees in-hand with an Allegro hand using finger-gaiting and per-fingertip contact-force observation, then hand it off to a parallel-jaw gripper for placement.",
+      "pattern_hint": "reorient",
+      "counts_nonzero": {
+        "cubes": 1
+      },
+      "features_on": [
+        "has_orientation_requirement"
+      ],
+      "structural_tags": [],
+      "top3": [
+        {
+          "task_id": "CP-NEW-adaptive-3finger-gripper",
+          "similarity": 0.5169,
+          "similarity_boosted": 0.5169,
+          "boost_applied": false
+        },
+        {
+          "task_id": "A-03",
+          "similarity": 0.4941,
+          "similarity_boosted": 0.4941,
+          "boost_applied": false
+        },
+        {
+          "task_id": "CP-NEW-robohive-relocate-pen",
+          "similarity": 0.3505,
+          "similarity_boosted": 0.403,
+          "boost_applied": true
+        }
+      ],
+      "top1_sim": 0.5169,
+      "top2_sim": 0.4941,
+      "margin": 0.0227,
+      "gate_fires": false,
+      "action": "few_shot",
+      "latency_ms": 103.3
+    },
+    {
+      "id": "A22",
+      "axis": "PLC-in-the-loop + Cat-0 stop",
+      "prompt": "Set up a PLC-in-the-loop cell over OPC-UA and Modbus where the robot pick trigger, conveyor run-stop, and a safety light-curtain interlock are all driven by external PLC tags, with an E-stop that brings the arm to an ISO 10218 Category-0 stop mid-trajectory and then resumes safely.",
+      "pattern_hint": "pick_place",
+      "counts_nonzero": {},
+      "features_on": [
+        "uses_conveyor_transport"
+      ],
+      "structural_tags": [],
+      "top3": [
+        {
+          "task_id": "CP-NEW-plc-fixture",
+          "similarity": 0.3613,
+          "similarity_boosted": 0.4155,
+          "boost_applied": true
+        },
+        {
+          "task_id": "CP-88",
+          "similarity": 0.3925,
+          "similarity_boosted": 0.3925,
+          "boost_applied": false
+        },
+        {
+          "task_id": "CP-NEW-plc-conveyor",
+          "similarity": 0.3702,
+          "similarity_boosted": 0.3702,
+          "boost_applied": false
+        }
+      ],
+      "top1_sim": 0.3613,
+      "top2_sim": 0.3925,
+      "margin": -0.0311,
+      "gate_fires": false,
+      "action": "few_shot",
+      "latency_ms": 98.6
+    },
+    {
+      "id": "A23",
+      "axis": "rosbag sim2real autotune",
+      "prompt": "Replay a real-robot rosbag of 200 joint trajectories into the sim, measure the per-joint sim-to-real deviation, auto-tune the actuator friction, armature, and damping to minimize it, and report the residual gap with a confidence bound.",
+      "pattern_hint": "train",
+      "counts_nonzero": {},
+      "features_on": [],
+      "structural_tags": [],
+      "top3": [
+        {
+          "task_id": "CP-NEW-sim2real-gap",
+          "similarity": 0.5305,
+          "similarity_boosted": 0.61,
+          "boost_applied": true
+        },
+        {
+          "task_id": "CP-NEW-ros2-rosbag-replay",
+          "similarity": 0.5398,
+          "similarity_boosted": 0.5398,
+          "boost_applied": false
+        },
+        {
+          "task_id": "CP-NEW-physics-calibrate-actuator",
+          "similarity": 0.416,
+          "similarity_boosted": 0.4784,
+          "boost_applied": true
+        }
+      ],
+      "top1_sim": 0.5305,
+      "top2_sim": 0.5398,
+      "margin": -0.0094,
+      "gate_fires": false,
+      "action": "few_shot",
+      "latency_ms": 104.1
+    },
+    {
+      "id": "A24",
+      "axis": "CNC machine-tending loop",
+      "prompt": "Run a CNC machine-tending cycle where a UR10 loads a blank, closes the door interlock, runs the machine for a fixed dwell, opens the door, and unloads the finished part to an outfeed, looped for five parts with the door interlock enforced every cycle.",
+      "pattern_hint": "pick_place",
+      "counts_nonzero": {
+        "cubes": 5
+      },
+      "features_on": [],
+      "structural_tags": [],
+      "top3": [
+        {
+          "task_id": "CP-NEW-yrkesroll-machinist-cnc-load",
+          "similarity": 0.4305,
+          "similarity_boosted": 0.495,
+          "boost_applied": true
+        },
+        {
+          "task_id": "CP-NEW-machine-tender-load-unload",
+          "similarity": 0.4269,
+          "similarity_boosted": 0.491,
+          "boost_applied": true
+        },
+        {
+          "task_id": "CP-NEW-machine-tender-door-interlock",
+          "similarity": 0.4407,
+          "similarity_boosted": 0.4407,
+          "boost_applied": false
+        }
+      ],
+      "top1_sim": 0.4305,
+      "top2_sim": 0.4269,
+      "margin": 0.0035,
+      "gate_fires": false,
+      "action": "few_shot",
+      "latency_ms": 91.5
+    },
+    {
+      "id": "A25",
+      "axis": "cable routing (deformable)",
+      "prompt": "Route a flexible cable harness through three clips on a panel and seat the connector, keeping the cable bend radius above its minimum the whole time.",
+      "pattern_hint": "sort",
+      "counts_nonzero": {},
+      "features_on": [],
+      "structural_tags": [],
+      "top3": [
+        {
+          "task_id": "CP-NEW-wire-harness-route",
+          "similarity": 0.1492,
+          "similarity_boosted": 0.1492,
+          "boost_applied": false
+        },
+        {
+          "task_id": "CP-58",
+          "similarity": 0.0621,
+          "similarity_boosted": 0.0621,
+          "boost_applied": false
+        },
+        {
+          "task_id": "CP-NEW-bottle-cap-tighten",
+          "similarity": 0.0547,
+          "similarity_boosted": 0.0547,
+          "boost_applied": false
+        }
+      ],
+      "top1_sim": 0.1492,
+      "top2_sim": 0.0621,
+      "margin": 0.087,
+      "gate_fires": false,
+      "action": "few_shot",
+      "latency_ms": 101.2
+    },
+    {
+      "id": "A26",
+      "axis": "moving-target conveyor pick",
+      "prompt": "Track and pick parts off a conveyor moving at 0.3 m/s with a single Franka, dropping each into a tote without stopping the belt.",
+      "pattern_hint": "pick_place",
+      "counts_nonzero": {
+        "conveyors": 1
+      },
+      "features_on": [
+        "uses_conveyor_transport"
+      ],
+      "structural_tags": [],
+      "top3": [
+        {
+          "task_id": "CP-NEW-conveyor-recirculation-overflow",
+          "similarity": 0.4227,
+          "similarity_boosted": 0.4861,
+          "boost_applied": true
+        },
+        {
+          "task_id": "CP-21",
+          "similarity": 0.3933,
+          "similarity_boosted": 0.4523,
+          "boost_applied": true
+        },
+        {
+          "task_id": "CP-26",
+          "similarity": 0.3664,
+          "similarity_boosted": 0.4214,
+          "boost_applied": true
+        }
+      ],
+      "top1_sim": 0.4227,
+      "top2_sim": 0.3933,
+      "margin": 0.0294,
+      "gate_fires": false,
+      "action": "few_shot",
+      "latency_ms": 91.8
+    },
+    {
+      "id": "A27",
+      "axis": "dual-arm large-object handoff",
+      "prompt": "Two UR10 arms cooperatively lift a long rigid beam that is too large for one arm, keeping it level during transfer to a fixture across the cell.",
+      "pattern_hint": "pick_place",
+      "counts_nonzero": {
+        "robots": 10
+      },
+      "features_on": [],
+      "structural_tags": [],
+      "top3": [
+        {
+          "task_id": "L-02",
+          "similarity": 0.3003,
+          "similarity_boosted": 0.3003,
+          "boost_applied": false
+        },
+        {
+          "task_id": "CP-76",
+          "similarity": 0.2403,
+          "similarity_boosted": 0.2764,
+          "boost_applied": true
+        },
+        {
+          "task_id": "CP-70",
+          "similarity": 0.1959,
+          "similarity_boosted": 0.2253,
+          "boost_applied": true
+        }
+      ],
+      "top1_sim": 0.3003,
+      "top2_sim": 0.2403,
+      "margin": 0.0599,
+      "gate_fires": false,
+      "action": "few_shot",
+      "latency_ms": 104.3
+    },
+    {
+      "id": "A28",
+      "axis": "RL grasp policy in-the-loop",
+      "prompt": "Train an RL grasp policy in IsaacLab across parallel environments, then step the trained policy in-the-loop as the controller to pick varied objects and report success rate.",
+      "pattern_hint": "train",
+      "counts_nonzero": {},
+      "features_on": [],
+      "structural_tags": [],
+      "top3": [
+        {
+          "task_id": "CP-NEW-rl-clone-env",
+          "similarity": 0.4213,
+          "similarity_boosted": 0.4845,
+          "boost_applied": true
+        },
+        {
+          "task_id": "A-03",
+          "similarity": 0.3978,
+          "similarity_boosted": 0.3978,
+          "boost_applied": false
+        },
+        {
+          "task_id": "CP-NEW-compare-policies-ab",
+          "similarity": 0.3128,
+          "similarity_boosted": 0.3597,
+          "boost_applied": true
+        }
+      ],
+      "top1_sim": 0.4213,
+      "top2_sim": 0.3978,
+      "margin": 0.0234,
+      "gate_fires": false,
+      "action": "few_shot",
+      "latency_ms": 97.2
+    }
+  ]
+}

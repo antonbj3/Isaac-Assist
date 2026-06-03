@@ -1,6 +1,6 @@
 {
   "task_id": "CP-17",
-  "goal": "Build a 3-class semantic sorter: 6 cubes (all 5cm physical) tagged with semantic class labels ('small', 'medium', 'large') routed to 3 corresponding bins. Demonstrates that color_routing in cuRobo handler dispatches on ANY semantic class, not just color — `semantic_type='class'` works the same way as 'color' via Semantics_class API namespace.",
+  "goal": "Build a 3-class semantic sorter: 6 cubes (all 5cm physical) tagged with semantic class labels ('small', 'medium', 'large') routed to 3 corresponding bins. Demonstrates that color_routing in cuRobo handler dispatches on ANY semantic class, not just color \u2014 `semantic_type='class'` works the same way as 'color' via Semantics_class API namespace.",
   "tools_used": [
     "create_prim",
     "set_attribute",
@@ -17,8 +17,8 @@
     "bulk_set_attribute",
     "setup_pick_place_controller"
   ],
-  "thoughts": "Six semantic-sort specifics for CP-17 (extends CP-16 — color → semantic-class routing):\n1) All cubes are 5cm uniform — semantic LABEL is what differs, not physical size. Avoids gripper-width issues that would arise with truly-different cubes.\n2) Each cube tagged via set_semantic_label(class_name='small'|'medium'|'large', semantic_type='class') — creates Semantics_class API on the prim. cuRobo handler's _cube_semantic_class checks Semantics_color/Semantics_colour/Semantics_class in that order, returning lowercase class_name.\n3) Visual coloring orthogonal to semantic class for clarity: 'small' cubes → light gray, 'medium' → dark gray, 'large' → black. Visual separation aids debugging without conflating with color routing.\n4) 3 bins arranged in row at y=-0.4: SmallBin (-0.4, -0.4), MediumBin (0, -0.4), LargeBin (+0.4, -0.4). Each within 0.6m reach.\n5) color_routing dict (misnamed — really semantic_routing): {'small':'/World/SmallBin', 'medium':'/World/MediumBin', 'large':'/World/LargeBin'}.\n6) 2 cubes per class on conveyor: Cube_s1, Cube_s2, Cube_m1, Cube_m2, Cube_l1, Cube_l2 — total 6 cubes spaced 0.30m apart on 3m conveyor. All routed by their semantic class.",
-  "code": "# DomeLight + Ground + Cell + Table\ncreate_prim(prim_path=\"/World/DomeLight\", prim_type=\"DomeLight\")\nset_attribute(prim_path=\"/World/DomeLight\", attr_name=\"inputs:intensity\", value=1000.0)\ncreate_prim(prim_path=\"/World/Ground\", prim_type=\"Cube\", position=[0, 0, -0.5], scale=[20, 20, 1])\napply_api_schema(prim_path=\"/World/Ground\", schema_name=\"PhysicsCollisionAPI\")\ncreate_prim(prim_path=\"/World/Cell\", prim_type=\"Xform\")\ncreate_prim(prim_path=\"/World/Table\", prim_type=\"Cube\", position=[0, 0, 0.375], scale=[1.5, 0.5, 0.375])\napply_api_schema(prim_path=\"/World/Table\", schema_name=\"PhysicsCollisionAPI\")\n\nset_physics_scene_config(config={\"enable_gpu_dynamics\": False, \"broadphase_type\": \"MBP\"})\n\nrobot_wizard(\n    robot_name=\"franka_panda\",\n    dest_path=\"/World/Franka\",\n    position=[0, 0, 0.75],\n    orientation=[0.7071068, 0, 0, 0.7071068],\n)\n\ncreate_conveyor(\n    prim_path=\"/World/ConveyorBelt\",\n    position=[0.0, 0.4, 0.78],\n    size=[3.0, 0.4, 0.05],\n    surface_velocity=[0.2, 0, 0],\n)\n\n# 6 cubes (all 5cm) — semantic class labels distinguish them\nclass_specs = [\n    (\"/World/Cube_s1\", -1.4, [0.7, 0.7, 0.7], \"small\"),\n    (\"/World/Cube_s2\", -1.1, [0.7, 0.7, 0.7], \"small\"),\n    (\"/World/Cube_m1\", -0.8, [0.4, 0.4, 0.4], \"medium\"),\n    (\"/World/Cube_m2\", -0.5, [0.4, 0.4, 0.4], \"medium\"),\n    (\"/World/Cube_l1\", -0.2, [0.1, 0.1, 0.1], \"large\"),\n    (\"/World/Cube_l2\", +0.1, [0.1, 0.1, 0.1], \"large\"),\n]\nfor path, x, rgb, name in class_specs:\n    create_prim(prim_path=path, prim_type=\"Cube\", position=[x, 0.4, 0.835], size=0.05)\n    for api in (\"PhysicsRigidBodyAPI\", \"PhysicsCollisionAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n        apply_api_schema(prim_path=path, schema_name=api)\n    create_material(material_path=f\"/World/Materials/Mat_{name}\", shader_type=\"OmniPBR\", diffuse_color=rgb)\n    assign_material(prim_path=path, material_path=f\"/World/Materials/Mat_{name}\")\n    set_semantic_label(prim_path=path, class_name=name, semantic_type=\"class\")\n\nbulk_set_attribute(\n    prim_paths=[c[0] for c in class_specs],\n    attr=\"physxRigidBody:sleepThreshold\",\n    value=0.0,\n)\nfor c in class_specs:\n    apply_physics_material(prim_path=c[0], material_name=\"rubber\")\n\n# 3 size-class bins\ncreate_bin(prim_path=\"/World/SmallBin\",  position=[-0.4, -0.4, 0.75], size=[0.20, 0.20, 0.15])\ncreate_bin(prim_path=\"/World/MediumBin\", position=[ 0.0, -0.4, 0.75], size=[0.20, 0.20, 0.15])\ncreate_bin(prim_path=\"/World/LargeBin\",  position=[ 0.4, -0.4, 0.75], size=[0.20, 0.20, 0.15])\n\nadd_proximity_sensor(sensor_path=\"/World/PickSensor\", position=[0.4, 0.4, 0.835], size=[0.06, 0.06, 0.06])\n\n# Semantic-routing dispatch via color_routing arg\nsetup_pick_place_controller(\n    robot_path=\"/World/Franka\",\n    target_source=\"curobo\",\n    sensor_path=\"/World/PickSensor\",\n    belt_path=\"/World/ConveyorBelt\",\n    source_paths=[c[0] for c in class_specs],\n    destination_path=\"/World/SmallBin\",\n    color_routing={\n        \"small\":  \"/World/SmallBin\",\n        \"medium\": \"/World/MediumBin\",\n        \"large\":  \"/World/LargeBin\",\n    },\n    drop_target=[-0.4, -0.4, 0.95],\n    planning_obstacles=[\"/World/Table\", \"/World/ConveyorBelt\", \"/World/SmallBin\", \"/World/MediumBin\", \"/World/LargeBin\"],\n)",
+  "thoughts": "Six semantic-sort specifics for CP-17 (extends CP-16 \u2014 color \u2192 semantic-class routing):\n1) All cubes are 5cm uniform \u2014 semantic LABEL is what differs, not physical size. Avoids gripper-width issues that would arise with truly-different cubes.\n2) Each cube tagged via set_semantic_label(class_name='small'|'medium'|'large', semantic_type='class') \u2014 creates Semantics_class API on the prim. cuRobo handler's _cube_semantic_class checks Semantics_color/Semantics_colour/Semantics_class in that order, returning lowercase class_name.\n3) Visual coloring orthogonal to semantic class for clarity: 'small' cubes \u2192 light gray, 'medium' \u2192 dark gray, 'large' \u2192 black. Visual separation aids debugging without conflating with color routing.\n4) 3 bins arranged in row at y=-0.4: SmallBin (-0.4, -0.4), MediumBin (0, -0.4), LargeBin (+0.4, -0.4). Each within 0.6m reach.\n5) color_routing dict (misnamed \u2014 really semantic_routing): {'small':'/World/SmallBin', 'medium':'/World/MediumBin', 'large':'/World/LargeBin'}.\n6) 2 cubes per class on conveyor: Cube_s1, Cube_s2, Cube_m1, Cube_m2, Cube_l1, Cube_l2 \u2014 total 6 cubes spaced 0.30m apart on 3m conveyor. All routed by their semantic class.",
+  "code": "# DomeLight + Ground + Cell + Table\ncreate_prim(prim_path=\"/World/DomeLight\", prim_type=\"DomeLight\")\nset_attribute(prim_path=\"/World/DomeLight\", attr_name=\"inputs:intensity\", value=1000.0)\ncreate_prim(prim_path=\"/World/Ground\", prim_type=\"Cube\", position=[0, 0, -0.5], scale=[20, 20, 1])\napply_api_schema(prim_path=\"/World/Ground\", schema_name=\"PhysicsCollisionAPI\")\ncreate_prim(prim_path=\"/World/Cell\", prim_type=\"Xform\")\ncreate_prim(prim_path=\"/World/Table\", prim_type=\"Cube\", position=[0, 0, 0.375], scale=[1.5, 0.5, 0.375])\napply_api_schema(prim_path=\"/World/Table\", schema_name=\"PhysicsCollisionAPI\")\n\nset_physics_scene_config(config={\"enable_gpu_dynamics\": False, \"broadphase_type\": \"MBP\"})\n\nrobot_wizard(\n    robot_name=\"franka_panda\",\n    dest_path=\"/World/Franka\",\n    position=[0, 0, 0.75],\n    orientation=[0.7071068, 0, 0, 0.7071068],\n)\n\ncreate_conveyor(\n    prim_path=\"/World/ConveyorBelt\",\n    position=[0.0, 0.4, 0.78],\n    size=[3.0, 0.4, 0.05],\n    surface_velocity=[0.2, 0, 0],\n)\n\n# 6 cubes (all 5cm) \u2014 semantic class labels distinguish them\nclass_specs = [\n    (\"/World/Cube_s1\", -1.4, [0.7, 0.7, 0.7], \"small\"),\n    (\"/World/Cube_s2\", -1.1, [0.7, 0.7, 0.7], \"small\"),\n    (\"/World/Cube_m1\", -0.8, [0.4, 0.4, 0.4], \"medium\"),\n    (\"/World/Cube_m2\", -0.5, [0.4, 0.4, 0.4], \"medium\"),\n    (\"/World/Cube_l1\", -0.2, [0.1, 0.1, 0.1], \"large\"),\n    (\"/World/Cube_l2\", +0.1, [0.1, 0.1, 0.1], \"large\"),\n]\nfor path, x, rgb, name in class_specs:\n    create_prim(prim_path=path, prim_type=\"Cube\", position=[x, 0.4, 0.835], size=0.05)\n    for api in (\"PhysicsRigidBodyAPI\", \"PhysicsCollisionAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n        apply_api_schema(prim_path=path, schema_name=api)\n    create_material(material_path=f\"/World/Materials/Mat_{name}\", shader_type=\"OmniPBR\", diffuse_color=rgb)\n    assign_material(prim_path=path, material_path=f\"/World/Materials/Mat_{name}\")\n    set_semantic_label(prim_path=path, class_name=name, semantic_type=\"class\")\n\nbulk_set_attribute(\n    prim_paths=[c[0] for c in class_specs],\n    attr=\"physxRigidBody:sleepThreshold\",\n    value=0.0,\n)\nfor c in class_specs:\n    apply_physics_material(prim_path=c[0], material_name=\"rubber\")\n\n# 3 size-class bins\ncreate_bin(prim_path=\"/World/SmallBin\",  position=[-0.4, -0.4, 0.75], size=[0.20, 0.20, 0.15])\ncreate_bin(prim_path=\"/World/MediumBin\", position=[ 0.0, -0.4, 0.75], size=[0.20, 0.20, 0.15])\ncreate_bin(prim_path=\"/World/LargeBin\",  position=[ 0.4, -0.4, 0.75], size=[0.20, 0.20, 0.15])\n\nadd_proximity_sensor(sensor_path=\"/World/PickSensor\", position=[0.4, 0.4, 0.835], size=[0.06, 0.06, 0.06])\n\n# Semantic-routing dispatch via color_routing arg\nsetup_pick_place_controller(\n    robot_path=\"/World/Franka\",\n    target_source=\"curobo\",\n    sensor_path=\"/World/PickSensor\",\n    belt_path=\"/World/ConveyorBelt\",\n    source_paths=[c[0] for c in class_specs],\n    destination_path=\"/World/SmallBin\",\n    color_routing={\n        \"small\":  \"/World/SmallBin\",\n        \"medium\": \"/World/MediumBin\",\n        \"large\":  \"/World/LargeBin\",\n    },\n    drop_target=[-0.4, -0.4, 0.95],\n    planning_obstacles=[\"/World/Table\", \"/World/ConveyorBelt\", \"/World/SmallBin\", \"/World/MediumBin\", \"/World/LargeBin\"],\n)",
   "settle_state": {
     "cubes": {
       "/World/Cube_s1": [
@@ -74,10 +74,23 @@
   "simulate_args": {
     "cube_path": "/World/Cube_s1",
     "target_path": "/World/SmallBin",
-    "duration_s": 180
+    "duration_s": 180,
+    "cube_paths": [
+      "/World/Cube_s1",
+      "/World/Cube_s2",
+      "/World/Cube_m1",
+      "/World/Cube_m2",
+      "/World/Cube_l1",
+      "/World/Cube_l2"
+    ],
+    "color_routing": {
+      "small": "/World/SmallBin",
+      "medium": "/World/MediumBin",
+      "large": "/World/LargeBin"
+    }
   },
   "extends": "CP-16",
-  "extension_notes": "CP-17 demonstrates that the cuRobo handler's color_routing dispatches on ANY semantic class — Semantics_class works identically to Semantics_color via set_semantic_label(semantic_type='class'). This unblocks size-sorters, type-sorters (raw/finished), priority-sorters, etc. Future variant: combine semantic-class with semantic-color for orthogonal multi-axis routing (small-red → BinA, small-blue → BinB, ...).",
+  "extension_notes": "CP-17 demonstrates that the cuRobo handler's color_routing dispatches on ANY semantic class \u2014 Semantics_class works identically to Semantics_color via set_semantic_label(semantic_type='class'). This unblocks size-sorters, type-sorters (raw/finished), priority-sorters, etc. Future variant: combine semantic-class with semantic-color for orthogonal multi-axis routing (small-red \u2192 BinA, small-blue \u2192 BinB, ...).",
   "intent": {
     "pattern_hint": "pick_place",
     "structural_features": {
@@ -97,24 +110,34 @@
   },
   "roles": {
     "primary_robot": {
-      "constraints": ["franka_panda", "ur5e", "kinova_gen3"],
+      "constraints": [
+        "franka_panda",
+        "ur5e",
+        "kinova_gen3"
+      ],
       "expected_count": 1,
       "required": true
     },
     "input_conveyor": {
-      "constraints": ["conveyor"],
+      "constraints": [
+        "conveyor"
+      ],
       "expected_count": 1,
       "required": true
     },
     "workpieces": {
-      "constraints": ["cube"],
+      "constraints": [
+        "cube"
+      ],
       "min": 1,
       "max": 6,
       "param_name": "n_cubes",
       "unordered": true
     },
     "destinations": {
-      "constraints": ["bin"],
+      "constraints": [
+        "bin"
+      ],
       "min": 1,
       "max": 3,
       "param_name": "n_bins",
@@ -125,32 +148,184 @@
     "primary_robot": {
       "path": "/World/Franka",
       "class": "franka_panda",
-      "position": [0, 0, 0.75],
-      "orientation": [0.7071068, 0, 0, 0.7071068]
+      "position": [
+        0,
+        0,
+        0.75
+      ],
+      "orientation": [
+        0.7071068,
+        0,
+        0,
+        0.7071068
+      ]
     },
     "input_conveyor": {
       "path": "/World/ConveyorBelt",
-      "position": [0.0, 0.4, 0.78],
-      "size": [3.0, 0.4, 0.05],
-      "surface_velocity": [0.2, 0, 0]
+      "position": [
+        0.0,
+        0.4,
+        0.78
+      ],
+      "size": [
+        3.0,
+        0.4,
+        0.05
+      ],
+      "surface_velocity": [
+        0.2,
+        0,
+        0
+      ]
     },
     "pick_sensor": {
       "path": "/World/PickSensor",
-      "position": [0.4, 0.4, 0.835],
-      "size": [0.06, 0.06, 0.06]
+      "position": [
+        0.4,
+        0.4,
+        0.835
+      ],
+      "size": [
+        0.06,
+        0.06,
+        0.06
+      ]
     },
     "workpieces": [
-      {"path": "/World/Cube_s1", "position": [-1.4, 0.4, 0.835], "color_rgb": [0.7, 0.7, 0.7], "semantic_class": "small",  "material_path": "/World/Materials/Mat_small"},
-      {"path": "/World/Cube_s2", "position": [-1.1, 0.4, 0.835], "color_rgb": [0.7, 0.7, 0.7], "semantic_class": "small",  "material_path": "/World/Materials/Mat_small"},
-      {"path": "/World/Cube_m1", "position": [-0.8, 0.4, 0.835], "color_rgb": [0.4, 0.4, 0.4], "semantic_class": "medium", "material_path": "/World/Materials/Mat_medium"},
-      {"path": "/World/Cube_m2", "position": [-0.5, 0.4, 0.835], "color_rgb": [0.4, 0.4, 0.4], "semantic_class": "medium", "material_path": "/World/Materials/Mat_medium"},
-      {"path": "/World/Cube_l1", "position": [-0.2, 0.4, 0.835], "color_rgb": [0.1, 0.1, 0.1], "semantic_class": "large",  "material_path": "/World/Materials/Mat_large"},
-      {"path": "/World/Cube_l2", "position": [ 0.1, 0.4, 0.835], "color_rgb": [0.1, 0.1, 0.1], "semantic_class": "large",  "material_path": "/World/Materials/Mat_large"}
+      {
+        "path": "/World/Cube_s1",
+        "position": [
+          -1.4,
+          0.4,
+          0.835
+        ],
+        "color_rgb": [
+          0.7,
+          0.7,
+          0.7
+        ],
+        "semantic_class": "small",
+        "material_path": "/World/Materials/Mat_small"
+      },
+      {
+        "path": "/World/Cube_s2",
+        "position": [
+          -1.1,
+          0.4,
+          0.835
+        ],
+        "color_rgb": [
+          0.7,
+          0.7,
+          0.7
+        ],
+        "semantic_class": "small",
+        "material_path": "/World/Materials/Mat_small"
+      },
+      {
+        "path": "/World/Cube_m1",
+        "position": [
+          -0.8,
+          0.4,
+          0.835
+        ],
+        "color_rgb": [
+          0.4,
+          0.4,
+          0.4
+        ],
+        "semantic_class": "medium",
+        "material_path": "/World/Materials/Mat_medium"
+      },
+      {
+        "path": "/World/Cube_m2",
+        "position": [
+          -0.5,
+          0.4,
+          0.835
+        ],
+        "color_rgb": [
+          0.4,
+          0.4,
+          0.4
+        ],
+        "semantic_class": "medium",
+        "material_path": "/World/Materials/Mat_medium"
+      },
+      {
+        "path": "/World/Cube_l1",
+        "position": [
+          -0.2,
+          0.4,
+          0.835
+        ],
+        "color_rgb": [
+          0.1,
+          0.1,
+          0.1
+        ],
+        "semantic_class": "large",
+        "material_path": "/World/Materials/Mat_large"
+      },
+      {
+        "path": "/World/Cube_l2",
+        "position": [
+          0.1,
+          0.4,
+          0.835
+        ],
+        "color_rgb": [
+          0.1,
+          0.1,
+          0.1
+        ],
+        "semantic_class": "large",
+        "material_path": "/World/Materials/Mat_large"
+      }
     ],
     "destinations": [
-      {"path": "/World/SmallBin",  "position": [-0.4, -0.4, 0.75], "size": [0.20, 0.20, 0.15], "routing_key": "small"},
-      {"path": "/World/MediumBin", "position": [ 0.0, -0.4, 0.75], "size": [0.20, 0.20, 0.15], "routing_key": "medium"},
-      {"path": "/World/LargeBin",  "position": [ 0.4, -0.4, 0.75], "size": [0.20, 0.20, 0.15], "routing_key": "large"}
+      {
+        "path": "/World/SmallBin",
+        "position": [
+          -0.4,
+          -0.4,
+          0.75
+        ],
+        "size": [
+          0.2,
+          0.2,
+          0.15
+        ],
+        "routing_key": "small"
+      },
+      {
+        "path": "/World/MediumBin",
+        "position": [
+          0.0,
+          -0.4,
+          0.75
+        ],
+        "size": [
+          0.2,
+          0.2,
+          0.15
+        ],
+        "routing_key": "medium"
+      },
+      {
+        "path": "/World/LargeBin",
+        "position": [
+          0.4,
+          -0.4,
+          0.75
+        ],
+        "size": [
+          0.2,
+          0.2,
+          0.15
+        ],
+        "routing_key": "large"
+      }
     ]
   },
   "code_template": "# DomeLight + Ground + Cell + Table\ncreate_prim(prim_path=\"/World/DomeLight\", prim_type=\"DomeLight\")\nset_attribute(prim_path=\"/World/DomeLight\", attr_name=\"inputs:intensity\", value=1000.0)\ncreate_prim(prim_path=\"/World/Ground\", prim_type=\"Cube\", position=[0, 0, -0.5], scale=[20, 20, 1])\napply_api_schema(prim_path=\"/World/Ground\", schema_name=\"PhysicsCollisionAPI\")\ncreate_prim(prim_path=\"/World/Cell\", prim_type=\"Xform\")\ncreate_prim(prim_path=\"/World/Table\", prim_type=\"Cube\", position=[0, 0, 0.375], scale=[1.5, 0.5, 0.375])\napply_api_schema(prim_path=\"/World/Table\", schema_name=\"PhysicsCollisionAPI\")\n\nset_physics_scene_config(config={\"enable_gpu_dynamics\": False, \"broadphase_type\": \"MBP\"})\n\nrobot_wizard(\n    robot_name={{primary_robot.class}},\n    dest_path={{primary_robot.path}},\n    position={{primary_robot.position}},\n    orientation={{primary_robot.orientation}},\n)\n\ncreate_conveyor(\n    prim_path={{input_conveyor.path}},\n    position={{input_conveyor.position}},\n    size={{input_conveyor.size}},\n    surface_velocity={{input_conveyor.surface_velocity}},\n)\n\ncreate_prim(prim_path={{workpieces[0].path}}, prim_type=\"Cube\", position={{workpieces[0].position}}, size=0.05)\nfor api in (\"PhysicsRigidBodyAPI\", \"PhysicsCollisionAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n    apply_api_schema(prim_path={{workpieces[0].path}}, schema_name=api)\ncreate_material(material_path={{workpieces[0].material_path}}, shader_type=\"OmniPBR\", diffuse_color={{workpieces[0].color_rgb}})\nassign_material(prim_path={{workpieces[0].path}}, material_path={{workpieces[0].material_path}})\nset_semantic_label(prim_path={{workpieces[0].path}}, class_name={{workpieces[0].semantic_class}}, semantic_type=\"class\")\n\ncreate_prim(prim_path={{workpieces[1].path}}, prim_type=\"Cube\", position={{workpieces[1].position}}, size=0.05)\nfor api in (\"PhysicsRigidBodyAPI\", \"PhysicsCollisionAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n    apply_api_schema(prim_path={{workpieces[1].path}}, schema_name=api)\ncreate_material(material_path={{workpieces[1].material_path}}, shader_type=\"OmniPBR\", diffuse_color={{workpieces[1].color_rgb}})\nassign_material(prim_path={{workpieces[1].path}}, material_path={{workpieces[1].material_path}})\nset_semantic_label(prim_path={{workpieces[1].path}}, class_name={{workpieces[1].semantic_class}}, semantic_type=\"class\")\n\ncreate_prim(prim_path={{workpieces[2].path}}, prim_type=\"Cube\", position={{workpieces[2].position}}, size=0.05)\nfor api in (\"PhysicsRigidBodyAPI\", \"PhysicsCollisionAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n    apply_api_schema(prim_path={{workpieces[2].path}}, schema_name=api)\ncreate_material(material_path={{workpieces[2].material_path}}, shader_type=\"OmniPBR\", diffuse_color={{workpieces[2].color_rgb}})\nassign_material(prim_path={{workpieces[2].path}}, material_path={{workpieces[2].material_path}})\nset_semantic_label(prim_path={{workpieces[2].path}}, class_name={{workpieces[2].semantic_class}}, semantic_type=\"class\")\n\ncreate_prim(prim_path={{workpieces[3].path}}, prim_type=\"Cube\", position={{workpieces[3].position}}, size=0.05)\nfor api in (\"PhysicsRigidBodyAPI\", \"PhysicsCollisionAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n    apply_api_schema(prim_path={{workpieces[3].path}}, schema_name=api)\ncreate_material(material_path={{workpieces[3].material_path}}, shader_type=\"OmniPBR\", diffuse_color={{workpieces[3].color_rgb}})\nassign_material(prim_path={{workpieces[3].path}}, material_path={{workpieces[3].material_path}})\nset_semantic_label(prim_path={{workpieces[3].path}}, class_name={{workpieces[3].semantic_class}}, semantic_type=\"class\")\n\ncreate_prim(prim_path={{workpieces[4].path}}, prim_type=\"Cube\", position={{workpieces[4].position}}, size=0.05)\nfor api in (\"PhysicsRigidBodyAPI\", \"PhysicsCollisionAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n    apply_api_schema(prim_path={{workpieces[4].path}}, schema_name=api)\ncreate_material(material_path={{workpieces[4].material_path}}, shader_type=\"OmniPBR\", diffuse_color={{workpieces[4].color_rgb}})\nassign_material(prim_path={{workpieces[4].path}}, material_path={{workpieces[4].material_path}})\nset_semantic_label(prim_path={{workpieces[4].path}}, class_name={{workpieces[4].semantic_class}}, semantic_type=\"class\")\n\ncreate_prim(prim_path={{workpieces[5].path}}, prim_type=\"Cube\", position={{workpieces[5].position}}, size=0.05)\nfor api in (\"PhysicsRigidBodyAPI\", \"PhysicsCollisionAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n    apply_api_schema(prim_path={{workpieces[5].path}}, schema_name=api)\ncreate_material(material_path={{workpieces[5].material_path}}, shader_type=\"OmniPBR\", diffuse_color={{workpieces[5].color_rgb}})\nassign_material(prim_path={{workpieces[5].path}}, material_path={{workpieces[5].material_path}})\nset_semantic_label(prim_path={{workpieces[5].path}}, class_name={{workpieces[5].semantic_class}}, semantic_type=\"class\")\n\nbulk_set_attribute(\n    prim_paths=[{{workpieces[0].path}}, {{workpieces[1].path}}, {{workpieces[2].path}}, {{workpieces[3].path}}, {{workpieces[4].path}}, {{workpieces[5].path}}],\n    attr=\"physxRigidBody:sleepThreshold\",\n    value=0.0,\n)\n\nfor path in [{{workpieces[0].path}}, {{workpieces[1].path}}, {{workpieces[2].path}}, {{workpieces[3].path}}, {{workpieces[4].path}}, {{workpieces[5].path}}]:\n    apply_physics_material(prim_path=path, material_name=\"rubber\")\n\ncreate_bin(prim_path={{destinations[0].path}}, position={{destinations[0].position}}, size={{destinations[0].size}})\ncreate_bin(prim_path={{destinations[1].path}}, position={{destinations[1].position}}, size={{destinations[1].size}})\ncreate_bin(prim_path={{destinations[2].path}}, position={{destinations[2].position}}, size={{destinations[2].size}})\n\nadd_proximity_sensor(sensor_path={{pick_sensor.path}}, position={{pick_sensor.position}}, size={{pick_sensor.size}})\n\nsetup_pick_place_controller(\n    robot_path={{primary_robot.path}},\n    target_source=\"curobo\",\n    sensor_path={{pick_sensor.path}},\n    belt_path={{input_conveyor.path}},\n    source_paths=[{{workpieces[0].path}}, {{workpieces[1].path}}, {{workpieces[2].path}}, {{workpieces[3].path}}, {{workpieces[4].path}}, {{workpieces[5].path}}],\n    destination_path={{destinations[0].path}},\n    color_routing={\n        {{destinations[0].routing_key}}: {{destinations[0].path}},\n        {{destinations[1].routing_key}}: {{destinations[1].path}},\n        {{destinations[2].routing_key}}: {{destinations[2].path}},\n    },\n    drop_target=[-0.4, -0.4, 0.95],\n    planning_obstacles=[\"/World/Table\", {{input_conveyor.path}}, {{destinations[0].path}}, {{destinations[1].path}}, {{destinations[2].path}}],\n)",
@@ -171,12 +346,12 @@
     "duration_s": 180
   },
   "failure_modes": [
-    "set_semantic_label semantic_type 'class' vs 'color' mismatch — handler tries Semantics_color first, then Semantics_colour, then Semantics_class. CP-17 uses 'class' → must NOT also have a Semantics_color attr or it overrides.",
+    "set_semantic_label semantic_type 'class' vs 'color' mismatch \u2014 handler tries Semantics_color first, then Semantics_colour, then Semantics_class. CP-17 uses 'class' \u2192 must NOT also have a Semantics_color attr or it overrides.",
     "color_routing dict (misnamed): keys must match cube class_name lowercase. CP-17 uses 'small'/'medium'/'large'.",
-    "Cube_l1 / Cube_l2 start within Franka reach (x=-0.2, +0.1 are |x|<0.7) — controller picks them immediately. Acceptable — order doesn't matter, all 6 will be processed.",
-    "All bins same physical size (20cm) — works for 5cm cubes. If cubes were physically different, larger bin would be needed for 'large' class."
+    "Cube_l1 / Cube_l2 start within Franka reach (x=-0.2, +0.1 are |x|<0.7) \u2014 controller picks them immediately. Acceptable \u2014 order doesn't matter, all 6 will be processed.",
+    "All bins same physical size (20cm) \u2014 works for 5cm cubes. If cubes were physically different, larger bin would be needed for 'large' class."
   ],
-  "verified_status": "build-spec-2026-04-XX; form-gate ✓; function-gate ✓ (180s sim. cube_final=(-0.34, -0.46, 0.785) in Bin)",
+  "verified_status": "build-spec-2026-04-XX; form-gate \u2713; function-gate \u2713 (180s sim. cube_final=(-0.34, -0.46, 0.785) in Bin)",
   "diagnose_args": {
     "robot_path": "/World/Franka",
     "sensor_path": "/World/PickSensor",

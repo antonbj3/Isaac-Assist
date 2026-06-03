@@ -1227,11 +1227,15 @@ else:
             f"        print(f'apply_api_schema: auto-created placeholder Xform at {prim_path}')\n"
             f"if not prim.IsValid():\n"
             f"    raise RuntimeError(f'apply_api_schema: prim not found: {prim_path}')\n"
+            f"_pre_xops = [op.GetName() for op in UsdGeom.Xformable(prim).GetOrderedXformOps()]\n"
             f"{cls}.Apply(prim)\n"
+            f"_post_xops = [op.GetName() for op in UsdGeom.Xformable(prim).GetOrderedXformOps()]\n"
             f"_applied = list(prim.GetAppliedSchemas() or [])\n"
             f"if '{cls}' not in _applied and '{schema}' not in _applied:\n"
             f"    raise RuntimeError(f'apply_api_schema: schema {cls} not in GetAppliedSchemas after Apply (got {{_applied}})')\n"
-            f"print(f'applied {cls} to {prim_path} — schemas now: {{_applied}}')"
+            f"if _pre_xops != _post_xops:\n"
+            f"    print(f'WARN apply_api_schema: {cls} on {prim_path} changed xformOps: pre={{_pre_xops}} post={{_post_xops}}')\n"
+            f"print(f'applied {cls} to {prim_path} — schemas={{len(_applied)}} xops={{_post_xops}}')"
         )
     # Fallback: Round 4 repair (2026-05-17). The legacy
     # ApplyAPISchemaCommand path is rejected by the patch validator

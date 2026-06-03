@@ -13,8 +13,8 @@
     "setup_pick_place_controller",
     "create_conveyor"
   ],
-  "thoughts": "Six tabletop-rearrangement specifics for CP-27 (extends CP-08 — drop_targets pattern but no conveyor):\n1) 4 cubes pre-placed on table at scattered xy positions: (0.2, 0.3), (0.4, 0.3), (-0.2, 0.3), (-0.4, 0.3). z=0.775 (table top + cube/2).\n2) Pallet 0.30×0.30×0.05m at [0, -0.4, 0.775] — same as CP-08.\n3) drop_targets dict has 4 entries — same 2x2 grid as CP-08 ({-0.04, +0.04} × {-0.44, -0.36}).\n4) NO conveyor. NO belt_path arg to setup_pick_place_controller — handler skips belt_pause/resume. Pure motion-plan pick-place.\n5) Sensor at (0.4, 0.3, 0.835) — covers the +X half of the source area. Cubes at (-0.2, -0.4) start outside sensor. As they don't move (no belt), sensor only fires for closest cubes. Or: sensor not strictly needed — cuRobo handler picks any cube within reach if sensor isn't gating.\n6) Without sensor gating + belt pause, controller has no temporal trigger. cuRobo handler's _next_cube selects closest within reach by default — works without sensor too.",
-  "code": "# DomeLight + Ground + Cell + Table\ncreate_prim(prim_path=\"/World/DomeLight\", prim_type=\"DomeLight\")\nset_attribute(prim_path=\"/World/DomeLight\", attr_name=\"inputs:intensity\", value=1000.0)\ncreate_prim(prim_path=\"/World/Ground\", prim_type=\"Cube\", position=[0, 0, -0.5], scale=[20, 20, 1])\napply_api_schema(prim_path=\"/World/Ground\", schema_name=\"PhysicsCollisionAPI\")\ncreate_prim(prim_path=\"/World/Cell\", prim_type=\"Xform\")\ncreate_prim(prim_path=\"/World/Table\", prim_type=\"Cube\", position=[0, 0, 0.375], scale=[1.0, 0.5, 0.375])\napply_api_schema(prim_path=\"/World/Table\", schema_name=\"PhysicsCollisionAPI\")\n\nset_physics_scene_config(config={\"enable_gpu_dynamics\": False, \"broadphase_type\": \"MBP\"})\n\nrobot_wizard(\n    robot_name=\"franka_panda\",\n    dest_path=\"/World/Franka\",\n    position=[0, 0, 0.75],\n    orientation=[0.7071068, 0, 0, 0.7071068],\n)\n\n# Stationary work surface (acts as belt_path for handler — surface_velocity=0 so no motion)\ncreate_conveyor(\n    prim_path=\"/World/WorkSurface\",\n    position=[0.0, 0.3, 0.78],\n    size=[1.5, 0.4, 0.05],\n    surface_velocity=[0.001, 0, 0],\n)\n\n# 4 cubes scattered on work surface top (z=0.835)\nfor i, (x, y) in enumerate([(0.2, 0.3), (0.4, 0.3), (-0.2, 0.3), (-0.4, 0.3)]):\n    path = f\"/World/Cube_{i+1}\"\n    create_prim(prim_path=path, prim_type=\"Cube\", position=[x, y, 0.835], size=0.05)\n    for api in (\"PhysicsRigidBodyAPI\", \"PhysicsCollisionAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n        apply_api_schema(prim_path=path, schema_name=api)\n\nbulk_set_attribute(\n    prim_paths=[f\"/World/Cube_{i+1}\" for i in range(4)],\n    attr=\"physxRigidBody:sleepThreshold\",\n    value=0.0,\n)\nfor path in [f\"/World/Cube_{i+1}\" for i in range(4)]:\n    apply_physics_material(prim_path=path, material_name=\"rubber\")\n\n# Target pallet — same as CP-08\ncreate_prim(prim_path=\"/World/Pallet\", prim_type=\"Cube\", position=[0, -0.4, 0.775], scale=[0.15, 0.15, 0.025])\napply_api_schema(prim_path=\"/World/Pallet\", schema_name=\"PhysicsCollisionAPI\")\n\n# Sensor at +X side (covers Cube_1, Cube_2). Cube_3, Cube_4 picked when controller's reach selection finds them after Cube_1/2 done.\nadd_proximity_sensor(sensor_path=\"/World/PickSensor\", position=[0.3, 0.3, 0.835], size=[0.06, 0.06, 0.06])\n\n# belt_path = WorkSurface (stationary — surface_velocity=0). Handler-required arg.\nsetup_pick_place_controller(\n    robot_path=\"/World/Franka\",\n    target_source=\"curobo\",\n    sensor_path=\"/World/PickSensor\",\n    belt_path=\"/World/WorkSurface\",\n    source_paths=[f\"/World/Cube_{i+1}\" for i in range(4)],\n    destination_path=\"/World/Pallet\",\n    drop_targets={\n        \"/World/Cube_1\": [-0.04, -0.44, 0.825],\n        \"/World/Cube_2\": [ 0.04, -0.44, 0.825],\n        \"/World/Cube_3\": [-0.04, -0.36, 0.825],\n        \"/World/Cube_4\": [ 0.04, -0.36, 0.825],\n    },\n    planning_obstacles=[\"/World/Table\", \"/World/WorkSurface\", \"/World/Pallet\"],\n)",
+  "thoughts": "Six tabletop-rearrangement specifics for CP-27 (extends CP-08 \u2014 drop_targets pattern but no conveyor):\n1) 4 cubes pre-placed on table at scattered xy positions: (0.2, 0.3), (0.4, 0.3), (-0.2, 0.3), (-0.4, 0.3). z=0.775 (table top + cube/2).\n2) Pallet 0.30\u00d70.30\u00d70.05m at [0, -0.4, 0.775] \u2014 same as CP-08.\n3) drop_targets dict has 4 entries \u2014 same 2x2 grid as CP-08 ({-0.04, +0.04} \u00d7 {-0.44, -0.36}).\n4) NO conveyor. NO belt_path arg to setup_pick_place_controller \u2014 handler skips belt_pause/resume. Pure motion-plan pick-place.\n5) Sensor at (0.4, 0.3, 0.835) \u2014 covers the +X half of the source area. Cubes at (-0.2, -0.4) start outside sensor. As they don't move (no belt), sensor only fires for closest cubes. Or: sensor not strictly needed \u2014 cuRobo handler picks any cube within reach if sensor isn't gating.\n6) Without sensor gating + belt pause, controller has no temporal trigger. cuRobo handler's _next_cube selects closest within reach by default \u2014 works without sensor too.",
+  "code": "# DomeLight + Ground + Cell + Table\ncreate_prim(prim_path=\"/World/DomeLight\", prim_type=\"DomeLight\")\nset_attribute(prim_path=\"/World/DomeLight\", attr_name=\"inputs:intensity\", value=1000.0)\ncreate_prim(prim_path=\"/World/Ground\", prim_type=\"Cube\", position=[0, 0, -0.5], scale=[20, 20, 1])\napply_api_schema(prim_path=\"/World/Ground\", schema_name=\"PhysicsCollisionAPI\")\ncreate_prim(prim_path=\"/World/Cell\", prim_type=\"Xform\")\ncreate_prim(prim_path=\"/World/Table\", prim_type=\"Cube\", position=[0, 0, 0.375], scale=[1.0, 0.5, 0.375])\napply_api_schema(prim_path=\"/World/Table\", schema_name=\"PhysicsCollisionAPI\")\n\nset_physics_scene_config(config={\"enable_gpu_dynamics\": False, \"broadphase_type\": \"MBP\"})\n\nrobot_wizard(\n    robot_name=\"franka_panda\",\n    dest_path=\"/World/Franka\",\n    position=[0, 0, 0.75],\n    orientation=[0.7071068, 0, 0, 0.7071068],\n)\n\n# Stationary work surface (acts as belt_path for handler \u2014 surface_velocity=0 so no motion)\ncreate_conveyor(\n    prim_path=\"/World/WorkSurface\",\n    position=[0.0, 0.3, 0.78],\n    size=[1.5, 0.4, 0.05],\n    surface_velocity=[0.001, 0, 0],\n)\n\n# 4 cubes scattered on work surface top (z=0.835)\nfor i, (x, y) in enumerate([(0.2, 0.3), (0.4, 0.3), (-0.2, 0.3), (-0.4, 0.3)]):\n    path = f\"/World/Cube_{i+1}\"\n    create_prim(prim_path=path, prim_type=\"Cube\", position=[x, y, 0.835], size=0.05)\n    for api in (\"PhysicsRigidBodyAPI\", \"PhysicsCollisionAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n        apply_api_schema(prim_path=path, schema_name=api)\n\nbulk_set_attribute(\n    prim_paths=[f\"/World/Cube_{i+1}\" for i in range(4)],\n    attr=\"physxRigidBody:sleepThreshold\",\n    value=0.0,\n)\nfor path in [f\"/World/Cube_{i+1}\" for i in range(4)]:\n    apply_physics_material(prim_path=path, material_name=\"rubber\")\n\n# Target pallet \u2014 same as CP-08\ncreate_prim(prim_path=\"/World/Pallet\", prim_type=\"Cube\", position=[0, -0.4, 0.775], scale=[0.15, 0.15, 0.025])\napply_api_schema(prim_path=\"/World/Pallet\", schema_name=\"PhysicsCollisionAPI\")\n\n# Sensor at +X side (covers Cube_1, Cube_2). Cube_3, Cube_4 picked when controller's reach selection finds them after Cube_1/2 done.\nadd_proximity_sensor(sensor_path=\"/World/PickSensor\", position=[0.3, 0.3, 0.835], size=[0.06, 0.06, 0.06])\n\n# belt_path = WorkSurface (stationary \u2014 surface_velocity=0). Handler-required arg.\nsetup_pick_place_controller(\n    robot_path=\"/World/Franka\",\n    target_source=\"curobo\",\n    sensor_path=\"/World/PickSensor\",\n    belt_path=\"/World/WorkSurface\",\n    source_paths=[f\"/World/Cube_{i+1}\" for i in range(4)],\n    destination_path=\"/World/Pallet\",\n    drop_targets={\n        \"/World/Cube_1\": [-0.04, -0.44, 0.825],\n        \"/World/Cube_2\": [ 0.04, -0.44, 0.825],\n        \"/World/Cube_3\": [-0.04, -0.36, 0.825],\n        \"/World/Cube_4\": [ 0.04, -0.36, 0.825],\n    },\n    planning_obstacles=[\"/World/Table\", \"/World/WorkSurface\", \"/World/Pallet\"],\n)",
   "settle_state": {
     "cubes": {
       "/World/Cube_1": [
@@ -59,7 +59,7 @@
   },
   "simulate_args": {
     "target_path": "/World/Pallet",
-    "duration_s": 180,
+    "duration_s": 400,
     "cube_paths": [
       "/World/Cube_1",
       "/World/Cube_2",
@@ -68,14 +68,14 @@
     ]
   },
   "extends": "CP-08",
-  "extension_notes": "CP-27 demonstrates pure pick-place without conveyor. Cubes pre-placed on table; robot rearranges to pallet grid. Useful for assembly/disassembly canonicals where input is a static workspace. Without belt_path, handler skips belt-pause logic — no PhysxSurfaceVelocityAPI needed.",
+  "extension_notes": "CP-27 demonstrates pure pick-place without conveyor. Cubes pre-placed on table; robot rearranges to pallet grid. Useful for assembly/disassembly canonicals where input is a static workspace. Without belt_path, handler skips belt-pause logic \u2014 no PhysxSurfaceVelocityAPI needed.",
   "failure_modes": [
     "Cube_3, Cube_4 outside sensor zone but within reach. cuRobo handler's _next_cube uses reach-based selection. Sensor mainly gates timing for belt scenes; not strictly needed here.",
-    "Cubes too close to robot base — base 'thigh' may collide. (0.2, 0.3) and (-0.2, 0.3) are 0.36m from base; safe.",
-    "Drop precision drift can accumulate — same as CP-08, ~5cm. Pallet 30cm gives margin.",
-    "verify_args: pick_path normally a conveyor or sensor; here using cube path directly. Verifier checks cube_path → place_path bridge. With Cube_1 path, bridge check may fail if expecting prims with physics surface velocity. Form-gate may show pipeline issue."
+    "Cubes too close to robot base \u2014 base 'thigh' may collide. (0.2, 0.3) and (-0.2, 0.3) are 0.36m from base; safe.",
+    "Drop precision drift can accumulate \u2014 same as CP-08, ~5cm. Pallet 30cm gives margin.",
+    "verify_args: pick_path normally a conveyor or sensor; here using cube path directly. Verifier checks cube_path \u2192 place_path bridge. With Cube_1 path, bridge check may fail if expecting prims with physics surface velocity. Form-gate may show pipeline issue."
   ],
-  "verified_status": "build-spec-2026-04-XX; form-gate ✓; function-gate ✓ (multi-cube cube_paths — Cube_3, Cube_4 delivered to Pallet)",
+  "verified_status": "build-spec-2026-04-XX; form-gate \u2713; function-gate \u2713 (multi-cube cube_paths \u2014 Cube_3, Cube_4 delivered to Pallet)",
   "diagnose_args": {
     "robot_path": "/World/Franka",
     "obstacles": [
@@ -114,22 +114,32 @@
   },
   "roles": {
     "primary_robot": {
-      "constraints": ["franka_panda", "ur5e", "kinova_gen3"],
+      "constraints": [
+        "franka_panda",
+        "ur5e",
+        "kinova_gen3"
+      ],
       "expected_count": 1,
       "required": true
     },
     "work_surface": {
-      "constraints": ["conveyor"],
+      "constraints": [
+        "conveyor"
+      ],
       "expected_count": 1,
       "required": true
     },
     "primary_destination": {
-      "constraints": ["bin"],
+      "constraints": [
+        "bin"
+      ],
       "expected_count": 1,
       "required": true
     },
     "workpieces": {
-      "constraints": ["cube"],
+      "constraints": [
+        "cube"
+      ],
       "min": 1,
       "max": 4,
       "param_name": "n_cubes",
@@ -140,33 +150,118 @@
     "primary_robot": {
       "path": "/World/Franka",
       "class": "franka_panda",
-      "position": [0, 0, 0.75],
-      "orientation": [0.7071068, 0, 0, 0.7071068]
+      "position": [
+        0,
+        0,
+        0.75
+      ],
+      "orientation": [
+        0.7071068,
+        0,
+        0,
+        0.7071068
+      ]
     },
     "work_surface": {
       "path": "/World/WorkSurface",
-      "position": [0.0, 0.3, 0.78],
-      "size": [1.5, 0.4, 0.05],
-      "surface_velocity": [0.001, 0, 0]
+      "position": [
+        0.0,
+        0.3,
+        0.78
+      ],
+      "size": [
+        1.5,
+        0.4,
+        0.05
+      ],
+      "surface_velocity": [
+        0.001,
+        0,
+        0
+      ]
     },
     "primary_destination": {
       "path": "/World/Pallet",
-      "position": [0, -0.4, 0.775],
-      "scale": [0.15, 0.15, 0.025]
+      "position": [
+        0,
+        -0.4,
+        0.775
+      ],
+      "scale": [
+        0.15,
+        0.15,
+        0.025
+      ]
     },
     "pick_sensor": {
       "path": "/World/PickSensor",
-      "position": [0.3, 0.3, 0.835],
-      "size": [0.06, 0.06, 0.06]
+      "position": [
+        0.3,
+        0.3,
+        0.835
+      ],
+      "size": [
+        0.06,
+        0.06,
+        0.06
+      ]
     },
     "workpieces": [
-      {"path": "/World/Cube_1", "position": [0.2, 0.3, 0.835], "drop_target": [-0.04, -0.44, 0.825]},
-      {"path": "/World/Cube_2", "position": [0.4, 0.3, 0.835], "drop_target": [0.04, -0.44, 0.825]},
-      {"path": "/World/Cube_3", "position": [-0.2, 0.3, 0.835], "drop_target": [-0.04, -0.36, 0.825]},
-      {"path": "/World/Cube_4", "position": [-0.4, 0.3, 0.835], "drop_target": [0.04, -0.36, 0.825]}
+      {
+        "path": "/World/Cube_1",
+        "position": [
+          0.2,
+          0.3,
+          0.835
+        ],
+        "drop_target": [
+          -0.04,
+          -0.44,
+          0.825
+        ]
+      },
+      {
+        "path": "/World/Cube_2",
+        "position": [
+          0.4,
+          0.3,
+          0.835
+        ],
+        "drop_target": [
+          0.04,
+          -0.44,
+          0.825
+        ]
+      },
+      {
+        "path": "/World/Cube_3",
+        "position": [
+          -0.2,
+          0.3,
+          0.835
+        ],
+        "drop_target": [
+          -0.04,
+          -0.36,
+          0.825
+        ]
+      },
+      {
+        "path": "/World/Cube_4",
+        "position": [
+          -0.4,
+          0.3,
+          0.835
+        ],
+        "drop_target": [
+          0.04,
+          -0.36,
+          0.825
+        ]
+      }
     ]
   },
-  "code_template": "# DomeLight + Ground + Cell + Table\ncreate_prim(prim_path=\"/World/DomeLight\", prim_type=\"DomeLight\")\nset_attribute(prim_path=\"/World/DomeLight\", attr_name=\"inputs:intensity\", value=1000.0)\ncreate_prim(prim_path=\"/World/Ground\", prim_type=\"Cube\", position=[0, 0, -0.5], scale=[20, 20, 1])\napply_api_schema(prim_path=\"/World/Ground\", schema_name=\"PhysicsCollisionAPI\")\ncreate_prim(prim_path=\"/World/Cell\", prim_type=\"Xform\")\ncreate_prim(prim_path=\"/World/Table\", prim_type=\"Cube\", position=[0, 0, 0.375], scale=[1.0, 0.5, 0.375])\napply_api_schema(prim_path=\"/World/Table\", schema_name=\"PhysicsCollisionAPI\")\n\nset_physics_scene_config(config={\"enable_gpu_dynamics\": False, \"broadphase_type\": \"MBP\"})\n\nrobot_wizard(\n    robot_name={{primary_robot.class}},\n    dest_path={{primary_robot.path}},\n    position={{primary_robot.position}},\n    orientation={{primary_robot.orientation}},\n)\n\n# Stationary work surface (acts as belt_path for handler — surface_velocity=0 so no motion)\ncreate_conveyor(\n    prim_path={{work_surface.path}},\n    position={{work_surface.position}},\n    size={{work_surface.size}},\n    surface_velocity={{work_surface.surface_velocity}},\n)\n\n# 4 cubes scattered on work surface top (z=0.835)\ncreate_prim(prim_path={{workpieces[0].path}}, prim_type=\"Cube\", position={{workpieces[0].position}}, size=0.05)\nfor api in (\"PhysicsRigidBodyAPI\", \"PhysicsCollisionAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n    apply_api_schema(prim_path={{workpieces[0].path}}, schema_name=api)\ncreate_prim(prim_path={{workpieces[1].path}}, prim_type=\"Cube\", position={{workpieces[1].position}}, size=0.05)\nfor api in (\"PhysicsRigidBodyAPI\", \"PhysicsCollisionAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n    apply_api_schema(prim_path={{workpieces[1].path}}, schema_name=api)\ncreate_prim(prim_path={{workpieces[2].path}}, prim_type=\"Cube\", position={{workpieces[2].position}}, size=0.05)\nfor api in (\"PhysicsRigidBodyAPI\", \"PhysicsCollisionAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n    apply_api_schema(prim_path={{workpieces[2].path}}, schema_name=api)\ncreate_prim(prim_path={{workpieces[3].path}}, prim_type=\"Cube\", position={{workpieces[3].position}}, size=0.05)\nfor api in (\"PhysicsRigidBodyAPI\", \"PhysicsCollisionAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n    apply_api_schema(prim_path={{workpieces[3].path}}, schema_name=api)\n\nbulk_set_attribute(\n    prim_paths=[{{workpieces[0].path}}, {{workpieces[1].path}}, {{workpieces[2].path}}, {{workpieces[3].path}}],\n    attr=\"physxRigidBody:sleepThreshold\",\n    value=0.0,\n)\nfor path in [{{workpieces[0].path}}, {{workpieces[1].path}}, {{workpieces[2].path}}, {{workpieces[3].path}}]:\n    apply_physics_material(prim_path=path, material_name=\"rubber\")\n\n# Target pallet\ncreate_prim(prim_path={{primary_destination.path}}, prim_type=\"Cube\", position={{primary_destination.position}}, scale={{primary_destination.scale}})\napply_api_schema(prim_path={{primary_destination.path}}, schema_name=\"PhysicsCollisionAPI\")\n\n# Sensor at +X side (covers Cube_1, Cube_2)\nadd_proximity_sensor(sensor_path={{pick_sensor.path}}, position={{pick_sensor.position}}, size={{pick_sensor.size}})\n\n# belt_path = WorkSurface (stationary). Handler-required arg.\nsetup_pick_place_controller(\n    robot_path={{primary_robot.path}},\n    target_source=\"curobo\",\n    sensor_path={{pick_sensor.path}},\n    belt_path={{work_surface.path}},\n    source_paths=[{{workpieces[0].path}}, {{workpieces[1].path}}, {{workpieces[2].path}}, {{workpieces[3].path}}],\n    destination_path={{primary_destination.path}},\n    drop_targets={\n        {{workpieces[0].path}}: {{workpieces[0].drop_target}},\n        {{workpieces[1].path}}: {{workpieces[1].drop_target}},\n        {{workpieces[2].path}}: {{workpieces[2].drop_target}},\n        {{workpieces[3].path}}: {{workpieces[3].drop_target}},\n    },\n    planning_obstacles=[\"/World/Table\", {{work_surface.path}}, {{primary_destination.path}}],\n)",
+  "code_template": "# DomeLight + Ground + Cell + Table\ncreate_prim(prim_path=\"/World/DomeLight\", prim_type=\"DomeLight\")\nset_attribute(prim_path=\"/World/DomeLight\", attr_name=\"inputs:intensity\", value=1000.0)\ncreate_prim(prim_path=\"/World/Ground\", prim_type=\"Cube\", position=[0, 0, -0.5], scale=[20, 20, 1])\napply_api_schema(prim_path=\"/World/Ground\", schema_name=\"PhysicsCollisionAPI\")\ncreate_prim(prim_path=\"/World/Cell\", prim_type=\"Xform\")\ncreate_prim(prim_path=\"/World/Table\", prim_type=\"Cube\", position=[0, 0, 0.375], scale=[1.0, 0.5, 0.375])\napply_api_schema(prim_path=\"/World/Table\", schema_name=\"PhysicsCollisionAPI\")\n\nset_physics_scene_config(config={\"enable_gpu_dynamics\": False, \"broadphase_type\": \"MBP\"})\n\nrobot_wizard(\n    robot_name={{primary_robot.class}},\n    dest_path={{primary_robot.path}},\n    position={{primary_robot.position}},\n    orientation={{primary_robot.orientation}},\n)\n\n# Stationary work surface (acts as belt_path for handler \u2014 surface_velocity=0 so no motion)\ncreate_conveyor(\n    prim_path={{work_surface.path}},\n    position={{work_surface.position}},\n    size={{work_surface.size}},\n    surface_velocity={{work_surface.surface_velocity}},\n)\n\n# 4 cubes scattered on work surface top (z=0.835)\ncreate_prim(prim_path={{workpieces[0].path}}, prim_type=\"Cube\", position={{workpieces[0].position}}, size=0.05)\nfor api in (\"PhysicsRigidBodyAPI\", \"PhysicsCollisionAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n    apply_api_schema(prim_path={{workpieces[0].path}}, schema_name=api)\ncreate_prim(prim_path={{workpieces[1].path}}, prim_type=\"Cube\", position={{workpieces[1].position}}, size=0.05)\nfor api in (\"PhysicsRigidBodyAPI\", \"PhysicsCollisionAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n    apply_api_schema(prim_path={{workpieces[1].path}}, schema_name=api)\ncreate_prim(prim_path={{workpieces[2].path}}, prim_type=\"Cube\", position={{workpieces[2].position}}, size=0.05)\nfor api in (\"PhysicsRigidBodyAPI\", \"PhysicsCollisionAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n    apply_api_schema(prim_path={{workpieces[2].path}}, schema_name=api)\ncreate_prim(prim_path={{workpieces[3].path}}, prim_type=\"Cube\", position={{workpieces[3].position}}, size=0.05)\nfor api in (\"PhysicsRigidBodyAPI\", \"PhysicsCollisionAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n    apply_api_schema(prim_path={{workpieces[3].path}}, schema_name=api)\n\nbulk_set_attribute(\n    prim_paths=[{{workpieces[0].path}}, {{workpieces[1].path}}, {{workpieces[2].path}}, {{workpieces[3].path}}],\n    attr=\"physxRigidBody:sleepThreshold\",\n    value=0.0,\n)\nfor path in [{{workpieces[0].path}}, {{workpieces[1].path}}, {{workpieces[2].path}}, {{workpieces[3].path}}]:\n    apply_physics_material(prim_path=path, material_name=\"rubber\")\n\n# Target pallet\ncreate_prim(prim_path={{primary_destination.path}}, prim_type=\"Cube\", position={{primary_destination.position}}, scale={{primary_destination.scale}})\napply_api_schema(prim_path={{primary_destination.path}}, schema_name=\"PhysicsCollisionAPI\")\n\n# Sensor at +X side (covers Cube_1, Cube_2)\nadd_proximity_sensor(sensor_path={{pick_sensor.path}}, position={{pick_sensor.position}}, size={{pick_sensor.size}})\n\n# belt_path = WorkSurface (stationary). Handler-required arg.\nsetup_pick_place_controller(\n    robot_path={{primary_robot.path}},\n    target_source=\"curobo\",\n    sensor_path={{pick_sensor.path}},\n    belt_path={{work_surface.path}},\n    source_paths=[{{workpieces[0].path}}, {{workpieces[1].path}}, {{workpieces[2].path}}, {{workpieces[3].path}}],\n    destination_path={{primary_destination.path}},\n    drop_targets={\n        {{workpieces[0].path}}: {{workpieces[0].drop_target}},\n        {{workpieces[1].path}}: {{workpieces[1].drop_target}},\n        {{workpieces[2].path}}: {{workpieces[2].drop_target}},\n        {{workpieces[3].path}}: {{workpieces[3].drop_target}},\n    },\n    planning_obstacles=[\"/World/Table\", {{work_surface.path}}, {{primary_destination.path}}],\n)",
   "verify_args_template": {
     "stages": [
       {
@@ -181,6 +276,6 @@
   "simulate_args_template": {
     "cube_path": "{{workpieces[0].path}}",
     "target_path": "{{primary_destination.path}}",
-    "duration_s": 180
+    "duration_s": 400
   }
 }

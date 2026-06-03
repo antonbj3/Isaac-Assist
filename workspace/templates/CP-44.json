@@ -61,7 +61,13 @@
   "simulate_args": {
     "cube_path": "/World/Cube_1",
     "target_path": "/World/Bin",
-    "duration_s": 180
+    "duration_s": 180,
+    "cube_paths": [
+      "/World/Cube_1",
+      "/World/Cube_2",
+      "/World/Sphere_1",
+      "/World/Sphere_2"
+    ]
   },
   "extends": "CP-01",
   "extension_notes": "CP-44 demonstrates handler agnosticism to object type \u2014 cubes and spheres processed identically via bbox center. source_paths can be any pickable prim.",

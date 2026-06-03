@@ -51,8 +51,8 @@
       "checkpoint_path",
       "success"
     ],
-    "correlation_target": 0.80,
-    "correlation_threshold": 0.70,
+    "correlation_target": 0.8,
+    "correlation_threshold": 0.7,
     "expected_n_samples": 100,
     "expected_correlated_params": [
       "mass",
@@ -90,7 +90,7 @@
       "uses_conveyor_transport": false,
       "n_correlated_dr_axes": 4,
       "n_dr_samples": 100,
-      "correlation_target": 0.80,
+      "correlation_target": 0.8,
       "uses_correlated_dr": true,
       "uses_dr_curriculum": false,
       "correlation_method": "copula",
@@ -162,21 +162,53 @@
     "primary_robot": {
       "path": "/World/Franka",
       "class": "franka_panda",
-      "position": [0, 0, 0.75],
-      "orientation": [1, 0, 0, 0]
+      "position": [
+        0,
+        0,
+        0.75
+      ],
+      "orientation": [
+        1,
+        0,
+        0,
+        0
+      ]
     },
     "source_bin": {
       "path": "/World/SourceBin",
-      "position": [0, 0.38, 0.825],
-      "size": [0.30, 0.30, 0.15]
+      "position": [
+        0,
+        0.38,
+        0.825
+      ],
+      "size": [
+        0.3,
+        0.3,
+        0.15
+      ]
     },
     "target_bin": {
       "path": "/World/TargetBin",
-      "position": [0, -0.38, 0.825],
-      "size": [0.30, 0.30, 0.15]
+      "position": [
+        0,
+        -0.38,
+        0.825
+      ],
+      "size": [
+        0.3,
+        0.3,
+        0.15
+      ]
     },
     "workpieces": [
-      {"path": "/World/Cube_1", "position": [0, 0.38, 0.90]}
+      {
+        "path": "/World/Cube_1",
+        "position": [
+          0,
+          0.38,
+          0.9
+        ]
+      }
     ],
     "training_run": {
       "task_name": "FrankaPickCubeCorrelatedDR",
@@ -185,7 +217,7 @@
       "num_envs": 16,
       "checkpoint_dir": "workspace/rl_checkpoints/FrankaPickCubeCorrelatedDR",
       "n_correlated_samples": 100,
-      "correlation_target": 0.80
+      "correlation_target": 0.8
     }
   },
   "code_template": "NUM_ENVS = {{training_run.num_envs}}\nN_SAMPLES = {{training_run.n_correlated_samples}}\nTASK_NAME = {{training_run.task_name}}\nROBOT_PATH = {{primary_robot.path}}\nRUN_DIR = {{training_run.checkpoint_dir}}\nRESULT_FILE = \"/tmp/rl_correlated_dr_result.json\"\nCORRELATION_TARGET = {{training_run.correlation_target}}\nCORRELATION_THRESHOLD = 0.7\npass  # removed sandbox-illegal call\n\ncreate_prim(prim_path=\"/World/DomeLight\", prim_type=\"DomeLight\")\nset_attribute(prim_path=\"/World/DomeLight\", attr_name=\"inputs:intensity\", value=1000.0)\ncreate_prim(prim_path=\"/World/Ground\", prim_type=\"Cube\", position=[0, 0, -0.5], scale=[20, 20, 1])\napply_api_schema(prim_path=\"/World/Ground\", schema_name=\"PhysicsCollisionAPI\")\nset_physics_scene_config(config={\"enable_gpu_dynamics\": False, \"broadphase_type\": \"MBP\"})\n\ncreate_prim(prim_path=\"/World/Table\", prim_type=\"Cube\", position=[0, 0, 0.375], scale=[0.6, 0.6, 0.375])\napply_api_schema(prim_path=\"/World/Table\", schema_name=\"PhysicsCollisionAPI\")\n\nrobot_wizard(\n    robot_name={{primary_robot.class}},\n    dest_path={{primary_robot.path}},\n    position={{primary_robot.position}},\n    orientation={{primary_robot.orientation}},\n)\n\ncreate_bin(prim_path={{source_bin.path}}, size={{source_bin.size}}, position={{source_bin.position}})\ncreate_prim(prim_path={{workpieces[0].path}}, prim_type=\"Cube\", position={{workpieces[0].position}}, size=0.05)\nfor api in (\"PhysicsRigidBodyAPI\", \"PhysicsCollisionAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n    apply_api_schema(prim_path={{workpieces[0].path}}, schema_name=api)\ncreate_bin(prim_path={{target_bin.path}}, size={{target_bin.size}}, position={{target_bin.position}})\n\n_dr_suggestions = suggest_dr_ranges(task_type=\"pick_and_place\", robot=\"Franka Panda\")\n_preset = apply_dr_preset(preset=\"indoor_industrial\")\n\nconfigure_correlated_dr(\n    parameter_groups=[\n        {\n            \"params\": [\"mass\", \"static_friction\", \"dynamic_friction\", \"joint_damping\"],\n            \"ranges\": {\"mass\": [0.5, 2.0], \"static_friction\": [0.3, 0.9], \"dynamic_friction\": [0.25, 0.85], \"joint_damping\": [5.0, 25.0]},\n            \"correlation\": CORRELATION_TARGET,\n            \"method\": \"copula\",\n        }\n    ],\n    target_path=\"/World\",\n    seed=42,\n)\n\n_samples = sample_correlated_dr(\n    axes=[\n        {\"name\": \"mass\",             \"mean\": 1.25, \"std\": 0.40},\n        {\"name\": \"static_friction\",  \"mean\": 0.60, \"std\": 0.15},\n        {\"name\": \"dynamic_friction\", \"mean\": 0.55, \"std\": 0.15},\n        {\"name\": \"joint_damping\",    \"mean\": 15.0, \"std\": 5.0},\n    ],\n    correlations=[\n        {\"axis_a\": \"mass\",            \"axis_b\": \"static_friction\",  \"rho\": CORRELATION_TARGET},\n        {\"axis_a\": \"mass\",            \"axis_b\": \"dynamic_friction\", \"rho\": CORRELATION_TARGET},\n        {\"axis_a\": \"mass\",            \"axis_b\": \"joint_damping\",    \"rho\": CORRELATION_TARGET},\n        {\"axis_a\": \"static_friction\", \"axis_b\": \"dynamic_friction\", \"rho\": 0.85},\n    ],\n    n_samples=N_SAMPLES,\n    seed=42,\n    name=\"rl_correlated_dr_baseline\",\n)\n\npreview_dr(num_samples=9, output_dir=\"workspace/dr_previews/rl_correlated_dr\", resolution=[512, 512])\n\n_analysis = analyze_randomization(num_samples=N_SAMPLES)\nper_axis_std = _analysis.get(\"per_axis_std\", {}) if isinstance(_analysis, dict) else {}\npairwise_correlations = _analysis.get(\"pairwise_correlations\", {}) if isinstance(_analysis, dict) else {}\nmass_friction_rho = pairwise_correlations.get(\"mass_static_friction\", 0.0)\nall_axes_active = all(std > 0 for std in per_axis_std.values()) if per_axis_std else False\ncorrelation_ok = mass_friction_rho >= CORRELATION_THRESHOLD\n\ncreate_isaaclab_env(task_name=TASK_NAME, robot_path=ROBOT_PATH, task_type=\"manipulation\", num_envs=NUM_ENVS, env_spacing=2.5, reward_terms=[\"reach_target\", \"grasp_success\", \"action_penalty\"])\nclone_envs(source_path=\"/World/envs/env_0\", num_envs=NUM_ENVS, spacing=2.5, collision_filter=True)\n\nlaunch_result = launch_training(task=TASK_NAME, algo={{training_run.algo}}, num_steps={{training_run.num_steps}}, num_envs=NUM_ENVS, checkpoint_dir=RUN_DIR)\nrun_id = launch_result.get(\"run_id\", TASK_NAME) if isinstance(launch_result, dict) else TASK_NAME\n_status = get_training_status(run_id=run_id, log_dir=RUN_DIR)\nsteps_completed = _status.get(\"steps_completed\", 0) if isinstance(_status, dict) else 0\n\n_checkpoint = checkpoint_training(run_id=run_id, include_replay_buffer=False, tag=\"correlated_dr_baseline\")\ncheckpoint_path = _checkpoint.get(\"checkpoint_path\", RUN_DIR + \"/correlated_dr_baseline.pt\") if isinstance(_checkpoint, dict) else RUN_DIR + \"/correlated_dr_baseline.pt\"\n\npass  # removed sandbox-illegal `with open(...)` block"

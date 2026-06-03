@@ -82,7 +82,13 @@
   "simulate_args": {
     "cube_path": "/World/Cube_1",
     "target_path": "/World/Pallet",
-    "duration_s": 180
+    "duration_s": 180,
+    "cube_paths": [
+      "/World/Cube_1",
+      "/World/Cube_2",
+      "/World/Cube_3",
+      "/World/Cube_4"
+    ]
   },
   "extends": "CP-01",
   "extension_notes": "CP-08 introduces compute_stack_placement (Tier A tool) and drop_targets dict on setup_pick_place_controller. Same pick mechanics as CP-01 but bin \u2192 pallet, single drop_target \u2192 per-cube drop positions. Validates cuRobo handler's _bin_drop_pos(cube_path) DROP_TARGETS branch. Future variants: 8-cube 2-layer brick stack (layer_rotation_deg=90), 9-cube 3x3, mixed-SKU palletizer (cubes of different sizes \u2014 needs spacing tuning per cube).",

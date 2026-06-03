@@ -24,10 +24,26 @@
   "code": "# -- Scene skeleton --------------------------------------------------------\ncreate_prim(prim_path=\"/World/DomeLight\", prim_type=\"DomeLight\")\nset_attribute(prim_path=\"/World/DomeLight\", attr_name=\"inputs:intensity\", value=1000.0)\ncreate_prim(prim_path=\"/World/Ground\", prim_type=\"Cube\", position=[0, 0, -0.5], scale=[20, 20, 1])\napply_api_schema(prim_path=\"/World/Ground\", schema_name=\"PhysicsCollisionAPI\")\n\n# -- Physics: CPU deterministic --------------------------------------------\nset_physics_scene_config(config={\"enable_gpu_dynamics\": False, \"broadphase_type\": \"MBP\"})\n\n# -- Robot table -----------------------------------------------------------\ncreate_prim(prim_path=\"/World/Table\", prim_type=\"Cube\", position=[0, 0, 0.375], scale=[0.7, 1.2, 0.375])\napply_api_schema(prim_path=\"/World/Table\", schema_name=\"PhysicsCollisionAPI\")\n\n# -- Franka arm ------------------------------------------------------------\nrobot_wizard(\n    robot_name=\"franka_panda\",\n    dest_path=\"/World/Franka\",\n    position=[0, 0, 0.75],\n    orientation=[0.7071068, 0, 0, 0.7071068],\n)\n\n# -- Infeed inspection conveyor (front, y=+0.40) ---------------------------\n# Belt position z=0.78, half-thickness=0.025 → belt top z=0.805.\n# Cube size=0.05m, half=0.025. cube_centre_z = 0.805 + 0.025 + 0.0025 = 0.8325.\n# (was 0.830 = flush with belt surface → cube half-embedded, sinks through on physics solve)\ncreate_conveyor(\n    prim_path=\"/World/InspectionBelt\",\n    position=[0.0, 0.40, 0.78],\n    size=[1.5, 0.30, 0.05],\n    surface_velocity=[0.08, 0, 0],\n)\n\n# -- Materials: blue=intact-label (good), red=defect-mark (reject) ---------\ncreate_material(material_path=\"/World/Materials/LabelBlue\",  shader_type=\"OmniPBR\", diffuse_color=[0.10, 0.25, 0.95])\ncreate_material(material_path=\"/World/Materials/DefectRed\", shader_type=\"OmniPBR\", diffuse_color=[0.95, 0.10, 0.10])\n\n# -- Destination bins (behind robot, y=-0.45) ------------------------------\n# Within Franka 0.85m reach: max horizontal = sqrt(0.35^2 + 0.45^2) = 0.57m.\ncreate_bin(prim_path=\"/World/GoodBin\",   position=[-0.35, -0.45, 0.75], size=[0.25, 0.25, 0.12])\ncreate_bin(prim_path=\"/World/RejectBin\", position=[ 0.35, -0.45, 0.75], size=[0.25, 0.25, 0.12])\n\n# -- 4 cubes on belt: 3 good (blue label) + 1 reject (red defect mark) -----\n# Spacing 0.20m; belt velocity 0.08 m/s -> ~2.5s gap between cubes at pick zone.\n_cube_specs = [\n    {\"path\": \"/World/Cube_1\", \"x\": -0.60, \"label\": \"pass_part\",   \"material\": \"/World/Materials/LabelBlue\"},\n    {\"path\": \"/World/Cube_2\", \"x\": -0.40, \"label\": \"pass_part\",   \"material\": \"/World/Materials/LabelBlue\"},\n    {\"path\": \"/World/Cube_3\", \"x\": -0.20, \"label\": \"reject_part\", \"material\": \"/World/Materials/DefectRed\"},\n    {\"path\": \"/World/Cube_4\", \"x\":  0.00, \"label\": \"pass_part\",   \"material\": \"/World/Materials/LabelBlue\"},\n]\ncube_paths = []\nfor spec in _cube_specs:\n    p = spec[\"path\"]\n    cube_paths.append(p)\n    create_prim(prim_path=p, prim_type=\"Cube\", position=[spec[\"x\"], 0.40, 0.8325], size=0.05)\n    for api in (\"PhysicsRigidBodyAPI\", \"PhysicsCollisionAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n        apply_api_schema(prim_path=p, schema_name=api)\n    assign_material(prim_path=p, material_path=spec[\"material\"])\n    set_semantic_label(prim_path=p, class_name=spec[\"label\"])\n    apply_physics_material(prim_path=p, material_name=\"rubber\")\n\nbulk_set_attribute(prim_paths=cube_paths, attr=\"physics:mass\", value=0.25)\nbulk_set_attribute(prim_paths=cube_paths, attr=\"physxRigidBody:sleepThreshold\", value=0.0)\n\n# -- Overhead inspection camera --------------------------------------------\n# Nadir view of conveyor pick zone at z=1.30; wide FOV covers all 4 cubes.\ncreate_prim(prim_path=\"/World/InspectCamera\", prim_type=\"Camera\")\nset_camera_params(\n    camera_path=\"/World/InspectCamera\",\n    params={\"focal_length\": 18.0, \"horizontal_aperture\": 20.955},\n)\nset_camera_look_at(\n    camera_path=\"/World/InspectCamera\",\n    target=[0.0, 0.40, 0.78],\n    eye=[0.0, 0.40, 1.30],\n)\n\n# -- PHASE 1: vision-classifier gate ---------------------------------------\n# Captures viewport from /World/InspectCamera, runs vision_detect_objects with\n# the two semantic class labels, and returns a cube->destination dict shaped\n# for setup_pick_place_controller's color_routing argument.\nadd_vision_classifier_gate(\n    cube_paths=cube_paths,\n    class_labels=[\"pass_part\", \"reject_part\"],\n    camera_path=\"/World/InspectCamera\",\n    destination_map={\n        \"pass_part\":   \"/World/GoodBin\",\n        \"reject_part\": \"/World/RejectBin\",\n    },\n)\n\n# -- PHASE 2: pick-place with semantic-class routing -----------------------\n# color_routing keys are the semantic class labels emitted by the vision gate.\n# Items classified pass_part -> GoodBin; reject_part -> RejectBin.\nsetup_pick_place_controller(\n    robot_path=\"/World/Franka\",\n    target_source=\"curobo\",\n    source_paths=cube_paths,\n    destination_path=\"/World/GoodBin\",\n    color_routing={\n        \"pass_part\":   \"/World/GoodBin\",\n        \"reject_part\": \"/World/RejectBin\",\n    },\n    planning_obstacles=[\"/World/Table\", \"/World/InspectionBelt\",\n                        \"/World/GoodBin\", \"/World/RejectBin\"],\n)\n\n# -- PHASE 3: verify routing -----------------------------------------------\nfor p in cube_paths:\n    get_world_transform(prim_path=p)",
   "settle_state": {
     "cubes_initial": {
-      "/World/Cube_1": [-0.60, 0.40, 0.8325],
-      "/World/Cube_2": [-0.40, 0.40, 0.8325],
-      "/World/Cube_3": [-0.20, 0.40, 0.8325],
-      "/World/Cube_4": [ 0.00, 0.40, 0.8325]
+      "/World/Cube_1": [
+        -0.6,
+        0.4,
+        0.8325
+      ],
+      "/World/Cube_2": [
+        -0.4,
+        0.4,
+        0.8325
+      ],
+      "/World/Cube_3": [
+        -0.2,
+        0.4,
+        0.8325
+      ],
+      "/World/Cube_4": [
+        0.0,
+        0.4,
+        0.8325
+      ]
     },
     "expected_routing": {
       "/World/Cube_1": "/World/GoodBin",
@@ -36,12 +52,24 @@
       "/World/Cube_4": "/World/GoodBin"
     },
     "camera": {
-      "/World/InspectCamera": [0.0, 0.40, 1.30],
-      "look_at": [0.0, 0.40, 0.78],
+      "/World/InspectCamera": [
+        0.0,
+        0.4,
+        1.3
+      ],
+      "look_at": [
+        0.0,
+        0.4,
+        0.78
+      ],
       "focal_length": 18.0
     },
     "conveyors": {
-      "/World/InspectionBelt": [0.08, 0, 0]
+      "/World/InspectionBelt": [
+        0.08,
+        0,
+        0
+      ]
     }
   },
   "verify_args": {
@@ -51,23 +79,47 @@
         "pick_path": "/World/InspectionBelt",
         "place_path": "/World/GoodBin",
         "robot_kind": "franka_panda",
-        "routed_bins": ["/World/GoodBin", "/World/RejectBin"]
+        "routed_bins": [
+          "/World/GoodBin",
+          "/World/RejectBin"
+        ]
       }
     ],
-    "cube_paths": ["/World/Cube_1", "/World/Cube_2", "/World/Cube_3", "/World/Cube_4"],
+    "cube_paths": [
+      "/World/Cube_1",
+      "/World/Cube_2",
+      "/World/Cube_3",
+      "/World/Cube_4"
+    ],
     "camera_path": "/World/InspectCamera",
     "class_routing": {
-      "pass_part":   "/World/GoodBin",
+      "pass_part": "/World/GoodBin",
       "reject_part": "/World/RejectBin"
     }
   },
   "simulate_args": {
     "target_path": "/World/GoodBin",
-    "routed_target_paths": ["/World/GoodBin", "/World/RejectBin"],
-    "cube_paths": ["/World/Cube_1", "/World/Cube_2", "/World/Cube_3", "/World/Cube_4"],
+    "routed_target_paths": [
+      "/World/GoodBin",
+      "/World/RejectBin"
+    ],
+    "cube_paths": [
+      "/World/Cube_1",
+      "/World/Cube_2",
+      "/World/Cube_3",
+      "/World/Cube_4"
+    ],
     "duration_s": 240,
-    "xy_tolerance": 0.10,
-    "per_bin_expected": {"good": 3, "reject": 1}
+    "xy_tolerance": 0.1,
+    "per_bin_expected": {
+      "good": 3,
+      "reject": 1
+    },
+    "color_routing": {
+      "pass_part": "/World/GoodBin",
+      "reject_part": "/World/RejectBin"
+    },
+    "belt_path": "/World/InspectionBelt"
   },
   "diagnose_args": {
     "robot_path": "/World/Franka",
@@ -78,7 +130,11 @@
       "/World/GoodBin",
       "/World/RejectBin"
     ],
-    "robot_base": [0.0, 0.0, 0.75]
+    "robot_base": [
+      0.0,
+      0.0,
+      0.75
+    ]
   },
   "failure_modes": [
     "add_vision_classifier_gate returns low-confidence classification for the red defect cube — if the classifier confidence threshold is too low, a defect-marked cube can be misrouted to GoodBin (false positive: defective product reaches downstream). Mitigation: enforce a min_confidence threshold inside the gate handler, or fall back to set_semantic_label ground truth when confidence < threshold. Real-world QA failure mode: insufficient training data on rare defects shrinks the rejection rate at the cost of escapes.",
@@ -117,33 +173,47 @@
   },
   "roles": {
     "primary_robot": {
-      "constraints": ["franka_panda", "ur5e", "kinova_gen3"],
+      "constraints": [
+        "franka_panda",
+        "ur5e",
+        "kinova_gen3"
+      ],
       "expected_count": 1,
       "required": true,
       "disambiguator": "short_reach_ok"
     },
     "infeed_conveyor": {
-      "constraints": ["conveyor"],
+      "constraints": [
+        "conveyor"
+      ],
       "expected_count": 1,
       "required": true
     },
     "inspect_camera": {
-      "constraints": ["camera"],
+      "constraints": [
+        "camera"
+      ],
       "expected_count": 1,
       "required": true
     },
     "good_bin": {
-      "constraints": ["bin"],
+      "constraints": [
+        "bin"
+      ],
       "expected_count": 1,
       "required": true
     },
     "reject_bin": {
-      "constraints": ["bin"],
+      "constraints": [
+        "bin"
+      ],
       "expected_count": 1,
       "required": true
     },
     "workpieces": {
-      "constraints": ["cube"],
+      "constraints": [
+        "cube"
+      ],
       "min": 2,
       "max": 8,
       "param_name": "n_cubes",
@@ -155,29 +225,128 @@
     "primary_robot": {
       "path": "/World/Franka",
       "class": "franka_panda",
-      "position": [0, 0, 0.75],
-      "orientation": [0.7071068, 0, 0, 0.7071068]
+      "position": [
+        0,
+        0,
+        0.75
+      ],
+      "orientation": [
+        0.7071068,
+        0,
+        0,
+        0.7071068
+      ]
     },
     "infeed_conveyor": {
       "path": "/World/InspectionBelt",
-      "position": [0.0, 0.40, 0.78],
-      "size": [1.5, 0.30, 0.05],
-      "surface_velocity": [0.08, 0, 0]
+      "position": [
+        0.0,
+        0.4,
+        0.78
+      ],
+      "size": [
+        1.5,
+        0.3,
+        0.05
+      ],
+      "surface_velocity": [
+        0.08,
+        0,
+        0
+      ]
     },
     "inspect_camera": {
       "path": "/World/InspectCamera",
-      "position": [0.0, 0.40, 1.30],
-      "target": [0.0, 0.40, 0.78],
+      "position": [
+        0.0,
+        0.4,
+        1.3
+      ],
+      "target": [
+        0.0,
+        0.4,
+        0.78
+      ],
       "fov": 60,
       "focal_length": 18.0
     },
-    "good_bin":   {"path": "/World/GoodBin",   "position": [-0.35, -0.45, 0.75], "size": [0.25, 0.25, 0.12], "routing_key": "pass_part"},
-    "reject_bin": {"path": "/World/RejectBin", "position": [ 0.35, -0.45, 0.75], "size": [0.25, 0.25, 0.12], "routing_key": "reject_part"},
+    "good_bin": {
+      "path": "/World/GoodBin",
+      "position": [
+        -0.35,
+        -0.45,
+        0.75
+      ],
+      "size": [
+        0.25,
+        0.25,
+        0.12
+      ],
+      "routing_key": "pass_part"
+    },
+    "reject_bin": {
+      "path": "/World/RejectBin",
+      "position": [
+        0.35,
+        -0.45,
+        0.75
+      ],
+      "size": [
+        0.25,
+        0.25,
+        0.12
+      ],
+      "routing_key": "reject_part"
+    },
     "workpieces": [
-      {"path": "/World/Cube_1", "position": [-0.60, 0.40, 0.8325], "label": "pass_part",   "material": "/World/Materials/LabelBlue",  "color": "blue", "mass": 0.25},
-      {"path": "/World/Cube_2", "position": [-0.40, 0.40, 0.8325], "label": "pass_part",   "material": "/World/Materials/LabelBlue",  "color": "blue", "mass": 0.25},
-      {"path": "/World/Cube_3", "position": [-0.20, 0.40, 0.8325], "label": "reject_part", "material": "/World/Materials/DefectRed",  "color": "red",  "mass": 0.25},
-      {"path": "/World/Cube_4", "position": [ 0.00, 0.40, 0.8325], "label": "pass_part",   "material": "/World/Materials/LabelBlue",  "color": "blue", "mass": 0.25}
+      {
+        "path": "/World/Cube_1",
+        "position": [
+          -0.6,
+          0.4,
+          0.8325
+        ],
+        "label": "pass_part",
+        "material": "/World/Materials/LabelBlue",
+        "color": "blue",
+        "mass": 0.25
+      },
+      {
+        "path": "/World/Cube_2",
+        "position": [
+          -0.4,
+          0.4,
+          0.8325
+        ],
+        "label": "pass_part",
+        "material": "/World/Materials/LabelBlue",
+        "color": "blue",
+        "mass": 0.25
+      },
+      {
+        "path": "/World/Cube_3",
+        "position": [
+          -0.2,
+          0.4,
+          0.8325
+        ],
+        "label": "reject_part",
+        "material": "/World/Materials/DefectRed",
+        "color": "red",
+        "mass": 0.25
+      },
+      {
+        "path": "/World/Cube_4",
+        "position": [
+          0.0,
+          0.4,
+          0.8325
+        ],
+        "label": "pass_part",
+        "material": "/World/Materials/LabelBlue",
+        "color": "blue",
+        "mass": 0.25
+      }
     ],
     "operator_role": {
       "yrkesroll": "inspector",
@@ -195,18 +364,29 @@
       ]
     }
   },
-  "code_template": "create_prim(prim_path=\"/World/DomeLight\", prim_type=\"DomeLight\")\nset_attribute(prim_path=\"/World/DomeLight\", attr_name=\"inputs:intensity\", value=1000.0)\ncreate_prim(prim_path=\"/World/Ground\", prim_type=\"Cube\", position=[0, 0, -0.5], scale=[20, 20, 1])\napply_api_schema(prim_path=\"/World/Ground\", schema_name=\"PhysicsCollisionAPI\")\nset_physics_scene_config(config={\"enable_gpu_dynamics\": False, \"broadphase_type\": \"MBP\"})\ncreate_prim(prim_path=\"/World/Table\", prim_type=\"Cube\", position=[0, 0, 0.375], scale=[0.7, 1.2, 0.375])\napply_api_schema(prim_path=\"/World/Table\", schema_name=\"PhysicsCollisionAPI\")\nrobot_wizard(\n    robot_name={{primary_robot.class}},\n    dest_path={{primary_robot.path}},\n    position={{primary_robot.position}},\n    orientation={{primary_robot.orientation}},\n)\ncreate_conveyor(\n    prim_path={{infeed_conveyor.path}},\n    position={{infeed_conveyor.position}},\n    size={{infeed_conveyor.size}},\n    surface_velocity={{infeed_conveyor.surface_velocity}},\n)\ncreate_material(material_path=\"/World/Materials/LabelBlue\",  shader_type=\"OmniPBR\", diffuse_color=[0.10, 0.25, 0.95])\ncreate_material(material_path=\"/World/Materials/DefectRed\", shader_type=\"OmniPBR\", diffuse_color=[0.95, 0.10, 0.10])\ncreate_bin(prim_path={{good_bin.path}},   position={{good_bin.position}},   size={{good_bin.size}})\ncreate_bin(prim_path={{reject_bin.path}}, position={{reject_bin.position}}, size={{reject_bin.size}})\ncreate_prim(prim_path={{workpieces[0].path}}, prim_type=\"Cube\", position={{workpieces[0].position}}, size=0.05)\napply_api_schema(prim_path={{workpieces[0].path}}, schema_name=\"PhysicsRigidBodyAPI\")\napply_api_schema(prim_path={{workpieces[0].path}}, schema_name=\"PhysicsCollisionAPI\")\napply_api_schema(prim_path={{workpieces[0].path}}, schema_name=\"PhysicsMassAPI\")\nassign_material(prim_path={{workpieces[0].path}}, material_path={{workpieces[0].material}})\nset_semantic_label(prim_path={{workpieces[0].path}}, class_name={{workpieces[0].label}})\napply_physics_material(prim_path={{workpieces[0].path}}, material_name=\"rubber\")\ncreate_prim(prim_path={{workpieces[1].path}}, prim_type=\"Cube\", position={{workpieces[1].position}}, size=0.05)\napply_api_schema(prim_path={{workpieces[1].path}}, schema_name=\"PhysicsRigidBodyAPI\")\napply_api_schema(prim_path={{workpieces[1].path}}, schema_name=\"PhysicsCollisionAPI\")\napply_api_schema(prim_path={{workpieces[1].path}}, schema_name=\"PhysicsMassAPI\")\nassign_material(prim_path={{workpieces[1].path}}, material_path={{workpieces[1].material}})\nset_semantic_label(prim_path={{workpieces[1].path}}, class_name={{workpieces[1].label}})\napply_physics_material(prim_path={{workpieces[1].path}}, material_name=\"rubber\")\ncreate_prim(prim_path={{workpieces[2].path}}, prim_type=\"Cube\", position={{workpieces[2].position}}, size=0.05)\napply_api_schema(prim_path={{workpieces[2].path}}, schema_name=\"PhysicsRigidBodyAPI\")\napply_api_schema(prim_path={{workpieces[2].path}}, schema_name=\"PhysicsCollisionAPI\")\napply_api_schema(prim_path={{workpieces[2].path}}, schema_name=\"PhysicsMassAPI\")\nassign_material(prim_path={{workpieces[2].path}}, material_path={{workpieces[2].material}})\nset_semantic_label(prim_path={{workpieces[2].path}}, class_name={{workpieces[2].label}})\napply_physics_material(prim_path={{workpieces[2].path}}, material_name=\"rubber\")\ncreate_prim(prim_path={{workpieces[3].path}}, prim_type=\"Cube\", position={{workpieces[3].position}}, size=0.05)\napply_api_schema(prim_path={{workpieces[3].path}}, schema_name=\"PhysicsRigidBodyAPI\")\napply_api_schema(prim_path={{workpieces[3].path}}, schema_name=\"PhysicsCollisionAPI\")\napply_api_schema(prim_path={{workpieces[3].path}}, schema_name=\"PhysicsMassAPI\")\nassign_material(prim_path={{workpieces[3].path}}, material_path={{workpieces[3].material}})\nset_semantic_label(prim_path={{workpieces[3].path}}, class_name={{workpieces[3].label}})\napply_physics_material(prim_path={{workpieces[3].path}}, material_name=\"rubber\")\nbulk_set_attribute(prim_paths=[{{workpieces[0].path}}, {{workpieces[1].path}}, {{workpieces[2].path}}, {{workpieces[3].path}}], attr=\"physics:mass\", value=0.25)\nbulk_set_attribute(prim_paths=[{{workpieces[0].path}}, {{workpieces[1].path}}, {{workpieces[2].path}}, {{workpieces[3].path}}], attr=\"physxRigidBody:sleepThreshold\", value=0.0)\ncreate_prim(prim_path={{inspect_camera.path}}, prim_type=\"Camera\")\nset_camera_params(\n    camera_path={{inspect_camera.path}},\n    params={\"focal_length\": {{inspect_camera.focal_length}}, \"horizontal_aperture\": 20.955},\n)\nset_camera_look_at(\n    camera_path={{inspect_camera.path}},\n    target={{inspect_camera.target}},\n    eye={{inspect_camera.position}},\n)\nadd_vision_classifier_gate(\n    cube_paths=[{{workpieces[0].path}}, {{workpieces[1].path}}, {{workpieces[2].path}}, {{workpieces[3].path}}],\n    class_labels=[{{good_bin.routing_key}}, {{reject_bin.routing_key}}],\n    camera_path={{inspect_camera.path}},\n    destination_map={{{good_bin.routing_key}}: {{good_bin.path}}, {{reject_bin.routing_key}}: {{reject_bin.path}}},\n)\nsetup_pick_place_controller(\n    robot_path={{primary_robot.path}},\n    target_source=\"curobo\",\n    source_paths=[{{workpieces[0].path}}, {{workpieces[1].path}}, {{workpieces[2].path}}, {{workpieces[3].path}}],\n    destination_path={{good_bin.path}},\n    color_routing={{{good_bin.routing_key}}: {{good_bin.path}}, {{reject_bin.routing_key}}: {{reject_bin.path}}},\n    planning_obstacles=[\"/World/Table\", {{infeed_conveyor.path}}, {{good_bin.path}}, {{reject_bin.path}}],\n)\nget_world_transform(prim_path={{workpieces[0].path}})\nget_world_transform(prim_path={{workpieces[1].path}})\nget_world_transform(prim_path={{workpieces[2].path}})\nget_world_transform(prim_path={{workpieces[3].path}})",
+  "code_template": "create_prim(prim_path=\"/World/DomeLight\", prim_type=\"DomeLight\")\nset_attribute(prim_path=\"/World/DomeLight\", attr_name=\"inputs:intensity\", value=1000.0)\ncreate_prim(prim_path=\"/World/Ground\", prim_type=\"Cube\", position=[0, 0, -0.5], scale=[20, 20, 1])\napply_api_schema(prim_path=\"/World/Ground\", schema_name=\"PhysicsCollisionAPI\")\nset_physics_scene_config(config={\"enable_gpu_dynamics\": False, \"broadphase_type\": \"MBP\"})\ncreate_prim(prim_path=\"/World/Table\", prim_type=\"Cube\", position=[0, 0, 0.375], scale=[0.7, 1.2, 0.375])\napply_api_schema(prim_path=\"/World/Table\", schema_name=\"PhysicsCollisionAPI\")\nrobot_wizard(\n    robot_name={{primary_robot.class}},\n    dest_path={{primary_robot.path}},\n    position={{primary_robot.position}},\n    orientation={{primary_robot.orientation}},\n)\ncreate_conveyor(\n    prim_path={{infeed_conveyor.path}},\n    position={{infeed_conveyor.position}},\n    size={{infeed_conveyor.size}},\n    surface_velocity={{infeed_conveyor.surface_velocity}},\n)\ncreate_material(material_path=\"/World/Materials/LabelBlue\",  shader_type=\"OmniPBR\", diffuse_color=[0.10, 0.25, 0.95])\ncreate_material(material_path=\"/World/Materials/DefectRed\", shader_type=\"OmniPBR\", diffuse_color=[0.95, 0.10, 0.10])\ncreate_bin(prim_path={{good_bin.path}},   position={{good_bin.position}},   size={{good_bin.size}})\ncreate_bin(prim_path={{reject_bin.path}}, position={{reject_bin.position}}, size={{reject_bin.size}})\ncreate_prim(prim_path={{workpieces[0].path}}, prim_type=\"Cube\", position={{workpieces[0].position}}, size=0.05)\napply_api_schema(prim_path={{workpieces[0].path}}, schema_name=\"PhysicsRigidBodyAPI\")\napply_api_schema(prim_path={{workpieces[0].path}}, schema_name=\"PhysicsCollisionAPI\")\napply_api_schema(prim_path={{workpieces[0].path}}, schema_name=\"PhysicsMassAPI\")\nassign_material(prim_path={{workpieces[0].path}}, material_path={{workpieces[0].material}})\nset_semantic_label(prim_path={{workpieces[0].path}}, class_name={{workpieces[0].label}})\napply_physics_material(prim_path={{workpieces[0].path}}, material_name=\"rubber\")\ncreate_prim(prim_path={{workpieces[1].path}}, prim_type=\"Cube\", position={{workpieces[1].position}}, size=0.05)\napply_api_schema(prim_path={{workpieces[1].path}}, schema_name=\"PhysicsRigidBodyAPI\")\napply_api_schema(prim_path={{workpieces[1].path}}, schema_name=\"PhysicsCollisionAPI\")\napply_api_schema(prim_path={{workpieces[1].path}}, schema_name=\"PhysicsMassAPI\")\nassign_material(prim_path={{workpieces[1].path}}, material_path={{workpieces[1].material}})\nset_semantic_label(prim_path={{workpieces[1].path}}, class_name={{workpieces[1].label}})\napply_physics_material(prim_path={{workpieces[1].path}}, material_name=\"rubber\")\ncreate_prim(prim_path={{workpieces[2].path}}, prim_type=\"Cube\", position={{workpieces[2].position}}, size=0.05)\napply_api_schema(prim_path={{workpieces[2].path}}, schema_name=\"PhysicsRigidBodyAPI\")\napply_api_schema(prim_path={{workpieces[2].path}}, schema_name=\"PhysicsCollisionAPI\")\napply_api_schema(prim_path={{workpieces[2].path}}, schema_name=\"PhysicsMassAPI\")\nassign_material(prim_path={{workpieces[2].path}}, material_path={{workpieces[2].material}})\nset_semantic_label(prim_path={{workpieces[2].path}}, class_name={{workpieces[2].label}})\napply_physics_material(prim_path={{workpieces[2].path}}, material_name=\"rubber\")\ncreate_prim(prim_path={{workpieces[3].path}}, prim_type=\"Cube\", position={{workpieces[3].position}}, size=0.05)\napply_api_schema(prim_path={{workpieces[3].path}}, schema_name=\"PhysicsRigidBodyAPI\")\napply_api_schema(prim_path={{workpieces[3].path}}, schema_name=\"PhysicsCollisionAPI\")\napply_api_schema(prim_path={{workpieces[3].path}}, schema_name=\"PhysicsMassAPI\")\nassign_material(prim_path={{workpieces[3].path}}, material_path={{workpieces[3].material}})\nset_semantic_label(prim_path={{workpieces[3].path}}, class_name={{workpieces[3].label}})\napply_physics_material(prim_path={{workpieces[3].path}}, material_name=\"rubber\")\nbulk_set_attribute(prim_paths=[{{workpieces[0].path}}, {{workpieces[1].path}}, {{workpieces[2].path}}, {{workpieces[3].path}}], attr=\"physics:mass\", value=0.25)\nbulk_set_attribute(prim_paths=[{{workpieces[0].path}}, {{workpieces[1].path}}, {{workpieces[2].path}}, {{workpieces[3].path}}], attr=\"physxRigidBody:sleepThreshold\", value=0.0)\ncreate_prim(prim_path={{inspect_camera.path}}, prim_type=\"Camera\")\nset_camera_params(\n    camera_path={{inspect_camera.path}},\n    params={\"focal_length\": {{inspect_camera.focal_length}}, \"horizontal_aperture\": 20.955},\n)\nset_camera_look_at(\n    camera_path={{inspect_camera.path}},\n    target={{inspect_camera.target}},\n    eye={{inspect_camera.position}},\n)\nadd_vision_classifier_gate(\n    cube_paths=[{{workpieces[0].path}}, {{workpieces[1].path}}, {{workpieces[2].path}}, {{workpieces[3].path}}],\n    class_labels=[{{good_bin.routing_key}}, {{reject_bin.routing_key}}],\n    camera_path={{inspect_camera.path}},\n    destination_map={{{good_bin.routing_key}}: {{good_bin.path}}, {{reject_bin.routing_key}}: {{reject_bin.path}}},\n)\nsetup_pick_place_controller(\n    robot_path={{primary_robot.path}},\n    target_source=\"curobo\",\n    source_paths=[{{workpieces[0].path}}, {{workpieces[1].path}}, {{workpieces[2].path}}, {{workpieces[3].path}}],\n    belt_path={{infeed_conveyor.path}},\n    destination_path={{good_bin.path}},\n    color_routing={{{good_bin.routing_key}}: {{good_bin.path}}, {{reject_bin.routing_key}}: {{reject_bin.path}}},\n    planning_obstacles=[\"/World/Table\", {{infeed_conveyor.path}}, {{good_bin.path}}, {{reject_bin.path}}],\n)\nget_world_transform(prim_path={{workpieces[0].path}})\nget_world_transform(prim_path={{workpieces[1].path}})\nget_world_transform(prim_path={{workpieces[2].path}})\nget_world_transform(prim_path={{workpieces[3].path}})",
   "simulate_args_template": {
     "target_path": "{{good_bin.path}}",
-    "routed_target_paths": ["{{good_bin.path}}", "{{reject_bin.path}}"],
-    "cube_paths": ["{{workpieces[0].path}}", "{{workpieces[1].path}}", "{{workpieces[2].path}}", "{{workpieces[3].path}}"],
+    "routed_target_paths": [
+      "{{good_bin.path}}",
+      "{{reject_bin.path}}"
+    ],
+    "cube_paths": [
+      "{{workpieces[0].path}}",
+      "{{workpieces[1].path}}",
+      "{{workpieces[2].path}}",
+      "{{workpieces[3].path}}"
+    ],
     "duration_s": 240,
-    "xy_tolerance": 0.10
+    "xy_tolerance": 0.1
   },
   "verified_status": "build-spec-2026-05-16; form-gate pending; function-gate pending",
   "motion_controllers": {
     "verified": [],
-    "untested": ["curobo", "rmpflow"],
+    "untested": [
+      "curobo",
+      "rmpflow"
+    ],
     "failed": {}
   },
   "_patch_history": [

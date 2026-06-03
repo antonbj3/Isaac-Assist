@@ -3877,6 +3877,45 @@ def _world_bbox(path):
         'max': [float(mx[0]), float(mx[1]), float(mx[2])],
     }}
 
+# 2026-05-19: Raycast-down support check. Discriminates "cube on target"
+# from "cube on table/floor at same height as target". Verified against
+# Anton's 4 ground-truth tags (CP-01 yes, CP-13/14/18 no) — 4/4 agreement
+# (vs old bbox-only check which gave 3/4 false positives).
+def _cube_support(cube_path_arg, target_path_arg):
+    \"\"\"Raycast down from below cube's bottom face; return (support_path,
+    under_target, distance). Origin 1 cm below cube_min_z so the cube
+    itself isn't hit. under_target: support is descendant of target_path
+    OR is another cube already delivered (for stacking).\"\"\"
+    cbb = _world_bbox(cube_path_arg)
+    cf = _world_pos(cube_path_arg)
+    if cf is None: return (None, False, None)
+    if cbb:
+        origin_z = cbb['min'][2] - 0.005
+    else:
+        origin_z = cf[2] - 0.05
+    try:
+        import omni.physx as _opx_sup
+        phys = _opx_sup.get_physx_scene_query_interface()
+        try:
+            from carb import Float3
+            o = Float3(float(cf[0]), float(cf[1]), float(origin_z))
+            d = Float3(0.0, 0.0, -1.0)
+        except Exception:
+            o = (float(cf[0]), float(cf[1]), float(origin_z))
+            d = (0.0, 0.0, -1.0)
+        hit = phys.raycast_closest(o, d, 2.0)
+        if not hit or not hit.get('hit'):
+            return (None, False, None)
+        sp = hit.get('rigidBody') or hit.get('collision')
+        sp_str = str(sp) if sp else None
+        if not sp_str:
+            return (None, False, None)
+        # Direct descendant of target
+        under = sp_str == target_path_arg or sp_str.startswith(target_path_arg + "/")
+        return (sp_str, under, float(hit.get('distance', 0.0)))
+    except Exception:
+        return (None, False, None)
+
 cube_paths = {cube_paths!r}
 cube_path = cube_paths[0] if cube_paths else ""  # primary cube for legacy fields
 target_path = {target_path!r}
@@ -4083,9 +4122,34 @@ def _do_one_run(run_idx, target_bbox):
     pre_pos_per_cube = {{cp: (_world_pos(cp) or [0,0,0]) for cp in cube_paths}}
     real_start = _t.time()
     last_t = 0.0
+    # 2026-05-19: track "ever in target xy + above floor" across sim.
+    # Multi-cube cycles can dislodge an earlier-delivered cube, causing
+    # in_xy at sim-end to be False even though the cube DID reach target.
+    # This shadow metric does not change `success`; runners that want
+    # delivery-by-ever-reached semantics read `cube_ever_in_target` field.
+    _bb_min = target_bbox['min']; _bb_max = target_bbox['max']
+    ever_in_xy_main = False
+    ever_in_xy_per_cube = {{cp: False for cp in cube_paths}}
+    _sample_tick = [0]
     while True:
         app.update()
         cur_t = float(tl.get_current_time())
+        _sample_tick[0] += 1
+        # sample bbox-presence every ~30 ticks (~0.5s at 60Hz)
+        if _sample_tick[0] % 30 == 0:
+            _cp_now = _world_pos(cube_path)
+            if _cp_now is not None:
+                if (_bb_min[0] - xy_tol <= _cp_now[0] <= _bb_max[0] + xy_tol
+                        and _bb_min[1] - xy_tol <= _cp_now[1] <= _bb_max[1] + xy_tol
+                        and _cp_now[2] >= _bb_min[2] - floor_tol):
+                    ever_in_xy_main = True
+            for _cp in cube_paths:
+                _pp_now = _world_pos(_cp)
+                if _pp_now is not None and (
+                        _bb_min[0] - xy_tol <= _pp_now[0] <= _bb_max[0] + xy_tol
+                        and _bb_min[1] - xy_tol <= _pp_now[1] <= _bb_max[1] + xy_tol
+                        and _pp_now[2] >= _bb_min[2] - floor_tol):
+                    ever_in_xy_per_cube[_cp] = True
         if cur_t >= duration_s - 0.15 and last_t < duration_s - 0.15:
             _p = _world_pos(cube_path)
             if _p is not None: p_pre = _p
@@ -4146,6 +4210,46 @@ def _do_one_run(run_idx, target_bbox):
     else:
         success = bool(in_xy and above_floor and at_rest and upright_ok)
 
+    # Shadow metric: cube delivery was reached IF cube_ever_in_target_xy
+    # AND cube is at_rest somewhere by sim end (not necessarily in bbox).
+    # Captures "delivered then dislodged by next cycle" cases for multi-cube
+    # canonicals. Does not affect `success`; runners opt-in via this field.
+    delivered_ever = bool(ever_in_xy_main and at_rest and upright_ok)
+
+    # 2026-05-19: Raycast-down support check (shadow field). Calibrated against
+    # Anton's 4 ground-truth tags: 4/4 agreement (CP-01/13/14/18).
+    # Extended 2026-05-20: chain-support recursion. When cube X rests on
+    # cube Y (multi-cube stacking — CP-41/44/45/47 Anton's PASS but
+    # support=Cube_2), follow the support chain. X is on target iff Y is
+    # on target. Recurse up to depth 5 to handle 5-cube stacks; bail on
+    # cycles via visited set.
+    primary_support, primary_under_target, primary_support_dist = _cube_support(cube_path, target_path)
+    per_cube_support = {{}}
+    for _cp in cube_paths:
+        _sp, _un, _sd = _cube_support(_cp, target_path)
+        per_cube_support[_cp] = {{'support': _sp, 'under_target': _un, 'dist': _sd}}
+
+    def _chain_under_target(cp, depth=0, visited=None):
+        if visited is None: visited = set()
+        if depth >= 5 or cp in visited: return False
+        visited.add(cp)
+        info = per_cube_support.get(cp)
+        if info is None:
+            _sp, _un, _sd = _cube_support(cp, target_path)
+            info = {{'support': _sp, 'under_target': _un, 'dist': _sd}}
+            per_cube_support[cp] = info
+        if info['under_target']:
+            return True
+        sp = info.get('support')
+        if not sp: return False
+        # If support is one of our cube_paths, recurse
+        if sp in cube_paths:
+            return _chain_under_target(sp, depth + 1, visited)
+        return False
+
+    primary_chain_under_target = _chain_under_target(cube_path)
+    cube_on_target = bool(primary_chain_under_target and at_rest and upright_ok)
+
     return {{
         'success': success,
         'cube_final': p_final,
@@ -4154,6 +4258,14 @@ def _do_one_run(run_idx, target_bbox):
         'in_target_xy': in_xy,
         'above_floor': above_floor,
         'at_rest': at_rest,
+        'cube_ever_in_target_xy': ever_in_xy_main,
+        'cubes_ever_in_target_xy': ever_in_xy_per_cube,
+        'delivered_ever': delivered_ever,
+        'cube_support_path': primary_support,
+        'cube_support_under_target': primary_under_target,
+        'cube_support_distance': primary_support_dist,
+        'per_cube_support': per_cube_support,
+        'cube_on_target': cube_on_target,
         'cube_upright_dot': upright_dot,
         'upright_ok': upright_ok,
         'sim_t_reached': cur_t,

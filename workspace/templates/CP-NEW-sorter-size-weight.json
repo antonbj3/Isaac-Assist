@@ -20,7 +20,7 @@
   "settle_state": {
     "cubes": {
       "/World/Cube_1": [
-        -1.6,
+        -1.45,
         0.4,
         0.8325
       ],
@@ -124,6 +124,10 @@
     "per_bin_expected": {
       "heavy": 3,
       "light": 6
+    },
+    "color_routing": {
+      "heavy": "/World/HeavyBin",
+      "light": "/World/LightBin"
     }
   },
   "diagnose_args": {
@@ -317,7 +321,7 @@
         "size": 0.05,
         "mass": 0.2,
         "position": [
-          -1.6,
+          -1.45,
           0.4,
           0.8325
         ]
@@ -380,34 +384,34 @@
       {
         "path": "/World/Cube_7",
         "label": "heavy",
-        "size": 0.08,
+        "size": 0.06,
         "mass": 0.5,
         "position": [
           -0.4,
           0.4,
-          0.845
+          0.835
         ]
       },
       {
         "path": "/World/Cube_8",
         "label": "heavy",
-        "size": 0.08,
+        "size": 0.06,
         "mass": 0.5,
         "position": [
           -0.2,
           0.4,
-          0.845
+          0.835
         ]
       },
       {
         "path": "/World/Cube_9",
         "label": "heavy",
-        "size": 0.08,
+        "size": 0.06,
         "mass": 0.5,
         "position": [
           0.0,
           0.4,
-          0.845
+          0.835
         ]
       }
     ]

@@ -2,19 +2,20 @@
   "task_id": "CP-75",
   "goal": "Build a UR10 builtin static-cube pick-place canonical: UR10 picks one statically-placed cube from a tabletop and drops it in a bin. No conveyor — sidesteps the belt-pause-from-callback quirk that blocks CP-74 function-gate, and provides a clean baseline that validates the universal_robots PickPlaceController works end-to-end on this Isaac Sim install.",
   "tools_used": [
+    "robot_wizard",
     "create_prim",
     "set_attribute",
     "apply_api_schema",
-    "add_reference",
     "teleport_prim",
     "create_bin",
     "set_physics_scene_config",
     "apply_physics_material",
     "bulk_set_attribute",
+    "surface_gripper",
     "setup_pick_place_controller"
   ],
   "thoughts": "Six static-pickup specifics for CP-75 (extends CP-74 by removing the conveyor):\n1) UR10 base on table (0, 0, 0.75) — same layout as CP-74. Mirror home pose [π/2, -π/2, π/2, -π/2, -π/2, 0] from the builtin handler points EE toward -X / +Y where the cube sits.\n2) NO conveyor. Cube is placed statically on the table top at (-0.5, 0.4, 0.825) — within UR10's 1.3m reach (dist from base ≈ 0.64m).\n3) Bin at (0.5, -0.4, 0.75) — opposite quadrant, dist ≈ 0.64m. UR10 needs to swing the base across XY plane between pick and drop; RmpFlow handles this if Cube is reachable.\n4) target_source='builtin' + robot_family='ur10' — exercises the universal_robots PickPlaceController + RMPFlow + SurfaceGripper stack from ur10_pick_up.py.\n5) No belt-pause needed. PickPlaceController's events_dt cadence drives all phases without external interaction.\n6) Function-gate goal: cube ends in /World/Bin's xy bbox. If THIS passes, the pickup stack works on this install — the CP-74 failure is purely the belt-pause quirk, not a fundamental UR10 stack issue.",
-  "code": "create_prim(prim_path=\"/World/DomeLight\", prim_type=\"DomeLight\")\nset_attribute(prim_path=\"/World/DomeLight\", attr_name=\"inputs:intensity\", value=1000.0)\ncreate_prim(prim_path=\"/World/Ground\", prim_type=\"Cube\", position=[0, 0, -0.5], scale=[20, 20, 1])\napply_api_schema(prim_path=\"/World/Ground\", schema_name=\"PhysicsCollisionAPI\")\ncreate_prim(prim_path=\"/World/Cell\", prim_type=\"Xform\")\ncreate_prim(prim_path=\"/World/Table\", prim_type=\"Cube\", position=[0, 0, 0.375], scale=[1.5, 0.5, 0.375])\napply_api_schema(prim_path=\"/World/Table\", schema_name=\"PhysicsCollisionAPI\")\n\nset_physics_scene_config(config={\"enable_gpu_dynamics\": False, \"broadphase_type\": \"MBP\"})\n\n# UR10 base on table\ncreate_prim(prim_path=\"/World/UR10\", prim_type=\"Xform\")\nadd_reference(prim_path=\"/World/UR10\", reference_path=\"/mnt/shared_data/isaac-sim-assets-complete-5.0.0/Assets/Isaac/5.0/Collected_Robots/ur10.usd\")\nteleport_prim(prim_path=\"/World/UR10\", position=[0, 0, 0.75])\n\n# Static cube on table — within UR10 reach\ncreate_prim(prim_path=\"/World/Cube_1\", prim_type=\"Cube\", position=[-0.5, 0.4, 0.825], size=0.05)\nfor api in (\"PhysicsRigidBodyAPI\", \"PhysicsCollisionAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n    apply_api_schema(prim_path=\"/World/Cube_1\", schema_name=api)\nbulk_set_attribute(prim_paths=[\"/World/Cube_1\"], attr=\"physxRigidBody:sleepThreshold\", value=0.0)\napply_physics_material(prim_path=\"/World/Cube_1\", material_name=\"rubber\")\n\n# Output bin\ncreate_bin(prim_path=\"/World/Bin\", position=[0.5, -0.4, 0.75], size=[0.3, 0.3, 0.15])\n\n# UR10 builtin PickPlaceController — no sensor / no belt\nsetup_pick_place_controller(\n    robot_path=\"/World/UR10\",\n    robot_family=\"ur10\",\n    target_source=\"builtin\",\n    source_paths=[\"/World/Cube_1\"],\n    destination_path=\"/World/Bin\",\n    end_effector_offset=[0.0, 0.0, 0.02],\n)",
+  "code": "create_prim(prim_path=\"/World/DomeLight\", prim_type=\"DomeLight\")\nset_attribute(prim_path=\"/World/DomeLight\", attr_name=\"inputs:intensity\", value=1000.0)\ncreate_prim(prim_path=\"/World/Ground\", prim_type=\"Cube\", position=[0, 0, -0.5], scale=[20, 20, 1])\napply_api_schema(prim_path=\"/World/Ground\", schema_name=\"PhysicsCollisionAPI\")\ncreate_prim(prim_path=\"/World/Cell\", prim_type=\"Xform\")\ncreate_prim(prim_path=\"/World/Table\", prim_type=\"Cube\", position=[0, 0, 0.375], scale=[1.5, 0.5, 0.375])\napply_api_schema(prim_path=\"/World/Table\", schema_name=\"PhysicsCollisionAPI\")\n\nset_physics_scene_config(config={\"enable_gpu_dynamics\": False, \"broadphase_type\": \"MBP\"})\n\n# UR10 base on table\nrobot_wizard(\n    robot_name=\"ur10\",\n    dest_path=\"/World/UR10\",\n    position=[0, 0, 0.75],\n    orientation=[1, 0, 0, 0],\n)\n\n# Suction gripper attached to UR10's ee_link\nsurface_gripper(\n    robot_path=\"/World/UR10\",\n    ee_link=\"/World/UR10/ee_link\",\n    grip_threshold=0.02,\n    force_limit=200.0,\n    torque_limit=200.0,\n)\n\n# Static cube on table — within UR10 reach\ncreate_prim(prim_path=\"/World/Cube_1\", prim_type=\"Cube\", position=[-0.5, 0.4, 0.825], size=0.05)\nfor api in (\"PhysicsRigidBodyAPI\", \"PhysicsCollisionAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n    apply_api_schema(prim_path=\"/World/Cube_1\", schema_name=api)\nbulk_set_attribute(prim_paths=[\"/World/Cube_1\"], attr=\"physxRigidBody:sleepThreshold\", value=0.0)\napply_physics_material(prim_path=\"/World/Cube_1\", material_name=\"rubber\")\n\n# Output bin\ncreate_bin(prim_path=\"/World/Bin\", position=[0.5, -0.4, 0.75], size=[0.3, 0.3, 0.15])\n\n# UR10 builtin PickPlaceController — no sensor / no belt\nsetup_pick_place_controller(\n    robot_path=\"/World/UR10\",\n    robot_family=\"ur10\",\n    target_source=\"builtin\",\n    source_paths=[\"/World/Cube_1\"],\n    destination_path=\"/World/Bin\",\n    end_effector_offset=[0.0, 0.0, 0.02],\n)",
   "settle_state": {
     "cubes": {
       "/World/Cube_1": [
@@ -58,17 +59,24 @@
   },
   "roles": {
     "primary_robot": {
-      "constraints": ["ur10e", "ur10"],
+      "constraints": [
+        "ur10e",
+        "ur10"
+      ],
       "expected_count": 1,
       "required": true
     },
     "primary_destination": {
-      "constraints": ["bin"],
+      "constraints": [
+        "bin"
+      ],
       "expected_count": 1,
       "required": true
     },
     "workpieces": {
-      "constraints": ["cube"],
+      "constraints": [
+        "cube"
+      ],
       "min": 1,
       "max": 1,
       "unordered": false
@@ -78,21 +86,43 @@
     "primary_robot": {
       "path": "/World/UR10",
       "class": "ur10e",
-      "position": [0, 0, 0.75]
+      "position": [
+        0,
+        0,
+        0.75
+      ],
+      "orientation": [
+        1,
+        0,
+        0,
+        0
+      ]
     },
     "primary_destination": {
       "path": "/World/Bin",
-      "position": [0.5, -0.4, 0.75],
-      "size": [0.3, 0.3, 0.15]
+      "position": [
+        0.5,
+        -0.4,
+        0.75
+      ],
+      "size": [
+        0.3,
+        0.3,
+        0.15
+      ]
     },
     "workpieces": [
       {
         "path": "/World/Cube_1",
-        "position": [-0.5, 0.4, 0.825]
+        "position": [
+          -0.5,
+          0.4,
+          0.825
+        ]
       }
     ]
   },
-  "code_template": "create_prim(prim_path=\"/World/DomeLight\", prim_type=\"DomeLight\")\nset_attribute(prim_path=\"/World/DomeLight\", attr_name=\"inputs:intensity\", value=1000.0)\ncreate_prim(prim_path=\"/World/Ground\", prim_type=\"Cube\", position=[0, 0, -0.5], scale=[20, 20, 1])\napply_api_schema(prim_path=\"/World/Ground\", schema_name=\"PhysicsCollisionAPI\")\ncreate_prim(prim_path=\"/World/Cell\", prim_type=\"Xform\")\ncreate_prim(prim_path=\"/World/Table\", prim_type=\"Cube\", position=[0, 0, 0.375], scale=[1.5, 0.5, 0.375])\napply_api_schema(prim_path=\"/World/Table\", schema_name=\"PhysicsCollisionAPI\")\n\nset_physics_scene_config(config={\"enable_gpu_dynamics\": False, \"broadphase_type\": \"MBP\"})\n\n# UR10 base on table\ncreate_prim(prim_path={{primary_robot.path}}, prim_type=\"Xform\")\nadd_reference(prim_path={{primary_robot.path}}, reference_path=\"/mnt/shared_data/isaac-sim-assets-complete-5.0.0/Assets/Isaac/5.0/Collected_Robots/ur10.usd\")\nteleport_prim(prim_path={{primary_robot.path}}, position={{primary_robot.position}})\n\n# Static cube on table — within UR10 reach\ncreate_prim(prim_path={{workpieces[0].path}}, prim_type=\"Cube\", position={{workpieces[0].position}}, size=0.05)\nfor api in (\"PhysicsRigidBodyAPI\", \"PhysicsCollisionAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n    apply_api_schema(prim_path={{workpieces[0].path}}, schema_name=api)\nbulk_set_attribute(prim_paths=[{{workpieces[0].path}}], attr=\"physxRigidBody:sleepThreshold\", value=0.0)\napply_physics_material(prim_path={{workpieces[0].path}}, material_name=\"rubber\")\n\n# Output bin\ncreate_bin(prim_path={{primary_destination.path}}, position={{primary_destination.position}}, size={{primary_destination.size}})\n\n# UR10 builtin PickPlaceController — no sensor / no belt\nsetup_pick_place_controller(\n    robot_path={{primary_robot.path}},\n    robot_family=\"ur10\",\n    target_source=\"builtin\",\n    source_paths=[{{workpieces[0].path}}],\n    destination_path={{primary_destination.path}},\n    end_effector_offset=[0.0, 0.0, 0.02],\n)",
+  "code_template": "create_prim(prim_path=\"/World/DomeLight\", prim_type=\"DomeLight\")\nset_attribute(prim_path=\"/World/DomeLight\", attr_name=\"inputs:intensity\", value=1000.0)\ncreate_prim(prim_path=\"/World/Ground\", prim_type=\"Cube\", position=[0, 0, -0.5], scale=[20, 20, 1])\napply_api_schema(prim_path=\"/World/Ground\", schema_name=\"PhysicsCollisionAPI\")\ncreate_prim(prim_path=\"/World/Cell\", prim_type=\"Xform\")\ncreate_prim(prim_path=\"/World/Table\", prim_type=\"Cube\", position=[0, 0, 0.375], scale=[1.5, 0.5, 0.375])\napply_api_schema(prim_path=\"/World/Table\", schema_name=\"PhysicsCollisionAPI\")\n\nset_physics_scene_config(config={\"enable_gpu_dynamics\": False, \"broadphase_type\": \"MBP\"})\n\n# UR10 base on table\nrobot_wizard(\n    robot_name=\"ur10\",\n    dest_path={{primary_robot.path}},\n    position={{primary_robot.position}},\n    orientation={{primary_robot.orientation}},\n)\n\n# Suction gripper attached to UR10's ee_link\nsurface_gripper(\n    robot_path=\"/World/UR10\",\n    ee_link=\"/World/UR10/ee_link\",\n    grip_threshold=0.02,\n    force_limit=200.0,\n    torque_limit=200.0,\n)\n\n# Static cube on table — within UR10 reach\ncreate_prim(prim_path={{workpieces[0].path}}, prim_type=\"Cube\", position={{workpieces[0].position}}, size=0.05)\nfor api in (\"PhysicsRigidBodyAPI\", \"PhysicsCollisionAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n    apply_api_schema(prim_path={{workpieces[0].path}}, schema_name=api)\nbulk_set_attribute(prim_paths=[{{workpieces[0].path}}], attr=\"physxRigidBody:sleepThreshold\", value=0.0)\napply_physics_material(prim_path={{workpieces[0].path}}, material_name=\"rubber\")\n\n# Output bin\ncreate_bin(prim_path={{primary_destination.path}}, position={{primary_destination.position}}, size={{primary_destination.size}})\n\n# UR10 builtin PickPlaceController — no sensor / no belt\nsetup_pick_place_controller(\n    robot_path={{primary_robot.path}},\n    robot_family=\"ur10\",\n    target_source=\"builtin\",\n    source_paths=[{{workpieces[0].path}}],\n    destination_path={{primary_destination.path}},\n    end_effector_offset=[0.0, 0.0, 0.02],\n)",
   "extends": "CP-74",
   "extension_notes": "CP-75 strips CP-74 down to static-cube pickup — no conveyor, no belt, no sensor. Validates the canonical Isaac Sim 5.x UR10 stack (Short_Suction variant + SingleManipulator + universal_robots.PickPlaceController) works end-to-end on this install. If function-gate passes here, CP-74's failure is isolated to the belt-pause-from-callback quirk and not a fundamental UR10 issue.",
   "failure_modes": [

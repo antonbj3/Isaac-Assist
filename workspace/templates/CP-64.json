@@ -7,10 +7,12 @@
     "apply_api_schema",
     "robot_wizard",
     "set_physics_scene_config",
-    "setup_nav_robot"
+    "generate_occupancy_map",
+    "setup_nav_robot",
+    "navigate_to"
   ],
-  "thoughts": "Six nav-robot specifics for CP-64:\n1) Carter wheeled robot at [0, 0, 0.10] (small wheel-base AMR).\n2) setup_nav_robot wraps with Nav2 config: goal_topic=/goal_pose, odom_topic=/odom.\n3) NO occupancy_map for canonical demo \u2014 runtime would set this from a real map.\n4) NO arm \u2014 pure mobile robot scenario.\n5) Realizes #31 RoboParty mobile leg. Full scenario also has manipulator + ROS2 bridge + Nav2.\n6) Runtime nav stack execution requires Nav2 + ROS2 bridge active.",
-  "code": "create_prim(prim_path=\"/World/DomeLight\", prim_type=\"DomeLight\")\nset_attribute(prim_path=\"/World/DomeLight\", attr_name=\"inputs:intensity\", value=1000.0)\ncreate_prim(prim_path=\"/World/Ground\", prim_type=\"Cube\", position=[0, 0, -0.5], scale=[20, 20, 1])\napply_api_schema(prim_path=\"/World/Ground\", schema_name=\"PhysicsCollisionAPI\")\n\nset_physics_scene_config(config={\"enable_gpu_dynamics\": False, \"broadphase_type\": \"MBP\"})\n\n# Carter (NVIDIA AMR) wheeled robot\nrobot_wizard(\n    robot_name=\"carter\",\n    dest_path=\"/World/Carter\",\n    position=[0, 0, 0.10],\n    orientation=[1, 0, 0, 0],\n)\n\nsetup_nav_robot(\n    robot_path=\"/World/Carter\",\n    occupancy_map=\"\",\n    nav_topic=\"/goal_pose\",\n    odom_topic=\"/odom\",\n)",
+  "thoughts": "Nav-robot specifics for CP-64 (2026-05-20 rewrite \u2014 fixes Carter-below-floor bug):\n1) Carter spawned at z=0.30 (was 0.10 \u2014 caused Carter to spawn below ground and then jump upward at play).\n   Rationale: /World/Ground Cube at z=-0.5 scale=[20,20,1] puts top face at z=0.0; Carter origin ~0.30m above wheel contact.\n2) Three static obstacle boxes placed before occupancy map generation so planner sees them.\n3) generate_occupancy_map called after obstacles exist; map_path fed to setup_nav_robot.\n4) navigate_to issues an actual nav goal (3.0, 0.0) \u2014 robot drives during simulation.\n5) setup_nav_robot wraps with Nav2 config: goal_topic=/goal_pose, odom_topic=/odom.\n6) NO arm \u2014 pure mobile robot scenario.\n7) Realizes #31 RoboParty mobile leg. Full scenario also has manipulator + ROS2 bridge + Nav2.",
+  "code": "create_prim(prim_path=\"/World/DomeLight\", prim_type=\"DomeLight\")\nset_attribute(prim_path=\"/World/DomeLight\", attr_name=\"inputs:intensity\", value=1000.0)\ncreate_prim(prim_path=\"/World/Ground\", prim_type=\"Cube\", position=[0, 0, -0.5], scale=[20, 20, 1])\napply_api_schema(prim_path=\"/World/Ground\", schema_name=\"PhysicsCollisionAPI\")\n\nset_physics_scene_config(config={\"enable_gpu_dynamics\": False, \"broadphase_type\": \"MBP\"})\n\n# Obstacle boxes — gives Nav2 planner something to route around\ncreate_prim(prim_path=\"/World/Obstacle_A\", prim_type=\"Cube\", position=[2, 2, 0.25], scale=[0.5, 0.5, 0.5])\napply_api_schema(prim_path=\"/World/Obstacle_A\", schema_name=\"PhysicsCollisionAPI\")\ncreate_prim(prim_path=\"/World/Obstacle_B\", prim_type=\"Cube\", position=[-2, 1, 0.25], scale=[0.5, 0.5, 0.5])\napply_api_schema(prim_path=\"/World/Obstacle_B\", schema_name=\"PhysicsCollisionAPI\")\ncreate_prim(prim_path=\"/World/Obstacle_C\", prim_type=\"Cube\", position=[3, -1, 0.25], scale=[0.5, 0.5, 0.5])\napply_api_schema(prim_path=\"/World/Obstacle_C\", schema_name=\"PhysicsCollisionAPI\")\n\n# Carter (NVIDIA AMR) wheeled robot — z=0.30: ground top at z=0.0, Carter chassis origin ~0.30m above wheel contact\nrobot_wizard(\n    robot_name=\"carter\",\n    dest_path=\"/World/Carter\",\n    position=[0, 0, 0.30],\n    orientation=[1, 0, 0, 0],\n)\n\n# Build occupancy grid of current scene (obstacles must exist before calling this)\nmap_result = generate_occupancy_map(\n    stage_resolution=0.05,\n    ground_z=0.0,\n    height_range=[0.1, 1.0],\n)\n\nsetup_nav_robot(\n    robot_path=\"/World/Carter\",\n    occupancy_map=map_result[\"map_path\"],\n    nav_topic=\"/goal_pose\",\n    odom_topic=\"/odom\",\n)\n\n# Issue nav goal — drives to (3.0, 0.0) facing forward; planner routes around Obstacle_C\nnavigate_to(\n    robot_path=\"/World/Carter\",\n    target_position=[3.0, 0.0],\n    target_orientation=0.0,\n)",
   "settle_state": {
     "cubes": {}
   },
@@ -21,7 +23,12 @@
     "expected_nav_topic": "/goal_pose",
     "expected_odom_topic": "/odom"
   },
-  "simulate_args": null,
+  "simulate_args": {
+    "robot_path": "/World/Carter",
+    "nav_goal": [3.0, 0.0],
+    "duration_s": 60,
+    "note": "Drive Carter to (3.0, 0.0); verify robot moves from spawn position."
+  },
   "extends": "CP-01",
   "extension_notes": "CP-64 realizes #31 RoboParty mobile-robot leg. Carter (NVIDIA AMR) wrapped with Nav2 config. Full RoboParty scenario adds manipulator partner + ROS2 bridge for Nav2 communication.",
   "failure_modes": [
@@ -55,11 +62,11 @@
     "primary_robot": {
       "path": "/World/Carter",
       "class": "carter",
-      "position": [0, 0, 0.10],
+      "position": [0, 0, 0.30],
       "orientation": [1, 0, 0, 0]
     }
   },
-  "code_template": "create_prim(prim_path=\"/World/DomeLight\", prim_type=\"DomeLight\")\nset_attribute(prim_path=\"/World/DomeLight\", attr_name=\"inputs:intensity\", value=1000.0)\ncreate_prim(prim_path=\"/World/Ground\", prim_type=\"Cube\", position=[0, 0, -0.5], scale=[20, 20, 1])\napply_api_schema(prim_path=\"/World/Ground\", schema_name=\"PhysicsCollisionAPI\")\n\nset_physics_scene_config(config={\"enable_gpu_dynamics\": False, \"broadphase_type\": \"MBP\"})\n\n# Carter (NVIDIA AMR) wheeled robot\nrobot_wizard(\n    robot_name={{primary_robot.class}},\n    dest_path={{primary_robot.path}},\n    position={{primary_robot.position}},\n    orientation={{primary_robot.orientation}},\n)\n\nsetup_nav_robot(\n    robot_path={{primary_robot.path}},\n    occupancy_map=\"\",\n    nav_topic=\"/goal_pose\",\n    odom_topic=\"/odom\",\n)",
+  "code_template": "create_prim(prim_path=\"/World/DomeLight\", prim_type=\"DomeLight\")\nset_attribute(prim_path=\"/World/DomeLight\", attr_name=\"inputs:intensity\", value=1000.0)\ncreate_prim(prim_path=\"/World/Ground\", prim_type=\"Cube\", position=[0, 0, -0.5], scale=[20, 20, 1])\napply_api_schema(prim_path=\"/World/Ground\", schema_name=\"PhysicsCollisionAPI\")\n\nset_physics_scene_config(config={\"enable_gpu_dynamics\": False, \"broadphase_type\": \"MBP\"})\n\n# Obstacle boxes\ncreate_prim(prim_path=\"/World/Obstacle_A\", prim_type=\"Cube\", position=[2, 2, 0.25], scale=[0.5, 0.5, 0.5])\napply_api_schema(prim_path=\"/World/Obstacle_A\", schema_name=\"PhysicsCollisionAPI\")\ncreate_prim(prim_path=\"/World/Obstacle_B\", prim_type=\"Cube\", position=[-2, 1, 0.25], scale=[0.5, 0.5, 0.5])\napply_api_schema(prim_path=\"/World/Obstacle_B\", schema_name=\"PhysicsCollisionAPI\")\ncreate_prim(prim_path=\"/World/Obstacle_C\", prim_type=\"Cube\", position=[3, -1, 0.25], scale=[0.5, 0.5, 0.5])\napply_api_schema(prim_path=\"/World/Obstacle_C\", schema_name=\"PhysicsCollisionAPI\")\n\nrobot_wizard(\n    robot_name={{primary_robot.class}},\n    dest_path={{primary_robot.path}},\n    position={{primary_robot.position}},\n    orientation={{primary_robot.orientation}},\n)\n\nmap_result = generate_occupancy_map(\n    stage_resolution=0.05,\n    ground_z=0.0,\n    height_range=[0.1, 1.0],\n)\n\nsetup_nav_robot(\n    robot_path={{primary_robot.path}},\n    occupancy_map=map_result[\"map_path\"],\n    nav_topic=\"/goal_pose\",\n    odom_topic=\"/odom\",\n)\n\nnavigate_to(\n    robot_path={{primary_robot.path}},\n    target_position=[3.0, 0.0],\n    target_orientation=0.0,\n)",
   "verify_args_template": {
     "stages": [],
     "note": "Mobile-robot nav setup diagnostic canonical — no cube delivery.",
@@ -73,7 +80,7 @@
     "robot_base": [
       0,
       0,
-      0.1
+      0.30
     ]
   }
 }

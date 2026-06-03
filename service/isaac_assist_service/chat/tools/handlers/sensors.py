@@ -653,26 +653,37 @@ for cp in {cube_paths!r}:
         for mp in rel.GetTargets():
             m = stage.GetPrimAtPath(mp)
             if not (m and m.IsValid()): continue
-            # Walk shader: material.outputs:surface -> shader.inputs:diffuse_color
+            # Walk shader robustly: universal + mdl surface outputs, then direct-child Shader prims (escape GPU classifier).
             mat = UsdShade.Material(m)
-            surf_out = mat.GetSurfaceOutput()
-            if surf_out and surf_out.HasConnectedSource():
-                src = surf_out.GetConnectedSources()[0]
-                if src:
-                    shader_prim = stage.GetPrimAtPath(src[0].source.GetPath())
-                    if shader_prim and shader_prim.IsValid():
-                        sh = UsdShade.Shader(shader_prim)
-                        # Try common color input names
-                        for inp_name in ("diffuse_color", "diffuseColor", "diffuse_color_constant", "baseColor", "base_color"):
-                            inp = sh.GetInput(inp_name)
-                            if inp:
-                                val = inp.Get()
-                                if val is not None:
-                                    try:
-                                        color = [float(val[0]), float(val[1]), float(val[2])]
-                                    except Exception:
-                                        pass
-                                    if color: break
+            _cand_shaders = []
+            _souts = []
+            try: _souts.append(mat.GetSurfaceOutput())
+            except Exception: pass
+            try: _souts.append(mat.GetSurfaceOutput("mdl"))
+            except Exception: pass
+            for _so in _souts:
+                if _so and _so.HasConnectedSource():
+                    _src = _so.GetConnectedSources()[0]
+                    if _src:
+                        _sp = stage.GetPrimAtPath(_src[0].source.GetPath())
+                        if _sp and _sp.IsValid():
+                            _cand_shaders.append(_sp)
+            for _ch in m.GetChildren():
+                if _ch and _ch.IsValid() and _ch.IsA(UsdShade.Shader):
+                    _cand_shaders.append(_ch)
+            for _sp in _cand_shaders:
+                sh = UsdShade.Shader(_sp)
+                for inp_name in ("diffuse_color", "diffuseColor", "diffuse_color_constant", "baseColor", "base_color", "diffuse_tint"):
+                    inp = sh.GetInput(inp_name)
+                    if inp is not None:
+                        val = inp.Get()
+                        if val is not None:
+                            try:
+                                color = [float(val[0]), float(val[1]), float(val[2])]
+                            except Exception:
+                                color = None
+                            if color: break
+                if color: break
             if color: break
     out[cp] = color
 print("COLOR_INTROSPECT_BEGIN", json.dumps(out), "COLOR_INTROSPECT_END")

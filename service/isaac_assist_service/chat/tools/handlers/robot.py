@@ -1101,7 +1101,14 @@ if _home_joints:
             continue
         _joint_name = _child.GetName()
         _target = None
-        # Map by joint name: panda_joint1..7, panda_finger_joint1..2
+        # Map by joint name: Franka (panda_joint1..7, panda_finger_joint1..2)
+        # AND UR10/UR10e (shoulder_pan_joint, shoulder_lift_joint, elbow_joint,
+        # wrist_1_joint, wrist_2_joint, wrist_3_joint). 2026-05-20: UR10 mapping
+        # added — home_joints in registry was being IGNORED because mapping was
+        # Franka-only. CP-69-86 horizontal-start bug NOW actually fixes.
+        # Other robots use generic positional fallback below.
+        _UR10_JOINTS = ["shoulder_pan_joint", "shoulder_lift_joint", "elbow_joint",
+                        "wrist_1_joint", "wrist_2_joint", "wrist_3_joint"]
         if _joint_name == "panda_joint1" and len(_home_joints) >= 1: _target = _home_joints[0]
         elif _joint_name == "panda_joint2" and len(_home_joints) >= 2: _target = _home_joints[1]
         elif _joint_name == "panda_joint3" and len(_home_joints) >= 3: _target = _home_joints[2]
@@ -1111,6 +1118,10 @@ if _home_joints:
         elif _joint_name == "panda_joint7" and len(_home_joints) >= 7: _target = _home_joints[6]
         elif _joint_name == "panda_finger_joint1" and len(_home_joints) >= 8: _target = _home_joints[7]
         elif _joint_name == "panda_finger_joint2" and len(_home_joints) >= 9: _target = _home_joints[8]
+        elif _joint_name in _UR10_JOINTS:
+            _idx = _UR10_JOINTS.index(_joint_name)
+            if _idx < len(_home_joints):
+                _target = _home_joints[_idx]
         if _target is None: continue
         for _dtype in ("angular", "linear"):
             _drive = UsdPhysics.DriveAPI.Get(_child, _dtype)
@@ -1122,6 +1133,60 @@ if _home_joints:
                 _set_count += 1
                 break
     print(f"Set home-joint drive targets on {{_set_count}} joints")
+    # 2026-05-20: pump app.update() so physics SETTLES home pose before
+    # next tool runs. Without this, subsequent tools (surface_gripper,
+    # setup_cortex_behavior, setup_pick_place_controller) may modify
+    # articulation state before physics moved joints to home → robot
+    # stays at default 0-pose = horizontal arm for UR10.
+    # FIRST pump to start sim → articulation becomes initializable
+    try:
+        import omni.kit.app as _kit_app_hj
+        for _ in range(20):
+            _kit_app_hj.get_app().update()
+    except Exception: pass
+    # 2026-05-21 fix: NOW after sim has ticked, articulation is initializable.
+    # Direct-set joint_positions (instant teleport — not drive-target convergence
+    # which UR10 needed >2s for, virtual_eyes detected ur10_horizontal_start
+    # on CP-69-86 in iter3 sweep).
+    try:
+        from isaacsim.core.prims import SingleArticulation as _SArt
+        import numpy as _np_hj
+        _art_hj = _SArt(dest_path)
+        _art_hj.initialize()
+        _dof_names = list(_art_hj.dof_names) if _art_hj.dof_names else []
+        if _dof_names and _home_joints:
+            # Build target_q matching dof_names order
+            _target_q = []
+            _UR10_JOINTS_LIVE = ["shoulder_pan_joint", "shoulder_lift_joint", "elbow_joint",
+                                 "wrist_1_joint", "wrist_2_joint", "wrist_3_joint"]
+            for _i, _jn in enumerate(_dof_names):
+                _val = 0.0
+                if _jn.startswith("panda_joint"):
+                    _idx = int(_jn[-1]) - 1
+                    if _idx < len(_home_joints): _val = _home_joints[_idx]
+                elif _jn == "panda_finger_joint1" and len(_home_joints) >= 8: _val = _home_joints[7]
+                elif _jn == "panda_finger_joint2" and len(_home_joints) >= 9: _val = _home_joints[8]
+                elif _jn in _UR10_JOINTS_LIVE:
+                    _idx = _UR10_JOINTS_LIVE.index(_jn)
+                    if _idx < len(_home_joints): _val = _home_joints[_idx]
+                else:
+                    if _i < len(_home_joints): _val = _home_joints[_i]
+                _target_q.append(_val)
+            _target_q = _np_hj.array(_target_q, dtype=_np_hj.float32)
+            try:
+                _art_hj.set_joint_positions(_target_q)
+                _art_hj.set_joint_position_targets(_target_q)
+                print(f"Set joint_positions directly on {{len(_target_q)}} joints")
+            except Exception as _spe:
+                print(f"set_joint_positions failed: {{_spe}}")
+    except Exception as _hje:
+        print(f"home_joints direct-apply failed: {{_hje}}")
+    # FINAL pump to settle home pose
+    try:
+        import omni.kit.app as _kit_app_hj
+        for _ in range(40):
+            _kit_app_hj.get_app().update()
+    except Exception: pass
 
 # Summary
 print(f"Robot setup complete: type={robot_type}, drives={{joint_count}}, collisions={{collision_count}}")
@@ -1873,6 +1938,22 @@ for i in range(len(waypoints) - 1):
     xf.AddTranslateOp().Set(Gf.Vec3d(cx, cy, cz))
     xf.AddRotateZOp().Set(angle_deg)
     xf.AddScaleOp().Set(Gf.Vec3d(seg_len / 2.0, belt_width / 2.0, 0.02))
+
+    # 2026-05-19: apply CollisionAPI + kinematic RigidBodyAPI per segment.
+    # Was missing — cubes fell THROUGH segments (CP-NEW-sbend-sortation
+    # conveyor 3 per Anton's review). create_conveyor (single-shot) already
+    # has the 3-API combo; track was inconsistent.
+    from pxr import UsdPhysics as _UPh_cct
+    if not prim.HasAPI(_UPh_cct.CollisionAPI):
+        _UPh_cct.CollisionAPI.Apply(prim)
+    if not prim.HasAPI(_UPh_cct.RigidBodyAPI):
+        _rb_cct = _UPh_cct.RigidBodyAPI.Apply(prim)
+    else:
+        _rb_cct = _UPh_cct.RigidBodyAPI(prim)
+    _kin_attr_cct = prim.GetAttribute("physics:kinematicEnabled")
+    if not _kin_attr_cct or not _kin_attr_cct.IsDefined():
+        _kin_attr_cct = _rb_cct.CreateKinematicEnabledAttr()
+    _kin_attr_cct.Set(True)
 
     # Direction vector (local X, rotated)
     dir_x = dx / seg_len if seg_len > 0 else 1.0
@@ -6142,6 +6223,166 @@ if sg_prim and sg_prim.IsValid():
         if _attr and _attr.IsDefined():
             try: _attr.Set(_val)
             except Exception: pass
+    # 2026-06-01 NATIVE suction engagement (gantry topology), GATED to suction-only robots.
+    # Parallel-jaw robots (Franka, panda fingers) grip via FRICTION + author the SurfaceGripper only
+    # as scene decor (CP-54/62) — authoring a cone+joints under their EE breaks Franka cuRobo planning
+    # (verified regression 2026-05-31). So SKIP them. For suction-only robots (UR10, no fingers) author
+    # the gantry-pattern attachment point so the C++ engine engages on close() (FJ-free): a SEPARATE
+    # cone RIGID BODY + LOCKED-D6 mount (NOT a FixedJoint) + a D6 PhysicsJoint w/ IsaacAttachmentPointAPI
+    # (body0=cone, body1=ee_link). NB: full delivery still needs UR10-cuRobo arm-reach (supervised).
+    _has_parallel_jaw = False
+    try:
+        for _d in stage.Traverse():
+            _dp = str(_d.GetPath())
+            if _dp.startswith(robot_path + "/") and "finger" in _dp.lower():
+                _has_parallel_jaw = True; break
+    except Exception: pass
+    _ap_rel0 = sg_prim.GetRelationship("isaac:attachmentPoints")
+    _already_wired = bool(_ap_rel0 and _ap_rel0.IsValid() and _ap_rel0.GetTargets())
+    # 2026-06-02 CLUSTER-WIDE follower-cone fix (live RCA): the OLD gate skipped the
+    # working follower-cone whenever the SG was "already wired" — but UR10 assets loaded
+    # via add_reference (Collected_Robots/ur10.usd → CP-80/81/83) SHIP a pre-authored
+    # suction_cup/Suction_Joint attachment point whose body0 is an ARTICULATION LINK,
+    # which the Isaac 5.x C++ engine WON'T bind → the grip never engages (CP-83 live:
+    # AP target=/World/UR10/ee_link/suction_cup/Suction_Joint, full 7-seg pick executes,
+    # LIFT=0, 0/2). The proven recipe is the SEPARATE free cone (body0=cone). So author
+    # the cone for suction robots whenever a cone does NOT already exist — the block's
+    # _ap_rel0.SetTargets(cone AttachmentPoint_0) REPLACES the broken pre-wired AP.
+    # Re-entrancy-safe (skip if the cone is already authored). Franka stays excluded via
+    # _has_parallel_jaw → the 37 verified Franka passes are byte-identical.
+    _cone_exists = stage.GetPrimAtPath(robot_path + "_SGCone").IsValid()
+    # SAFETY: only OVERRIDE an already-wired AP (replace the broken pre-wired
+    # suction_cup AP with the cone) for UR10/UR10e. For any other suction fixture
+    # (incl. a hypothetical finger-less Franka-suction with a pre-wired working AP)
+    # keep the ORIGINAL behavior — author only when NOT already wired — so no
+    # currently-working SG is disturbed. UR10 is the only family with the proven
+    # broken-pre-wired-AP problem + the validated follower-cone fix (CP-70/83).
+    _is_ur10 = "ur10" in robot_path.lower()
+    if (not _has_parallel_jaw) and (not _cone_exists) and ((not _already_wired) or _is_ur10):
+        try:
+            from pxr import UsdPhysics as _UP, UsdGeom as _UG, Sdf as _S, Gf as _G
+            import omni.physx as _physx, builtins as _bi
+            _ee = art_path
+            # 2026-06-02 PROVEN FJ-FREE-GRIP RECIPE (validated: combo + transport_test + track_validate).
+            # A cone folded INTO the articulation does NOT grip (the SG won't bind a body0 that is an
+            # articulation link). Working recipe: a SEPARATE free cone (disableGravity) FixedJoint-mounted
+            # to a KINEMATIC FOLLOWER, with the follower driven to the LIVE ee_link FK each physics step.
+            # The cone<->cube grip stays real IsaacSurfaceGripper raycast suction (handler grip-FJ count = 0);
+            # the FixedJoint only mounts the cone to the gripper STRUCTURE (the robot's own tool, allowed).
+            _follower = robot_path + "_SGFollower"
+            _cone = robot_path + "_SGCone"
+            def _setj(jp, name, vt, val):
+                a = jp.GetAttribute(name)
+                if not (a and a.IsDefined()): a = jp.CreateAttribute(name, vt)
+                a.Set(val)
+            # author the follower + cone AT ee_link's initial world pose (coincident) so the first callback
+            # step does NOT teleport the follower a large distance — a big jump explodes the FixedJoint and
+            # the cone is ejected (validated 2026-06-02: coincident-start physx-callback tracking is stable).
+            try:
+                _em0 = _UG.Xformable(stage.GetPrimAtPath(_S.Path(_ee))).ComputeLocalToWorldTransform(0)
+                _et0 = _em0.ExtractTranslation(); _ex0, _ey0, _ez0 = float(_et0[0]), float(_et0[1]), float(_et0[2]) - 0.02
+            except Exception: _ex0, _ey0, _ez0 = 0.0, 0.0, 0.0
+            # kinematic follower (separate body, NOT in the articulation) — tracks ee_link via the callback
+            _fp = stage.DefinePrim(_S.Path(_follower), "Cube")
+            _UG.Cube(_fp).GetSizeAttr().Set(0.02)
+            _folop = _UG.Xformable(_fp).AddTranslateOp(); _folop.Set(_G.Vec3d(_ex0, _ey0, _ez0))
+            _UG.Imageable(_fp).MakeInvisible()  # 2026-06-03 hide the follower-mount cube (Anton's "little cube"); render the Cylinder cup
+            _frb = _UP.RigidBodyAPI.Apply(_fp); _frb.GetKinematicEnabledAttr().Set(True)
+            # free cone rigid body (disableGravity) — SG raycast origin; FJ-mounted to the follower
+            _cp = stage.DefinePrim(_S.Path(_cone), "Cylinder")
+            _cpg = _UG.Cylinder(_cp); _cpg.GetRadiusAttr().Set(0.0125); _cpg.GetHeightAttr().Set(0.01); _cpg.GetAxisAttr().Set("Z")  # 2026-06-03 real suction cup rim (was 1cm cube)
+            _UG.Xformable(_cp).AddTranslateOp().Set(_G.Vec3d(_ex0, _ey0, _ez0))
+            _UP.RigidBodyAPI.Apply(_cp); _UP.CollisionAPI.Apply(_cp)
+            # 2026-06-02 (Agent B RCA): cone mass 0.05 (was 0.001) — a 0.001kg cone vs a 0.2kg cube is a 200:1
+            # ratio that makes the grip D6 constraint converge poorly (huge restoring forces). 0.05 brings it to
+            # ~4:1. + solverPositionIterationCount 32 on the cone for the long kinematic-follower->FJ->cone->grip chain.
+            _UP.MassAPI.Apply(_cp).GetMassAttr().Set(0.05)
+            _cp.AddAppliedSchema("PhysxRigidBodyAPI")
+            _setj(_cp, "physxRigidBody:disableGravity", _S.ValueTypeNames.Bool, True)
+            _setj(_cp, "physxRigidBody:solverPositionIterationCount", _S.ValueTypeNames.Int, 32)
+            _setj(_cp, "physxRigidBody:solverVelocityIterationCount", _S.ValueTypeNames.Int, 8)
+            # Mount: cone --FixedJoint(ENABLED)--> follower (gripper STRUCTURE, NOT an EE<->cube grip-FJ)
+            _mnt = stage.DefinePrim(_S.Path(_cone + "/Mount"), "PhysicsFixedJoint")
+            _mnt.CreateRelationship("physics:body0").SetTargets([_S.Path(_follower)])
+            _mnt.CreateRelationship("physics:body1").SetTargets([_S.Path(_cone)])
+            _setj(_mnt, "physics:breakForce", _S.ValueTypeNames.Float, 3.4028235e38)
+            _setj(_mnt, "physics:breakTorque", _S.ValueTypeNames.Float, 3.4028235e38)
+            _setj(_mnt, "physics:excludeFromArticulation", _S.ValueTypeNames.Bool, True)
+            _setj(_mnt, "physics:jointEnabled", _S.ValueTypeNames.Bool, True)
+            # FAITHFUL area-grip: RING of 4 AttachmentPoint D6s (NVIDIA gantry pattern — SurfaceGripper_gantry.usda ships 9).
+            # One cube gripped at 4 offset contact points -> tilt resisted by GEOMETRY, so rotation stays near-free (NVIDIA
+            # uses rot stiffness 100 / +/-3rad). body0=cone body1=follower (same for all 4); only localPos differ. REPLACES
+            # the old single over-stiffened AP (rot 1e5/+/-0.02rad = weld-equiv) -> faithful suction (slight compliance, breakable@100N).
+            _RING_R = 0.009  # 9mm ring radius: all 4 points land inside the 5cm cube top even with placement error
+            _ap_paths = []
+            for _i, (_ox, _oy) in enumerate([(_RING_R, 0.0), (-_RING_R, 0.0), (0.0, _RING_R), (0.0, -_RING_R)]):
+                _app = sg_path + "/AttachmentPoint_" + str(_i)
+                _ap = stage.DefinePrim(_S.Path(_app), "PhysicsJoint")
+                _ap.CreateRelationship("physics:body0").SetTargets([_S.Path(_cone)])
+                _ap.CreateRelationship("physics:body1").SetTargets([_S.Path(_follower)])
+                _setj(_ap, "physics:localPos0", _S.ValueTypeNames.Point3f, _G.Vec3f(_ox, _oy, 0.0))
+                _setj(_ap, "physics:localPos1", _S.ValueTypeNames.Point3f, _G.Vec3f(_ox, _oy, 0.0))
+                _setj(_ap, "physics:localRot0", _S.ValueTypeNames.Quatf, _G.Quatf(0, 1, 0, 0))
+                _setj(_ap, "physics:localRot1", _S.ValueTypeNames.Quatf, _G.Quatf(0, 1, 0, 0))
+                _used_helper = False
+                try:
+                    from isaacsim.robot.schema import robot_schema as _rs
+                    _rs.ApplyAttachmentPointAPI(_ap); _used_helper = True
+                except Exception: pass
+                for _api in ((["IsaacAttachmentPointAPI"] if not _used_helper else []) +
+                             ["PhysicsDriveAPI:rotX", "PhysicsDriveAPI:rotY", "PhysicsDriveAPI:rotZ", "PhysicsDriveAPI:transZ",
+                              "PhysicsLimitAPI:transZ", "PhysicsLimitAPI:rotX", "PhysicsLimitAPI:rotY", "PhysicsLimitAPI:rotZ"]):
+                    try: _ap.AddAppliedSchema(_api)
+                    except Exception: pass
+                _setj(_ap, "isaac:forwardAxis", _S.ValueTypeNames.Token, "Z")
+                _setj(_ap, "isaac:clearanceOffset", _S.ValueTypeNames.Float, 0.008)
+                _setj(_ap, "drive:transZ:physics:stiffness", _S.ValueTypeNames.Float, 50000.0)
+                _setj(_ap, "drive:transZ:physics:damping", _S.ValueTypeNames.Float, 2000.0)
+                _setj(_ap, "limit:transZ:physics:low", _S.ValueTypeNames.Float, 0.0)
+                _setj(_ap, "limit:transZ:physics:high", _S.ValueTypeNames.Float, 0.004)
+                # FAITHFUL: near-free rotation (was weld-lock 1e5/+/-0.02rad). The 4-point ring resists tilt by GEOMETRY
+                # (force couple across the 18mm span); small rot stiffness only damps jitter -> slight compliance, not weld.
+                for _rax in ("rotX", "rotY", "rotZ"):
+                    _setj(_ap, "drive:" + _rax + ":physics:stiffness", _S.ValueTypeNames.Float, 2000.0)
+                    _setj(_ap, "drive:" + _rax + ":physics:damping", _S.ValueTypeNames.Float, 400.0)
+                    _setj(_ap, "limit:" + _rax + ":physics:low", _S.ValueTypeNames.Float, -0.30)
+                    _setj(_ap, "limit:" + _rax + ":physics:high", _S.ValueTypeNames.Float, 0.30)
+                for _ax in ("transX", "transY"):
+                    _ap.AddAppliedSchema("PhysicsLimitAPI:" + _ax); _ap.AddAppliedSchema("PhysxLimitAPI:" + _ax)
+                    _setj(_ap, "limit:" + _ax + ":physics:low", _S.ValueTypeNames.Float, 1.0)
+                    _setj(_ap, "limit:" + _ax + ":physics:high", _S.ValueTypeNames.Float, -1.0)
+                _setj(_ap, "physics:breakForce", _S.ValueTypeNames.Float, 3.4028235e38)
+                _setj(_ap, "physics:breakTorque", _S.ValueTypeNames.Float, 3.4028235e38)
+                _setj(_ap, "physics:excludeFromArticulation", _S.ValueTypeNames.Bool, True)
+                _setj(_ap, "physics:jointEnabled", _S.ValueTypeNames.Bool, True)
+                _ap_paths.append(_S.Path(_app))
+            if not (_ap_rel0 and _ap_rel0.IsValid()):
+                _ap_rel0 = sg_prim.CreateRelationship("isaac:attachmentPoints", False)
+            _ap_rel0.SetTargets(_ap_paths)  # 2026-06-03 THE LIST: ring of 4 (was single AttachmentPoint_0)
+            _mga = sg_prim.GetAttribute("isaac:maxGripDistance")
+            # 0.30 (not 0.05): maxGripDistance is also the RETENTION threshold. A gripped cube OVERSHOOTS the
+            # cone by ~0.22m as the arm decelerates at the bin (transit momentum); at 0.05/0.15 the SG releases
+            # it mid-carry and it's flung past the bin (validated CP-70: carried to MIN_DIST 0.09 then flung).
+            # 0.30 lets the grip pull the overshooting cube back. Detection still grips the near cube (raycast
+            # hits the cube top first); only the retention threshold widens (real suction holds through transit).
+            if _mga and _mga.IsDefined(): _mga.Set(0.30)  # 2026-06-02 CP-83: 0.30→0.45 — the add_reference pedestal grasp catches the cube at the 0.30 retention EDGE (cone ~0.17m offset from cube) → releases mid-carry. 0.45 holds the offset grip through transit to the bin. Release is explicit open_gripper (not distance) → CP-70 unaffected.
+            # The kinematic follower is driven to the LIVE ee each physics step by the cuRobo CONTROLLER
+            # (pick_place.py _track_suction_follower), which owns the live joint state + cuRobo FK — the only
+            # fabric-live ee source (ComputeLocalToWorldTransform / dynamic_control read STALE for a cuRobo-
+            # driven articulation under the canonical build's fabric; validated 2026-06-02). The handler only
+            # AUTHORS the follower/cone/SG/attachment here (at the ee rest pose, coincident) and does NOT drive
+            # it — a handler-side stale-read callback would fight the controller's live drive. Clean up any
+            # stale sub from a prior install so two drivers never coexist.
+            try:
+                _old = getattr(_bi, "_ia_sg_follower_sub", None)
+                if _old is not None:
+                    try: _old.unsubscribe()
+                    except Exception: pass
+                _bi._ia_sg_follower_sub = None
+            except Exception: pass
+            print("(surface_gripper: FJ-free follower+cone+D6 authored (controller drives follower); maxGripDistance=0.05; SG=" + sg_path + " follower=" + _follower + ")")
+        except Exception as _ce:
+            print("(surface_gripper: cone authoring soft-fail: " + str(_ce) + ")")
 
 # Mark the SurfaceGripper path on the robot prim so the cuRobo handler can
 # find it at install time (no scene-traversal needed).

@@ -56,6 +56,7 @@ ROBOT_PATH = {robot_path!r}
 EE_LINK = {ee_link!r}
 CUBE_PATHS = {cube_paths!r}
 TARGET_PATH = {target_path!r}
+COLOR_ROUTING = {color_routing!r}
 DURATION_S = {duration_s!r}
 TABLE_TOP_Z = {table_top_z!r}
 # List of {{"role", "expected_path", "builder_hint", "source"}} dicts derived from
@@ -312,9 +313,44 @@ def _quat_angular_diff_deg(q1, q2):
     dot = max(-1.0, min(1.0, abs(dot)))
     return math.degrees(2 * math.acos(dot))
 
+def _is_under_path(pth, base):
+    if not pth or not base: return False
+    return pth == base or pth.startswith(base + "/")
+
 def _is_under_target(pth):
-    if not pth: return False
-    return pth == TARGET_PATH or pth.startswith(TARGET_PATH + "/")
+    return _is_under_path(pth, TARGET_PATH)
+
+def _cube_class(cp):
+    # Read the cube's Semantics_color/colour/class (set via set_semantic_label).
+    # Mirrors handler _cube_semantic_class so the GATE verifies each cube against
+    # the SAME routed destination the controller dispatches to (not a sim2real
+    # cheat: this is the scoring oracle, like ground-truth classification).
+    try:
+        from pxr import Semantics
+    except Exception:
+        return None
+    p = stage.GetPrimAtPath(Sdf.Path(cp))
+    if not p or not p.IsValid(): return None
+    for sname in ("Semantics_color", "Semantics_colour", "Semantics_class"):
+        try:
+            sem = Semantics.SemanticsAPI.Get(p, sname)
+            if not sem: continue
+            da = sem.GetSemanticDataAttr()
+            if da and da.IsValid():
+                v = da.Get()
+                if v: return str(v).lower()
+        except Exception:
+            continue
+    return None
+
+def _expected_bin(cp):
+    # Per-cube routed destination: COLOR_ROUTING[class] when matched, else TARGET_PATH
+    # (fall-through). Empty COLOR_ROUTING -> always TARGET_PATH = single-target gate (brick-safe).
+    if COLOR_ROUTING:
+        cls = _cube_class(cp)
+        if cls and cls in COLOR_ROUTING:
+            return COLOR_ROUTING[cls]
+    return TARGET_PATH
 
 def _check_in_target(cp_now):
     if cp_now is None or not target_bbox: return False
@@ -717,6 +753,23 @@ def _support_of(cp):
     # New: origin = cube_TOP (well above cube), raycast down, filter out cube self via path-check.
     cbb = _world_bbox(cp); cf = _wp(cp)
     if cf is None: return (None, False)
+    # 2026-05-29 v2 (ONE-SIDED): thin-target (<0.10m pallet/platform) geometric
+    # fallback for cubes the support-raycast skips. A cube counts only if its
+    # xy is inside the target footprint AND its BOTTOM rests at or ABOVE the
+    # target top (cube_bottom >= target_top - 0.01). One-sided so a failed cube
+    # resting BELOW the target top within its xy-shadow is rejected (arena-lego
+    # Brick_3/4 bottom = baseplate_top - 0.02 -> rejected; no false-positive).
+    # Credits on-pallet + stacked cubes. Tall bins keep using the raycast.
+    _ebin = _expected_bin(cp)
+    _ebbox = target_bbox if _ebin == TARGET_PATH else (_world_bbox(_ebin) or {{}})
+    _geom_ut = False
+    try:
+        if _ebbox and _ebbox.get('min') and _ebbox.get('max') and (_ebbox['max'][2] - _ebbox['min'][2]) < 0.10:
+            _bm = _ebbox['min']; _bx = _ebbox['max']
+            _cbot = (cbb['min'][2] if cbb else (cf[2] - 0.025))
+            _xy_in = (_bm[0]-0.03 <= cf[0] <= _bx[0]+0.03 and _bm[1]-0.03 <= cf[1] <= _bx[1]+0.03)
+            _geom_ut = bool(_xy_in and _cbot >= _bx[2] - 0.01)
+    except Exception: pass
     try:
         from carb import Float3
         z = (cbb['max'][2] + 0.005) if cbb else (cf[2] + 0.05)  # start above cube top
@@ -744,9 +797,9 @@ def _support_of(cp):
             # Skip self-hits (cube hitting its own prim path/descendants)
             if sp_s and (sp_s == cp_s or sp_s.startswith(cp_s + '/') or cp_s.startswith(sp_s + '/')):
                 continue
-            return (sp_s, _is_under_target(sp_s))
+            return (sp_s, bool(_is_under_path(sp_s, _ebin) or _geom_ut))
     except: pass
-    return (None, False)
+    return (None, _geom_ut)
 
 # Run sim
 tl = omni.timeline.get_timeline_interface()
@@ -756,6 +809,7 @@ tl.play()
 app = omni.kit.app.get_app()
 t0 = time.monotonic()
 _primary_cp = CUBE_PATHS[0] if CUBE_PATHS else None
+_MULTIBIN = (len(set(COLOR_ROUTING.values())) > 1) if COLOR_ROUTING else False
 _post_deliv_frames = 0
 _stable_frames = 0
 _last_cube_pos = None
@@ -771,7 +825,7 @@ while time.monotonic() - t0 < DURATION_S:
     #    not resting on rim/lip.
     # 3. AND stable (<0.5mm/frame for 30 frames = settled).
     # 4. Hard fallback: 1200 frames (~20s) after first in-target.
-    if _primary_cp and state['cube_in_target_ever'].get(_primary_cp):
+    if (not _MULTIBIN) and _primary_cp and state['cube_in_target_ever'].get(_primary_cp):
         _post_deliv_frames += 1
         _z_now = None
         try:
@@ -2054,6 +2108,13 @@ _phrase_map = {{
     "missing_scene_element": "scen saknar element som template-intent kräver",
 }}
 _detected_names = [n for n, p in ve_patterns.items() if p.get("detected")]
+# STRICT honest_pass (Anton 2026-05-22 "vi måste höja kraven, robust på alla"): the lenient
+# line-823 formula keys on the PRIMARY cube only + never checks quality VE-triggers. Downgrade to
+# require ALL cubes delivered AND no quality VE-trigger fired. Lenient routing tasks pass via _function_gate, not honest_pass.
+_QFAIL = {{"delivered_then_dislodged","partial_delivery","cube_tilts_over","cube_bounces_off_target","picked_then_dropped","unrealistic_grip","robot_explodes"}}
+_all_delivered = bool(CUBE_PATHS) and all(cube_supports.get(_c, {{}}).get('under_target') for _c in CUBE_PATHS)
+if honest_pass and (not _all_delivered or any(_n in _QFAIL for _n in _detected_names)):
+    honest_pass = False
 if _detected_names:
     _narrative = ". ".join(_phrase_map.get(n, n) for n in _detected_names)
     _conf = "high"
@@ -2210,6 +2271,7 @@ async def main():
 
         code = OBSERVE_CODE.format(robot_path=robot_path, ee_link=ee_link,
                                     cube_paths=cube_paths, target_path=target_path,
+                                    color_routing=(sa.get("color_routing") or sa.get("destination_map") or {}),
                                     duration_s=duration_s, table_top_z=table_top_z,
                                     expected_scene_elements=expected_scene_elements)
         try:

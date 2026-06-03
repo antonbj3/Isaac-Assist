@@ -11,10 +11,11 @@
     "set_physics_scene_config",
     "apply_physics_material",
     "bulk_set_attribute",
+    "surface_gripper",
     "setup_pick_place_controller"
   ],
   "thoughts": "Six multi-cube pedestal specifics for CP-81:\n1) UR10 base at world (0, 0, 0.75) — same as CP-78. Mirror home pose.\n2) Two pedestals at xy=(-0.5, 0.55) and (-0.5, 0.25). Each 15cm tall (z=0.875 center); top at z=0.95.\n3) Two cubes on top of pedestals at z=0.975. SOURCE_PATHS=[/World/Cube_1, /World/Cube_2].\n4) Single bin at world (0.5, -0.4, 0.75) — both cubes delivered there.\n5) Tests _next_cube() iteration in builtin handler — controller picks cubes in order (typically nearest-to-base or insertion order).\n6) Validates that S['delivered'] tracking + raycast SOURCE_PATHS prefix-match handles 2 cubes correctly without cross-contamination of FixedJoints.",
-  "code": "create_prim(prim_path=\"/World/DomeLight\", prim_type=\"DomeLight\")\nset_attribute(prim_path=\"/World/DomeLight\", attr_name=\"inputs:intensity\", value=1000.0)\ncreate_prim(prim_path=\"/World/Ground\", prim_type=\"Cube\", position=[0, 0, -0.5], scale=[20, 20, 1])\napply_api_schema(prim_path=\"/World/Ground\", schema_name=\"PhysicsCollisionAPI\")\ncreate_prim(prim_path=\"/World/Cell\", prim_type=\"Xform\")\ncreate_prim(prim_path=\"/World/Table\", prim_type=\"Cube\", position=[0, 0, 0.375], scale=[1.5, 0.5, 0.375])\napply_api_schema(prim_path=\"/World/Table\", schema_name=\"PhysicsCollisionAPI\")\n\nset_physics_scene_config(config={\"enable_gpu_dynamics\": False, \"broadphase_type\": \"MBP\"})\n\ncreate_prim(prim_path=\"/World/UR10\", prim_type=\"Xform\")\nadd_reference(prim_path=\"/World/UR10\", reference_path=\"/mnt/shared_data/isaac-sim-assets-complete-5.0.0/Assets/Isaac/5.0/Collected_Robots/ur10.usd\")\nteleport_prim(prim_path=\"/World/UR10\", position=[0, 0, 0.75])\n\n# Two pedestals\ncreate_prim(prim_path=\"/World/Pedestal_1\", prim_type=\"Cube\", position=[-0.5, 0.55, 0.875], scale=[0.06, 0.06, 0.075])\napply_api_schema(prim_path=\"/World/Pedestal_1\", schema_name=\"PhysicsCollisionAPI\")\ncreate_prim(prim_path=\"/World/Pedestal_2\", prim_type=\"Cube\", position=[-0.5, 0.25, 0.875], scale=[0.06, 0.06, 0.075])\napply_api_schema(prim_path=\"/World/Pedestal_2\", schema_name=\"PhysicsCollisionAPI\")\n\n# Two cubes on top of pedestals\ncreate_prim(prim_path=\"/World/Cube_1\", prim_type=\"Cube\", position=[-0.5, 0.55, 0.975], size=0.05)\nfor api in (\"PhysicsRigidBodyAPI\", \"PhysicsCollisionAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n    apply_api_schema(prim_path=\"/World/Cube_1\", schema_name=api)\nbulk_set_attribute(prim_paths=[\"/World/Cube_1\"], attr=\"physxRigidBody:sleepThreshold\", value=0.0)\napply_physics_material(prim_path=\"/World/Cube_1\", material_name=\"rubber\")\n\ncreate_prim(prim_path=\"/World/Cube_2\", prim_type=\"Cube\", position=[-0.5, 0.25, 0.975], size=0.05)\nfor api in (\"PhysicsRigidBodyAPI\", \"PhysicsCollisionAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n    apply_api_schema(prim_path=\"/World/Cube_2\", schema_name=api)\nbulk_set_attribute(prim_paths=[\"/World/Cube_2\"], attr=\"physxRigidBody:sleepThreshold\", value=0.0)\napply_physics_material(prim_path=\"/World/Cube_2\", material_name=\"rubber\")\n\ncreate_bin(prim_path=\"/World/Bin\", position=[0.5, -0.4, 0.75], size=[0.3, 0.3, 0.15])\n\nsetup_pick_place_controller(\n    robot_path=\"/World/UR10\",\n    robot_family=\"ur10\",\n    target_source=\"curobo\",\n    source_paths=[\"/World/Cube_1\", \"/World/Cube_2\"],\n    destination_path=\"/World/Bin\",\n    end_effector_offset=[0.0, 0.0, 0.02],\n)",
+  "code": "create_prim(prim_path=\"/World/DomeLight\", prim_type=\"DomeLight\")\nset_attribute(prim_path=\"/World/DomeLight\", attr_name=\"inputs:intensity\", value=1000.0)\ncreate_prim(prim_path=\"/World/Ground\", prim_type=\"Cube\", position=[0, 0, -0.5], scale=[20, 20, 1])\napply_api_schema(prim_path=\"/World/Ground\", schema_name=\"PhysicsCollisionAPI\")\ncreate_prim(prim_path=\"/World/Cell\", prim_type=\"Xform\")\ncreate_prim(prim_path=\"/World/Table\", prim_type=\"Cube\", position=[0, 0, 0.375], scale=[1.5, 0.5, 0.375])\napply_api_schema(prim_path=\"/World/Table\", schema_name=\"PhysicsCollisionAPI\")\n\nset_physics_scene_config(config={\"enable_gpu_dynamics\": False, \"broadphase_type\": \"MBP\"})\n\ncreate_prim(prim_path=\"/World/UR10\", prim_type=\"Xform\")\nadd_reference(prim_path=\"/World/UR10\", reference_path=\"/mnt/shared_data/isaac-sim-assets-complete-5.0.0/Assets/Isaac/5.0/Collected_Robots/ur10.usd\")\nteleport_prim(prim_path=\"/World/UR10\", position=[0, 0, 0.75])\n\n# Suction gripper attached to UR10's ee_link\nsurface_gripper(\n    robot_path=\"/World/UR10\",\n    ee_link=\"/World/UR10/ee_link\",\n    grip_threshold=0.02,\n    force_limit=200.0,\n    torque_limit=200.0,\n)\n\n# Two pedestals\ncreate_prim(prim_path=\"/World/Pedestal_1\", prim_type=\"Cube\", position=[-0.5, 0.55, 0.875], scale=[0.06, 0.06, 0.075])\napply_api_schema(prim_path=\"/World/Pedestal_1\", schema_name=\"PhysicsCollisionAPI\")\ncreate_prim(prim_path=\"/World/Pedestal_2\", prim_type=\"Cube\", position=[-0.5, 0.25, 0.875], scale=[0.06, 0.06, 0.075])\napply_api_schema(prim_path=\"/World/Pedestal_2\", schema_name=\"PhysicsCollisionAPI\")\n\n# Two cubes on top of pedestals\ncreate_prim(prim_path=\"/World/Cube_1\", prim_type=\"Cube\", position=[-0.5, 0.55, 0.975], size=0.05)\nfor api in (\"PhysicsRigidBodyAPI\", \"PhysicsCollisionAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n    apply_api_schema(prim_path=\"/World/Cube_1\", schema_name=api)\nbulk_set_attribute(prim_paths=[\"/World/Cube_1\"], attr=\"physxRigidBody:sleepThreshold\", value=0.0)\napply_physics_material(prim_path=\"/World/Cube_1\", material_name=\"rubber\")\n\ncreate_prim(prim_path=\"/World/Cube_2\", prim_type=\"Cube\", position=[-0.5, 0.25, 0.975], size=0.05)\nfor api in (\"PhysicsRigidBodyAPI\", \"PhysicsCollisionAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n    apply_api_schema(prim_path=\"/World/Cube_2\", schema_name=api)\nbulk_set_attribute(prim_paths=[\"/World/Cube_2\"], attr=\"physxRigidBody:sleepThreshold\", value=0.0)\napply_physics_material(prim_path=\"/World/Cube_2\", material_name=\"rubber\")\n\ncreate_bin(prim_path=\"/World/Bin\", position=[0.5, -0.4, 0.75], size=[0.3, 0.3, 0.15])\n\nsetup_pick_place_controller(\n    robot_path=\"/World/UR10\",\n    robot_family=\"ur10\",\n    target_source=\"curobo\",\n    source_paths=[\"/World/Cube_1\", \"/World/Cube_2\"],\n    destination_path=\"/World/Bin\",\n    end_effector_offset=[0.0, 0.0, 0.02],\n)",
   "settle_state": {
     "cubes": {
       "/World/Cube_1": [
@@ -69,17 +70,24 @@
   },
   "roles": {
     "primary_robot": {
-      "constraints": ["ur10e", "ur10"],
+      "constraints": [
+        "ur10e",
+        "ur10"
+      ],
       "expected_count": 1,
       "required": true
     },
     "primary_destination": {
-      "constraints": ["bin"],
+      "constraints": [
+        "bin"
+      ],
       "expected_count": 1,
       "required": true
     },
     "workpieces": {
-      "constraints": ["cube"],
+      "constraints": [
+        "cube"
+      ],
       "min": 2,
       "max": 2,
       "unordered": false
@@ -89,25 +97,45 @@
     "primary_robot": {
       "path": "/World/UR10",
       "class": "ur10e",
-      "position": [0, 0, 0.75]
+      "position": [
+        0,
+        0,
+        0.75
+      ]
     },
     "primary_destination": {
       "path": "/World/Bin",
-      "position": [0.5, -0.4, 0.75],
-      "size": [0.3, 0.3, 0.15]
+      "position": [
+        0.5,
+        -0.4,
+        0.75
+      ],
+      "size": [
+        0.3,
+        0.3,
+        0.15
+      ]
     },
     "workpieces": [
       {
         "path": "/World/Cube_1",
-        "position": [-0.5, 0.55, 0.975]
+        "position": [
+          -0.5,
+          0.55,
+          0.975
+        ]
       },
       {
         "path": "/World/Cube_2",
-        "position": [-0.5, 0.25, 0.975]
+        "position": [
+          -0.5,
+          0.25,
+          0.975
+        ]
       }
     ]
   },
-  "code_template": "create_prim(prim_path=\"/World/DomeLight\", prim_type=\"DomeLight\")\nset_attribute(prim_path=\"/World/DomeLight\", attr_name=\"inputs:intensity\", value=1000.0)\ncreate_prim(prim_path=\"/World/Ground\", prim_type=\"Cube\", position=[0, 0, -0.5], scale=[20, 20, 1])\napply_api_schema(prim_path=\"/World/Ground\", schema_name=\"PhysicsCollisionAPI\")\ncreate_prim(prim_path=\"/World/Cell\", prim_type=\"Xform\")\ncreate_prim(prim_path=\"/World/Table\", prim_type=\"Cube\", position=[0, 0, 0.375], scale=[1.5, 0.5, 0.375])\napply_api_schema(prim_path=\"/World/Table\", schema_name=\"PhysicsCollisionAPI\")\n\nset_physics_scene_config(config={\"enable_gpu_dynamics\": False, \"broadphase_type\": \"MBP\"})\n\ncreate_prim(prim_path={{primary_robot.path}}, prim_type=\"Xform\")\nadd_reference(prim_path={{primary_robot.path}}, reference_path=\"/mnt/shared_data/isaac-sim-assets-complete-5.0.0/Assets/Isaac/5.0/Collected_Robots/ur10.usd\")\nteleport_prim(prim_path={{primary_robot.path}}, position={{primary_robot.position}})\n\n# Two pedestals\ncreate_prim(prim_path=\"/World/Pedestal_1\", prim_type=\"Cube\", position=[-0.5, 0.55, 0.875], scale=[0.06, 0.06, 0.075])\napply_api_schema(prim_path=\"/World/Pedestal_1\", schema_name=\"PhysicsCollisionAPI\")\ncreate_prim(prim_path=\"/World/Pedestal_2\", prim_type=\"Cube\", position=[-0.5, 0.25, 0.875], scale=[0.06, 0.06, 0.075])\napply_api_schema(prim_path=\"/World/Pedestal_2\", schema_name=\"PhysicsCollisionAPI\")\n\n# Two cubes on top of pedestals\ncreate_prim(prim_path={{workpieces[0].path}}, prim_type=\"Cube\", position={{workpieces[0].position}}, size=0.05)\nfor api in (\"PhysicsRigidBodyAPI\", \"PhysicsCollisionAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n    apply_api_schema(prim_path={{workpieces[0].path}}, schema_name=api)\nbulk_set_attribute(prim_paths=[{{workpieces[0].path}}], attr=\"physxRigidBody:sleepThreshold\", value=0.0)\napply_physics_material(prim_path={{workpieces[0].path}}, material_name=\"rubber\")\n\ncreate_prim(prim_path={{workpieces[1].path}}, prim_type=\"Cube\", position={{workpieces[1].position}}, size=0.05)\nfor api in (\"PhysicsRigidBodyAPI\", \"PhysicsCollisionAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n    apply_api_schema(prim_path={{workpieces[1].path}}, schema_name=api)\nbulk_set_attribute(prim_paths=[{{workpieces[1].path}}], attr=\"physxRigidBody:sleepThreshold\", value=0.0)\napply_physics_material(prim_path={{workpieces[1].path}}, material_name=\"rubber\")\n\ncreate_bin(prim_path={{primary_destination.path}}, position={{primary_destination.position}}, size={{primary_destination.size}})\n\nsetup_pick_place_controller(\n    robot_path={{primary_robot.path}},\n    robot_family=\"ur10\",\n    target_source=\"curobo\",\n    source_paths=[{{workpieces[0].path}}, {{workpieces[1].path}}],\n    destination_path={{primary_destination.path}},\n    end_effector_offset=[0.0, 0.0, 0.02],\n)",
+  "code_template": "create_prim(prim_path=\"/World/DomeLight\", prim_type=\"DomeLight\")\nset_attribute(prim_path=\"/World/DomeLight\", attr_name=\"inputs:intensity\", value=1000.0)\ncreate_prim(prim_path=\"/World/Ground\", prim_type=\"Cube\", position=[0, 0, -0.5], scale=[20, 20, 1])\napply_api_schema(prim_path=\"/World/Ground\", schema_name=\"PhysicsCollisionAPI\")\ncreate_prim(prim_path=\"/World/Cell\", prim_type=\"Xform\")\ncreate_prim(prim_path=\"/World/Table\", prim_type=\"Cube\", position=[0, 0, 0.375], scale=[1.5, 0.5, 0.375])\napply_api_schema(prim_path=\"/World/Table\", schema_name=\"PhysicsCollisionAPI\")\n\nset_physics_scene_config(config={\"enable_gpu_dynamics\": False, \"broadphase_type\": \"MBP\"})\n\ncreate_prim(prim_path={{primary_robot.path}}, prim_type=\"Xform\")\nadd_reference(prim_path={{primary_robot.path}}, reference_path=\"/mnt/shared_data/isaac-sim-assets-complete-5.0.0/Assets/Isaac/5.0/Collected_Robots/ur10.usd\")\nteleport_prim(prim_path={{primary_robot.path}}, position={{primary_robot.position}})\n\n# Suction gripper attached to UR10's ee_link\nsurface_gripper(\n    robot_path={{primary_robot.path}},\n    ee_link=\"/World/UR10/ee_link\",\n    grip_threshold=0.02,\n    force_limit=200.0,\n    torque_limit=200.0,\n)\n\n# Two pedestals\ncreate_prim(prim_path=\"/World/Pedestal_1\", prim_type=\"Cube\", position=[-0.5, 0.55, 0.875], scale=[0.06, 0.06, 0.075])\napply_api_schema(prim_path=\"/World/Pedestal_1\", schema_name=\"PhysicsCollisionAPI\")\ncreate_prim(prim_path=\"/World/Pedestal_2\", prim_type=\"Cube\", position=[-0.5, 0.25, 0.875], scale=[0.06, 0.06, 0.075])\napply_api_schema(prim_path=\"/World/Pedestal_2\", schema_name=\"PhysicsCollisionAPI\")\n\n# Two cubes on top of pedestals\ncreate_prim(prim_path={{workpieces[0].path}}, prim_type=\"Cube\", position={{workpieces[0].position}}, size=0.05)\nfor api in (\"PhysicsRigidBodyAPI\", \"PhysicsCollisionAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n    apply_api_schema(prim_path={{workpieces[0].path}}, schema_name=api)\nbulk_set_attribute(prim_paths=[{{workpieces[0].path}}], attr=\"physxRigidBody:sleepThreshold\", value=0.0)\napply_physics_material(prim_path={{workpieces[0].path}}, material_name=\"rubber\")\n\ncreate_prim(prim_path={{workpieces[1].path}}, prim_type=\"Cube\", position={{workpieces[1].position}}, size=0.05)\nfor api in (\"PhysicsRigidBodyAPI\", \"PhysicsCollisionAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n    apply_api_schema(prim_path={{workpieces[1].path}}, schema_name=api)\nbulk_set_attribute(prim_paths=[{{workpieces[1].path}}], attr=\"physxRigidBody:sleepThreshold\", value=0.0)\napply_physics_material(prim_path={{workpieces[1].path}}, material_name=\"rubber\")\n\ncreate_bin(prim_path={{primary_destination.path}}, position={{primary_destination.position}}, size={{primary_destination.size}})\n\nsetup_pick_place_controller(\n    robot_path={{primary_robot.path}},\n    robot_family=\"ur10\",\n    target_source=\"curobo\",\n    source_paths=[{{workpieces[0].path}}, {{workpieces[1].path}}],\n    destination_path={{primary_destination.path}},\n    end_effector_offset=[0.0, 0.0, 0.02],\n)",
   "extends": "CP-78",
   "extension_notes": "CP-81 = converted from builtin to cuRobo target_source. The builtin two-cube path was failing reproducibly; cuRobo handles multi-cube via _picked_path/_cube_to_pick which works.",
   "failure_modes": [
