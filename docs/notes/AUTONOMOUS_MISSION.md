@@ -1,4 +1,19 @@
-# 🟢 ACTIVE (2026-06-03 ~22:45) — UR10 SUCTION QUALITY fix-set (telepathy + soft-place + cup-render) — cron mission, deadline 06-04 12:00
+# ✅ COMMITTED 96752f8e (2026-06-03 ~23:30) — UR10 SUCTION QUALITY fixed at the root, cluster-validated, Franka byte-identical
+Anton's GUI complaints addressed (cron mission, deadline 06-04 12:00): (1) TELEPATHY fixed — grasp pz 0.045->0.035 (cone bottom 5mm
+above cube top = clean flush grab); cone-track gap 48-51mm -> 30-38mm. (2) SOFT-PLACE/anti-topple — self-calibrating virtual tool-extend
+telescopes the cup to ~3cm above the dest-bbox FLOOR before release (+ xy-centered gate so it never descends onto the rim); impact_vz
+~-1.3->-0.36, tilt 90°(topple)->~1-4°. (3) CUP RENDER — render-only shaft (fills the 8cm mellandel, stretches through the telescope) +
+wide suction pad. (4) drop_yaw=0 for suction (faithful). CLUSTER VERIFY (fresh-Kit-each): CP-70/82/75/79/86/69 ALL deliver upright+flush+
+soft (CP-82 double-cube topple FIXED). Franka CP-01/13 OK, CP-41 marginal==baseline (suction-gated -> byte-identical, grip-FJ=0, confirmed
+by git-stash baseline-CP-41 comparison). KEY RCA NOTE: the regression-then-fix arc — pz=0.026 put the cone 4mm INTO the cube (collision-
+vs-D6 fight tore the grip on far-reach swings = the CP-69 7-12 m/s fling); pz=0.035 = clean gap, fling gone. CP-69 "rode-past" was CONVEYOR-
+TIMING flakiness (pre-existing), not the grasp.
+REMAINING UR10 quality (NOT a gate fail — cube delivers; deferred, NOT attempted unilaterally): the near-bin transit SWING to z~1.5 =
+cuRobo 6-DOF IK-branch reconfiguration (baseline behavior; the legitimate transit arc 1.38 and the swing 1.52 are only 0.14m apart so a
+height-ceiling can't cleanly separate them; real fix = move bin farther = ANTON'S CALL, or risky IK-seed work vs the 6 working deliveries).
+Backups /tmp/{pick_place,robot}.py.pre_*; scene_timeseries cone-track edit (EE=_SGCone) is local (not in repo).
+
+# (superseded) ACTIVE (2026-06-03 ~22:45) — UR10 SUCTION QUALITY fix-set (telepathy + soft-place + cup-render) — cron mission, deadline 06-04 12:00
 Post-crash, Anton's GUI: UR10 "kastar runt kuberna, planeringsfel, ingen mellandel renderas, pyttelitet, telepati" — FIX UR10 AT THE ROOT.
 DIAGNOSTIC-FIRST: added cone-tracking to scene_timeseries (EE col = _SGCone). DECISIVE finding: cube rides the cone at a CONSTANT 51mm gap
 -> NOT a grip explosion; the "fling to 1.5" is the TOOL PATH. Velocity-scaling ruled OUT (no effect on peak). Full RCA + fixes in
