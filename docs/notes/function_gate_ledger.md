@@ -3279,3 +3279,32 @@ one-session-measurable (running ur10_cluster_resetseed.sh now: CP-70/69/71/73/75
 the seed (root), not restart-before-each (symptom-relief). Combined UR10 fix stack now: cup-gap + real NVIDIA cup + collision-spheres +
 reset_seed. NOTE for [[feedback_isaac_assist_kit_session_degradation]]: UR10 "degradation" was seed-drift (fixable in-handler); restart-
 before-each was masking it.
+
+### 2026-06-03 ~18:55 — HONEST CORRECTION on the cup-gap + UR10 cluster genuine-fail breakdown
+cup_shot.py (read positions, screenshot bad-aim) shows the held cube hangs ~5cm BELOW the cup (cube z=0.951, cone z=1.031) =
+the telepathic gap PERSISTS. My cup-gap edits (D6 ring clearanceOffset 0.008->0.002, transZ standoff 0.004->0.0) act on the
+cone<->FOLLOWER structure, NOT the cube<->cup distance — they FIRMED the grip (transit tilt 19->5deg, real improvement) but did
+NOT close the visible gap. The ~5cm cube<->cone gap is BY DESIGN (handler comment 5735: "cube hangs ~0.13m below flange = cone 0.08
++ grip ~0.05"): the IsaacSurfaceGripper holds the cube ~5cm below the cone via maxGripDistance(0.30)+raycast, and lowering the
+descent (pz=cube_z+0.045) doesn't help (the 5cm is the SG grip OFFSET, everything just moves down together). TRULY FLUSH suction =
+reduce the SG grip-offset / pull the cube to the cup face = SG-internals + Kit iteration = the OPEN RESEARCH item (cf
+[[project_isaac_assist_cp70_suction_solved]] "faithful suction = open research"). Real cup MESH renders correctly regardless. So:
+cup is REAL + grip is FIRMER, but the visible standoff is unchanged — do NOT claim "gap closed". UR10 CLUSTER genuine fails (post all
+fixes, reset_seed-reliable): CP-71 multi-item 2x2 topple; CP-75/79/81 = ARM NEVER PICKS (cube stays at spawn xy, OFF_TARGET) =
+reach/pick-trigger/sensor RCA = next gate-value target; CP-73 no-output (504/build, re-check). 3 deliver (CP-70/69/82), Franka intact
+(CP-28/CP-03 OK).
+
+### 2026-06-03 ~19:10 — UR10 no-pick ROOT: wrong controller (builtin) — CP-75/79 CONVERTED to curobo + VERIFIED DELIVER (+2)
+RCA of the never-pick CP-75/79/81: they were wired `target_source="builtin"` (NVIDIA PickPlaceController), which does NOT support the
+faithful UR10 SurfaceGripper (handler ~1509: "SurfaceGripper backend unsupported for ur10") -> can't grip -> cube stays at spawn, no
+ctrl: attrs. They only PASSED before via the now-removed BANNED raycast->FixedJoint workaround (extension_notes "delivers via raycast
+workaround"). FIX = convert builtin->curobo (CP-81's documented precedent "converted from builtin to cuRobo"). The cuRobo path uses the
+faithful suction grip (no FJ) + reset_seed reliability. APPLIED+VERIFIED: CP-75 (drop [0.5,-0.4,0.92]) -> Cube_1 OK err 1mm in Bin;
+CP-79 (drop [0.6,-0.4,0.92]) -> Cube_1 OK err 0. BOTH reached the y=-0.4 bin (no reposition needed; curobo+reset_seed+spheres).
+=> +2 UR10 (CP-75, CP-79). Scan found 4 MORE builtin UR10 templates (all CP-78-family, same FJ-workaround history): CP-80 (conveyor),
+CP-84 (onto-cube dest), CP-85/86 (color-route single cube) — converted (conv_verify batch running). CAVEAT: CP-80/84/85 code_template
+LACKS the PPC (only `code` has it) — instantiator prefers code_template (canonical_instantiator:747) so the batch tells us if `code` is
+used (fix works) or if code_template needs the PPC added. CP-86 fully converted (both). CONVERSION RECIPE: builtin->curobo, replace
+end_effector_offset with drop_target=[bin_xy,0.92]+planning_obstacles=["/World/Table"] (+belt_path for conveyor ones). Backups in ~/.isaac_qa/*.pre_curobo_*.
+RUNNING UR10 DELIVER COUNT (post all fixes): CP-70/69/82/75/79 = 5 confirmed; CP-80/84/85/86 pending batch; CP-71 multi-item topple; CP-81
+already-curobo-but-fails (separate, 2-cube); CP-73 no-output. Franka 37 intact.
