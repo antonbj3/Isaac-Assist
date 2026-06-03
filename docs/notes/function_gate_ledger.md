@@ -3329,3 +3329,15 @@ CONVERSION-BUG FIXES (my hasty conv script): CP-80 had DUPLICATE belt_path kwarg
 EMPTY -> instantiator uses `code` (the converted version). Re-verifying CP-80/84/85 fresh now (conv2). CP-86 verified DELIVERS (err 1mm).
 HONEST STATE: UR10 GATE largely won (6 deliver: CP-70/69/82/75/79/86; CP-80/84/85 pending), reliable every cycle (reset_seed), Franka 37
 intact, grip-FJ=0. UR10 QUALITY (clean path / real cup / flush grip) = deep, documented, Anton's-call levers noted.
+
+### 2026-06-03 ~20:25 — DUAL-FRANKA: multi-robot reset_seed = CP-51 handoff DELIVERS (+1); cluster is heterogeneous
+The cron's dual-Franka OOB fix is a no-op (confirmed: no oob_skipped on clean cache). The REAL CP-51 root = SEED-DRIFT in the SHARED
+MotionPlanner: FrankaA+FrankaB share one cached planner (same robot_cfg); FrankaA's plan advances the Halton sample buffer -> FrankaB's
+plan is BIASED by FrankaA's seed -> the DIAGONAL approach that pushes the cube + grips air. FIX (pick_place _plan_to_world_point ~5089):
+extended the UR10 per-plan reset_seed to ALSO fire when MULTI-ROBOT (>1 live _curobo_pp_sub_) -> FrankaB gets its own deterministic
+vertical descent. GATED -> single-robot Franka (the 37) never enters -> byte-identical, grip-FJ=0 (reset_seed is planning-only, grasp is
+the same parallel-jaw friction). VERIFIED CP-51: FrankaB Cube_1:delivered, cube (0.70,-0.49,0.785) INSIDE bin [0.55-0.85,-0.65--0.35],
+plan_fails=0 -> the full FrankaA->handoff->FrankaB->bin completes (FIRST dual-Franka delivery). +1.
+CLUSTER IS HETEROGENEOUS (not all seed-drift): CP-52 = FrankaA REACH fail (Cube_1:xy_0.98 m, beyond reach; FrankaB never engages) = move
+source closer / reach. CP-53 = FrankaB 3-cube grasp still fails (FrankaA hands off 3, FrankaB plan_calls=24 all failed) = 3-cube handoff
+harder than CP-51's 1-cube. NEXT: test CP-65/67/76 (may be 1-cube-handoff like CP-51 -> reset_seed should deliver).

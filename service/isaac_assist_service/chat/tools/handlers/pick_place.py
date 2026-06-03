@@ -5098,7 +5098,18 @@ def _plan_to_world_point(point_world, current_q7, exclude_obs=None, yaw_deg=0.0,
     # 2nd+ pick cycle contorts/spins/flings (the Kit-session "degradation": CP-69 1st-run clean,
     # 2nd-run flung, reproducibly). Reset per-plan for determinism. Gated to UR10 -> Franka already
     # resets in the vhold path, so the 37 single-robot Franka passes are byte-identical.
-    if ROBOT_FAMILY in ("ur10", "ur10e"):
+    # 2026-06-03 also reset per-plan for MULTI-ROBOT (dual-Franka): FrankaA+FrankaB SHARE the cached
+    # MotionPlanner (same robot_cfg) -> FrankaA's plan advances the Halton sample buffer -> FrankaB's
+    # plan is BIASED by FrankaA's persisted seed -> the DIAGONAL approach that pushes the free cube +
+    # grips air (cp51_faithful: FrankaB hand at y=-0.06 mid-height, not over the cube y=-0.29). Reset so
+    # FrankaB gets its own deterministic vertical descent. GATED >1 live _curobo_pp_sub_ -> single-robot
+    # Franka (the 37) never enters this branch -> byte-identical.
+    try:
+        import builtins as _bi_rs
+        _multi_rs = len([_k for _k in vars(_bi_rs) if _k.startswith("_curobo_pp_sub_")]) > 1
+    except Exception:
+        _multi_rs = False
+    if ROBOT_FAMILY in ("ur10", "ur10e") or _multi_rs:
         try: _planner.reset_seed()
         except Exception: pass
     if vhold_mode > 0:
