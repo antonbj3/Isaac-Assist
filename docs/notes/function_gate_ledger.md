@@ -3402,3 +3402,30 @@ both OK, CP-13 both OK (stacked); CP-41 Cube_3 toppled ONCE (known-marginal 4-cu
 byte-identical -> baseline-CP-41 comparison in flight to confirm pre-existing). REMAINING (quality, NOT gate; cube delivers): the transit
 SWING to z~1.5 on near bins = cuRobo 6-DOF IK-branch reconfiguration; baseline behavior; real fix = move bin farther (Anton's call) or
 IK-seed work (risky). FixedJoint grip count = 0 (real IsaacSurfaceGripper throughout).
+
+### 2026-06-04 ~05:50 — UR10 SWING: deep diagnosis (Anton's "planeringsfel") — it is LOAD-BEARING, not a simple bug
+Anton redirected to the swing/planning as THE remaining UR10 root ("bin won't help, it's the planning") and gave autonomy.
+Diagnostic-first, restart-FREE iteration (added a UR10 force-rebuild so cuRobo config changes apply in-process = no Kit
+restart = no screen glitch; + a per-segment plan-FK diag to /tmp/curobo_plan_diag.log).
+
+FINDINGS (CP-70; robot at origin facing +x; Cube at x=-0.5 BEHIND the robot; Bin at x=+0.5 front):
+ - Every segment's planned traj[-1] reaches its goal err=0.0 -> NO undershoot. The swing is the PLANNED PATH BETWEEN goals.
+ - Three swing components: (S1) home->cube approach arcs to y=0.67, z=1.4 — partly geometry (cube is BEHIND the robot, a
+   ~140deg base sweep is unavoidable). (S4) cube->bin carry lifts to z=1.46 (no y-swing). (S5) the DESCENT plans a
+   lift-to-1.4 + swing-to-(0.7,0.16) instead of a 6cm straight descent.
+ - S5 ROOT = the suction home re-seed (pick_place ~5945): S5's plan START is overwritten with the LIVE joints, which at
+   _build_segments time = HOME -> S5 plans HOME->bin = the swing. The CHAINED seed (S4.5-end, arm OVER the bin) gives a
+   PROVABLY clean descent (diag: pathZmax 1.14, pathY[-0.3,-0.3], pathX[0.5,0.5], no swing).
+ - BUT the chained seed (both sub-step AND direct plan) FLINGS the cube (err 1.07, impact -2.2, toppled) while the
+   home-reseed DELIVERS (err 0.0). => THE SWING IS LOAD-BEARING: the home-reseed detour routes the arm to a NON-FLINGING
+   final IK branch at the near-bin top-down pose; the clean direct descent lands in a different (bad/near-singular) branch
+   that flings on release/soft-place. Removing the swing => bad branch => fling.
+ - RULED OUT (restart-free, marker-confirmed applied): cspace_distance_weight proximal-heavy [20,10,5,1,1,1] = ZERO effect;
+   graph-planner enable_graph_attempt=0 = ZERO effect. So it is NOT a trajopt cost-preference; it is hard IK-branch geometry
+   that the NV-custom cuRobo build resists steering (consistent with the ledger's PoseCostMetric+AttachmentManager-broken notes).
+CONCLUSION: the swing is cuRobo's WORKING path around a near-bin IK-branch/singularity difficulty (+ the cube-behind-robot
+geometry for S1). It DELIVERS (gate passes). A clean fix needs real cuRobo IK-branch control (deep, risks the 6 deliveries)
+OR keeping LLM-scene targets in the robot's dexterous front workspace (scene-design guideline) so the singularity-routing
+isn't triggered. Reverted all swing experiments -> clean committed fix-set (96752f8e); CP-70 delivers err 0.0 confirmed.
+NEXT (UR10 root stalled = SECONDARY per mission): test the 3 UR10-suction UNSTACK templates (palletizer/tray/CP-71) the
+committed fix-set should help.
