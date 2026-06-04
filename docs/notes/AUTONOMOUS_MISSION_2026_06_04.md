@@ -116,3 +116,11 @@ UR10 FINAL (tonight): 6/13 deliver (CP-69 swing,70,75,79,82,86). 7 known-hard, l
  scene_eyes, full RCA. NOT chasing the known-hard 7 further tonight (no quick lever exists; documented).
 PIVOT: cluster #2 conveyor-sync/claim-logic = CP-12, CP-NEW-3station-oee, CP-NEW-inspect-reject.
 Ground-truth launched -> /tmp/c2_gt.txt. Analyze on next wake; fix tractable ones; predict-then-measure.
+
+## 2026-06-04 ~22:40 — cluster #2 (conveyor-sync) ground-truth + root
+CP-12 (palletize, Franka): Cube_1/2 OK→Pallet, Cube_3 rode belt off end (x=1.64→Ground t=56.1, NEVER
+picked). CP-NEW-3station-oee: 6/7 deliver, Cube_7 rode off (ON_BELT x=2.19). CP-NEW-inspect-reject: 5/5
+to PassBin OK. => failures = cubes ride the conveyor PAST the robot before being claimed (the cluster's
+claim-logic theme), NOT flings. Tractable: belt-pause/pacing OR claim-the-next-cube sequencing. Better
+shape than UR10. NEXT: why isn't the later cube claimed before riding off (belt-pause gap / pick-loop
+stops early)? Fix + verify CP-12 (predict-then-measure, no re-sweep).
