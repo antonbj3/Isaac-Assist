@@ -124,3 +124,16 @@ to PassBin OK. => failures = cubes ride the conveyor PAST the robot before being
 claim-logic theme), NOT flings. Tractable: belt-pause/pacing OR claim-the-next-cube sequencing. Better
 shape than UR10. NEXT: why isn't the later cube claimed before riding off (belt-pause gap / pick-loop
 stops early)? Fix + verify CP-12 (predict-then-measure, no re-sweep).
+
+## NEXT (actionable for the next cron-wake / fresh context — do this first)
+TARGET: CP-12 belt-ride-off (cluster #2). Cube_3 rides the conveyor off the end before the robot
+claims it (Cube_1/2 deliver fine). Root to confirm + fix:
+  1. Read the Franka multi-cube pick-loop + belt-pause in pick_place.py (_pause_belt / wait_sensor /
+     the loop that picks the NEXT source cube). Hypothesis: belt doesn't pause for cube N, or the
+     pick-loop doesn't re-claim after 2 cubes, so cube_3 rides past.
+  2. CAREFUL: Franka path = the byte-identical 37-set. Gate any fix so the 37 don't regress. Predict
+     the effect before editing; verify CP-12 alone (target 3/3), then spot-check 1-2 of the 37.
+  3. Then CP-NEW-3station-oee (Cube_7 same ride-off). inspect-reject already 5/5.
+Tools: scene_eyes / scene_timeseries (run-dir), grader has the auto-articulation + None-guard fixes.
+DON'T re-sweep UR10 (done: 6/13, 7 known-hard documented). DON'T rabbit-hole the UR10 cone-physics
+(architectural/Anton). Flags reset clean. Kit headless+healthy.
