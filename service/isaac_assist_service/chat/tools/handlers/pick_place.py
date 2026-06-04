@@ -5846,7 +5846,7 @@ def _build_segments(cube_pos, drop_pos, current_q):
     # UR10/suction-gated → Franka byte-identical. UNTESTED — pending Kit verify + radius/apex/step tuning.
     try:
         import math as _math_ta, builtins as _bi_ta
-        if _SG_FOLLOWER_OP is not None and getattr(_bi_ta, "_ur10_transit_arc", False):
+        if _SG_FOLLOWER_OP is not None and getattr(_bi_ta, "_ur10_transit_arc", True):
             _bx, _by = float(_usd_pos[0]), float(_usd_pos[1])
             _cdx, _cdy = float(cube_pos[0]) - _bx, float(cube_pos[1]) - _by
             _ddx, _ddy = float(drop_pos[0]) - _bx, float(drop_pos[1]) - _by
