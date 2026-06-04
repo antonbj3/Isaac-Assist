@@ -50,11 +50,17 @@ Canonical-geometri-buggar (robotbaser/stationer spawnas i/på annan geometri). E
   FrankaB @y=-0.5 sitter i/vid RotaryTable @origin (default-radie 0.20m i create_rotary_table, men disc-scale i mallen kan vara
   större → "mitt i bordet" ✓). Behöver layout-omdesign (robotar längre ut + verifiera räckvidd till bord+conveyor+bin) + GUI-check
   att bordet faktiskt roterar.
-- **CP-52** (parallel-pick duo): FrankaA @-0.5,0 / FrankaB @0.5,0; kuber på band @y=0.4. "Ingen rörelse = plan-fail out-of-reach":
-  FrankaA tilldelas Cube_1/2, FrankaB Cube_3/4 — kontrollera kubernas x-spridning vs ~0.85m räckvidd från respektive bas; flytta
-  pick-zonen närmare (y 0.4→0.3) eller kuber till reachbar x. Liten geometri-justering, GUI-verify.
-- **CP-76** (dynamic fixture hold): tom role_defaults; "bara EN plattform, station 2 saknas" = station-2-spawn körs ej i code-fältet.
-  Kräver läsning av code-spawn-loopen (ej klar). Markerad som svårast i forskningssetet.
+- **CP-52** (parallel-pick duo) — FULLDIAGNOSTISERAD: kuber x=[-1.4,-1.15,0.3,0.55] @y=0.4 på band (surface_velocity 0.2 m/s +x).
+  FrankaA(-0.5,0) plockar Cube_1(x=-1.4)+Cube_2(x=-1.15): **Cube_1 räckvidd 0.985m > ~0.85m = UTANFÖR RÄCKVIDD**; Cube_2 0.76m OK.
+  FrankaB(0.5,0) Cube_3(0.45m)+Cube_4(0.40m) OK. Cube_1 är MENAT att matas in av bandet (når reach vid x≈-1.26, ~0.7s), MEN Anton
+  såg "STILLASTÅENDE conveyor" → Cube_1 advancar aldrig in → FrankaA plan-fail → ingen rörelse. ROT = (1) bandet animerar inte
+  (surface_velocity appliceras ej) + (2) Cube_1 spawnar out-of-reach och förlitar sig på bandet. FIX: få bandet att mata (verifiera
+  create_conveyor surface_velocity-animation) ELLER spawna Cube_1 inom initial reach (x≥-1.26). Bandanimering = dominant. GUI-verify.
+- **CP-76** (dynamic fixture hold) — OMVÄRDERAD: INTE "station 2 saknas". Koden har AVSIKTLIGT en HoldPedestal @(0,0,0.80) som BÅDA
+  robotarna använder (R1 lägger workpiece på pedestalen, R2 staplar mating-part ovanpå). Anton såg "båda placerar på samma plattform"
+  = det koden GÖR. Den verkliga luckan är GOAL-vs-IMPL: målet vill att R1 HÅLLER workpiece i LUFTEN vid transfer-posen (det svåra
+  kollisions-fallet) medan R2 fogar in; koden stubbar det som en statisk pedestal-stack. Att realisera det troget = R1 behåller grepp
+  + håller pose medan R2 opererar = betydande beteende-arbete (det "svåraste fallet i forskningssetet"), INTE en spawn-fix.
 ＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
 
 # ✅ SWING (Anton's "planeringsfel") — RESOLVED AS DIAGNOSIS 2026-06-04 ~06:40; general fix (b) ATTEMPTED + proven impossible
