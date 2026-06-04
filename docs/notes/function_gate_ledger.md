@@ -3560,3 +3560,15 @@ Full UR10 suction cluster re-measured on the clean-cache fresh Kit (git f0097edc
 => 6/6 UR10 deliver dead-center on a clean cache. The 2026-06-03 "regression" (kastar/planfel/telepati) was 100% the
 corrupt warp cache. CODE IS GOOD. Now spot-checking previously-"failing" suction templates (CP-83/CP-71/palletizer-layer-
 stack — Anton's "total kaos" = the cache-poison signature) on the clean cache for cache-victim wins.
+
+### 2026-06-04 ~07:05 — both bisect suspects CLEARED (closes the cron prompt's bisect directive)
+The cron mandate named 2 regressor suspects for the UR10 throwing/planfel. Checked both (the regression is already proven
+= corrupt warp cache):
+ (1) robot.py limit:transZ:physics:high=0.0 ("rigid grip yanked by follower → throwing"): NOT the cause. transZ low/high
+     0/0 is the FLUSH suction-axis fix; on a CLEAN cache there is NO throwing (peak 2.0-2.6 m/s, up=1.0, 6/6 deliver). The
+     throwing only appeared under the corrupt-cache cuRobo collision plan-fails.
+ (2) ur10_scene.yml wrist_3_link cup-spheres ("over-constrain cuRobo → planeringsfel"): NOT over-constraining. 4 spheres
+     (r0.05@0, r0.07@0.06, r0.04@0.11, r0.045@0.158) = a sensible wrist+tool collision column; 6/6 deliver WITH them, and
+     the "planeringsfel" was the cache (NVRTC collision-kernel fails), not these spheres. Shrinking them would make cuRobo
+     blind to the tool (clip risk) — they are correct.
+=> Neither suspect is a regressor; no revert needed. The diagnostic-first bisect is closed: the regression = warp cache.
