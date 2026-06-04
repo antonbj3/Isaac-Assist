@@ -3730,3 +3730,27 @@ TRANSIT-ARC (committed 19a0910e, default-on, verified 6/6: collision eliminated 
 solution; the LLM-controllable scene-aware transit hint (Anton's idea) is the adaptive extension. goal_state edit REVERTED
 (blocked dead-code); backup /tmp/pick_place.py.pre_goalstate. If warp is ever upgraded (≥1.13 w/ Isaac compat), the goal_state
 native fix becomes available — the implementation approach is recorded here.
+
+### 2026-06-04 ~11:55 — *** ROOT CAUSE FOUND (RCA workflow + source-verified): the warp block is a SELF-INFLICTED monkeypatch ***
+Anton: "lös grundproblemet... can curobo work 100% without upgrading warp?" Ran a 5-agent Kit-free RCA workflow (wf_d5f4c66c).
+DEFINITIVE FINDING (verified in source, pick_place.py:3983-3990): the handler monkeypatches `wp.func` to STRIP the `module=`
+kwarg on the FALSE premise "Kit bundles warp 1.8.2". The env actually runs **conda warp 1.11.0** (Isaac runs the SAME warp via
+symlink), whose `wp.func` NATIVELY supports `module=` (verified: inspect.signature(wp.func).parameters has 'module'). cuRobo's
+collision kernels call `wp.func(..., module=__name__)` (wp_collision_kernel.py:58-60) so the cuboid/mesh/voxel `is_obs_enabled`
+overloads accumulate into ONE module (warp reads scope_locals via inspect f_back.f_back). STRIPPING module= scattered them →
+only the LAST (voxel) survived → the exact `WarpCodegenError: is_obs_enabled [CuboidDataWarp,int32,int32]` + **SILENTLY BROKEN
+cuboid collision** (almost certainly WHY the arm brushed bin walls — the bin wasn't collision-checked — AND why "cache corruption"
+looked intermittent). The OLD shim ALSO wrapped wp.func with an extra frame, which breaks the f_back.f_back threading independently.
+=> **cuRobo CAN plan 100% natively WITHOUT a warp upgrade.** Warp upgrade is NOT needed AND not cleanly possible (Isaac+cuRobo
+share one warp on disk; only shallow import-shims break at 1.13). FIX (applied, backup /tmp/pick_place.py.pre_wpfunc): shim wp.func
+ONLY if warp genuinely lacks module= (guarded by inspect.signature); else leave native wp.func untouched; NO wrapper.
+FIELD-EXPERT VIEW (RCA): production cells DON'T need one monolithic trajectory — they blend via-points (ABB zonedata/KUKA C_DIS/
+FANUC CNT/UR blend_radius); a full STOP at grasp/release is EXPECTED + correct (settle before grip; suction settle prevents fling).
+The stepped transit is aesthetics/cycle-time/wear, NOT a collision-safety regression. So "perfectly smooth" is polish, not required.
+NATIVE LEVER unblocked by the fix (RCA's top pick): MotionPlanner.plan_cspace(goal_js, start) — public joint-goal API, pins all
+trajopt seeds at the same-branch target, same use_implicit_goal flow as working plan_pose → one smooth collision-aware trajectory,
+no swing/stepping. (Backup: seed_traj straight-line cspace interp.) Caveat: same-branch config for a behind-robot target may be
+inherently distant (the swing may BE the shortest path) — goal pins the endpoint, trajopt picks the path; needs Kit confirmation.
+**THE RISK (testing now):** the fix is PROCESS-WIDE → restoring cuboid collision could make the 37 Franka plan-fail (home-on-table
+flagged). Cleared ~/.cache/warp + fresh headless Kit. Validating: CP-70 (delivers? brush gone? no WarpCodegenError?) + CP-09/CP-41
+(Franka floor no-regression). REVERT if the 37 break. Mixed UR10+Franka smoke-test template CP-NEW-mixed-ur10-franka also prepped.
