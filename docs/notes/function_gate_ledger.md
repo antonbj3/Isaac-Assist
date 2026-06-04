@@ -3500,3 +3500,16 @@ geometry to the EE collision (attach a small Cuboid/sphere at the tool frame, li
 keeps the cup clear. BOUNDED + suction-gated (no Franka touch) but touches the shared planner -> needs Kit verify + 37
 re-verify -> Anton's greenlight (not done unilaterally near deadline). NOTE: this addresses the BRUSH, not the SWING
 (the 180° transport for behind-robot cubes is still inherent/placement-driven, separately concluded).
+
+### 2026-06-04 ~06:35 — cup-collision candidate: predicted-effect = NOT a clean win either (goal-feasibility tension)
+Reasoned through the cup-in-collision-model fix before touching code (predict-the-effect discipline). Anton's GUI note is
+"kolliderar med bin-mittelaxeln, snurrar runt, SEN drop" => the brush is during the transport SWING, then it descends.
+If the cup is attached as a collision body for the WHOLE plan, the PLACE-GOAL pose (cup inside/above the bin to release at
+the bin floor) would itself be in collision with the bin cuboid -> plan_pose returns infeasible -> REGRESSED delivery
+(same tension that kills "add the bin as an obstacle"). A correct version would attach the cup ONLY during transport and
+detach before the final descent (segment-scoped collision), which is fiddly shared-planner surgery = the SAME "deep/risky,
+Anton's call" bucket as general IK-branch handling — NOT a quick bounded win. => not implemented. CONCLUSION stands: every
+GENERAL-planner lever for the UR10 swing/brush lands in deep-cuRobo (Anton's call); the SCENE-DESIGN guideline (UR10
+cube+bin in the dexterous front workspace) is the clean, validated, transfer-friendly answer; the cube DELIVERS through
+the swing today on all 6 UR10 (gate passes). UR10 root = triangulated from 3 angles (IK-branch / scene-design /
+collision-model), all consistent. Moving to independent secondary work (no UR10-canonical or shared-planner edits w/o OK).
