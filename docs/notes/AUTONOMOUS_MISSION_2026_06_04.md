@@ -201,3 +201,20 @@ No cheap wins remain. Night's high-value output = full library map + root-causes
 recommendations (docs/notes/LIBRARY_HEALTH_OVERVIEW_2026_06_05.md). Loop: cron stays armed; further
 deep fixes are blocked on Anton's architectural decisions or need a dedicated fresh-context multi-robot
 session. On future wakes: re-verify landed fixes hold; don't re-sweep; don't high-risk-fiddle.
+
+## 2026-06-05 ~02:10 (cron) — UNIFIED conveyor-cluster root (first-principles, CP-12 + CP-52)
+CP-52 live probe: belt vel=(0,0,0) STOPPED (directive=0.2), en=True, x=[-1.5,1.5] z_top=0.805. Cubes
+rigidbody+dynamic at z=0.83 (on belt). SensorA@x=-0.2, SensorB@x=+0.2. Cube_3@0.30 OVERSHOT SensorB
+(+0.1m past). FrankaA plan_calls=8/picked="" ; FrankaB plan_calls=0/picked="" (never tried). MOVE_LOCK
+holder=FrankaA.
+MECHANISM: cubes overshoot the sensor zone (belt ran at spawn, carried them past) -> _cube_at_sensor
+finds none IN-zone -> no claim. But an overshot cube is imminent-enough that _cube_imminent_at_sensor
+force-STOPS the belt -> frozen -> upstream cubes never reach the other sensor -> DEADLOCK (multi-robot).
+SAME ROOT as CP-12 single-robot (overshoot -> ride off the end). => ONE root behind the conveyor cluster:
+**cube overshoots sensor zone -> unclaimed -> belt frozen (multi) / ride-off (single).**
+UNIFIED FIX (careful, next): in the cuRobo claim path (_cube_at_sensor / wait_sensor select), add a
+FALLBACK — if no cube is IN-zone, claim the nearest undelivered cube that has OVERSHOT the sensor but is
+still within REACH (claiming pauses+the robot picks it where it stopped). Additive (only when no in-zone
+cube) => the 37 + working multi-robot byte-identical. Verify CP-12=3/3, CP-52 delivers, + regression
+CP-22/CP-08/CP-51. CONFIRM the exact handler+function first (CP-12 fix#1 was misplaced builtin-vs-cuRobo).
+This would land CP-12, CP-52, likely 3station Cube_7 = the highest-value tractable fix found tonight.
