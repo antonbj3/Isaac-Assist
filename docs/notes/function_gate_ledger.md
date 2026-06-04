@@ -3608,3 +3608,23 @@ code, already fixed — AWAITS his GUI confirmation (trust his eyes over the gra
 REAL reasons (not cache); CP-71 0/4 = degradation-inconclusive. The earlier "cache was the regression" entries (~06:55/~07:00/
 ~07:08) stand as the reasoning trail but are SUPERSEDED by this correction. Lesson (logged): don't attribute a fix to an
 intervention without a measured before/after on the same code — I had the 6/6-deliver fact (solid) but over-reached on WHY.
+
+### 2026-06-04 ~07:25 — Confirmation batch (fresh Kit): Franka floor INTACT (byte-identical verified); CP-71 = pile-pick (hard); CP-09 5-stack-top pre-existing
+Ran on a fresh non-degraded Kit (warm cache, 0→4 non-fatal NVRTC) to (a) confirm the #1 hard rule (don't break the 37 Franka)
+and (b) settle CP-71's degradation-vs-genuine ambiguity:
+ - **CP-01 (Franka 4-stack): DELIVERS** — all 4 stacked, err ≤0.014, minor 8° lean (Anton-accepted "lite sned") + LOOSE_GRIP
+   flags (gap_std 24mm = normal friction-grip slip, grader is strict). PASS.
+ - **CP-09 (Franka 5-stack): 4/5 clean + TOP cube topples 92° — CONSISTENT 2/2 (not stochastic).** Root = the 8° systematic
+   lean accumulates; the 5th cube on the leaning tower tips. **NOT a mission regression:** verified `git diff ec609990 96752f8e
+   -- pick_place.py` = ALL +94/-4 lines are suction-gated (`if _SG_FOLLOWER_OP is not None`) → the Franka parallel-jaw path is
+   BYTE-IDENTICAL to Anton's-review state (ec609990, where he called it "FUNGERAR ✓"). drop_yaw=0 + S6-straight-up-retract are
+   both correctly Franka-gated. So CP-09's top-topple is PRE-EXISTING marginal 5-stack behavior (Anton's eye was lenient on the
+   tilted top), not introduced by the suction mission. The 37-floor is INTACT.
+ - **CP-71 (UR10 dispenser): 0/4 on the FRESH Kit too → GENUINE, not degradation.** Root (Kit-free): it's a PILE-PICK — the
+   `create_gravity_dispenser` staggers the 4 cubes VERTICALLY (handler L4895: z=drop_height-i·0.055) at ONE xy (-0.4,0.4) → they
+   fall into a PILE on the small feeder. The UR10 disturbs the pile → cubes scatter off the feeder to z=0.5 (toppled, ON_FLOOR).
+   Picking from an unstable pile is genuinely hard (the historical "3/4" was likely a luckier pile settle). Secondary; the fix
+   would be a stabler feeder / lower drop_height / spaced spawn = a TEMPLATE redesign, not the 6-core grip. NOT cache.
+NET: UR10 6-core RESOLVED (6/6, 96752f8e). Franka floor INTACT (byte-identical proven). Remaining = genuinely-hard secondaries
+(CP-71 pile / CP-83 seed-snap / palletizer 10cm-box) + the placement-swing on the 6 (Anton's call). The autonomous 6-core vein
+is exhausted; the rest is deep per-template work (risky vs the 6) or Anton-gated decisions.
