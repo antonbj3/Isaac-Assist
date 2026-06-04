@@ -3650,3 +3650,10 @@ template + canonical-geometry work = Anton's call, consistent with the swing/sce
 NEXT-WAKE guidance: the autonomous 6-core vein is exhausted; remaining = Anton-gated geometry decisions (swing, palletizer,
 CP-71 feeder, dual-Franka) + risky deep-grip. Don't manufacture risky changes vs the 6/37. If Anton returns → execute his
 decision (pre-staged (a) for the swing). Else low-risk prep / hold. Deadline 2026-06-04 12:00.
+
+### 2026-06-04 ~07:35 — CP-83 maxGripDistance candidate: NEVER-tried, but low EV (don't re-chase)
+`git log -S "_mga.Set(0.45)"` = empty → 0.45 was never committed (robot.py L6400 sets 0.30; the comment only NOTES 0.45 for
+CP-83's offset pedestal grasp). So it's a never-tried 1-line candidate, BUT CP-83's dominant Cube_1 fling = cuRobo SEED-SNAP
+(violent swing branch), not grip-distance release — so 0.45 alone won't deliver CP-83, and testing needs a Kit restart
+(handlers load at Kit startup). LOW EV vs risk to the working 6. Park unless CP-83 is explicitly prioritized + the seed-snap is
+addressed first. (Dynamic-loop tick 07:35: no new actionable work since the 07:28 close-out; 6-core resolved, rest Anton-gated.)
