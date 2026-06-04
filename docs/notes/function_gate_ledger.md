@@ -3674,3 +3674,18 @@ unaffected). **UNTESTED** — a planning fix needs iterative Kit test+tune (R/ap
 is LIVE on :1 (pid 2881331, DISPLAY=:1) so I can't run scene_timeseries without stomping his review. NEXT: when the Kit
 is free, set _ur10_transit_arc=True (exec_sync), verify CP-70 (clean monotonic rotation? delivers? no upper_arm|Wall?),
 tune, then confirm CP-69/82/75/86 + the dexterous CP-79 + the 37 Franka, then flip default on. Backup /tmp/pick_place.py.pre_transitarc.
+
+### 2026-06-04 ~09:58 — *** TRANSIT-ARC VERIFIED: swing-loop + bin-collision ELIMINATED on all 5 behind-cube UR10 ***
+Anton freed the Kit ("använd kit då" + shut down his GUI). Enabled the transit-arc (default on), fresh headless Kit, verified:
+ - **CP-70**: cube path was the chaotic loop (toward-bin→away to z1.49,y0.63→around→bin = "plans wrong then self-corrects").
+   WITH ARC: clean MONOTONIC sweep — pick(behind)→up over base (0,0.45,1.13)→around front at const z~1.13→descend to bin.
+   max-z 1.49→1.26, max-|y| 0.63→0.45, transit tilt 4.4°→2.0°, peak 2.34→1.75. err 0.0, delivers, up=1.0. **NO upper_arm|Wall** (baseline had WallX1/Y1/Y2).
+ - **CP-69** (far-behind): err 0.001, transit tilt 1.6°, NO wall, delivers. **CP-82** (2-cube): both→correct bins err 0.0, NO wall.
+   **CP-75**: err 0.0, NO wall (transit tilt 9.9° — highest, per-geometry arc tuning could refine). **CP-86**: err 0.0, transit tilt 4.8°, NO wall.
+ - **CP-79** (dexterous, dot>0 → arc NOT applied): err 0.0, unaffected (gate correct).
+=> Bin-collision ELIMINATED on all 5 behind-cube; chaotic loop → clean monotonic rotation; all deliver; dexterous untouched.
+ROOT was exactly the direct behind→front S3→S4 transit forcing an IK-branch reconfiguration. FIX: angular arc at sub-bin
+radius (R=0.45) + high apex inserted between S3/S4 → fold-in, rotate around base axis, extend out+down. pick_place
+_build_segments, behind→front-gated (dot<0), UR10/suction-gated (Franka byte-identical), grip-FJ=0 (only planning waypoints).
+Committed default-on (19a0910e); flag _ur10_transit_arc kept for A/B. NEXT: Anton GUI-review (is the clean rotation his 100%?);
+optional per-geometry arc tuning (CP-75 9.9° tilt); cup-fidelity (always-down/extend) deferred per Anton.
