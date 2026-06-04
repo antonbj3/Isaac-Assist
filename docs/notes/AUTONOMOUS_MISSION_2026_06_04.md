@@ -256,3 +256,10 @@ Remaining = architectural (plannability/faithful-suction/multi-robot) — Anton'
 sessions. Env is flaky after this many hours; a Kit/session restart would help future deep work.
 LOOP: cron armed. Future wakes: light regression-watch (single template, fresh Kit) or await Anton.
 Don't re-sweep, don't blind-fiddle the intricate code, don't fight the flaky env with more batches.
+
+## 2026-06-05 ~04:05 (cron) — CP-70 fresh-Kit PASS: degradation scare RESOLVED
+CP-70 on fresh Kit: err 0.0, OK, delivered [0.5,-0.3,0.785] ✅. The earlier "Cube_1|Floor" was DEGRADATION
+(false-negative on the multi-hour Kit), confirmed — NOT a regression. Both headline UR10 fixes now verified
+stable on a FRESH Kit: CP-69 ✅ + CP-70 ✅. Degradation caveat PROVEN (same template floors on degraded Kit,
+delivers on fresh) → reinforces that tonight's degraded-Kit fail-counts (flings) are pessimistic; re-verify
+any fail on a fresh Kit before trusting. Landed fixes confirmed; night's work verified where it matters.
