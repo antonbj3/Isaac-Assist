@@ -28,6 +28,33 @@ transfererar till nya scener utan risk.
   (hög risk mot de 6 fungerande leveranserna; inte gjort autonomt).
 
 Detaljerad evidens nedan + i `function_gate_ledger.md` (2026-06-04 ~05:50→~06:35). Allt experiment reverterat; fix-set 96752f8e intakt.
+
+## ►► FÖRBEREDD (a)-EXEKVERING — säg "kör (a)" så applicerar jag direkt (jag rör inte canonical-geometri utan ditt OK) ◄◄
+Mål: lägg kub+bin i UR10:ns dexterösa FRAM-arbetsyta (x≳+0.45, |y|<0.45) = CP-79-mönstret (validerat svingfritt: kub fram-vänster,
+bin fram-höger, ingen 180° bas-rotation). Per mall, scopat efter komplexitet:
+- **TRIVIALT (1 rad, statisk kub, bin redan fram):**
+  - **CP-75**: role_defaults.workpieces[0].position [-0.5,0.4,0.825] → **[0.5,0.4,0.825]**  (bin /World/Bin @0.5,-0.4 ✓ redan fram)
+  - **CP-86**: role_defaults.workpieces[0].position [-0.5,0.4,0.975] → **[0.5,0.4,0.975]**  (bin /World/Bin @0.5,-0.4 ✓)
+- **LÄTT (2 rader, statisk, 2 kuber, 2 bins redan fram):**
+  - **CP-82**: workpieces[0] [-0.5,0.55,0.975] → **[0.5,0.35,0.975]**, workpieces[1] [-0.5,0.25,0.975] → **[0.5,0.05,0.975]**
+    (Bin_red @0.5,-0.3 ✓ / Bin_blue @0.5,-0.55 — |y|=0.55 lite vid men det är en SLÄPP-destination från höjd, mindre kritisk än pick)
+- **DESIGNVAL (kräver att CONVEYORN flyttas till fram = ändrar "plocka-från-bakom-conveyor"-framingen — DIN bedömning):**
+  - **CP-70**: conveyor-pick, kub @-0.5,0.4 på band bakom roboten. Flytta bandet+pick-zonen till x>0 (t.ex. spawn → 0.5,0.4). Bin @0.5,-0.3 ✓.
+  - **CP-69**: conveyor-pick, kub @-1.0,0.4 (långt bakom). Samma: flytta bandet fram. Bin @0.5,-0.4 ✓.
+  Alternativ om du vill BEHÅLLA bakom-conveyor-semantiken: lev-med-sving (b) på just CP-70/69 (de levererar idag, gaten grön).
+Efter applicering: re-verifiera var mall (scene_timeseries, fresh-Kit) att svingen är borta + leverans intakt; Franka 37 oberörda (UR10-gated geometri).
+
+## ►► SEKUNDÄRT (lägre prio, kräver också ditt geometri-OK + GUI-verify) — dual-Franka BYGG-buggar Anton's GUI flaggade ◄◄
+Canonical-geometri-buggar (robotbaser/stationer spawnas i/på annan geometri). EJ applicerade unilateralt. Diagnos (Kit-fri):
+- **CP-67** (rotary station): FrankaA @y=0.5 (bas ~0.4–0.6) ÖVERLAPPAR conveyorn @y=0.55–0.85 ("halvt inne i conveyorn" ✓);
+  FrankaB @y=-0.5 sitter i/vid RotaryTable @origin (default-radie 0.20m i create_rotary_table, men disc-scale i mallen kan vara
+  större → "mitt i bordet" ✓). Behöver layout-omdesign (robotar längre ut + verifiera räckvidd till bord+conveyor+bin) + GUI-check
+  att bordet faktiskt roterar.
+- **CP-52** (parallel-pick duo): FrankaA @-0.5,0 / FrankaB @0.5,0; kuber på band @y=0.4. "Ingen rörelse = plan-fail out-of-reach":
+  FrankaA tilldelas Cube_1/2, FrankaB Cube_3/4 — kontrollera kubernas x-spridning vs ~0.85m räckvidd från respektive bas; flytta
+  pick-zonen närmare (y 0.4→0.3) eller kuber till reachbar x. Liten geometri-justering, GUI-verify.
+- **CP-76** (dynamic fixture hold): tom role_defaults; "bara EN plattform, station 2 saknas" = station-2-spawn körs ej i code-fältet.
+  Kräver läsning av code-spawn-loopen (ej klar). Markerad som svårast i forskningssetet.
 ＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
 
 # ✅ SWING (Anton's "planeringsfel") — RESOLVED AS DIAGNOSIS 2026-06-04 ~06:40; general fix (b) ATTEMPTED + proven impossible
