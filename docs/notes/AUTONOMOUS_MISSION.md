@@ -1,3 +1,35 @@
+＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+# ►► ANTON — 30-SEKUNDERS BESLUTSLÄGE (UR10) — 2026-06-04 ~06:40 ◄◄
+**FIXAT + committat (96752f8e, fix-set intakt):** UR10-suction-kvaliteten vid roten — telepati (pz=0.035, flush grepp),
+soft-place/anti-tippning (självkalibrerande tool-extend till bin-golvet), mellandel-rendering (skaft+pad), drop_yaw=0.
+**6/6 UR10 levererar** (CP-70/69/82/75/79/86), Franka 37 byte-identiska, grip-FJ=0 (äkta IsaacSurfaceGripper-sug).
+
+**KVAR:** transport-SWINGEN (+ bin-brush) på de 5 "bakom-roboten"-mallarna. Kuben **levererar genom svingen idag**
+(gaten går grön) — det är ett KVALITETS/rörelse-problem, inte ett leverans-fel.
+
+**ROT (triangulerad 3 vägar, allt samstämmigt — inte en gissning):**
+- 5/6 UR10-mallar spawnar kuben BAKOM roboten (x<0) med binnen framför. Att flytta en kub från bakom till framför
+  KRÄVER en ~180° bas-rotation = svingen. **Fysik/kinematik, inte en planner-bugg.** CP-79 (enda dexterösa/fram-mallen)
+  är redan ren — ingen sving (verifierat).
+- (1) IK-gren-reseed, (2) manipulerbarhets-IK-seed (implementerad, bevisat verkningslös: ingen nära-nuvarande hållbar
+  gren finns — den hållbara grenen ÄR distanserad → svingen ÄR vägen dit), (3) collision-world/cup (bin-som-hinder bryter
+  placeringen; cup-som-hinder bryter mål-posen). **Alla generella planner-grepp landar i djup/riskabel cuRobo-kirurgi.**
+
+**TRANSFERVÄNLIGA SVARET (uppfyller "måste funka för nya scener med okända placeringar"):** en SCEN-GENERERINGS-RIKTLINJE
+— instruera LLM:en att lägga UR10:s kub+bin i den dexterösa FRAM-arbetsytan (x≳+0.45, |y|<0.45). Engångsregel i prompten,
+noll per-scen-tuning, validerad ren på CP-79 + en CP-70-variant. Detta är det enda greppet som BÅDE rensar rörelsen OCH
+transfererar till nya scener utan risk.
+
+**MENY (ditt val):**
+- **(a) [REK]** Jag designar om de 5 bakom-kub-canonicalerna till fram-placering (en rad i role_defaults var) + lägger
+  generator-riktlinjen. Rensar svingen + transfererar. Jag gör det på ditt OK (jag rör inte canonical-geometri unilateralt).
+- **(b)** Acceptera leverera-med-sving (gaten går grön idag, 6/6).
+- **(c)** Beställ djup cuRobo IK-gren/singularitets-hantering för garanterat-ren rörelse vid GODTYCKLIGA LLM-placeringar
+  (hög risk mot de 6 fungerande leveranserna; inte gjort autonomt).
+
+Detaljerad evidens nedan + i `function_gate_ledger.md` (2026-06-04 ~05:50→~06:35). Allt experiment reverterat; fix-set 96752f8e intakt.
+＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+
 # ✅ SWING (Anton's "planeringsfel") — RESOLVED AS DIAGNOSIS 2026-06-04 ~06:40; general fix (b) ATTEMPTED + proven impossible
 FINAL on the UR10 swing after implementing BOTH paths. It is the planner's LOAD-BEARING singularity-avoidance for kinematically-
 hard target placements (5/6 UR10 templates spawn the cube BEHIND the robot + the bin near a singularity). It DELIVERS through it.
