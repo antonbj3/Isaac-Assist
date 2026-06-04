@@ -1,4 +1,15 @@
 ＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+# 🏁 MISSION SLUTSUMMERING (2026-06-04 12:00 — Anton tillbaka + live-styr; autonom cron-loop avslutas här)
+**UR10-sug — vad som faktiskt hände (12h-mission):**
+1. **Synliga klagomålen FIXADE av 96752f8e** (dina GUI-symtom 2026-06-03 var på GAMLA koden, ec609990): telepati (pz 0.045→0.035 = flush ~1.5mm), kopp-render (skaft+pad), kastning (pz-interpenetration borta). Grader: **6/6 UR10 levererar dead-center**. Inväntar din GUI-bekräftelse.
+2. **Sving + kollision (planeringen) — TRANSIT-BÅGE** (committad 19a0910e, default-på, **verifierat 6/6**): kollision eliminerad (noll överarm-vägg-kontakt) + kaos-loop → ren monoton rotation. Det är **guidning** (geometrisk waypoint), inte ren-native.
+3. **Native cuRobo-roten UTTÖMD (4 spakar)** — kan INTE styras rent på detta bygge: IK-endpoint-seed (sving oförändrad), cspace (0), graph (0), **goal_state-trajopt = WARP-CODEGEN-BLOCKERAD** (`is_obs_enabled`/CuboidDataWarp; rätt API finns men kräver warp ≥1.13, inkompatibel med Isaac 5.1). → guidning krävs fundamentalt.
+4. **Adaptiv nästa-steg (din idé, väntar ditt go):** LLM-styrd scen-medveten transit-ledtråd ("modifiera cuRobos planering med ord") — bågen-mekanismen finns, exponera som LLM-satt verktygsarg.
+**Franka-golvet (37): INTAKT** (96752f8e byte-identisk, diff-verifierad). **grip-FJ = 0** (ingen EE↔kub-FJ, äkta IsaacSurfaceGripper). **Cache-"regressionen": KORRIGERAD** (96752f8e var fixen; cache-rensning var försiktighet; 4 NVRTC non-fatal).
+**Genuint svåra (EJ cache):** CP-83 (seed-snap), CP-71 (pile-pick), palletizer (far-reach+sving+10cm-låda). Djupt per-mall.
+**INVÄNTAR ANTON:** (a) bygga LLM-override, eller (b) GUI-granska bågen. + kopp-fidelity (alltid-nedåt/förlängning) deferred per dig.
+Full detalj: function_gate_ledger.md (2026-06-04). Cron-jobben raderade (mission slut; du live-styr). Konversationen fortsätter direkt.
+＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
 # 🟢 PLANERINGS-ROTEN FIXAD (2026-06-04 ~09:58) — TRANSIT-BÅGE: sving-loop + bin-kollision ELIMINERADE (verifierat 6/6)
 Anton (GUI-5): "svingen+kollisionen oacceptabla, planerar fel sen rättar sig, planeringen måste bli 100% först. jobba på."
 ROT: den direkta bakom→fram-transporten (S3 lift → S4) tvingade en IK-gren-omkonfiguration = upp/ut-loopen ("planerar fel sen rättar sig") + överarm-mot-bin-vägg.
