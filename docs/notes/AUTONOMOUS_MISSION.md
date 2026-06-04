@@ -1,4 +1,12 @@
 ＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+# 🟢 PLANERINGS-ROTEN FIXAD (2026-06-04 ~09:58) — TRANSIT-BÅGE: sving-loop + bin-kollision ELIMINERADE (verifierat 6/6)
+Anton (GUI-5): "svingen+kollisionen oacceptabla, planerar fel sen rättar sig, planeringen måste bli 100% först. jobba på."
+ROT: den direkta bakom→fram-transporten (S3 lift → S4) tvingade en IK-gren-omkonfiguration = upp/ut-loopen ("planerar fel sen rättar sig") + överarm-mot-bin-vägg.
+FIX (commit 19a0910e, default ON): vinkel-BÅGE på sub-bin-radie (R=0.45) + hög apex insatt mellan S3/S4 → armen viker IN, roterar runt basaxeln, sträcker UT+NER till binnen = ren "lyft→vänd→placera".
+VERIFIERAT (fresh headless Kit): CP-70 loop z1.49→1.26 / y0.63→0.45, transit-tilt 4.4°→2.0°, monoton rotation, INGEN vägg-kontakt, levererar err 0.
+ALLA 5 bakom-kub (CP-70/69/82/75/86): **bin-kollision BORTA** (noll upper_arm|Wall), levererar err~0. Dexterösa CP-79 (båge ej aktiv): orörd. Franka sug-gated = byte-identisk (37 orörda). grip-FJ=0 (bara planerings-waypoints).
+KVAR: (1) DIN GUI-granskning — är den rena rotationen ditt 100%? (2) per-geometri båg-trim (CP-75 transit-tilt 9.9° = högst). (3) kopp-fidelity (alltid-nedåt/förlängning) = deferred per dig.
+＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
 # ✅ UR10 STATUS (2026-06-04 ~07:13) — 96752f8e LEVERERAR 6/6 (grader); dina symtom var GAMLA koden, redan fixad
 **Kärnbudskap:** på NUVARANDE kod (96752f8e) visar gradern att **alla 6 UR10 levererar dead-center, flush (~1.5mm), upprätt,
 mjukt, grip-FJ=0** — CP-70 (err 0.0, STATE=OK, ×2 verifierat), CP-69 (err 0.001), CP-82 (båda kuber→rätt bin), CP-79/75/86 (err 0.0).
