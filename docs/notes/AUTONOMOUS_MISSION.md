@@ -1,21 +1,19 @@
 ＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
-# 🚨 BREAKING (2026-06-04 ~07:00) — UR10-"REGRESSIONEN" VAR KORRUPT WARP-CACHE, INTE KODEN
-Din GUI 2026-06-03 ("ännu sämre, KASTAR kuber + planeringsfel + telepati") = **miljö, inte kod**. Den körande headless-Kit:en
-hade **4 NVRTC-fel** i /tmp/isaac_sim_launch.log ("CuboidDataWarp_<hash> undefined") = warp-cache-PCH-korruptionen som
-spräcker cuRobos KOLLISIONS-kärnor → plan_pose failar / spastisk rörelse = exakt "kastar runt + planeringsfel".
-ÅTGÄRD (diagnostic-first, per din egen prompt "grep NVRTC FÖRST"): dödade korrupt Kit på explicit PID, rensade ~/.cache/warp
-(203M), startade om headless FÄRSKT → 0 NVRTC. Mätte om (kod byte-identisk, git f0097edc):
- - **CP-70** (kub bakom @-0.5): err 0.0, seated +15mm, tilt 1.1°, impact -0.36 (peak 2.34 m/s — INGEN 11 m/s-kastning), **STATE=OK**, slutar I BINNEN [0.5,-0.3,0.785], gap ~1.5mm fysiskt = FLUSH, up=1.0 hela vägen.
- - **CP-69** (kub LÅNGT bakom @-1.0, den HISTORISKT VÄRSTA 11 m/s-flingaren): err 0.001, seated, tilt 1.4°, peak 2.35, I BINNEN.
-=> Kastning + planeringsfel + telepati = **cachen** (telepatin dessutom pre-96752f8e; på ren cache är kuben ~1.5mm från koppen = flush).
-Koden (96752f8e) är BRA. Render (skaft+pad) + tiny-cup också fixat. **REMEDY (redan automatiserat i drift_gated.sh): vid
-NVRTC → rensa ~/.cache/warp + starta om Kit.** Korruptionen ÅTERKOMMER (känd Warp-PCH-bug), det är INTE en kod-defekt.
-KVAR av UR10:s ARBETANDE set = ENBART den platsdrivna SVINGEN (beslutsläget nedan). Allt annat du klagade på (kast/planfel/telepati/render/pyttekopp) på de 6 = LÖST.
-CLUSTER BEKRÄFTAT: alla 6 (CP-70/69/82/79/75/86) levererar dead-center på ren cache (mätt builds 1-6, låg degradering, PASS = pålitligt).
-VIKTIG NYANS (spot-check): cachen REGRESSERADE det redan-arbetande settet (nu återställt) — den gjorde INTE de genuint-svåra mallarna
-till "kaos-victims". På REN cache failar fortfarande: CP-83 (seed-snap), CP-NEW-palletizer-layer-stack (din "kaos" är ÄKTA: 0.10m-LÅDOR
-slirar på 5cm-tunad grip → 12 m/s fling), CP-71 (0/4 men build #9 = degraderings-osäkert, var 3/4 historiskt — behöver fresh-Kit-omkörning).
-Dessa = genuina per-mall-fixar (djup grip-rot för icke-5cm-payload = riskabelt mot de 6, ditt val), INTE cache. Inga cache-victim-vinster hittade.
+# ✅ UR10 STATUS (2026-06-04 ~07:13) — 96752f8e LEVERERAR 6/6 (grader); dina symtom var GAMLA koden, redan fixad
+**Kärnbudskap:** på NUVARANDE kod (96752f8e) visar gradern att **alla 6 UR10 levererar dead-center, flush (~1.5mm), upprätt,
+mjukt, grip-FJ=0** — CP-70 (err 0.0, STATE=OK, ×2 verifierat), CP-69 (err 0.001), CP-82 (båda kuber→rätt bin), CP-79/75/86 (err 0.0).
+**Inväntar din GUI-bekräftelse** (jag litar på dina ögon över gradern).
+**Dina 2026-06-03-klagomål (kastar/telepati/render/pyttekopp) var på GAMLA koden (tip ec609990, GUI_REVIEW4 — PRE-96752f8e).**
+96752f8e (committat ~23:30, EFTER din review) fixade exakt dessa: pz 0.045→0.035 (flush, ej telepati), kopp-render skaft+pad,
+drop_yaw=0. De 6 levererar nu = bekräftar att fixen håller.
+**ÄRLIG KORRIGERING:** jag påstod först (~07:00) "regressionen var korrupt warp-cache" — det var ÖVERdrivet. Jag mätte ALDRIG
+pre-clear-Kit:en, och de 4 NVRTC-raderna i loggen är **NON-FATALA** (CP-70 levererar med dem närvarande; de 6 mättes med dem
+i loggen). Cache-rensningen var FÖRSIKTIGHETSÅTGÄRD (färsk session = bra hygien), INTE den bevisade fixen. Den bevisade fixen
+är 96752f8e (kod). Lärdom: attribuera inte en fix till en åtgärd utan mätt före/efter på samma kod. (Resonemangs-spåret står i ledgern.)
+**KVAR av det arbetande settet = ENBART den platsdrivna SVINGEN** (beslutsläget nedan) — levererar men loopar i transit för bakom-kub-picks.
+**Genuint svåra (failar på nuvarande kod, EJ cache):** CP-83 (seed-snap), CP-NEW-palletizer-layer-stack (din "kaos" är ÄKTA:
+0.10m-LÅDOR slirar på 5cm-tunad grip → 12 m/s fling), CP-71 (0/4 men build #9 = degraderings-osäkert, var 3/4 historiskt). Dessa =
+genuina per-mall-fixar (djup grip-rot för icke-5cm-payload = riskabelt mot de 6, ditt val), INTE cache.
 ＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
 # ►► ANTON — 30-SEKUNDERS BESLUTSLÄGE (UR10) — 2026-06-04 ~06:40 ◄◄
 **FIXAT + committat (96752f8e, fix-set intakt):** UR10-suction-kvaliteten vid roten — telepati (pz=0.035, flush grepp),
