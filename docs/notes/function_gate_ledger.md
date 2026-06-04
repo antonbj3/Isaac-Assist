@@ -3463,3 +3463,18 @@ front). Verified on the real canonical CP-79: cone_z=[0.82,1.32] cone_y=[-0.40,0
 each is a TEMPLATE edit: move role_defaults.workpieces[0].position into the dexterous front workspace (e.g. x~+0.5..0.6,
 |y|<0.45). NOT applied unilaterally — changing canonical scene geometry is Anton's call (pragmatic placement-redesign vs
 deep cuRobo for arbitrary LLM placements vs accept the deliver-but-swing).
+
+### 2026-06-04 ~06:40 — UR10 swing: GENERAL-FIX (b) attempted (manipulability IK-seed) — DEFINITIVELY does not work
+A Kit-free feasibility study (5-agent workflow) identified the one viable general lever: re-rank cuRobo's IK BRANCH
+solutions by manipulability (|det J|, square 6-DOF Jacobian) before trajopt, so trajopt reaches a HOLDABLE (non-singular)
+branch without the singularity-avoidance swing. I IMPLEMENTED it (pick_place _plan_pose_manip: ik_solver.solve_pose ->
+per-branch Yoshikawa via a compute_jacobian Kinematics -> top-k seed -> trajopt_solver.solve_pose, UR10-gated, fallback to
+plan_pose). RESULT (CP-70, cube-tracked): manip-ONLY ranking picks a DISTANT non-singular branch -> trajopt swings WILDLY to
+reach it (cone_z -0.95..1.88 = worse/chaos, cube off-target). Adding a distance-to-current BLEND fixes the chaos and it
+DELIVERS again (err 0) — but the swing is UNCHANGED (cone_z 0.84..1.52, cone_y -0.35..0.67 = baseline). ROOT (now fully
+proven): there is NO near-current holdable branch — the holdable config for a behind-robot/near-singular target is inherently
+DISTANT (it requires the base rotation), so reaching it IS the swing. Manipulability seed-reordering cannot avoid the swing
+because the swing is the necessary PATH to the holdable branch, not a bad branch CHOICE. => (b) the general planner fix is NOT
+achievable with cuRobo's config/API surface (confirmed by implementation, not just analysis). (a) the scene-design lever
+(dexterous placements -> validated clean on CP-79 + a CP-70 variant) is THE answer. Lever 1 reverted; committed fix-set 96752f8e
+intact. The cube delivers through the swing today on all 6 UR10 (gate passes).
