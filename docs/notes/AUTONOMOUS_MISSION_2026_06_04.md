@@ -272,3 +272,14 @@ IK-infeasible). FULL fresh-Kit verification: CP-69 ✅ CP-70 ✅ CP-01 ✅(no-re
 => ALL landed fixes stable on fresh Kit, NO regressions introduced. The autonomous run is fully closed
 + verified. Remaining failures are architectural (Anton's decisions) or the unified conveyor fix (needs
 a focused fresh-context session, not blind attempts). Cron armed for await-Anton / occasional regwatch.
+
+## 2026-06-05 (grind) — CP-52: belt-band + Z-settle BOTH ineffective (time-series-verified); real root = lock deadlock
+Per Anton's rule (review time series EVERY time, no quick grader interpretation):
+- Belt-band fix: CP-12/52 unchanged, CP-65 FLUNG (reverted).
+- Z-settle height-discriminating fix: CP-52 time-series (per-robot ctrl over 30s) shows FrankaB plan_calls=0
+  UNCHANGED, FrankaA pc=8/picked=""/cubes STATIC the whole run. So FrankaB never reaches _cube_to_pick →
+  the Z-settle gate is NOT the block (reverted). REAL ROOT: lock/state-machine deadlock — FrankaA planned
+  ONE cycle (pc=8) but never moved its cube + holds MOVE_LOCK; FrankaB blocked at the wait_sensor mutex-
+  guard / move-token. FrankaA's Cube_2 (-1.15) IS in reach (0.76<0.85) yet never moves → FrankaA stuck in
+  settling/executing after planning, not releasing. Both agent fixes missed because the block is the LOCK,
+  upstream of claim. NEXT: deep-dig why FrankaA plans-but-doesn't-execute + holds MOVE_LOCK forever.
