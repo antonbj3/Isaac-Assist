@@ -3513,3 +3513,21 @@ GENERAL-planner lever for the UR10 swing/brush lands in deep-cuRobo (Anton's cal
 cube+bin in the dexterous front workspace) is the clean, validated, transfer-friendly answer; the cube DELIVERS through
 the swing today on all 6 UR10 (gate passes). UR10 root = triangulated from 3 angles (IK-branch / scene-design /
 collision-model), all consistent. Moving to independent secondary work (no UR10-canonical or shared-planner edits w/o OK).
+
+### 2026-06-04 ~07:05 — WAKE STATE (read this + the mission-doc top block on next wake)
+This wake's work (all docs-only; handlers byte-identical to 96752f8e — verified via git diff --stat):
+ - UR10 swing/root: TRIANGULATED 3 ways (IK-branch reseed / manipulability-IK-seed / collision-world+cup), all consistent →
+   every GENERAL-planner lever lands in deep/risky cuRobo = Anton's call; scene-design (dexterous front placement) is the
+   clean, validated, transfer-friendly answer. Collision-world hypothesis CHECKED & REFUTED (non-/World/Bin dest is the
+   WORKING config; 19 Franka templates prove it). cup-collision candidate predicted-infeasible (goal-pose-in-bin → plan-fail).
+ - Mission-doc top = pristine 30-sec DECISION SUMMARY + PRE-STAGED (a)-execution spec (per-template scoped: CP-75/86 trivial
+   1-liner, CP-82 easy 2-liner, CP-70/69 = conveyor-move design-choice) → "kör (a)" = instant apply.
+ - Dual-Franka build-bugs FULLY diagnosed (Kit-free): CP-67 (FrankaA y0.5→0.38 clears conveyor; FrankaB-table = pedestal/arm
+   not base-overlap; full chain needs GUI), CP-52 (Cube_1 x=-1.4 OOR 0.985m + belt-perceived-still → fix: spawn Cube_1 x≥-1.26),
+   CP-76 (goal-vs-impl: static pedestal vs intended mid-air hold = hard, not a spawn bug).
+STATE: everything tractable is ANTON-GATED — UR10 = decision (a/b/c); dual-Franka = geometry-OK + GUI-verify; suction-unstack
+(tray/heap/palletizer-layer) = coupled to the concluded suction root. The autonomous gate-win vein is exhausted; prep is maximal.
+NEXT WAKE (if Anton still away): more Kit-free build-bug surveys of pending clusters (conveyor-sync CP-12/3-station/inspect-reject)
+to produce ready-to-fix diagnoses; do NOT manufacture risky Kit/handler edits or re-chase the exhausted swing levers; keep system
+clean for Anton's GUI return (headless Kit @8001 alive — if he wants GUI he kills it + launches DISPLAY=:1). If Anton returns with
+a decision → execute (a) instantly per the pre-staged spec, or the chosen dual-Franka fix. Deadline 2026-06-04 12:00. Tip 4e56ac3e.
