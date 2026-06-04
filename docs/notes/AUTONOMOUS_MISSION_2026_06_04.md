@@ -72,3 +72,20 @@ per-canonical handler bugs. Honest implication: these templates as authored plac
 can't reach flange-down; fixes = (a) a tool-offset for non-suction drops (flange stays high), (b)
 relax drop orientation, or (c) template geometry (drop higher/closer). The plannability flag should
 catch these at gen time. Landed: destination-exclude fallback (additive, unblocked CP-85 planning).
+
+## 2026-06-04 ~21:50 — COMPLETE UR10 cluster characterization
+| canonical | verdict | root |
+|---|---|---|
+| CP-69 | deliver (w/ swing) | far-pick branch-flip (envelope) |
+| CP-70/75/79/82/86 | DELIVER OK | suction, clean |
+| CP-83 | fail (swing/envelope) | wrist 290°/elbow 243° smooth swing, no deliver |
+| CP-84/85 | fail (drop IK-infeasible) | non-suction flange can't reach low+far down-oriented (measured ik_ok=False) |
+| CP-80 | fail (VIOLENT thrash) | wrist_1 525°, 172 reversals, peak rot 1789°/s — controller/physics blow-up (elevated conveyor) |
+| CP-81 | fail (VIOLENT explosion) | peak TOOL speed 27 m/s, rot 1799°/s — physics blow-up (two-cube pedestal) |
+| CP-71 | grader OK now (fix landed) | dispenser-fill — needs closer delivery check |
+| CP-73 | not gradable by this tool | Cortex behaviour-tree mode (different verifier needed) |
+TWO root-classes among the 7 non-clean: (A) REACH/ORIENTATION ENVELOPE (CP-69/83/84/85) = plannability
+story, needs orientation-relax / template-geometry / the plannability flag; (B) VIOLENT BLOW-UP
+(CP-80/81) = controller/physics instability, distinct + likely more tractable. CP-71/73 = different modes.
+LANDED tonight: support-surface fix (CP-69), grader robustness (all measurable), destination-exclude
+(CP-85 planning), scene_eyes tool, full swing RCA. NEXT: investigate CP-80/81 blow-up (distinct bug).
