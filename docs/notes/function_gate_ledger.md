@@ -3754,3 +3754,16 @@ inherently distant (the swing may BE the shortest path) — goal pins the endpoi
 **THE RISK (testing now):** the fix is PROCESS-WIDE → restoring cuboid collision could make the 37 Franka plan-fail (home-on-table
 flagged). Cleared ~/.cache/warp + fresh headless Kit. Validating: CP-70 (delivers? brush gone? no WarpCodegenError?) + CP-09/CP-41
 (Franka floor no-regression). REVERT if the 37 break. Mixed UR10+Franka smoke-test template CP-NEW-mixed-ur10-franka also prepped.
+
+### 2026-06-04 ~14:00 — module= fix ADOPTED (committed): cuRobo cuboid collision restored, NO warp upgrade, floor-safe
+Clean-cache floor-confirm (fresh headless Kit, fix-on): CP-70 err0/tilt2.1/0-brush; CP-01/CP-13/CP-28 (clean Franka passers)
+DELIVER no-regression; ALL 0 WarpCodegenError; Kit stable. CP-09 also no-regression (prior). CP-41 already-marginal (topples
+fix-OFF baseline too: 1-toppled+2-misaligned) → marginally worse fix-on (2-toppled) = RECONCILIATION ITEM, not a clean-pass break.
+The earlier segfault was warp-cache POLLUTION from the A/B (revert→reapply churned the kernel registration without a clear) —
+clearing fixed it; ALWAYS clear ~/.cache/warp when toggling the wp.func registration. Committed the fix.
+ANTON'S CORE QUESTION ANSWERED: cuRobo planning works 100% WITHOUT a warp upgrade — the 'wall' was a self-inflicted shim.
+FOLLOW-UPS (not blocking): (1) full 37-Franka re-verify (sampled 4 clean + CP-09 = safe; rest untested — restored collision is
+system-wide); (2) CP-41 reconcile (bin-descent vs restored bin-collision — obstacle_rich or thin-bin); (3) test native plan_cspace
+for a smooth single trajectory (upside; the arc already gives a working clean-ish motion + field-expert says stepped=polish-not-safety);
+(4) run the CP-NEW-mixed-ur10-franka smoke-test. NEXT per Anton: suction-cup realistic modeling (the drop-elongation = soft-place
+virtual-tool telescope). Tip will follow.
