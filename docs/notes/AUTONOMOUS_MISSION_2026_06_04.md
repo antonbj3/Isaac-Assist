@@ -33,3 +33,8 @@ CP-69, CP-70, CP-71, CP-73, CP-75, CP-79, CP-80, CP-81, CP-82, CP-83, CP-84, CP-
 
 ## PROGRESS LOG (update as I go — survives compact)
 - 2026-06-04 ~end-of-day: mission started. scene_eyes built+committed. Swing RCA committed. Verified today: CP-70/75/79/82/86 deliver clean; CP-69 delivers-with-swing (far-pick). Next: full ground-truth pass on the rest (CP-71/73/80/81/83/84/85 + CP-07/54).
+
+## RESUME / durability
+- Cron backstop (session-only): daa19c89 ("7,22,37,52 * * * *"). If the session restarted and it's gone, RECREATE it (fires only when idle → resumes the chain). 
+- On compact/resume: read this doc's PROGRESS LOG + /tmp/ur10_gt.txt + memory. Continue; don't restart from scratch.
+- Active loop: ground-truth batch (/tmp/ur10_groundtruth.sh → /tmp/ur10_gt.txt) running headless; waiter notifies on UR10_GT_DONE.
