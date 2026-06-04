@@ -164,3 +164,15 @@ DON'T re-sweep UR10 (done: 6/13, 7 known-hard documented). DON'T rabbit-hole the
 - DECISION: don't high-risk-fiddle the claim-logic for marginal gains. Complete the LANDSCAPE instead
   (ground-truth remaining clusters) so the review has the full picture. Launched cluster #3 (dual-Franka
   CP-51/52/53) ground-truth -> /tmp/c3_gt.txt.
+
+## 2026-06-05 ~01:00 (cron) — cluster #3 (dual-Franka) verdict + landscape near-complete
+CP-51 (relay): Cube_1 picked then FLUNG (final [0,-0.29], not Bin[0.7,-0.5]). CP-52 (shared-bin): Cube
+1-4 NEVER MOVED (stayed at start row y=0.4, impact_vz~-0.05, 0 picks — robots idle, possible claim-mutex
+deadlock). CP-53 (staging relay): Cube_1-3 picked then FLUNG. => cluster #3 = 0/3, MULTI-ROBOT handoff
+broken (known-hard: shared-mutex/handoff-sync/seed-bias per memory). CP-52's never-moved is the most
+distinct (idle, not fling) — possible tractable deadlock if revisited.
+LIBRARY-HEALTH PICTURE (this run): UR10 6/13 (7 hard: envelope+cone). Cluster#2 conveyor good (CP-12 2/3,
+3station 6/7, inspect-reject 5/5; subtle belt-edges). Cluster#3 dual-Franka 0/3 (multi-robot, hard).
+=> failures concentrate in HARD CLASSES (reach-envelope, cone-physics, multi-robot, belt-timing); cheap
+wins scarce. Launched cluster #4-5 (CP-05 flip + stacking) ground-truth -> /tmp/c45_gt.txt to complete
+the map, then write a comprehensive library-health OVERVIEW for Anton's review.
