@@ -10,8 +10,12 @@ spräcker cuRobos KOLLISIONS-kärnor → plan_pose failar / spastisk rörelse = 
 => Kastning + planeringsfel + telepati = **cachen** (telepatin dessutom pre-96752f8e; på ren cache är kuben ~1.5mm från koppen = flush).
 Koden (96752f8e) är BRA. Render (skaft+pad) + tiny-cup också fixat. **REMEDY (redan automatiserat i drift_gated.sh): vid
 NVRTC → rensa ~/.cache/warp + starta om Kit.** Korruptionen ÅTERKOMMER (känd Warp-PCH-bug), det är INTE en kod-defekt.
-KVAR av UR10 = ENBART den platsdrivna SVINGEN (beslutsläget nedan). Allt annat du klagade på (kast/planfel/telepati/render/pyttekopp) = LÖST.
-(Cluster-bekräftelse CP-82/79/75/86 på ren cache pågår — uppdateras i ledgern.)
+KVAR av UR10:s ARBETANDE set = ENBART den platsdrivna SVINGEN (beslutsläget nedan). Allt annat du klagade på (kast/planfel/telepati/render/pyttekopp) på de 6 = LÖST.
+CLUSTER BEKRÄFTAT: alla 6 (CP-70/69/82/79/75/86) levererar dead-center på ren cache (mätt builds 1-6, låg degradering, PASS = pålitligt).
+VIKTIG NYANS (spot-check): cachen REGRESSERADE det redan-arbetande settet (nu återställt) — den gjorde INTE de genuint-svåra mallarna
+till "kaos-victims". På REN cache failar fortfarande: CP-83 (seed-snap), CP-NEW-palletizer-layer-stack (din "kaos" är ÄKTA: 0.10m-LÅDOR
+slirar på 5cm-tunad grip → 12 m/s fling), CP-71 (0/4 men build #9 = degraderings-osäkert, var 3/4 historiskt — behöver fresh-Kit-omkörning).
+Dessa = genuina per-mall-fixar (djup grip-rot för icke-5cm-payload = riskabelt mot de 6, ditt val), INTE cache. Inga cache-victim-vinster hittade.
 ＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
 # ►► ANTON — 30-SEKUNDERS BESLUTSLÄGE (UR10) — 2026-06-04 ~06:40 ◄◄
 **FIXAT + committat (96752f8e, fix-set intakt):** UR10-suction-kvaliteten vid roten — telepati (pz=0.035, flush grepp),
