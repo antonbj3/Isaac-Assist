@@ -38,3 +38,25 @@ CP-69, CP-70, CP-71, CP-73, CP-75, CP-79, CP-80, CP-81, CP-82, CP-83, CP-84, CP-
 - Cron backstop (session-only): daa19c89 ("7,22,37,52 * * * *"). If the session restarted and it's gone, RECREATE it (fires only when idle → resumes the chain). 
 - On compact/resume: read this doc's PROGRESS LOG + /tmp/ur10_gt.txt + memory. Continue; don't restart from scratch.
 - Active loop: ground-truth batch (/tmp/ur10_groundtruth.sh → /tmp/ur10_gt.txt) running headless; waiter notifies on UR10_GT_DONE.
+
+## GROUND-TRUTH (2026-06-04 ~20:10, headless) — full UR10 cluster
+- DELIVER OK (verified today): CP-69 (w/ swing, far-pick), CP-70, CP-75, CP-79, CP-82, CP-86.
+- CP-84 (stack) + CP-85 (color-route): cuRobo, PICK ok but DROP plan FAILS (res_None, NO collision warning) — descend goal goes BELOW table (z=0.685 < 0.75). Root: handler descends drop_target−approach_h → into the table for SURFACE drops (fine for bin-drops which release high). SHARED root candidate.
+- CP-80 (elevated conveyor z=0.95): cuRobo THRASH — wrist_3 958°, 183 reversals, no delivery. Distinct (elevated-height instability).
+- CP-81 + CP-83 (two-cube pedestal): not delivered (OFF_TARGET / Cube_2 flung). CP-83 known-hard (memory).
+- CP-71 (dispenser-fill 4 cubes) + CP-73 (Cortex-BT conveyor): grader returns empty (different modes — may not be standard deliver tasks; verify separately).
+- GRADER BUG (separate): scene_timeseries crashes Sdf.Path(None) (TS_PARSE_FAIL) on non-delivering/non-standard templates — measurement only.
+- FIX ORDER: (1) drop-descend-below-surface CP-84/85 [shared, safe-gated] → (2) CP-80 thrash → (3) CP-81/83 two-cube → (4) CP-71/73 mode-check + grader robustness.
+
+## 2026-06-04 ~20:40 — grader fix landed + drop-fail root refined
+- GRADER FIX (LANDED, verified): scene_timeseries.py (run-dir /home/anton/.isaac_qa/run/) now auto-detects
+  the ArticulationRoot when role_defaults.primary_robot is unset (CP-80/84/85 etc had it None → grader picked
+  /World/Franka → EE None → Sdf.Path(None) crash). Also None-guards wp()/bbox(). CP-84 now grades. GENERAL.
+  (Run-dir tool, not in repo — recorded here.)
+- ROOT (refined, shared CP-81/83/84/85 pedestal→destination drops): _build_segments plans ALL segments
+  UPFRONT; a failing DROP plan (res_None) aborts the WHOLE pick-place → arm never moves → cube stays aloft
+  (joints=0 + "PICKED" but cube at start = this, not a grasp). Drop excludes only the held cube
+  (exclude_obs=S["picked_path"]), NOT the destination (stack BaseCube / bin) → with collision restored the
+  non-suction descend onto the destination collides → res_None. Suction dodges it via high release.
+- NEXT FIX: exclude the DESTINATION from collision on the drop/descend segment (extend _build_scene_cfg /
+  exclude_obs to a list). Verify CP-84 delivers + CP-70 (suction) byte-identical. Likely lands 4 canonicals.
