@@ -60,3 +60,15 @@ CP-69, CP-70, CP-71, CP-73, CP-75, CP-79, CP-80, CP-81, CP-82, CP-83, CP-84, CP-
   non-suction descend onto the destination collides → res_None. Suction dodges it via high release.
 - NEXT FIX: exclude the DESTINATION from collision on the drop/descend segment (extend _build_scene_cfg /
   exclude_obs to a list). Verify CP-84 delivers + CP-70 (suction) byte-identical. Likely lands 4 canonicals.
+
+## 2026-06-04 ~21:20 — DECISIVE root: hard canonicals = UR10 reachability/orientation envelope
+Measured (cspace ik_ok per-plan): CP-84 drop goal [0.5,-0.4,0.825] ik_ok=FALSE (zero IK seeds);
+same xy at z=1.005/1.175 ik_ok=True. So the drop pose is IK-INFEASIBLE: the NON-SUCTION UR10 flange
+can't reach z=0.825 @ r=0.64 with down-orientation. CP-69/70 (suction) deliver to z=0.785 because the
+cone tool-offset (~0.16m) keeps the FLANGE high while the tip is low. => CP-84/85 (ee_link, no offset)
++ the CP-69 swing + likely CP-80/81/83 are ALL the same root: targets near/beyond the UR10 down-
+orientation reach envelope. This IS the plannability-constraint story (long-term direction) — NOT
+per-canonical handler bugs. Honest implication: these templates as authored place drop goals the UR10
+can't reach flange-down; fixes = (a) a tool-offset for non-suction drops (flange stays high), (b)
+relax drop orientation, or (c) template geometry (drop higher/closer). The plannability flag should
+catch these at gen time. Landed: destination-exclude fallback (additive, unblocked CP-85 planning).
