@@ -3980,10 +3980,22 @@ while _CUROBO_SP in sys.path:
 sys.path.insert(0, _CUROBO_SP)
 importlib.invalidate_caches()
 
-# Warp 1.8.2 vs cuRobo 0.7+ compat patch: wp.func accepts module= kwarg on
-# newer Warp, but Kit bundles 1.8.2. Silently drop the kwarg (see I-28).
+# 2026-06-04 ROOT FIX (RCA-verified): the OLD shim stripped module= from EVERY wp.func call on the FALSE premise
+# "Kit bundles warp 1.8.2". The env actually runs conda warp 1.11.0 (Isaac runs the SAME warp via symlink), whose
+# wp.func NATIVELY supports module= (verified: inspect.signature(wp.func) has 'module'). cuRobo's collision kernels
+# call wp.func(..., module=__name__) so the cuboid/mesh/voxel is_obs_enabled overloads accumulate into ONE module
+# (warp reads scope_locals via inspect f_back.f_back). Stripping module= scattered them -> only the LAST (voxel)
+# survived -> WarpCodegenError "is_obs_enabled [CuboidDataWarp,int32,int32]" + SILENTLY BROKEN cuboid collision
+# (this is also why "cache corruption" looked intermittent historically). FIX: shim ONLY if warp genuinely lacks
+# module= support; otherwise leave warp's NATIVE wp.func untouched. Do NOT wrap (an extra call frame breaks the
+# f_back.f_back scope_locals threading -> re-breaks the overload accumulation).
 import warp as wp
-if not hasattr(wp, "_curobo_pp_orig_func"):
+import inspect as _wp_inspect
+try:
+    _wp_func_has_module = ("module" in _wp_inspect.signature(wp.func).parameters)
+except Exception:
+    _wp_func_has_module = False
+if (not _wp_func_has_module) and (not hasattr(wp, "_curobo_pp_orig_func")):
     wp._curobo_pp_orig_func = wp.func
     def _curobo_pp_patched_func(f=None, *, name=None, module=None, **_kw):
         return wp._curobo_pp_orig_func(f, name=name) if f is not None else wp._curobo_pp_orig_func
