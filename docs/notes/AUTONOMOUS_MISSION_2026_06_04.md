@@ -104,3 +104,15 @@ NEXT (pick on wake, efficient — DON'T rabbit-hole the known-hard cone-physics)
   2. Try drop-only orientation-relax for CP-83/84 (the envelope lever not yet properly tried).
   3. Else pivot to a fresh pending cluster (#11 conveyor-sync, #12 dual-Franka, #13 stacking) for quick wins.
 Don't re-sweep; targeted + predict-then-measure. Cron daa19c89 active.
+
+## 2026-06-04 ~22:15 — UR10 cluster night-verdict + PIVOT to cluster #2
+UR10 FINAL (tonight): 6/13 deliver (CP-69 swing,70,75,79,82,86). 7 known-hard, levers EXHAUSTED:
+ - Envelope (CP-83/84/85 + CP-69-swing): cspace/seeds/ori_tol/pos-only/destination-excl ALL tried,
+   none deliver. ori_tol doesn't reach IK feasibility. = plannability/template-redesign territory.
+ - Cone blow-up (CP-80/81): suction-cone/follower physics instability (CP-81 cone flung to z=-0.43
+   @ 11 m/s) = architectural, Anton's-call.
+ - CP-71 (dispenser cubes end ON_FLOOR, not delivered), CP-73 (Cortex-BT, not gradable by this tool).
+ LANDED: support-surface(CP-69), grader-robustness(all measurable), destination-excl(CP-85 planning),
+ scene_eyes, full RCA. NOT chasing the known-hard 7 further tonight (no quick lever exists; documented).
+PIVOT: cluster #2 conveyor-sync/claim-logic = CP-12, CP-NEW-3station-oee, CP-NEW-inspect-reject.
+Ground-truth launched -> /tmp/c2_gt.txt. Analyze on next wake; fix tractable ones; predict-then-measure.
