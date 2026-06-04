@@ -4582,8 +4582,15 @@ except Exception: pass
 # G1-right coexist in one Kit session without clobbering each other's kinematics.
 # Scope suffix is "all" for single-arm robots (Franka, UR10) which have no scope.
 _PLANNER_SCOPE_TAG = (ARM_SCOPE or "all")
-_PLANNER_ATTR = "_curobo_pp_planner_v22_{{}}_{{}}".format(
-    _CUROBO_ROBOT_CFG.replace(".yml", "").replace(".", "_"), _PLANNER_SCOPE_TAG)
+# 2026-06-04 EXPERIMENT (gated): trajopt/ik seed-count override. Eyes seed-capture showed the
+# planner committed to num_seeds=1 -> a single contorted IK solution (the 223deg transit-flip swing).
+# More seeds let cuRobo explore + pick a lower-cost non-flipping trajectory. Defaults (16/2) keep the
+# cache key + planning byte-identical when the flags are unset (Franka and default UR10 untouched).
+_UR_IK_SEEDS = int(getattr(builtins, "_ur10_ik_seeds", 16))
+_UR_TRAJ_SEEDS = int(getattr(builtins, "_ur10_trajopt_seeds", 2))
+_UR_ORI_TOL = float(getattr(builtins, "_ur10_ori_tol", 0.05))  # 2026-06-04 EXPERIMENT: loosen tool-down lock to test if the forced IK-branch flip (the swing) relaxes
+_PLANNER_ATTR = "_curobo_pp_planner_v22_{{}}_{{}}_s{{}}_{{}}_o{{}}".format(
+    _CUROBO_ROBOT_CFG.replace(".yml", "").replace(".", "_"), _PLANNER_SCOPE_TAG, _UR_IK_SEEDS, _UR_TRAJ_SEEDS, _UR_ORI_TOL)
 _planner = getattr(builtins, _PLANNER_ATTR, None)
 if _planner is None:
     # Old global planner names — keep cleanup for backwards-compat with
@@ -4624,11 +4631,11 @@ if _planner is None:
     _pcfg = MotionPlannerCfg.create(
         robot=_robot_arg,
         use_cuda_graph=False,
-        num_ik_seeds=16,
-        num_trajopt_seeds=2,
+        num_ik_seeds=_UR_IK_SEEDS,
+        num_trajopt_seeds=_UR_TRAJ_SEEDS,
         self_collision_check=_self_coll,
         position_tolerance=0.003,
-        orientation_tolerance=0.05,
+        orientation_tolerance=_UR_ORI_TOL,
         scene_model="collision_primitives_3d.yml",
         collision_cache={{"obb": 32, "mesh": 0}},
     )
@@ -5121,6 +5128,20 @@ def _plan_to_world_point(point_world, current_q7, exclude_obs=None, yaw_deg=0.0,
     q = torch.tensor([[float(x) for x in current_q7[:_ARM_DOF]]], dtype=torch.float32, device='cuda')
     start = JointState.from_position(q, joint_names=_PLANNER_JOINT_NAMES)
     _vhold_applied = False
+    # 2026-06-04 EXPERIMENT (gated): POSITION-ONLY plan. The swing is a geometrically-forced IK branch
+    # flip from the tool being orientation-locked DOWN through the front-center crossing (RCA 2026-06-04).
+    # track_position() costs POSITION only -> orientation free -> trajopt/IK can avoid the flip. Off =>
+    # byte-identical. (Applies to all plans here; transit-only refinement is a follow-up.)
+    if getattr(builtins, "_ur10_pos_only", False):
+        try:
+            from curobo._src.cost.tool_pose_criteria import ToolPoseCriteria as _TPC_po
+            _planner.reset_seed()
+            _planner.trajopt_solver.update_tool_pose_criteria({{_TOOL_FRAME: _TPC_po.track_position()}})
+            _vhold_applied = True
+        except Exception as _poe:
+            try:
+                with open('/tmp/posonly_dbg.log', 'a') as _pof: _pof.write("posonly_fail " + str(_poe)[:140] + "\\n")
+            except Exception: pass
     # 2026-06-03 UR10 SEED-DRIFT fix: reset_seed() is otherwise only called in the vhold>0 path
     # (Franka). For UR10 (_vmode=0) the cuRobo sample buffer ADVANCES across plan calls within a
     # Kit session -> consecutive plans on the same goal resolve to DIFFERENT IK branches -> the
@@ -5210,14 +5231,53 @@ def _plan_to_world_point(point_world, current_q7, exclude_obs=None, yaw_deg=0.0,
         # exception would otherwise fail the plan — cannot break a working plan).
         _PLAN_RETRY = 5 if ROBOT_FAMILY in ("ur10", "ur10e") else 1
         res = None
-        for _pra in range(_PLAN_RETRY):
+        # 2026-06-04 EXPERIMENT (gated): plan_cspace BRANCH-PIN. Eyes seed-capture showed plan_pose lets
+        # trajopt drift to a FLIPPED goal config (the 223deg transit swing) even though IK is seeded from
+        # current (use_implicit_goal=True frees the goal config). plan_cspace fixes the GOAL JOINT CONFIG
+        # (IK-from-current -> closest branch) so trajopt CANNOT flip. Gated => off = byte-identical (Franka
+        # + default UR10). Falls back to plan_pose on any failure. Returns same TrajOptSolverResult type.
+        if getattr(builtins, "_ur10_plan_cspace", False):
+            _csdbg = []
             try:
-                res = _planner.plan_pose(goal, start, max_attempts=3)
-                break
-            except Exception:
-                if _pra == _PLAN_RETRY - 1:
-                    raise
-                continue
+                _ikr = _planner.ik_solver.solve_pose(goal, current_state=start, return_seeds=16)
+                _ikok = bool(_ikr.success.any().item()) if (_ikr is not None and hasattr(_ikr, "success")) else False
+                _csdbg.append("ik_ok=" + str(_ikok))
+                if _ikok:
+                    # branch-continuity: of ALL successful IK seeds, pick the one CLOSEST (L1 joint dist)
+                    # to the current config — forbids the elbow/wrist flip if a continuous solution exists.
+                    _sols = _ikr.solution.reshape(-1, _ikr.solution.shape[-1])
+                    _succ = _ikr.success.reshape(-1)
+                    _sp = start.position.reshape(-1)
+                    _best = None; _bestd = 1e9
+                    for _si in range(_sols.shape[0]):
+                        if not bool(_succ[_si].item()): continue
+                        _d = float((_sols[_si] - _sp).abs().sum().item())
+                        if _d < _bestd: _bestd = _d; _best = _sols[_si:_si + 1]
+                    _csdbg.append("bestd_rad=" + (str(round(_bestd, 2)) if _best is not None else "none"))
+                    _gq = _best if _best is not None else _sols[0:1]
+                    _gjs = JointState.from_position(_gq, joint_names=_PLANNER_JOINT_NAMES)
+                    _cres = _planner.plan_cspace(_gjs, start, max_attempts=3)
+                    _csok = bool(_cres.success[0, 0].item()) if (_cres is not None and hasattr(_cres, "success")) else False
+                    _csdbg.append("cspace_ok=" + str(_csok))
+                    _csdbg.append("gq=" + str([round(float(_x), 3) for _x in _gq.reshape(-1).detach().cpu().numpy()]))
+                    if _csok:
+                        res = _cres
+            except Exception as _cspe:
+                _csdbg.append("EXC=" + type(_cspe).__name__ + ":" + str(_cspe)[:120])
+                res = None
+            try:
+                with open("/tmp/cspace_dbg.log", "a") as _csf:
+                    _csf.write("CSPACE goal=" + str([round(float(_v), 3) for _v in point_world]) + " " + " ".join(_csdbg) + "\\n")
+            except Exception: pass
+        if res is None:
+            for _pra in range(_PLAN_RETRY):
+                try:
+                    res = _planner.plan_pose(goal, start, max_attempts=3)
+                    break
+                except Exception:
+                    if _pra == _PLAN_RETRY - 1:
+                        raise
+                    continue
         if res is None or not bool(res.success[0, 0].item()):
             try:
                 _a_plan_fails.Set(int(_a_plan_fails.Get() or 0) + 1)
@@ -5229,10 +5289,58 @@ def _plan_to_world_point(point_world, current_q7, exclude_obs=None, yaw_deg=0.0,
                 with open("/tmp/curobo_planfail.log", "a") as _f:
                     _f.write(f"{{ROBOT_PATH}} goal={{point_world}} yaw={{yaw_deg}} status={{_st}}\\n")
             except Exception: pass
+            try:
+                import builtins as _ebf
+                if getattr(_ebf, "_eyes_plan_capture", False):
+                    _elogf = getattr(_ebf, "_eyes_plan_log", None)
+                    if _elogf is None:
+                        _elogf = []; _ebf._eyes_plan_log = _elogf
+                    _elogf.append({{"goal": [float(_v) for _v in point_world], "yaw": float(yaw_deg),
+                                    "success": False, "status": str(_st)}})
+            except Exception: pass
             return None
         interp = res.get_interpolated_plan()
         traj = interp.position[0, 0, :, :7].detach().cpu().numpy()
         mt = float(res.motion_time()) if callable(res.motion_time) else float(res.motion_time)
+        # 2026-06-04 EYES plan-capture (gated): record the EXACT cuRobo planned trajectory per
+        # plan call so scene_eyes can read the planner's intended joint path (not infer from
+        # playback). builtins._eyes_plan_capture must be set by the probe; off => zero cost =>
+        # Franka byte-identical (the 37 hold). traj = [knots x 7 joints].
+        try:
+            import builtins as _eb
+            if getattr(_eb, "_eyes_plan_capture", False):
+                _elog = getattr(_eb, "_eyes_plan_log", None)
+                if _elog is None:
+                    _elog = []; _eb._eyes_plan_log = _elog
+                # one-time: record the EXACT result-object format of this cuRobo build
+                if not hasattr(_eb, "_eyes_plan_fields"):
+                    try: _eb._eyes_plan_fields = sorted(a for a in dir(res) if not a.startswith("__"))
+                    except Exception: _eb._eyes_plan_fields = []
+                # cuRobo diagnostic "decision trace" — defensively pull whatever this build exposes
+                def _rd(_n):
+                    try:
+                        _v = getattr(res, _n, None)
+                        if _v is None: return None
+                        if callable(_v): _v = _v()
+                        if hasattr(_v, "item"): return float(_v.item())
+                        if hasattr(_v, "tolist"):
+                            _l = _v.tolist(); return _l[0] if isinstance(_l, list) and len(_l) == 1 else _l
+                        return float(_v) if isinstance(_v, (int, float)) else str(_v)
+                    except Exception: return None
+                _diag = {{_k: _rd(_k) for _k in ("status", "solve_time", "total_time", "ik_time", "graph_time",
+                          "trajopt_time", "finetune_time", "optimized_dt", "motion_time",
+                          "position_error", "rotation_error", "cspace_error",
+                          "seed_cost", "seed_rank", "num_seeds")}}
+                try:
+                    _di = getattr(res, "debug_info", None)
+                    if _di is not None: _diag["debug_info"] = str(_di)[:600]
+                except Exception: pass
+                _etj = traj.tolist() if hasattr(traj, "tolist") else [list(_r) for _r in traj]
+                _est = max(1, len(_etj) // 40)
+                _elog.append({{"goal": [float(_v) for _v in point_world], "yaw": float(yaw_deg),
+                               "success": True, "motion_time": float(mt), "knots": len(_etj),
+                               "diag": _diag, "traj": _etj[::_est]}})
+        except Exception: pass
         return (traj, mt)
     except Exception as _pe:
         try:
