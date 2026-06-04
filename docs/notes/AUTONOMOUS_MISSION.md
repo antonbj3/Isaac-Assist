@@ -1,3 +1,17 @@
+# 🔬 SWING (Anton's "planeringsfel") — DEEPLY DIAGNOSED 2026-06-04 ~06:00, it is LOAD-BEARING (Anton's decision needed)
+Anton (2026-06-04, full autonomy granted, back ~few hours): the remaining UR10 issue is the PLANNING swing, "bin won't help".
+I diagnosed it at the root (restart-FREE in-process planner rebuild + per-segment plan-FK diag): every segment reaches its
+goal err=0; the swing is the PLANNED PATH. The S5 descent swing comes from the suction HOME re-seed (S5 plans from HOME).
+BUT removing it (chained seed -> provably clean descent) FLINGS the cube — isolation test: the cube is held stable over the
+bin 11s then flung AT RELEASE, and is held 0.13 OFF-CENTER (plan reaches center err=0) => the chained-seed descent lands in
+a NEAR-SINGULAR IK branch the arm can't hold -> release fling. The home-reseed SWING routes to a NON-singular HOLDABLE branch.
+=> THE SWING IS cuRobo's SINGULARITY-AVOIDANCE; it is load-bearing (it delivers; clean removal flings). Proven NO-effect:
+cspace_distance_weight, graph-planner. Full evidence in function_gate_ledger.md (2026-06-04 ~05:50 + ~05:55 entries).
+ANTON'S DECISION (two clean levers, both his call): (a) SCENE-DESIGN guideline — keep LLM-scene targets in the UR10's
+dexterous front workspace (the CP-70 cube is BEHIND the robot at x=-0.5 + the bin near a singularity) so the singular branch
+isn't on the path = transfers cleanly; (b) deep cuRobo IK-branch/singularity handling = high-risk vs the 6 working deliveries.
+The cube DELIVERS through the swing today (gate passes). All swing experiments reverted; fix-set 96752f8e intact (CP-70 err 0).
+
 # ✅ COMMITTED 96752f8e (2026-06-03 ~23:30) — UR10 SUCTION QUALITY fixed at the root, cluster-validated, Franka byte-identical
 Anton's GUI complaints addressed (cron mission, deadline 06-04 12:00): (1) TELEPATHY fixed — grasp pz 0.045->0.035 (cone bottom 5mm
 above cube top = clean flush grab); cone-track gap 48-51mm -> 30-38mm. (2) SOFT-PLACE/anti-topple — self-calibrating virtual tool-extend
