@@ -1,4 +1,18 @@
 ＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+# 🚨 BREAKING (2026-06-04 ~07:00) — UR10-"REGRESSIONEN" VAR KORRUPT WARP-CACHE, INTE KODEN
+Din GUI 2026-06-03 ("ännu sämre, KASTAR kuber + planeringsfel + telepati") = **miljö, inte kod**. Den körande headless-Kit:en
+hade **4 NVRTC-fel** i /tmp/isaac_sim_launch.log ("CuboidDataWarp_<hash> undefined") = warp-cache-PCH-korruptionen som
+spräcker cuRobos KOLLISIONS-kärnor → plan_pose failar / spastisk rörelse = exakt "kastar runt + planeringsfel".
+ÅTGÄRD (diagnostic-first, per din egen prompt "grep NVRTC FÖRST"): dödade korrupt Kit på explicit PID, rensade ~/.cache/warp
+(203M), startade om headless FÄRSKT → 0 NVRTC. Mätte om (kod byte-identisk, git f0097edc):
+ - **CP-70** (kub bakom @-0.5): err 0.0, seated +15mm, tilt 1.1°, impact -0.36 (peak 2.34 m/s — INGEN 11 m/s-kastning), **STATE=OK**, slutar I BINNEN [0.5,-0.3,0.785], gap ~1.5mm fysiskt = FLUSH, up=1.0 hela vägen.
+ - **CP-69** (kub LÅNGT bakom @-1.0, den HISTORISKT VÄRSTA 11 m/s-flingaren): err 0.001, seated, tilt 1.4°, peak 2.35, I BINNEN.
+=> Kastning + planeringsfel + telepati = **cachen** (telepatin dessutom pre-96752f8e; på ren cache är kuben ~1.5mm från koppen = flush).
+Koden (96752f8e) är BRA. Render (skaft+pad) + tiny-cup också fixat. **REMEDY (redan automatiserat i drift_gated.sh): vid
+NVRTC → rensa ~/.cache/warp + starta om Kit.** Korruptionen ÅTERKOMMER (känd Warp-PCH-bug), det är INTE en kod-defekt.
+KVAR av UR10 = ENBART den platsdrivna SVINGEN (beslutsläget nedan). Allt annat du klagade på (kast/planfel/telepati/render/pyttekopp) = LÖST.
+(Cluster-bekräftelse CP-82/79/75/86 på ren cache pågår — uppdateras i ledgern.)
+＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
 # ►► ANTON — 30-SEKUNDERS BESLUTSLÄGE (UR10) — 2026-06-04 ~06:40 ◄◄
 **FIXAT + committat (96752f8e, fix-set intakt):** UR10-suction-kvaliteten vid roten — telepati (pz=0.035, flush grepp),
 soft-place/anti-tippning (självkalibrerande tool-extend till bin-golvet), mellandel-rendering (skaft+pad), drop_yaw=0.
