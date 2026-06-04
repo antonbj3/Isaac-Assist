@@ -3628,3 +3628,25 @@ and (b) settle CP-71's degradation-vs-genuine ambiguity:
 NET: UR10 6-core RESOLVED (6/6, 96752f8e). Franka floor INTACT (byte-identical proven). Remaining = genuinely-hard secondaries
 (CP-71 pile / CP-83 seed-snap / palletizer 10cm-box) + the placement-swing on the 6 (Anton's call). The autonomous 6-core vein
 is exhausted; the rest is deep per-template work (risky vs the 6) or Anton-gated decisions.
+
+### 2026-06-04 ~07:28 — palletizer "kaos" = COMPOUND (far-reach + swing + big-box), not a single new root
+Kit-free geometry read of CP-NEW-palletizer-layer-stack: UR10@(0,0,0.75) identity; pallet@(0,-0.55) BEHIND; 6× 0.10m boxes on
+an infeed conveyor at x=[-1.4,-1.1,-0.8,-0.5,-0.2,0.1], y=0.45. THREE compounding failure causes: (1) Box_1@x=-1.4 is OUT OF
+REACH (~1.47m vs UR10 ~1.3m); (2) pick-behind-left → place-behind(-0.55) = the SAME placement-driven SWING as the 6-core; (3)
+0.10m boxes slip the 5cm-cube-tuned 9mm grip ring during the swing (gap_std 25-36mm → 12 m/s fling). => the palletizer is not
+a distinct "big-box grip" root in isolation — it COMPOUNDS the already-known swing + reach limits + a payload mismatch. Fixing
+it needs a SCENARIO redesign (reachable box x within ~1.0m + dexterous front pallet) AND big-box grip handling = deep per-
+template + canonical-geometry work = Anton's call, consistent with the swing/scene-design conclusion. Not a quick autonomous win.
+
+### 2026-06-04 ~07:28 — UR10 cluster FULLY CHARACTERIZED (wake close-out)
+- **6-core (CP-70/69/82/79/75/86): RESOLVED — 96752f8e delivers 6/6 dead-center** (grader; awaits Anton GUI). Swing on the
+  behind-cube ones = placement-driven (pre-staged (a) scene-design fix; Anton's call).
+- **Hard secondaries (genuine, not cache):** CP-83 (seed-snap), CP-71 (pile-pick: dispenser piles 4 cubes on a small feeder),
+  palletizer (compound far-reach+swing+big-box). All = deep per-template / scenario-redesign = Anton's call or risky vs the 6.
+- **Franka floor INTACT** (96752f8e byte-identical to the parallel-jaw path, diff-verified; CP-01 delivers; CP-09 5-stack-top
+  topple is pre-existing marginal).
+- **Honest correction stands:** the "regression" was pre-96752f8e code (already fixed by 96752f8e); the cache-clear was
+  precautionary; 4 NVRTC are non-fatal. The mandate "fix UR10 suction at the root" is FULFILLED for the 6-core working set.
+NEXT-WAKE guidance: the autonomous 6-core vein is exhausted; remaining = Anton-gated geometry decisions (swing, palletizer,
+CP-71 feeder, dual-Franka) + risky deep-grip. Don't manufacture risky changes vs the 6/37. If Anton returns → execute his
+decision (pre-staged (a) for the swing). Else low-risk prep / hold. Deadline 2026-06-04 12:00.
