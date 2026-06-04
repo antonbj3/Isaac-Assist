@@ -5055,6 +5055,23 @@ def _build_scene_cfg(exclude_path=None):
         static_paths = [p for p in PLANNING_OBSTACLES if not _is_scene_floor(p)]
     else:
         static_paths = ["/World/Table", "/World/ConveyorBelt", "/World/Bin"] + list(PLANNING_OBSTACLES)
+    # 2026-06-04 UR10 SUPPORT-SURFACE exclusion. The UR10 is bolted to the table top
+    # (base z=0.75 = table top) and picks cubes that REST ON a conveyor/belt (cube z~0.80,
+    # belt top z~0.78). With cuboid collision RESTORED (the wp.func module= fix, c026078b),
+    # including the support Table/Belt as hard obstacles flags the arm's start config OR the
+    # pick goal as in-collision -> plan_pose returns nothing -> SILENT no-op. Measured root
+    # of the CP-69 regression (3/3 yesterday pre-fix -> 0/5 today; kit log: repeated
+    # "[curobo] Start or End state in collision"; the belt slab is the discriminator — CP-70
+    # /75/82/86 have no belt and still pass). Support surfaces the arm approaches TOP-DOWN are
+    # not obstacles (same principle the comment at the planner-build documents for the Franka
+    # mount table). Bin/walls/pillars stay as real obstacles (this is what the restored
+    # collision correctly avoids). GATED to UR10 -> Franka obstacle set byte-identical (37 hold).
+    if ROBOT_FAMILY in ("ur10", "ur10e"):
+        _SUPPORT_KW = ("table", "belt", "conveyor", "feeder", "ground", "floor")
+        def _is_support(_p):
+            _tail = _p.strip("/").rsplit("/", 1)[-1].lower()
+            return any(_kw in _tail for _kw in _SUPPORT_KW)
+        static_paths = [p for p in static_paths if not _is_support(p)]
     cuboids = {{}}
     # Pre-compute inverse base quat (wxyz)
     _iqw = float(_usd_quat[0]); _iqx = -float(_usd_quat[1])
