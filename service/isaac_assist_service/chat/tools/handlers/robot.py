@@ -6346,6 +6346,15 @@ if sg_prim and sg_prim.IsValid():
             # uses rot stiffness 100 / +/-3rad). body0=cone body1=follower (same for all 4); only localPos differ. REPLACES
             # the old single over-stiffened AP (rot 1e5/+/-0.02rad = weld-equiv) -> faithful suction (slight compliance, breakable@100N).
             _RING_R = 0.009  # 9mm ring radius: all 4 points land inside the 5cm cube top even with placement error
+            # 2026-06-04 HOT-SWAP grip mode (Anton): keep the working WELD as default + add a switchable COMPLIANT
+            # (faithful real-suction-force) mode. Set builtins._ur10_grip_mode="compliant" to test; default "weld" =
+            # the current verified-6/6 behavior (trivial switch-back). Only the suction-axis (transZ) drive differs.
+            import builtins as _bi_gm
+            _GRIP_MODE = getattr(_bi_gm, "_ur10_grip_mode", "weld")
+            if _GRIP_MODE == "compliant":
+                _tz_stiff, _tz_damp, _tz_hi = 5000.0, 100.0, 0.01   # NVIDIA-gantry-style: compliant + 1cm axial give = real breakable suction, not a weld
+            else:
+                _tz_stiff, _tz_damp, _tz_hi = 50000.0, 2000.0, 0.0  # WELD (current/working): rigid hold through the fast transit
             _ap_paths = []
             for _i, (_ox, _oy) in enumerate([(_RING_R, 0.0), (-_RING_R, 0.0), (0.0, _RING_R), (0.0, -_RING_R)]):
                 _app = sg_path + "/AttachmentPoint_" + str(_i)
@@ -6368,10 +6377,10 @@ if sg_prim and sg_prim.IsValid():
                     except Exception: pass
                 _setj(_ap, "isaac:forwardAxis", _S.ValueTypeNames.Token, "Z")
                 _setj(_ap, "isaac:clearanceOffset", _S.ValueTypeNames.Float, 0.002)  # 2026-06-03 gap-fix: was 0.008 (latched cube 8mm early); 0.002 min that clears the 0.0125 cone collider
-                _setj(_ap, "drive:transZ:physics:stiffness", _S.ValueTypeNames.Float, 50000.0)
-                _setj(_ap, "drive:transZ:physics:damping", _S.ValueTypeNames.Float, 2000.0)
+                _setj(_ap, "drive:transZ:physics:stiffness", _S.ValueTypeNames.Float, _tz_stiff)
+                _setj(_ap, "drive:transZ:physics:damping", _S.ValueTypeNames.Float, _tz_damp)
                 _setj(_ap, "limit:transZ:physics:low", _S.ValueTypeNames.Float, 0.0)
-                _setj(_ap, "limit:transZ:physics:high", _S.ValueTypeNames.Float, 0.0)  # 2026-06-03 gap-fix: zero suction-axis standoff (was 0.004 air-gap); rot compliance untouched (ring still faithful/breakable)
+                _setj(_ap, "limit:transZ:physics:high", _S.ValueTypeNames.Float, _tz_hi)  # HOT-SWAP: weld=0.0 rigid | compliant=0.01 (1cm axial give)
                 # FAITHFUL: near-free rotation (was weld-lock 1e5/+/-0.02rad). The 4-point ring resists tilt by GEOMETRY
                 # (force couple across the 18mm span); small rot stiffness only damps jitter -> slight compliance, not weld.
                 for _rax in ("rotX", "rotY", "rotZ"):
