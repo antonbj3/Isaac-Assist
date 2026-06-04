@@ -3689,3 +3689,25 @@ radius (R=0.45) + high apex inserted between S3/S4 → fold-in, rotate around ba
 _build_segments, behind→front-gated (dot<0), UR10/suction-gated (Franka byte-identical), grip-FJ=0 (only planning waypoints).
 Committed default-on (19a0910e); flag _ur10_transit_arc kept for A/B. NEXT: Anton GUI-review (is the clean rotation his 100%?);
 optional per-geometry arc tuning (CP-75 9.9° tilt); cup-fidelity (always-down/extend) deferred per Anton.
+
+### 2026-06-04 ~10:30 — UR10 swing: refined root-diagnosis + native levers EXHAUSTED → guidance fundamentally required (Anton's call a/b)
+Anton (live): "den är inte adaptiv, lös grundproblemet istället först." Re-attacked the cuRobo root + refined the diagnosis:
+ - The swing is trajopt's path for the hard behind→front transit = a MAJOR IK-branch RECONFIGURATION. The cube goes to
+   z≈1.5 (far ABOVE the bin z≈0.87) → NOT obstacle-clearance; the arm folds up high to FLIP its IK configuration
+   (wrist/elbow branch change). Trajopt settles in a reconfiguration local-minimum.
+ - NATIVE config/seed levers tried THIS session and INSUFFICIENT: (1) seed IK from the current config / rank the goal IK by
+   minimal-reconfiguration (manipulability+distance) → delivered but swing UNCHANGED (trajopt re-converges to the reconfig
+   even with the near-branch endpoint); (2) cspace_distance_weight proximal-heavy → ZERO effect; (3) graph-planner enable →
+   ZERO effect. The NV-custom cuRobo build does NOT let itself be steered to the clean branch via config/seed for this transit.
+ - CONCLUSION: cuRobo (this build) cannot plan this clean UNAIDED — a hard 6-DOF behind→front reconfiguration needs an
+   initial-path HINT to escape the reconfig local-min. That's a property of the transit + planner, NOT a config bug. So SOME
+   guidance is fundamentally required. The question is WHICH:
+     (a) blind geometric heuristic = the transit-ARC (committed 19a0910e, default-on, VERIFIED 6/6: collision eliminated +
+         clean monotonic rotation) — works but scene-blind (Anton's "not adaptive" critique = valid for complex scenes).
+     (b) LLM-provided SCENE-AWARE transit hint (Anton's idea: "modifiera cuRobos planering med ord") — the LLM understands
+         the scene and supplies the hint; cuRobo executes/refines it. This is the ADAPTIVE answer for new-scene generality.
+ - One untested DEEP native lever: seed the full trajopt TRAJECTORY (not just the endpoint) with a clean lift-over path.
+   Long shot (endpoint-seed already failed; NV API opaque) + still a non-semantic seed (not more adaptive than the arc).
+FORK PRESENTED TO ANTON (awaiting his steer): (a) exhaust the deep trajopt-trajectory-seed, or (b) build the LLM-guided
+transit-hint as the proper adaptive solution (arc mechanism already exists; expose it as an LLM-set tool arg). I lean (b).
+The transit-ARC remains committed default-on as the working (blind) fallback. R-adaptive radius idea PARKED (untested, reverted).
