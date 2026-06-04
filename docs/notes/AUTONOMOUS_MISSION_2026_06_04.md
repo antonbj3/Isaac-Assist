@@ -137,3 +137,17 @@ claims it (Cube_1/2 deliver fine). Root to confirm + fix:
 Tools: scene_eyes / scene_timeseries (run-dir), grader has the auto-articulation + None-guard fixes.
 DON'T re-sweep UR10 (done: 6/13, 7 known-hard documented). DON'T rabbit-hole the UR10 cone-physics
 (architectural/Anton). Flags reset clean. Kit headless+healthy.
+
+## 2026-06-05 ~00:30 (cron-cycle) — CP-12 fix#1 MISPLACED + reverted; correct target identified
+- MISTAKE caught: I edited the BUILTIN _next_cube (line ~1378) but CP-12 uses target_source="curobo"
+  (the cuRobo handler). So the edit never applied to CP-12 -> Cube_3 still rode off. CP-22 (regression
+  check) stayed clean. REVERTED the misplaced edit (git checkout, was uncommitted). Lesson: confirm the
+  template's handler path (builtin/native/cuRobo/spline/sensor_gated) BEFORE editing a per-path function.
+- CP-12 facts: PickSensor @ x=+0.4 (downstream), belt +0.2 m/s +x, 3 cubes 0.40m apart. Cube_3 reaches
+  the sensor ~t44 while the robot is BUSY (its 3rd cycle) -> not claimed -> belt carries it past -> off
+  the end (x=1.68). Suspect: "Resume belt unconditionally on wait_sensor transition" — belt resumes even
+  with an undelivered cube near the sensor.
+- CORRECT NEXT (careful, fresh context): find CP-12's ACTUAL claim state-machine (native S@~2858 vs
+  cuRobo S@~5322; target_source=curobo => the cuRobo one). Fix = DON'T resume the belt while an
+  undelivered cube is within the sensor zone (hold it until claimed). GATE so the 37 single-robot Franka
+  (paced belts) are byte-identical; verify CP-12=3/3 + spot-check CP-22/CP-08. predict-then-measure.
