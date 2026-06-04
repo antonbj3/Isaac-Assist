@@ -89,3 +89,18 @@ story, needs orientation-relax / template-geometry / the plannability flag; (B) 
 (CP-80/81) = controller/physics instability, distinct + likely more tractable. CP-71/73 = different modes.
 LANDED tonight: support-surface fix (CP-69), grader robustness (all measurable), destination-exclude
 (CP-85 planning), scene_eyes tool, full swing RCA. NEXT: investigate CP-80/81 blow-up (distinct bug).
+
+## 2026-06-04 ~22:00 — honest boundary + NEXT (for cron-wake / fresh context)
+UR10 cluster is FULLY characterized + tractable shared-roots fixed. The remaining 7 are TWO known-hard
+classes, NOT quick handler bugs:
+  (A) reach/orientation ENVELOPE (CP-69 swing / CP-83 / CP-84 / CP-85) → the plannability-constraint
+      story (long-term, [[project_isaac_assist_plannability_telemetry_direction]]). Tractable lever to
+      TRY: proper orientation-relax for the DROP only (pos-only broke the whole solve; do drop-only).
+  (B) suction-cone PHYSICS BLOW-UP (CP-80 thrash, CP-81 cone flung to z=-0.43 @ 11 m/s) → architectural
+      suction-cone/follower instability = Anton's-call per [[feedback_isaac_assist_no_fj_fusk]] history.
+  CP-71 (dispenser-fill: grader now runs, verify delivery) + CP-73 (Cortex-BT: needs a different verifier).
+NEXT (pick on wake, efficient — DON'T rabbit-hole the known-hard cone-physics):
+  1. CP-71 closer delivery check (grader runs now — does the dispenser-fill actually deliver?). EASY win candidate.
+  2. Try drop-only orientation-relax for CP-83/84 (the envelope lever not yet properly tried).
+  3. Else pivot to a fresh pending cluster (#11 conveyor-sync, #12 dual-Franka, #13 stacking) for quick wins.
+Don't re-sweep; targeted + predict-then-measure. Cron daa19c89 active.
