@@ -186,3 +186,18 @@ NEXT (if loop continues): the remaining work is (1) plannability constraint [Ant
 suction-cone [Anton-decide/architectural], (3) multi-robot claim-logic (CP-52 deadlock = tractable entry).
 None are cheap; (3)/CP-52 is the most tractable if a fix-attempt is wanted. Don't high-risk-fiddle the
 conveyor belt-edges or UR10 envelope (documented dead-ends without the constraint).
+
+## 2026-06-05 ~01:35 (cron) — CP-52 confirmed deadlock + DEFINITIVE conclusion
+CP-52: primary EE (FrankaA/panda_hand) displacement = 0.000m ALL run (fully idle), 0 picks, no plan/mutex
+log. = multi-robot claim/move-token DEADLOCK (FrankaA never claims). This is the dual-Franka cluster that
+was NEVER finished (pending), the most intricate code (carefully-built shared-mutex). Safe fix needs a
+dedicated multi-robot pass — NOT bloated-context fiddling (regression risk to the mutex).
+DEFINITIVE NIGHT CONCLUSION: every remaining library failure is HARD/unfinished/architectural —
+  UR10 reach-envelope (CP-69/83/84/85) -> plannability constraint [Anton-decide]
+  UR10 cone-physics (CP-80/81) -> faithful suction [Anton-decide/architectural]
+  multi-robot dual-Franka (CP-51/52/53) -> dedicated claim/handoff pass (CP-52 deadlock = entry)
+  conveyor belt-edges (CP-12/3station) -> risky-marginal, skip
+No cheap wins remain. Night's high-value output = full library map + root-causes + landed fixes +
+recommendations (docs/notes/LIBRARY_HEALTH_OVERVIEW_2026_06_05.md). Loop: cron stays armed; further
+deep fixes are blocked on Anton's architectural decisions or need a dedicated fresh-context multi-robot
+session. On future wakes: re-verify landed fixes hold; don't re-sweep; don't high-risk-fiddle.
