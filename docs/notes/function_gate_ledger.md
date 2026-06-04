@@ -3588,3 +3588,23 @@ Hypothesis: the corrupt cache also poisoned the previously-"failing" suction tem
 a universal poison that suppressed the hard templates. Clearing the cache restores the working set; the genuinely-hard ones
 (CP-83/palletizer-bigbox/CP-71) need real per-template fixes (deep grip root for non-5cm payloads = risky, Anton's call).
 The 6/6 headline is SOLID (measured builds 1-6, early/low-degradation, and PASSES are drift-trustworthy).
+
+### 2026-06-04 ~07:13 — *** CORRECTION: "cache was the regression" was OVERSTATED. The real story: 96752f8e fixed it; cache-clear was precautionary ***
+I walked back the earlier (~06:55) "the regression was the corrupt warp cache" headline after a falsifying test. RECONCILING
+THE DATA (measure-causation discipline):
+ - **The 4 NVRTC log lines are NON-FATAL.** Re-tested CP-70 with 4 NVRTC PRESENT in the launch log → err 0.0, STATE=OK,
+   delivered (git 945e8e62). The 6/6 cluster ALSO delivered with these 4 present (they appeared at CP-70's 06:50 cold compile,
+   right after app-ready line 447, BEFORE the cluster). => 4 NVRTC ≠ broken cache (my own memory: "WARP_FAIL grep over-flags;
+   CP-01 4/4 with NVRTC present"). The cache-clear was NOT the discriminator for the 6/6 delivery.
+ - **I never measured CP-70 on the PRE-clear Kit.** I assumed it was throwing and attributed the fix to the cache-clear without
+   a before/after on the same code = a premature causal claim.
+ - **Anton's 2026-06-03 throwing/telepathy/render was on PRE-96752f8e code (tip ec609990 in GUI_REVIEW4).** 96752f8e (committed
+   ~23:30, AFTER his review + after the cron prompt was written ~21:35) already fixed exactly those: pz 0.045→0.035 (flush),
+   cup-render shaft+pad, drop_yaw=0. The OLD code explains his symptoms without invoking the cache.
+HONEST, DEFENSIBLE FINDING (this is the real deliverable): **On the CURRENT code (96752f8e), the grader shows 6/6 UR10 deliver
+dead-center, flush (~1.5mm), upright, gentle, grip-FJ=0** (CP-70 ×2 + CP-69/82/79/75/86). Anton's complaints map to the pre-fix
+code, already fixed — AWAITS his GUI confirmation (trust his eyes over the grader). The cache-clear+restart was good hygiene
+(fresh session) but is NOT established as the fix. The genuinely-hard templates (palletizer 10cm-box, CP-83 seed-snap) fail for
+REAL reasons (not cache); CP-71 0/4 = degradation-inconclusive. The earlier "cache was the regression" entries (~06:55/~07:00/
+~07:08) stand as the reasoning trail but are SUPERSEDED by this correction. Lesson (logged): don't attribute a fix to an
+intervention without a measured before/after on the same code — I had the 6/6-deliver fact (solid) but over-reached on WHY.
