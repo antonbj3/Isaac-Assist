@@ -218,3 +218,21 @@ still within REACH (claiming pauses+the robot picks it where it stopped). Additi
 cube) => the 37 + working multi-robot byte-identical. Verify CP-12=3/3, CP-52 delivers, + regression
 CP-22/CP-08/CP-51. CONFIRM the exact handler+function first (CP-12 fix#1 was misplaced builtin-vs-cuRobo).
 This would land CP-12, CP-52, likely 3station Cube_7 = the highest-value tractable fix found tonight.
+
+## 2026-06-05 ~02:40 (cron) — CP-52 cuRobo claim located; multi-robot subtlety not fully cracked
+cuRobo claim fn: lines 5648-5748 (build reachable cands -> nearest-to-sensor, or None). CP-52 specifics:
+FrankaA(base -0.5) reaches Cube_2(0.76m) but picked="" / plan_calls=8/fails=0 (plans, never commits);
+FrankaB(base 0.5) reaches Cube_3(0.45m, sitting at SensorB) but plan_calls=0 (never plans). belt force-
+stopped (vel=0). Interaction of move/plan-token (MOVE_LOCK holder=FrankaA) + multi-robot Z-settle gate
+(needs _stab>=6) + belt-pause is NOT fully cracked — and this code governs the WORKING relay CP-65 + the
+37. Editing it in bloated context (after today's CP-12 builtin-vs-cuRobo misplacement) = real regression
+risk for marginal gain. NOT doing it blind.
+DEFINITIVE: all remaining library failures are intricate (UR10 envelope/cone, multi-robot claim/token,
+conveyor overshoot-claim). No safe quick wins. Precise roots all documented (this doc + LIBRARY_HEALTH_
+OVERVIEW). The unified conveyor fix (overshoot-claim) is the best tractable candidate but needs a focused
+session: confirm fn path, gate vs the 37 + CP-65, verify CP-12/CP-52/3station + regressions.
+LOOP GUIDANCE for future cron-wakes: the productive autonomous ceiling for this context is reached.
+Prefer REGRESSION-WATCH (periodically re-verify the landed fixes: CP-69 delivers, CP-70 OK, CP-01/04/22
+deliver, grader doesn't crash) over re-diagnosing the known-intricate items. Don't high-risk-fiddle the
+multi-robot/claim/envelope code. Await Anton's architectural decisions (plannability / faithful-suction /
+dedicated multi-robot pass) or a fresh focused session for the unified conveyor fix.
