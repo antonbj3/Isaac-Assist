@@ -3711,3 +3711,22 @@ Anton (live): "den är inte adaptiv, lös grundproblemet istället först." Re-a
 FORK PRESENTED TO ANTON (awaiting his steer): (a) exhaust the deep trajopt-trajectory-seed, or (b) build the LLM-guided
 transit-hint as the proper adaptive solution (arc mechanism already exists; expose it as an LLM-set tool arg). I lean (b).
 The transit-ARC remains committed default-on as the working (blind) fallback. R-adaptive radius idea PARKED (untested, reverted).
+
+### 2026-06-04 ~11:10 — Native root EXHAUSTED: goal_state lever is WARP-CODEGEN-BLOCKED (definitive)
+Per Anton "solve root first", attempted the genuine native lever: constrain trajopt's goal to the same-branch joint config
+(minimal IK reconfiguration) so cuRobo plans the clean rotation NATIVELY. Introspected the NV-custom planner — `trajopt_solver.
+solve_pose` DOES expose `goal_state` + `seed_traj` (the right API). Implemented: ik_solve seeded from current → nearest-branch
+config → `trajopt_solver.solve_pose(goal, current_state=start, goal_state=cfg)`. RESULT (CP-70, arc OFF + goal_state ON):
+**`WarpCodegenError: 'is_obs_enabled' ... [CuboidDataWarp, int32, int32]`** — calling trajopt_solver.solve_pose DIRECTLY triggers
+cuRobo's `sphere_obstacle_collision_kernel` which hits the **warp 1.11.0 codegen bug** (the CuboidDataWarp family, see
+[[project_isaac_assist_warp_cache_planfail]]). It's a source-level overload mismatch (NOT a stale cache) → needs warp ≥1.13,
+which is INCOMPATIBLE with Isaac 5.1 ([[project_isaac_assist_warp_upgrade]]). The goal_state path soft-failed → plan_pose →
+CP-70 still delivered (err 0.0) but with the swing (transit tilt 5.5°, arc off). plan_pose works (avoids that kernel) but
+(a) has NO goal_state param and (b) produces the unsteerable IK-branch swing.
+=> NATIVE ROOT EXHAUSTED (4 levers): IK-endpoint-seed (swing unchanged), cspace-weight (0 effect), graph-planner (0 effect),
+goal_state-trajopt (WARP-BLOCKED). The native trajopt API that COULD steer it is gated behind a warp version Isaac can't run.
+CONCLUSION (honest, definitive): cuRobo cannot plan this clean UNAIDED on this build. Guidance is fundamentally required. The
+TRANSIT-ARC (committed 19a0910e, default-on, verified 6/6: collision eliminated + clean monotonic rotation) is the working
+solution; the LLM-controllable scene-aware transit hint (Anton's idea) is the adaptive extension. goal_state edit REVERTED
+(blocked dead-code); backup /tmp/pick_place.py.pre_goalstate. If warp is ever upgraded (≥1.13 w/ Isaac compat), the goal_state
+native fix becomes available — the implementation approach is recorded here.
