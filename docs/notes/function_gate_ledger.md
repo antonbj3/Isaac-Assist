@@ -3572,3 +3572,19 @@ The cron mandate named 2 regressor suspects for the UR10 throwing/planfel. Check
      the "planeringsfel" was the cache (NVRTC collision-kernel fails), not these spheres. Shrinking them would make cuRobo
      blind to the tool (clip risk) — they are correct.
 => Neither suspect is a regressor; no revert needed. The diagnostic-first bisect is closed: the regression = warp cache.
+
+### 2026-06-04 ~07:08 — Spot-check: the cache regressed the WORKING set, did NOT unlock the hard ones (no cache-victims)
+Hypothesis: the corrupt cache also poisoned the previously-"failing" suction templates. Spot-checked 3 on the clean cache
+(builds 7-9 of the session — degradation rising, so FAILS are drift-gated-inconclusive, only PASSES trustworthy):
+ - CP-83 (2-cube): Cube_1 FLUNG/TOPPLED/ON_FLOOR (err 0.96), Cube_2 OFF_TARGET (err 1.24). Genuine fail (seed-snap/IK-branch
+   per [[project_isaac_assist_cp83_state]]), NOT cache.
+ - CP-NEW-palletizer-layer-stack (6× 0.10m BOXES): ALL 6 FLUNG/TOPPLED, Box_1 peak 12.16 m/s, gap std 25-36mm (the 10cm box
+   SLIPS wildly on the 5cm-cube-tuned 9mm AttachmentPoint ring → loose grip → fling). Anton's GUI "total kaos" is REAL on a
+   clean cache, not the cache. Root = grip geometry tuned for 5cm cubes can't hold a 10cm box through the swing. Deep per-
+   template grip work (risky vs the 6), NOT a free win.
+ - CP-71 (4-cube dispenser): 0/4 all ON_FLOOR/ON_BELT (err 1.2-1.6), gap std 38-44mm. BUT build #9 (heavy degradation) +
+   historically 3/4 → INCONCLUSIVE (drift-gated: a fail on a degraded Kit is not trustworthy). Needs a fresh-Kit re-run.
+=> CONCLUSION: the warp-cache corruption was a REGRESSION on the ALREADY-WORKING set (6/6 UR10 restored on clean cache), NOT
+a universal poison that suppressed the hard templates. Clearing the cache restores the working set; the genuinely-hard ones
+(CP-83/palletizer-bigbox/CP-71) need real per-template fixes (deep grip root for non-5cm payloads = risky, Anton's call).
+The 6/6 headline is SOLID (measured builds 1-6, early/low-degradation, and PASSES are drift-trustworthy).
