@@ -5835,6 +5835,37 @@ def _build_segments(cube_pos, drop_pos, current_q):
     # (suction/UR10 byte-identical); fail-open in the dispatch (skip if unplannable, never fail the cube).
     if _SG_FOLLOWER_OP is None:
         goals.append((np.array([drop_pos[0], drop_pos[1], h1]), None, drop_yaw))  # S6 retract straight up
+    # 2026-06-04 UR10 TRANSIT-ARC (Anton: swing+collision are the priority root). FLAG-GATED OFF by default
+    # (builtins._ur10_transit_arc) → byte-identical until verified, so the 6 + Franka + GUI-review are untouched.
+    # ROOT: the S3 lift (cube_xy) → S4 transit (drop_xy) is a LARGE behind→front XY move planned DIRECTLY → cuRobo
+    # executes the IK-branch reconfiguration as the up/out LOOP (cube to z~1.5,y~0.6 = "plans wrong then self-corrects")
+    # + the upper_arm sweeps the bin walls. FIX: replace the single direct transit with an angular ARC at a SUB-BIN
+    # radius + high apex — the arm folds IN (inside the bin radius) and rotates around its base axis, then S4 extends
+    # OUT+DOWN to the bin. Clean "lift → turn → place", and folded-in it clears the bin walls until the final descent.
+    # Gated to behind→front (dot((cube-base),(drop-base))<0 = >90° around base); dexterous (CP-79, dot>0) untouched.
+    # UR10/suction-gated → Franka byte-identical. UNTESTED — pending Kit verify + radius/apex/step tuning.
+    try:
+        import math as _math_ta, builtins as _bi_ta
+        if _SG_FOLLOWER_OP is not None and getattr(_bi_ta, "_ur10_transit_arc", False):
+            _bx, _by = float(_usd_pos[0]), float(_usd_pos[1])
+            _cdx, _cdy = float(cube_pos[0]) - _bx, float(cube_pos[1]) - _by
+            _ddx, _ddy = float(drop_pos[0]) - _bx, float(drop_pos[1]) - _by
+            if (_cdx * _ddx + _cdy * _ddy) < 0.0:  # pick & drop >90° apart around the base = the big-rotation swing case
+                _th_c = _math_ta.atan2(_cdy, _cdx); _th_d = _math_ta.atan2(_ddy, _ddx)
+                _dth = _th_d - _th_c
+                while _dth > _math_ta.pi: _dth -= 2.0 * _math_ta.pi
+                while _dth < -_math_ta.pi: _dth += 2.0 * _math_ta.pi
+                _R = 0.45  # sub-bin radius: arm folded-in (bin sits ~0.58 from base) so it clears the bin walls mid-rotation
+                _zc = max(float(h1), float(h_mid_drop)) + 0.10  # high apex → rotate folded-up, not swung-out
+                _n_arc = max(2, int(abs(_dth) / 0.6))  # ~35° angular steps
+                _arc = []
+                for _k in range(1, _n_arc + 1):
+                    _th = _th_c + _dth * (float(_k) / float(_n_arc + 1))
+                    _arc.append((np.array([_bx + _R * _math_ta.cos(_th), _by + _R * _math_ta.sin(_th), _zc], dtype=np.float32), None, drop_yaw))
+                for _g in reversed(_arc):
+                    goals.insert(4, _g)  # arc waypoints between S3 (lift) and S4 (transit) — forces a clean base rotation
+    except Exception as _tae:
+        print("(curobo: transit-arc soft-fail: " + str(_tae) + ")")
     segs = []
     q = np.asarray(current_q, dtype=np.float32)
 
