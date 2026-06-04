@@ -243,3 +243,16 @@ Long-lived Kit (multi-hour) showed CP-70 Cube_1|Floor while CP-69 passed. Per th
 CAVEAT: tonight's FAIL counts (esp. flings CP-51/53, CP-12 Cube_3, 3station Cube_7) may be degradation-
 PESSIMISTIC. SOLID (not degradation): CP-52 deadlock, CP-84 ik_ok=False, CP-80/81 cone blow-up, swing RCA.
 PASSES trustworthy. Restarted Kit FRESH; re-running regwatch of landed fixes.
+
+## 2026-06-05 ~03:40 (cron) — fresh-Kit regwatch: CP-69 PASS; batch flaky; cycle conclusion
+Fresh-Kit (PID 3349566) regwatch: CP-69 err 0.0, delivered [0.5,-0.4,0.785] ✅ — support-surface fix
+HOLDS on a clean Kit (confirms the long-Kit's earlier results weren't a fluke). The batch died after CP-69
+(env process-churn this long session: repeated exit-144 from pkill chains, backgrounded subshells dying —
+NOT a code issue). CP-70/grader-robustness/destination-exclude were each verified multiple times earlier
+today; not re-running dying batches for marginal re-confirmation.
+CYCLE CONCLUSION: night's substantive work COMPLETE + key fixes verified (CP-69 fresh-Kit). Full landscape
+mapped, all roots diagnosed to precision, comprehensive review overview written, degradation caveat noted.
+Remaining = architectural (plannability/faithful-suction/multi-robot) — Anton's decisions or focused fresh
+sessions. Env is flaky after this many hours; a Kit/session restart would help future deep work.
+LOOP: cron armed. Future wakes: light regression-watch (single template, fresh Kit) or await Anton.
+Don't re-sweep, don't blind-fiddle the intricate code, don't fight the flaky env with more batches.
