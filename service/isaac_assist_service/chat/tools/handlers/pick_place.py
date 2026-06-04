@@ -5084,7 +5084,7 @@ def _build_scene_cfg(exclude_path=None):
     _iqw = float(_usd_quat[0]); _iqx = -float(_usd_quat[1])
     _iqy = -float(_usd_quat[2]); _iqz = -float(_usd_quat[3])
     for path in static_paths:
-        if path == exclude_path: continue
+        if exclude_path and (path == exclude_path or (isinstance(exclude_path, (list, tuple, set)) and path in exclude_path)): continue
         p = stage.GetPrimAtPath(path)
         if not (p and p.IsValid()): continue
         try:
@@ -6099,12 +6099,23 @@ def _build_segments(cube_pos, drop_pos, current_q):
             res = _plan_sub_step(q, goal_world, exclude_obs=S["picked_path"], yaw_deg=yaw_deg)
             if res is None and ROBOT_FAMILY in ("ur10", "ur10e"):
                 res = _plan_sub_step(_q_chained, goal_world, exclude_obs=S["picked_path"], yaw_deg=yaw_deg)
+            if res is None and DEST_PATH:
+                # 2026-06-04 drop-IK fix: descend onto destination has no collision-free IK (ik_solver uses
+                # scene collision; destination in-world, only held cube excluded). Retry excluding the
+                # DESTINATION too. ADDITIVE (only on failure) -> zero regression. Fixes pedestal->dest drops.
+                res = _plan_sub_step(_q_chained, goal_world, exclude_obs=[S["picked_path"], DEST_PATH], yaw_deg=yaw_deg)
         else:
             res = _plan_to_world_point(goal_world, q, exclude_obs=S["picked_path"], yaw_deg=yaw_deg, vhold_mode=_seg_vmode)
             if res is None and _seg_vmode != 0:
                 # EDIT 2 fallback: the vertical (vhold) constraint missed -> retry UNCONSTRAINED so a
                 # vhold plan-fail never fails the cube (no regression vs the pre-vhold single plan).
                 res = _plan_to_world_point(goal_world, q, exclude_obs=S["picked_path"], yaw_deg=yaw_deg, vhold_mode=0)
+            if res is None and DEST_PATH:
+                # 2026-06-04 drop-IK fix: descend onto destination has NO collision-free IK (ik_solver uses
+                # the scene collision checker; destination is in-world + only the held cube was excluded).
+                # Retry excluding the DESTINATION too. ADDITIVE (only on failure) -> zero regression on
+                # first-try canonicals; fixes pedestal->destination drops (CP-81/83/84/85).
+                res = _plan_to_world_point(goal_world, q, exclude_obs=[S["picked_path"], DEST_PATH], yaw_deg=yaw_deg, vhold_mode=0)
         if res is None and action_after is None and idx == len(goals) - 1 and _SG_FOLLOWER_OP is None:
             # EDIT 1 fail-open: the S6 straight-up retract is a safety lift, not load-bearing. If it
             # won't plan, SKIP it (arm stays at the S5 release pose = legacy behavior) rather than
