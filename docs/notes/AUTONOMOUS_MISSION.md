@@ -12,8 +12,13 @@ i loggen). Cache-rensningen var FÖRSIKTIGHETSÅTGÄRD (färsk session = bra hyg
 är 96752f8e (kod). Lärdom: attribuera inte en fix till en åtgärd utan mätt före/efter på samma kod. (Resonemangs-spåret står i ledgern.)
 **KVAR av det arbetande settet = ENBART den platsdrivna SVINGEN** (beslutsläget nedan) — levererar men loopar i transit för bakom-kub-picks.
 **Genuint svåra (failar på nuvarande kod, EJ cache):** CP-83 (seed-snap), CP-NEW-palletizer-layer-stack (din "kaos" är ÄKTA:
-0.10m-LÅDOR slirar på 5cm-tunad grip → 12 m/s fling), CP-71 (0/4 men build #9 = degraderings-osäkert, var 3/4 historiskt). Dessa =
-genuina per-mall-fixar (djup grip-rot för icke-5cm-payload = riskabelt mot de 6, ditt val), INTE cache.
+0.10m-LÅDOR slirar på 5cm-tunad grip → 12 m/s fling), CP-71 (0/4 BEKRÄFTAT genuint på FÄRSK Kit, ej degradering — det är en PILE-PICK:
+gravity-dispensern staplar 4 kuber vertikalt på EN xy → de faller i en hög på den lilla feedern → UR10 rör om högen → kuber scattrar av
+till z=0.5; fixet = stabilare feeder / lägre drop_height = TEMPLATE-redesign). Dessa = genuina per-mall-fixar (djup grip-rot för icke-5cm
+ELLER pile/feeder-geometri = riskabelt/template-arbete, ditt val), INTE cache.
+**FRANKA-GOLVET INTAKT (#1 hard rule):** CP-01 (4-stack) levererar; CP-09 (5-stack) bygger 4/5 rent + topp-kuben tippar (8° lutning
+ackumuleras) — men det är PRE-EXISTING, INTE en mission-regression: `git diff ec609990 96752f8e -- pick_place.py` = alla +94/-4 rader
+suction-gated → Franka parallel-jaw-vägen är BYTE-IDENTISK med din review-state (ec609990). Suction-fixet rörde aldrig Franka.
 ＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
 # ►► ANTON — 30-SEKUNDERS BESLUTSLÄGE (UR10) — 2026-06-04 ~06:40 ◄◄
 **FIXAT + committat (96752f8e, fix-set intakt):** UR10-suction-kvaliteten vid roten — telepati (pz=0.035, flush grepp),
