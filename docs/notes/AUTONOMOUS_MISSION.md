@@ -1,4 +1,19 @@
-# 🔬 SWING (Anton's "planeringsfel") — DEEPLY DIAGNOSED 2026-06-04 ~06:00, it is LOAD-BEARING (Anton's decision needed)
+# ✅ SWING (Anton's "planeringsfel") — RESOLVED AS DIAGNOSIS 2026-06-04 ~06:40; general fix (b) ATTEMPTED + proven impossible
+FINAL on the UR10 swing after implementing BOTH paths. It is the planner's LOAD-BEARING singularity-avoidance for kinematically-
+hard target placements (5/6 UR10 templates spawn the cube BEHIND the robot + the bin near a singularity). It DELIVERS through it.
+- (a) SCENE-DESIGN lever = VALIDATED: dexterous front placements (real canonical CP-79 + a CP-70 variant) -> swing GONE, clean
+  delivery. The 5 behind-cube templates (CP-70/69/82/75/86) are the swing set; their fix is a one-line role_defaults position
+  edit to the dexterous front workspace. I did NOT apply it (changing canonical geometry is Anton's call).
+- (b) GENERAL PLANNER fix = IMPLEMENTED + proven NOT to work: manipulability-aware IK-seed reordering (the only viable cuRobo
+  lever per a 5-agent feasibility study). Manip-only -> chaos; manip+distance -> delivers but swing UNCHANGED. ROOT: there is NO
+  near-current holdable branch — the holdable config for a hard target is inherently distant (needs the base rotation), so
+  reaching it IS the swing. The swing is the PATH to the holdable branch, not a fixable branch choice. Full evidence: ledger
+  2026-06-04 ~05:50/~05:55/~06:15/~06:20/~06:40.
+ANTON DECISION: (a) let me redesign the 5 behind-cube canonicals to dexterous placement (eliminates the swing on them; for
+arbitrary LLM scenes, guide the generator to place dexterously) — I do it on your OK; OR accept the deliver-but-swing (gate passes).
+All experiments reverted; committed fix-set 96752f8e intact, CP-70 delivers err 0.
+
+# (superseded) 🔬 SWING — DEEPLY DIAGNOSED 2026-06-04 ~06:00, LOAD-BEARING
 Anton (2026-06-04, full autonomy granted, back ~few hours): the remaining UR10 issue is the PLANNING swing, "bin won't help".
 I diagnosed it at the root (restart-FREE in-process planner rebuild + per-segment plan-FK diag): every segment reaches its
 goal err=0; the swing is the PLANNED PATH. The S5 descent swing comes from the suction HOME re-seed (S5 plans from HOME).
