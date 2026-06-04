@@ -3767,3 +3767,30 @@ system-wide); (2) CP-41 reconcile (bin-descent vs restored bin-collision — obs
 for a smooth single trajectory (upside; the arc already gives a working clean-ish motion + field-expert says stepped=polish-not-safety);
 (4) run the CP-NEW-mixed-ur10-franka smoke-test. NEXT per Anton: suction-cup realistic modeling (the drop-elongation = soft-place
 virtual-tool telescope). Tip will follow.
+
+### 2026-06-04 ~15:00 — CP-69 regression from the module= fix: RCA + REPAIR (support-surface exclusion) + grip hot-swap
+Two commits: f9a5587c (planning fix) + fcaf3d64 (grip hot-swap). Both verified, weld is default.
+
+**SUCTION GRIP (Anton's ask — faithful physics, hot-swappable):** Added builtins._ur10_grip_mode (robot.py _handle_surface_gripper).
+weld(default)=transZ 50000/2000/limit0 (rigid, the verified baseline); compliant=transZ 5000/100/limit0.01 (1cm axial give = real
+breakable suction). Rotational ring compliance unchanged in both. COMPLIANT verified to HOLD + deliver dead-center with realistic give
+on CP-70/75/82(2-cube)/86 (gap_std ~15mm vs weld ~5mm, settled tilt <1°, transit tilt up to 13° but no fling). Reversible (Anton's
+hot-swap principle). Stage-2 faithful MOUNT (free cone, no kinematic-teleport oracle) remains GUI-bound research.
+
+**CP-69 REGRESSION — RCA (measured, not guessed):** The "CP-69 FLUNG under compliant" cluster verdict was a FALSE attribution.
+- Read ts: EE FROZEN all 1300 rows (moved 1mm), suction cone NEVER contacted the cube — the cube just rode the conveyor past the
+  idle arm. Not a fling; a SILENT plan no-op. A/B proved weld≡compliant (both 0/5 no-op) → grip mode EXONERATED.
+- kit_restart.log: repeated "[curobo] Start or End state in collision" during the CP-69 runs.
+- Timeline: CP-69 picked 3/3 yesterday 23:44 (BEFORE the module= fix + transit-arc); 0/5 today (AFTER). The module= fix RESTORED
+  cuboid collision → the support cuboids the handler adds (/World/Table, /World/ConveyorBelt) became REAL. UR10 is bolted to the
+  table top (base z=0.75=table top) + picks a cube resting ON the belt (cube z~0.80, belt top z~0.78) → cuRobo flags start/goal
+  in-collision → plan_pose returns nothing → arm never moves. Pre-fix masked (cuboids silently ignored).
+- Discriminator = the BELT: CP-70/75/82/86 have no ConveyorBelt and kept passing post-fix; only the belt-template (CP-69) broke.
+
+**REPAIR (f9a5587c):** _build_scene_cfg now excludes SUPPORT surfaces (table/belt/conveyor/feeder/ground/floor) for UR10/UR10e —
+the arm approaches top-down, the mount table + the belt the cube rests on are NOT obstacles. Bin/walls/pillars STAY (real obstacles
+the restored collision correctly avoids). GATED to UR10 → Franka obstacle set byte-identical (the 37 hold). Same principle the
+planner-build comment already documents for the Franka mount table.
+**VERIFIED (fresh Kit, fix on, weld):** CP-69 EE moved 1763mm, suction contacts cube, delivered dead-center [0.5,-0.4] err 0.0
+(was 0/5 no-op). CP-70/75/86 still deliver err 0.0 — ZERO regression. "Start or End state in collision" warnings: 0.
+FOLLOW-UP IN FLIGHT: CP-79 + CP-82 re-confirm (table now excluded for them too; no belt → low risk, were passing).
