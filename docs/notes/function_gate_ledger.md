@@ -3531,3 +3531,23 @@ NEXT WAKE (if Anton still away): more Kit-free build-bug surveys of pending clus
 to produce ready-to-fix diagnoses; do NOT manufacture risky Kit/handler edits or re-chase the exhausted swing levers; keep system
 clean for Anton's GUI return (headless Kit @8001 alive — if he wants GUI he kills it + launches DISPLAY=:1). If Anton returns with
 a decision → execute (a) instantly per the pre-staged spec, or the chosen dual-Franka fix. Deadline 2026-06-04 12:00. Tip 4e56ac3e.
+
+### 2026-06-04 ~06:55 — *** UR10 "REGRESSION" ROOT-CAUSED: it was the CORRUPT WARP CACHE, NOT the code ***
+Diagnostic-first (cron prompt + memory: grep NVRTC BEFORE blaming a template). The running headless Kit had **4 NVRTC
+errors** in /tmp/isaac_sim_launch.log ("CuboidDataWarp_<hash> undefined" + NVRTC_ERROR_COMPILATION) — the warp-cache PCH
+corruption that breaks cuRobo COLLISION kernels → plan_pose fails / erratic motion = EXACTLY Anton's "kastar runt kuberna
++ planeringsfel". Killed the corrupt Kit by explicit PID (2688992 kit / 2688981 launcher), cleared ~/.cache/warp (203M),
+relaunched headless FRESH → 0 NVRTC. Re-measured on the clean Kit (handlers byte-identical, git f0097edc):
+ - **CP-70** (cube behind @-0.5): err_xy=0.0, contain=+0.015(seated), tilt 1.1°, impact_vz -0.36 (peak 2.34 m/s — NO 11 m/s
+   throw), drift 0, **STATE=OK**, final=[0.5,-0.3,0.785] IN THE BIN, gap 31.5mm c-c (~1.5mm physical = flush), up=1.0 throughout.
+ - **CP-69** (cube far-behind @-1.0, the HISTORICALLY-WORST 11 m/s flinger): err_xy=0.001, contain=+0.015, tilt 1.4°(tr1.8°),
+   impact_vz -0.39 (peak 2.35), drift 0, final=[0.5,-0.401,0.785] IN THE BIN, up=1.0. STATE=NON_RIGID_GRIP (= carry-jerk from
+   the swing loop, NOT a grip failure: gap std 5mm, cube held the whole time; line 507 trigger = acc_max>40/rev>=3).
+=> The throwing + planfail + telepathy Anton saw on 2026-06-03 were the **corrupt warp cache** (+ the telepathy was the
+pre-96752f8e cup-gap; on clean cache the cube is ~1.5mm physical from the cone = flush). The code (96752f8e) is GOOD.
+**REMEDY (operational, already automated in drift_gated.sh):** on NVRTC detection → clear ~/.cache/warp + restart Kit.
+The corruption RECURS (known Warp PCH-staleness bug, see [[warp_cache_planfail]]); it is NOT a code defect.
+REMAINING genuine UR10 issue (unchanged, prior-concluded): the SWING — for behind-robot picks the gripped cube LOOPS during
+transit (CP-70 to z1.49/y0.63, CP-69 similar) before settling dead-center; it DELIVERS (up=1.0, err~0) but the loop triggers
+carry-jerk + a minor upper_arm-vs-bin-wall brush. Placement-driven (CP-79 dexterous = clean, prior-validated). = Anton's
+scene-design call, NOT a code bug. Net: UR10 suction is in GOOD shape on a clean cache; the "regression" was environmental.
