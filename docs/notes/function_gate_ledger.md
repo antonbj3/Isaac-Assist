@@ -3440,3 +3440,17 @@ SG release flings the cube. The home-reseed swing routes to a NON-singular, HOLD
 possible without resolving the near-bin singularity. Levers (Anton's call): (a) keep LLM-scene targets in the robot's
 dexterous workspace (scene-design guideline) so the singular branch isn't on the path; (b) deep cuRobo IK-branch/singularity
 handling (high-risk vs the 6 deliveries). All experiments reverted; committed fix-set 96752f8e intact (CP-70 delivers err 0).
+
+### 2026-06-04 ~06:15 — UR10 swing: DEXTEROUS-TARGET test = DECISIVE (the swing is placement-driven, not a planner bug)
+Built a CP-70 variant (role_defaults.workpieces + primary_destination + code_template drop_target — NB scene_timeseries
+rebuilds from code_template+role_defaults, NOT the `code` field) with both targets in the UR10's DEXTEROUS FRONT workspace:
+cube (0.55,0.25), bin (0.55,-0.25) (vs base: cube BEHIND the robot at -0.5,0.4; bin at 0.5,-0.3 near a singularity).
+RESULT: cone_z=[0.81,1.32] (base swung to 1.52), cone_y=[-0.25,0.25] (base swung to +0.67) -> THE SWING VANISHES, and it
+DELIVERS cleanly (err 0.0, tilt 0.8, soft -0.44). => CONFIRMED: the swing is cuRobo's (delivering) RESPONSE to
+kinematically-hard target placement (behind-robot reach + near-bin singularity), NOT a fixable planner bug. For DEXTEROUS
+placements the planner is already clean.
+ANTON ANSWER (complete, evidenced): the UR10 "planeringsfel" is real but placement-driven. Two paths: (a) SCENE-DESIGN
+guideline — author/LLM-generate canonicals with UR10 targets in the dexterous front workspace (validated clean, transfers,
+zero per-scene tuning); (b) for GUARANTEED-clean motion at ARBITRARY LLM placements (behind/near-singular), deep cuRobo
+IK-branch/singularity handling is needed (high-risk vs the 6 deliveries). The cube DELIVERS through the swing today regardless.
+Temp variant deleted; fix-set 96752f8e intact.
