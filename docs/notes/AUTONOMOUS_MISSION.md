@@ -46,10 +46,13 @@ Efter applicering: re-verifiera var mall (scene_timeseries, fresh-Kit) att sving
 
 ## ►► SEKUNDÄRT (lägre prio, kräver också ditt geometri-OK + GUI-verify) — dual-Franka BYGG-buggar Anton's GUI flaggade ◄◄
 Canonical-geometri-buggar (robotbaser/stationer spawnas i/på annan geometri). EJ applicerade unilateralt. Diagnos (Kit-fri):
-- **CP-67** (rotary station): FrankaA @y=0.5 (bas ~0.4–0.6) ÖVERLAPPAR conveyorn @y=0.55–0.85 ("halvt inne i conveyorn" ✓);
-  FrankaB @y=-0.5 sitter i/vid RotaryTable @origin (default-radie 0.20m i create_rotary_table, men disc-scale i mallen kan vara
-  större → "mitt i bordet" ✓). Behöver layout-omdesign (robotar längre ut + verifiera räckvidd till bord+conveyor+bin) + GUI-check
-  att bordet faktiskt roterar.
+- **CP-67** (rotary station) — KONFIRMERAT + nyans: RotaryTable @(0,0,0.81) **radius=0.20m**, 30°/s. **FrankaA @y=0.5 (bas
+  ~0.35–0.65) ÖVERLAPPAR conveyorn @y=0.55–0.85 ("halvt inne i conveyorn" ✓)** → flytta FrankaA till y≤0.38 (bas→0.23–0.53,
+  klarar bandets 0.55-kant; räckvidd till band y=0.7 = 0.32m + till disc-kant y=0.2 = 0.18m, båda OK). FrankaB @y=-0.5 är dock
+  0.30m från disc-centrum / 0.10m UTANFÖR 0.20m-disc-kanten → ingen bas-overlap mot själva disken; Antons "mitt i bordet" är
+  troligen create_rotary_table:s BREDARE bas/pedestal (ej disc-radien) eller armen som sträcker sig ÖVER disken. Hela kedjan
+  (plocka band → lägg på disc +Y → rotera → FrankaB plockar -Y → OutBin) + verkliga conveyor-feed (kuber x=-1.4..-0.65 långt i -x)
+  kräver GUI-iteration (Anton: "grundläggande redesign"). KONKRET första-fix: FrankaA y=0.5→0.38 (eliminerar conveyor-overlap).
 - **CP-52** (parallel-pick duo) — FULLDIAGNOSTISERAD: kuber x=[-1.4,-1.15,0.3,0.55] @y=0.4 på band (surface_velocity 0.2 m/s +x).
   FrankaA(-0.5,0) plockar Cube_1(x=-1.4)+Cube_2(x=-1.15): **Cube_1 räckvidd 0.985m > ~0.85m = UTANFÖR RÄCKVIDD**; Cube_2 0.76m OK.
   FrankaB(0.5,0) Cube_3(0.45m)+Cube_4(0.40m) OK. Cube_1 är MENAT att matas in av bandet (når reach vid x≈-1.26, ~0.7s), MEN Anton
