@@ -3478,3 +3478,25 @@ because the swing is the necessary PATH to the holdable branch, not a bad branch
 achievable with cuRobo's config/API surface (confirmed by implementation, not just analysis). (a) the scene-design lever
 (dexterous placements -> validated clean on CP-79 + a CP-70 variant) is THE answer. Lever 1 reverted; committed fix-set 96752f8e
 intact. The cube delivers through the swing today on all 6 UR10 (gate passes).
+
+### 2026-06-04 ~06:30 — UR10 "collides with bin": collision-world hypothesis CHECKED & REFUTED (diagnostic-first)
+Anton's GUI note said the UR10 arm "kolliderar med bin-mittelaxeln" during transport. Hypothesis: the bin isn't in
+cuRobo's collision world so the planner paths THROUGH it. Checked the data (Kit-free, read-only) BEFORE touching code:
+ - The collision-world builder (_curobo scene cfg, pick_place ~L5045) hardcodes static obstacles =
+   ["/World/Table","/World/ConveyorBelt","/World/Bin"] + PLANNING_OBSTACLES. It does NOT read the template's actual
+   primary_destination.path / destinations[].path.
+ - BUT: 19 of the non-UR10 (Franka) templates use NON-/World/Bin destinations (/World/Pallet, /World/TargetZone,
+   /World/TowerBase, /World/PalletBase, /World/RedBin, /World/Slot, /World/Container, /World/KitTray, ...) and MANY of
+   them DELIVER (CP-09 5/5, CP-15, CP-28, CP-42 — confirmed floor + Anton GUI). => a destination that is NOT a collision
+   obstacle is the NORMAL, WORKING configuration: the arm must be able to descend INTO/ONTO the destination to place.
+   Making the destination a hard cuboid obstacle would BLOCK the placement descent and REGRESS deliveries.
+ => HYPOTHESIS REFUTED. "Add the bin to the collision world" is NOT a fix; it would break placement. (CP-82 names its
+   bins Bin_red/Bin_blue, also not collision obstacles — same working pattern, not a bug.)
+REAL remaining "brushes the bin" candidate (narrower, bounded, UR10-suction-gated): the picked CUBE is attached to the
+planner as an obstacle (trajopt attachment_manager.attach, pick_place ~L5905) but the suction CUP/CONE child of the EE is
+NOT in cuRobo's collision model (it's a render+grip child, not in the UR10 URDF collision spheres). So cuRobo clears the
+ee_link but the cup hangs below/beside it and brushes the bin wall on the swooping approach. Candidate: add the cup
+geometry to the EE collision (attach a small Cuboid/sphere at the tool frame, like the picked-cube attach) so cuRobo
+keeps the cup clear. BOUNDED + suction-gated (no Franka touch) but touches the shared planner -> needs Kit verify + 37
+re-verify -> Anton's greenlight (not done unilaterally near deadline). NOTE: this addresses the BRUSH, not the SWING
+(the 180° transport for behind-robot cubes is still inherent/placement-driven, separately concluded).
