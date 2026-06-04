@@ -3454,3 +3454,12 @@ guideline — author/LLM-generate canonicals with UR10 targets in the dexterous 
 zero per-scene tuning); (b) for GUARANTEED-clean motion at ARBITRARY LLM placements (behind/near-singular), deep cuRobo
 IK-branch/singularity handling is needed (high-risk vs the 6 deliveries). The cube DELIVERS through the swing today regardless.
 Temp variant deleted; fix-set 96752f8e intact.
+
+### 2026-06-04 ~06:20 — UR10 swing: confirmed on REAL canonicals + the redesign list
+Placement analysis of the 6 UR10 templates (robot at origin, +x): 5/6 put the CUBE BEHIND the robot (x<0) ->
+CP-70(-0.5,0.4) CP-69(-1.0,0.4) CP-82(-0.5,0.55) CP-75(-0.5,0.4) CP-86(-0.5,0.4); only CP-79 is DEXTEROUS (cube 0.6,0.4
+front). Verified on the real canonical CP-79: cone_z=[0.82,1.32] cone_y=[-0.40,0.40] = CLEAN natural pick-place, NO swing
+(vs behind-cube CP-70 1.52/+0.67), delivers err 0. => the 5 behind-cube templates are the ones that swing; the fix for
+each is a TEMPLATE edit: move role_defaults.workpieces[0].position into the dexterous front workspace (e.g. x~+0.5..0.6,
+|y|<0.45). NOT applied unilaterally — changing canonical scene geometry is Anton's call (pragmatic placement-redesign vs
+deep cuRobo for arbitrary LLM placements vs accept the deliver-but-swing).
