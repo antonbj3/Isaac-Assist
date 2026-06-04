@@ -3429,3 +3429,14 @@ OR keeping LLM-scene targets in the robot's dexterous front workspace (scene-des
 isn't triggered. Reverted all swing experiments -> clean committed fix-set (96752f8e); CP-70 delivers err 0.0 confirmed.
 NEXT (UR10 root stalled = SECONDARY per mission): test the 3 UR10-suction UNSTACK templates (palletizer/tray/CP-71) the
 committed fix-set should help.
+
+### 2026-06-04 ~05:55 — UR10 swing: FINAL isolation proof (fling is at RELEASE, near-singular hold)
+Isolation test (chained-direct S5 + soft-place DISABLED, cube-tracked): the cube is held STABLE over the bin for 11s
+(steady at 0.37,-0.27,1.18, spd 0) then FLUNG at RELEASE (t=28 -> -0.41,0.32 @ 2 m/s) — NOT during the descent. And the
+held cube is at (0.37,-0.27) = 0.13 OFF-CENTER from the bin (0.5,-0.3) although the plan reaches (0.5,-0.3) err=0. =>
+the chained-seed descent lands in a NEAR-SINGULAR IK branch the arm cannot hold accurately (settles 0.13 short) -> the
+SG release flings the cube. The home-reseed swing routes to a NON-singular, HOLDABLE branch -> accurate clean release.
+=> CONFIRMED: the swing is cuRobo's singularity-AVOIDANCE that buys an accurate, holdable release. Clean removal is not
+possible without resolving the near-bin singularity. Levers (Anton's call): (a) keep LLM-scene targets in the robot's
+dexterous workspace (scene-design guideline) so the singular branch isn't on the path; (b) deep cuRobo IK-branch/singularity
+handling (high-risk vs the 6 deliveries). All experiments reverted; committed fix-set 96752f8e intact (CP-70 delivers err 0).
