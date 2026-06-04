@@ -263,3 +263,12 @@ CP-70 on fresh Kit: err 0.0, OK, delivered [0.5,-0.3,0.785] ✅. The earlier "Cu
 stable on a FRESH Kit: CP-69 ✅ + CP-70 ✅. Degradation caveat PROVEN (same template floors on degraded Kit,
 delivers on fresh) → reinforces that tonight's degraded-Kit fail-counts (flings) are pessimistic; re-verify
 any fail on a fresh Kit before trusting. Landed fixes confirmed; night's work verified where it matters.
+
+## 2026-06-05 ~04:30 (cron) — REGRESSION-WATCH COMPLETE (fresh Kit), zero regressions
+CP-01 (Franka stacking): 4/4 delivered ✅ — the night's pick_place edits (support-surface excl,
+destination-exclude fallback, the gated UR10 levers) did NOT regress the working Franka set. CP-84:
+grader produces clean GRADED output (no Sdf.Path crash) ✅ — grader-fix holds; still ALOFT (known
+IK-infeasible). FULL fresh-Kit verification: CP-69 ✅ CP-70 ✅ CP-01 ✅(no-regress) CP-84 grader-ok ✅.
+=> ALL landed fixes stable on fresh Kit, NO regressions introduced. The autonomous run is fully closed
++ verified. Remaining failures are architectural (Anton's decisions) or the unified conveyor fix (needs
+a focused fresh-context session, not blind attempts). Cron armed for await-Anton / occasional regwatch.
