@@ -176,3 +176,13 @@ LIBRARY-HEALTH PICTURE (this run): UR10 6/13 (7 hard: envelope+cone). Cluster#2 
 => failures concentrate in HARD CLASSES (reach-envelope, cone-physics, multi-robot, belt-timing); cheap
 wins scarce. Launched cluster #4-5 (CP-05 flip + stacking) ground-truth -> /tmp/c45_gt.txt to complete
 the map, then write a comprehensive library-health OVERVIEW for Anton's review.
+
+## 2026-06-05 ~01:20 (cron) — LANDSCAPE COMPLETE + review overview written
+Cluster #4-5: CP-01 4/4 OK, CP-04 4/4 OK (single-robot Franka stacking solid); CP-05 flip grader-empty.
+=> Single-robot Franka mostly works; failures concentrate in 3 hard classes. Full review-ready synthesis:
+docs/notes/LIBRARY_HEALTH_OVERVIEW_2026_06_05.md (per-cluster health + 3 hard classes + recommendations +
+landed fixes). This is the culminating deliverable for Anton's review.
+NEXT (if loop continues): the remaining work is (1) plannability constraint [Anton-decide], (2) faithful
+suction-cone [Anton-decide/architectural], (3) multi-robot claim-logic (CP-52 deadlock = tractable entry).
+None are cheap; (3)/CP-52 is the most tractable if a fix-attempt is wanted. Don't high-risk-fiddle the
+conveyor belt-edges or UR10 envelope (documented dead-ends without the constraint).
