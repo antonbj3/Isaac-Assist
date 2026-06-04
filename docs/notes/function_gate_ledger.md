@@ -3657,3 +3657,20 @@ CP-83's offset pedestal grasp). So it's a never-tried 1-line candidate, BUT CP-8
 (violent swing branch), not grip-distance release — so 0.45 alone won't deliver CP-83, and testing needs a Kit restart
 (handlers load at Kit startup). LOW EV vs risk to the working 6. Park unless CP-83 is explicitly prioritized + the seed-snap is
 addressed first. (Dynamic-loop tick 07:35: no new actionable work since the 07:28 close-out; 6-core resolved, rest Anton-gated.)
+
+### 2026-06-04 ~09:20 — Anton REJECTS deliver-with-swing: planning must be 100%. Transit-arc STAGED (flag-gated, untested)
+Anton GUI-5 feedback: "Svingen och kollisionen är totalt oacceptabla ... planerar fel och sen rättar sig själv ...
+planeringen måste bli 100% först. jobba på." (Also noted: cup extends on drop = the soft-place telescope, and the cup is
+always-down = part of the kinematic mount = "cheating" — we work the cup LATER; planning first.)
+ROOT (re-confirmed from code): the S3 lift (cube_xy) → S4 transit (drop_xy) is a LARGE behind→front XY move planned
+DIRECTLY by _plan_to_world_point (not sub-stepped, unlike Z-descents) → cuRobo executes the IK-branch reconfiguration as
+the up/out LOOP (cube to z~1.5,y~0.6 = his "plans wrong then self-corrects") + the upper_arm sweeps the bin walls.
+FIX STAGED (pick_place _build_segments, commit this wake): an angular ARC at sub-bin radius (R=0.45, bin sits ~0.58 from
+base) + high apex (max(h1,h_mid_drop)+0.10) inserted between S3 and S4 — the arm folds IN, rotates around its base axis,
+then S4 extends out+down to the bin = clean lift-turn-place that also clears the bin walls until the final descent.
+Gated: behind→front only (dot((cube-base),(drop-base))<0; dexterous CP-79 dot>0 untouched), UR10/suction-only (Franka
+byte-identical), behind builtins._ur10_transit_arc (DEFAULT OFF → byte-identical commit; the 6 + 37 + Anton's live GUI
+unaffected). **UNTESTED** — a planning fix needs iterative Kit test+tune (R/apex/step count) to reach 100%; Anton's GUI
+is LIVE on :1 (pid 2881331, DISPLAY=:1) so I can't run scene_timeseries without stomping his review. NEXT: when the Kit
+is free, set _ur10_transit_arc=True (exec_sync), verify CP-70 (clean monotonic rotation? delivers? no upper_arm|Wall?),
+tune, then confirm CP-69/82/75/86 + the dexterous CP-79 + the 37 Franka, then flip default on. Backup /tmp/pick_place.py.pre_transitarc.
