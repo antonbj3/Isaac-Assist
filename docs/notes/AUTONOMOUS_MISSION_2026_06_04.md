@@ -151,3 +151,16 @@ DON'T re-sweep UR10 (done: 6/13, 7 known-hard documented). DON'T rabbit-hole the
   cuRobo S@~5322; target_source=curobo => the cuRobo one). Fix = DON'T resume the belt while an
   undelivered cube is within the sensor zone (hold it until claimed). GATE so the 37 single-robot Franka
   (paced belts) are byte-identical; verify CP-12=3/3 + spot-check CP-22/CP-08. predict-then-measure.
+
+## 2026-06-05 ~00:45 (cron) — cluster #2 verdict + pivot to landscape-completion
+- CP-12 cuRobo path ALREADY has belt-hold logic (_resume_belt_if_clear / _cube_imminent_at_sensor:
+  suppress resume while a cube is within HOLD_R of the sensor). Cube_3 ride-off = subtle edge: it drifts
+  PAST HOLD_R while the robot is busy -> no longer "imminent" -> belt resumes -> rides off. belt_v=0.2
+  (<0.25) so _look_ahead_x=0. A real fix = hold belt while ANY undelivered cube is at/past sensor &
+  reachable — but that intricate claim-logic governs the multi-robot/conveyor templates too =>
+  HIGH-RISK for one cube (CP-12 is 2/3). NOT worth it without broader regression coverage.
+- Cluster #2 verdict: GOOD shape (CP-12 2/3, 3station 6/7, inspect-reject 5/5); failures are subtle
+  belt-timing edges, not cheap wins.
+- DECISION: don't high-risk-fiddle the claim-logic for marginal gains. Complete the LANDSCAPE instead
+  (ground-truth remaining clusters) so the review has the full picture. Launched cluster #3 (dual-Franka
+  CP-51/52/53) ground-truth -> /tmp/c3_gt.txt.
