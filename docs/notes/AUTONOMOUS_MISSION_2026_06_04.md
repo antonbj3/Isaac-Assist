@@ -236,3 +236,10 @@ Prefer REGRESSION-WATCH (periodically re-verify the landed fixes: CP-69 delivers
 deliver, grader doesn't crash) over re-diagnosing the known-intricate items. Don't high-risk-fiddle the
 multi-robot/claim/envelope code. Await Anton's architectural decisions (plannability / faithful-suction /
 dedicated multi-robot pass) or a fresh focused session for the unified conveyor fix.
+
+## 2026-06-05 ~03:15 (cron) — DEGRADATION caveat + fresh-Kit regression-watch
+Long-lived Kit (multi-hour) showed CP-70 Cube_1|Floor while CP-69 passed. Per the degradation rule
+(false-negatives only; trust passes; never revert on a degraded verdict), CP-70-floor = degradation.
+CAVEAT: tonight's FAIL counts (esp. flings CP-51/53, CP-12 Cube_3, 3station Cube_7) may be degradation-
+PESSIMISTIC. SOLID (not degradation): CP-52 deadlock, CP-84 ik_ok=False, CP-80/81 cone blow-up, swing RCA.
+PASSES trustworthy. Restarted Kit FRESH; re-running regwatch of landed fixes.
