@@ -3551,3 +3551,12 @@ REMAINING genuine UR10 issue (unchanged, prior-concluded): the SWING — for beh
 transit (CP-70 to z1.49/y0.63, CP-69 similar) before settling dead-center; it DELIVERS (up=1.0, err~0) but the loop triggers
 carry-jerk + a minor upper_arm-vs-bin-wall brush. Placement-driven (CP-79 dexterous = clean, prior-validated). = Anton's
 scene-design call, NOT a code bug. Net: UR10 suction is in GOOD shape on a clean cache; the "regression" was environmental.
+
+### 2026-06-04 ~07:00 — UR10 cluster CONFIRMED 6/6 deliver on clean cache (closes the regression question)
+Full UR10 suction cluster re-measured on the clean-cache fresh Kit (git f0097edc, handlers byte-identical):
+ - CP-70 err 0.0 STATE=OK | CP-69 err 0.001 (NON_RIGID_GRIP = swing carry-jerk, delivers) | CP-82 Cube_1→Bin_red err 0.0 +
+   Cube_2→Bin_blue err 0.0 BOTH OK | CP-79 err 0.0 OK (dexterous, transit tilt 2.7° = low swing) | CP-75 err 0.0 OK |
+   CP-86 err 0.0 OK. All seated (+15mm), upright (tilt <1.5° settled), gentle (impact ~-0.36, peak ~2.0-2.6 m/s), up=1.0.
+=> 6/6 UR10 deliver dead-center on a clean cache. The 2026-06-03 "regression" (kastar/planfel/telepati) was 100% the
+corrupt warp cache. CODE IS GOOD. Now spot-checking previously-"failing" suction templates (CP-83/CP-71/palletizer-layer-
+stack — Anton's "total kaos" = the cache-poison signature) on the clean cache for cache-victim wins.
