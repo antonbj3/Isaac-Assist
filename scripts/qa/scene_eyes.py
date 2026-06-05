@@ -89,6 +89,38 @@ def cattr(nm, dflt):
     except Exception:
         return dflt
 
+# CONTACTS (PhysX contact-report) — the missing time-series signal vs scene_timeseries.
+# Grip (gripper-vs-cube) + arm-vs-scene collisions. The UR10 swing collides forearm/wrist
+# with the support surface (Table/Pedestal) -> arm stalls -> cube held aloft; scene_eyes was
+# BLIND to this without contacts. Applied to robot links + cubes + bins/pedestals/tables.
+_contacts = set()
+try:
+    from pxr import PhysxSchema, PhysicsSchemaTools
+    from omni.physx import get_physx_simulation_interface
+    _crp = list(CUBES)
+    _bases = [ROBOT] if ROBOT else []
+    for _pr in stage.Traverse():
+        _nm = _pr.GetName()
+        if any(_k in _nm for _k in ("Bin", "Pedestal", "Table", "Base", "Tray", "Bridge", "Pallet", "Wall")):
+            _bases.append(str(_pr.GetPath()))
+    for _base in _bases:
+        _bp = stage.GetPrimAtPath(Sdf.Path(_base))
+        if _bp and _bp.IsValid():
+            for _d in [_bp] + list(_bp.GetChildren()):
+                for _dd in [_d] + list(_d.GetChildren()): _crp.append(str(_dd.GetPath()))
+    for _p in set(_crp):
+        _pp = stage.GetPrimAtPath(Sdf.Path(_p))
+        if _pp and _pp.IsValid():
+            try: PhysxSchema.PhysxContactReportAPI.Apply(_pp)
+            except Exception: pass
+    def _oc(h, d):
+        for _ch in h:
+            try: _contacts.add((str(PhysicsSchemaTools.intToSdfPath(_ch.actor0)).split("/")[-1], str(PhysicsSchemaTools.intToSdfPath(_ch.actor1)).split("/")[-1]))
+            except Exception: pass
+    _csub = get_physx_simulation_interface().subscribe_contact_report_events(_oc)
+except Exception as _ce:
+    print("CONTACT_SETUP_FAIL", repr(_ce)); _csub = None
+
 # fixed cell camera for the (optional) frame burst
 vp = None
 if FRAMES:
@@ -151,7 +183,9 @@ for i in range(N):
                      "j": jpos(), "cubes": cubes,
                      "pc": int(cattr("ctrl:plan_calls", 0)), "pf": int(cattr("ctrl:plan_fails", 0)),
                      "pick": str(cattr("ctrl:picked_path", "")), "err": str(cattr("ctrl:last_error", "")),
-                     "fgoal": str(cattr("ctrl:last_fail_goal", ""))})
+                     "fgoal": str(cattr("ctrl:last_fail_goal", "")),
+                     "contacts": sorted(["%s|%s" % (a, c) for (a, c) in _contacts])})
+        _contacts.clear()
     if FRAMES and vp is not None and i % CAP == 0:
         try:
             vpu.capture_viewport_to_file(vp, file_path=OUT + "/f%03d.png" % fi)
@@ -312,6 +346,27 @@ def _analyse(js):
             if diag.get("debug_info"):
                 out.append("        debug_info: %s" % str(diag.get("debug_info"))[:200])
         out.append("    → the plan with the big sweep IS the swinging segment — cuRobo's exact intended path, before physics")
+    # CONTACTS timeline (grip + arm-vs-scene collisions) — the signal scene_eyes was blind to.
+    seen_c = {}; arm_scene = []
+    for r in rows:
+        for c in (r.get("contacts") or []):
+            if "ConveyorBelt" in c: continue
+            if c not in seen_c:
+                seen_c[c] = r["t"]
+                _lo = c.lower()
+                if (any(k in _lo for k in ("table", "pedestal", "wall", "base", "bridge")) and
+                        any(k in _lo for k in ("link", "forearm", "wrist", "upper_arm", "shoulder", "elbow", "hand", "finger"))):
+                    arm_scene.append((r["t"], c))
+    if seen_c:
+        out.append("CONTACTS (first-seen t; grip + collisions, belt excluded):")
+        for c, t in sorted(seen_c.items(), key=lambda kv: kv[1]):
+            out.append("    t=%5.1fs  %s" % (t, c))
+        if arm_scene:
+            out.append("  !! ARM-VS-SCENE COLLISIONS (swing hitting the support surface -> stalls/held-aloft):")
+            for t, c in arm_scene:
+                out.append("      t=%5.1fs  %s" % (t, c))
+    else:
+        out.append("CONTACTS: none recorded (check CONTACT_SETUP_FAIL)")
     return "\n".join(out)
 
 
