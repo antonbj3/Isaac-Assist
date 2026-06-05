@@ -6141,6 +6141,25 @@ def _build_segments(cube_pos, drop_pos, current_q):
                 # Retry excluding the DESTINATION too. ADDITIVE (only on failure) -> zero regression on
                 # first-try canonicals; fixes pedestal->destination drops (CP-81/83/84/85).
                 res = _plan_to_world_point(goal_world, q, exclude_obs=[S["picked_path"], DEST_PATH], yaw_deg=yaw_deg, vhold_mode=0)
+        # 2026-06-05 DROP z-backoff fallback: a release-descend goal with NO feasible plan at
+        # the requested z (reach/orientation/collision at the low release height) retries at
+        # progressively HIGHER z and releases from the first feasible height — the held cube
+        # drops the small remaining gap. CP-84 [0.5,-0.4,0.82] res_None but [..,1.0] plans;
+        # CP-65 Franka handoff drop [0,-0.3,0.93] res_None -> all 4 cubes abandoned, FrankaB
+        # never fed. ADDITIVE (only after all same-z fallbacks failed) -> the 37 + CP-52 deliver
+        # first-try so res!=None here -> byte-identical. Release segment only (action_after=='open').
+        if res is None and action_after == "open":
+            _gb = np.asarray(goal_world, dtype=np.float32)
+            _exd = [S["picked_path"], DEST_PATH] if DEST_PATH else S["picked_path"]
+            for _dz in (0.06, 0.12, 0.18, 0.26):
+                _gz = np.array([float(_gb[0]), float(_gb[1]), float(_gb[2]) + _dz], dtype=np.float32)
+                if _SG_FOLLOWER_OP is not None:
+                    res = _plan_sub_step(q, _gz, exclude_obs=_exd, yaw_deg=yaw_deg)
+                else:
+                    res = _plan_to_world_point(_gz, q, exclude_obs=_exd, yaw_deg=yaw_deg, vhold_mode=0)
+                if res is not None:
+                    print(f"(curobo: drop z-backoff +{{_dz}}m -> feasible z={{round(float(_gz[2]), 3)}})")
+                    break
         if res is None and action_after is None and idx == len(goals) - 1 and _SG_FOLLOWER_OP is None:
             # EDIT 1 fail-open: the S6 straight-up retract is a safety lift, not load-bearing. If it
             # won't plan, SKIP it (arm stays at the S5 release pose = legacy behavior) rather than
