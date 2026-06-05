@@ -5378,8 +5378,16 @@ def _apply_belt_pause_curobo():
     # driven behavior, so the 37 verified-passing are untouched. Names resolve at
     # call time (callback fires only during sim, after the full codegen has run).
     try:
-        if (len(_curobo_live_pp_subs()) > 1 and _belt_sv is not None
-                and _sensor_xy_v is not None and _cube_imminent_at_sensor()):
+        if (len(_curobo_live_pp_subs()) > 1 and _belt_sv is not None and (
+                (_sensor_xy_v is not None and _cube_imminent_at_sensor())
+                # 2026-06-05 CP-52 ride-off fix: hold the SHARED belt while THIS robot is
+                # actively picking (claimed→delivering). Otherwise the robot's SECOND cube
+                # rides off the belt end during the ~15s it spends on the first (CP-52:
+                # Cube_1/Cube_4 flew off while their arm worked Cube_3/Cube_2). When the
+                # robot returns to wait_sensor the belt resumes (below / _resume_belt_if_clear)
+                # so the next cube flows in. GATED multi-robot. Self-freeze-safe: the per-cube
+                # mutex keeps both robots delivering (no robot stuck busy forever).
+                or S.get("mode") in ("settling", "executing", "gripping", "retreating"))):
             _belt_sv.Set((0, 0, 0))
             _belt_pause_request_curobo[0] = None
             return
@@ -5435,11 +5443,28 @@ HOLD_R = 0.15  # sensor-neighborhood hold radius (m); NOT reach — upstream cub
 def _cube_imminent_at_sensor():
     # True iff some undelivered cube sits within HOLD_R of the sensor xy.
     if _sensor_xy_v is None: return False
+    # 2026-06-04 CP-52 self-lock fix (eyes+probe-confirmed): in MULTI-robot mode the
+    # standing belt-pause force-stops the SHARED belt whenever any source cube is within
+    # HOLD_R of a sensor. A cube spawned/sitting DOWNSTREAM of the sensor (already past
+    # the pick point in the belt-flow direction) can NEVER be saved by pausing -- it just
+    # freezes the belt forever and starves the sibling's UPSTREAM cubes. CP-52: Cube_3
+    # spawns 0.10m downstream of SensorB (HOLD_R=0.15) -> belt SV pinned to 0 for the whole
+    # run, no cube ever flows (probe: beltSV=[0,0,0] @ every tick, all cubes Delta=0). Skip
+    # downstream cubes when pausing. GATED multi-robot: single robot keeps the exact
+    # radius-only behavior (the 37 byte-identical; _resume_belt_if_clear unchanged for them).
+    _multi = len(_curobo_live_pp_subs()) > 1
+    _fx = float(_nominal_belt[0]) if _nominal_belt else 0.0
+    _fy = float(_nominal_belt[1]) if _nominal_belt else 0.0
+    _fmag = (_fx*_fx + _fy*_fy) ** 0.5
     for sp in SOURCE_PATHS:
         if sp in S['delivered'] or sp in S.get('failed', set()): continue
         cp = _world_pos(sp)
         if cp is None: continue
         if float(((cp[0]-_sensor_xy_v[0])**2 + (cp[1]-_sensor_xy_v[1])**2) ** 0.5) <= HOLD_R:
+            if _multi and _fmag > 1e-6:
+                # signed distance along belt-flow from sensor; >+3cm = downstream of pick point
+                _proj = ((cp[0]-_sensor_xy_v[0])*_fx + (cp[1]-_sensor_xy_v[1])*_fy) / _fmag
+                if _proj > 0.03: continue
             return True
     return False
 def _resume_belt_if_clear():
@@ -6166,21 +6191,30 @@ def _on_step(dt):
                         _attr = _mp.GetAttribute("mutex:claimed_by")
                         _claimed = (_attr.Get() if _attr else "") or ""
                         if _claimed and _claimed != ROBOT_PATH:
-                            # 2026-05-31 dual-Franka shared-bin RETREAT (the missing
-                            # case): the sibling holds the mutex (it's picking/
-                            # delivering). Before we wait, RETREAT to _HOME_Q so we
-                            # don't park at the shared bin and block its delivery
-                            # path (GUI-confirmed: arm parked at drop pose blocks
-                            # the sibling). One-shot per idle window (re-armed on our
-                            # next claim). GATED multi-robot only → 37 unaffected.
-                            if len(_curobo_live_pp_subs()) > 1 and not S.get("retreated_idle"):
-                                _grip_open()
-                                art_ctrl.apply_action(ArticulationAction(
-                                    joint_positions=_HOME_Q[:_ARM_DOF].astype(np.float64),
-                                    joint_indices=np.arange(_ARM_DOF),
-                                ))
-                                S["retreated_idle"] = True
-                            return  # other robot holds mutex; wait this tick
+                            # 2026-06-05 PARALLEL-PICK fix (CP-52): the single-slot claim-
+                            # mutex over-serialized DISJOINT pickers. Only WAIT if the
+                            # sibling is working a cube I could ALSO pick (shared pickup /
+                            # handoff: CP-51/53 — claimed_cube ∈ MY source_paths). For
+                            # disjoint source_paths (parallel-pick) the sibling's cube isn't
+                            # mine → claim my own concurrently; the PLAN_LOCK serializes
+                            # planning (no CUDA-700) and the MOVE_LOCK serializes execution
+                            # (no arm-arm collision). Fail-safe: unknown claimed_cube → keep
+                            # the old wait. GATED multi-robot (>1 live curobo sub) → 37 hold.
+                            _cca = _mp.GetAttribute("mutex:claimed_cube")
+                            _ccv = (_cca.Get() if _cca else "") or ""
+                            if (not _ccv) or (_ccv in SOURCE_PATHS):
+                                # 2026-05-31 dual-Franka shared-bin RETREAT: before we wait,
+                                # RETREAT to _HOME_Q so we don't park at the shared bin and
+                                # block the sibling's delivery path. One-shot per idle window.
+                                if len(_curobo_live_pp_subs()) > 1 and not S.get("retreated_idle"):
+                                    _grip_open()
+                                    art_ctrl.apply_action(ArticulationAction(
+                                        joint_positions=_HOME_Q[:_ARM_DOF].astype(np.float64),
+                                        joint_indices=np.arange(_ARM_DOF),
+                                    ))
+                                    S["retreated_idle"] = True
+                                return  # sibling holds a cube I share; wait this tick
+                            # else: disjoint cube → fall through and claim my own
                 except Exception: pass
             picked = _cube_to_pick()
             if picked:
@@ -6190,10 +6224,22 @@ def _on_step(dt):
                         _mp = stage.GetPrimAtPath(MUTEX_PATH)
                         if _mp and _mp.IsValid():
                             _attr = _mp.GetAttribute("mutex:claimed_by")
-                            if _attr: _attr.Set(ROBOT_PATH)
-                            _cc = _mp.GetAttribute("mutex:claim_count")
-                            if _cc and _cc.IsDefined():
-                                _cc.Set(int(_cc.Get() or 0) + 1)
+                            _held = (_attr.Get() if _attr else "") or ""
+                            # Take the mutex only when FREE or already mine. A disjoint
+                            # parallel-pick that fell through the guard (sibling holds it for
+                            # a cube not in MY sources) claims WITHOUT stealing the sibling's
+                            # slot — its disjoint cube needs no claim-protection (the sibling
+                            # never picks it). Record claimed_cube so the sibling's guard can
+                            # tell shared (wait) from disjoint (proceed).
+                            if _attr and (_held == "" or _held == ROBOT_PATH):
+                                _attr.Set(ROBOT_PATH)
+                                _cca = _mp.GetAttribute("mutex:claimed_cube")
+                                if not _cca:
+                                    _cca = _mp.CreateAttribute("mutex:claimed_cube", Sdf.ValueTypeNames.String)
+                                if _cca: _cca.Set(picked)
+                                _cc = _mp.GetAttribute("mutex:claim_count")
+                                if _cc and _cc.IsDefined():
+                                    _cc.Set(int(_cc.Get() or 0) + 1)
                     except Exception: pass
                 # Pause belt + open gripper. Move to "settling" state so
                 # cube can decelerate naturally for several physics ticks
