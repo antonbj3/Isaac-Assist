@@ -85,3 +85,16 @@ Measurement holes closed en route: gate_one dropped the whole P0-18 arg surface
 gate_one cube_path fallback; nofm unparseable-gate logging; honest_gate transitive-support
 misroute labeling (tower-in-bin). CP-71 same afternoon: honest FAIL 2/2 with
 completeness=all (was an 18/18 batch "pass").
+
+## Finding: semantic-label assignment is nondeterministic (vision family)
+
+CP-NEW-kit-prep-vision-gate's template code is fully deterministic (fixed
+label list zipped to fixed part paths — Part_3 must always be "housing"),
+yet two identical builds exported Part_3 as `pcb` and `bracket`. Labels land
+on the WRONG parts, differently per build ⇒ a race/ordering bug in the
+set_semantic_label execution path, NOT template randomness. Blast radius:
+every vision/semantics-routed template (labels drive routing — this likely
+contributes to the family's honest-gate failures: parts get routed by wrong
+identities). Repro: build the template twice, diff
+`semantic:Semantics_*:params:semanticData` per part. NEXT: instrument the
+set_semantic_label handler for call/application order.
