@@ -45,6 +45,9 @@ def _gen_create_scene_baseline(args: Dict) -> str:
     ground_scale = float(args.get("ground_scale", 20.0))
     include_ground = bool(args.get("include_ground", True))
     include_table = bool(args.get("include_table", True))
+    # Cell defaults to following the table (the canonical family authors
+    # both); several CP-NEW variants author a table with NO Cell parent.
+    include_cell = bool(args.get("include_cell", include_table))
     table_size = args.get("table_size", [1.5, 0.5])
     table_height = float(args.get("table_height", 0.75))
     physics = args.get("physics") or {}
@@ -53,14 +56,20 @@ def _gen_create_scene_baseline(args: Dict) -> str:
     tx, ty = float(table_size[0]), float(table_size[1])
     th = table_height / 2.0  # half-extent + centre z for the table slab
 
-    table_block = ""
-    if include_table:
-        table_block = f"""
-# Work cell + table (top at z={table_height}). Slab modelled like the
-# hand-rolled originals: Cube scaled to half-extents, centred at half height.
+    cell_block = ""
+    if include_cell:
+        cell_block = f"""
+# Work cell parent
 cell = stage.GetPrimAtPath('{root}/Cell')
 if not cell or not cell.IsValid():
     stage.DefinePrim('{root}/Cell', 'Xform')
+"""
+
+    table_block = ""
+    if include_table:
+        table_block = f"""
+# Work table (top at z={table_height}). Slab modelled like the
+# hand-rolled originals: Cube scaled to half-extents, centred at half height.
 table_prim = stage.GetPrimAtPath('{root}/Table')
 if not table_prim or not table_prim.IsValid():
     table_prim = UsdGeom.Cube.Define(stage, '{root}/Table').GetPrim()
@@ -103,7 +112,7 @@ light_prim = stage.GetPrimAtPath('{root}/DomeLight')
 if not light_prim or not light_prim.IsValid():
     light_prim = UsdLux.DomeLight.Define(stage, '{root}/DomeLight').GetPrim()
 UsdLux.DomeLight(light_prim).GetIntensityAttr().Set({intensity})
-{ground_block}{table_block}
+{ground_block}{cell_block}{table_block}
 # Physics scene — the verified-corpus settings unless overridden.
 phys_prim = stage.GetPrimAtPath('/PhysicsScene')
 if not phys_prim or not phys_prim.IsValid():
@@ -112,7 +121,7 @@ px_api = PhysxSchema.PhysxSceneAPI.Apply(phys_prim)
 px_api.CreateEnableGPUDynamicsAttr().Set({gpu_dyn})
 px_api.CreateBroadphaseTypeAttr().Set('{broadphase}')
 
-print('scene_baseline: light{"+ground" if include_ground else ""}{"+cell+table" if include_table else ""} + PhysicsScene(gpu={gpu_dyn}, {broadphase})')
+print('scene_baseline: light{"+ground" if include_ground else ""}{"+cell" if include_cell else ""}{"+table" if include_table else ""} + PhysicsScene(gpu={gpu_dyn}, {broadphase})')
 """
 
 

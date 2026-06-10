@@ -19,6 +19,7 @@ import sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO))  # service.* imports in script mode (v2 substitution)
 
 PAT = re.compile(
     r'(?:#[^\n]*\n)*'
@@ -81,7 +82,21 @@ def main() -> int:
     results = {}
     for n in names:
         tpl = json.load(open(REPO / f"workspace/templates/{n}.json"))
-        new_code = candidate_code(tpl.get(field) or "")
+        raw_field = tpl.get(field) or ""
+        new_code = candidate_code(raw_field)
+        if new_code is None:
+            # v2: AST matcher for the variant openings; ct needs the real
+            # role substitution for PARSING (raw keeps its placeholders)
+            parse_text = raw_field
+            if ct_mode:
+                try:
+                    from service.isaac_assist_service.chat.canonical_instantiator import (
+                        substitute_role_placeholders)
+                    parse_text = substitute_role_placeholders(
+                        raw_field, tpl.get("role_defaults"))
+                except Exception:
+                    pass
+            new_code = candidate_code_v2(raw_field, parse_text)
         if new_code is None:
             results[n] = "NO_MATCH"
             print(f"{n}: NO_MATCH (variant — later wave)", flush=True)
@@ -107,6 +122,138 @@ def main() -> int:
         results[n] = verdict
     print("SUMMARY " + json.dumps(results))
     return 0
+
+
+
+
+# ---------------------------------------------------------------------------
+# v2: AST-based opening matcher [ct-variant wave] — order-tolerant, handles
+# inline intensity, multiline calls, missing Cell/Ground/Table. Works on a
+# placeholder-SUBSTITUTED source; spans map back to raw lines (substitution
+# preserves line structure).
+
+import ast as _ast
+
+
+def _lit(node):
+    """Literal value of an ast node (Constant / List of Constants) or None."""
+    if isinstance(node, _ast.Constant):
+        return node.value
+    if isinstance(node, (_ast.List, _ast.Tuple)):
+        out = []
+        for el in node.elts:
+            v = _lit(el)
+            if v is None and not (isinstance(el, _ast.Constant) and el.value is None):
+                return None
+            out.append(v)
+        return out
+    if isinstance(node, _ast.Dict):
+        d = {}
+        for k, v in zip(node.keys, node.values):
+            kk, vv = _lit(k), _lit(v)
+            if kk is None:
+                return None
+            d[kk] = vv
+        return d
+    if isinstance(node, _ast.UnaryOp) and isinstance(node.op, _ast.USub):
+        v = _lit(node.operand)
+        return -v if isinstance(v, (int, float)) else None
+    return None
+
+
+def _classify_stmt(stmt):
+    """(kind, payload) for opening-block statements; (None, None) otherwise."""
+    if not (isinstance(stmt, _ast.Expr) and isinstance(stmt.value, _ast.Call)):
+        return None, None
+    call = stmt.value
+    if not isinstance(call.func, _ast.Name):
+        return None, None
+    name = call.func.id
+    kw = {k.arg: _lit(k.value) for k in call.keywords if k.arg}
+    if name == "create_prim":
+        path = kw.get("prim_path")
+        if path == "/World/DomeLight":
+            return "light", {"intensity": kw.get("intensity")}
+        if path == "/World/Ground" and kw.get("position") == [0, 0, -0.5]:
+            sc = kw.get("scale")
+            if isinstance(sc, list) and len(sc) == 3 and sc[0] == sc[1] and sc[2] == 1:
+                return "ground", {"scale": float(sc[0])}
+        if path == "/World/Cell" and kw.get("prim_type") == "Xform":
+            return "cell", {}
+        if path == "/World/Table":
+            pos, sc = kw.get("position"), kw.get("scale")
+            if (isinstance(pos, list) and isinstance(sc, list) and len(sc) == 3
+                    and pos[:2] == [0, 0] and abs(pos[2] - sc[2]) < 1e-9):
+                return "table", {"size": [sc[0] * 2, sc[1] * 2], "height": sc[2] * 2}
+    elif name == "set_attribute":
+        if (kw.get("prim_path") == "/World/DomeLight"
+                and kw.get("attr_name") == "inputs:intensity"):
+            return "light_intensity", {"intensity": kw.get("value")}
+    elif name == "apply_api_schema":
+        if kw.get("schema_name") == "PhysicsCollisionAPI":
+            if kw.get("prim_path") == "/World/Ground":
+                return "ground_col", {}
+            if kw.get("prim_path") == "/World/Table":
+                return "table_col", {}
+    elif name == "set_physics_scene_config":
+        if kw.get("config") == {"enable_gpu_dynamics": False, "broadphase_type": "MBP"}:
+            return "physics", {}
+    return None, None
+
+
+def candidate_code_v2(raw_text: str, parse_text: str = None):
+    """Replace the opening block (any canonical-family variant) with a
+    create_scene_baseline call. raw_text = the text to EDIT (may contain
+    placeholders); parse_text = substituted text to PARSE (defaults raw)."""
+    src = parse_text if parse_text is not None else raw_text
+    try:
+        mod = _ast.parse(src)
+    except SyntaxError:
+        return None
+    found, first_ln, last_ln = {}, None, None
+    for stmt in mod.body:
+        kind, payload = _classify_stmt(stmt)
+        if kind is None:
+            break
+        if kind in found:        # duplicate family -> not the opening block
+            break
+        found[kind] = payload
+        first_ln = first_ln or stmt.lineno
+        last_ln = stmt.end_lineno
+    if "light" not in found or "physics" not in found:
+        return None
+    # paired families must be complete
+    if ("ground" in found) != ("ground_col" in found):
+        return None
+    if ("table" in found) != ("table_col" in found):
+        return None
+    if "table" in found and abs(found["table"]["height"] - 0.75) > 1e-9:
+        return None              # non-canonical table height — out of scope
+    args = []
+    inten = found.get("light_intensity", {}).get("intensity",
+            found["light"].get("intensity"))
+    if inten is not None and float(inten) != 1000.0:
+        args.append(f"intensity={inten}")
+    if "ground" not in found:
+        args.append("include_ground=False")
+    elif found["ground"]["scale"] != 20.0:
+        args.append(f"ground_scale={found['ground']['scale']}")
+    if "table" not in found:
+        args.append("include_table=False")
+        if "cell" in found:
+            args.append("include_cell=True")
+    else:
+        ts = found["table"]["size"]
+        if ts != [1.5, 0.5]:
+            args.append(f"table_size=[{ts[0]}, {ts[1]}]")
+        if "cell" not in found:
+            args.append("include_cell=False")
+    lines = raw_text.splitlines(keepends=True)
+    head = "".join(lines[: first_ln - 1])
+    tail = "".join(lines[last_ln:])
+    repl = ("# Toolified opening [P2-07 v2]\n"
+            f"create_scene_baseline({', '.join(args)})\n")
+    return head + repl + tail
 
 
 if __name__ == "__main__":
