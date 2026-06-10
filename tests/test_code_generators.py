@@ -1101,6 +1101,13 @@ _TEST_VECTORS = [
         ["AddReference", "widget.usd", "RigidBodyAPI.Apply"],
     ),
     (
+        "add_classification_sensor",
+        {"sensor_path": "/W/Scan", "position": [0, 0.4, 0.8],
+         "accuracy": 0.8, "seed": 7},
+        ["isaac_sensor:class", "PhysxTriggerAPI", "_rnd.Random(7)",
+         "subscribe_physics_step_events"],
+    ),
+    (
         "create_physics_joint",
         {"joint_path": "/W/J", "body0": "/W/Cab", "body1": "/W/Drawer",
          "lower_limit": -0.3, "upper_limit": 0.0},

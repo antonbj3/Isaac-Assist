@@ -4012,6 +4012,20 @@ class DiagnoseTaskOutcomeArgs(BaseModel):
     outdir: Optional[str] = Field(None, description="Override artifact dir (default TS_OUTDIR env or ~/.isaac_qa/run)")
 
 
+class AddClassificationSensorArgs(BaseModel):
+    """Scan-station classification sensor with declared, seeded error model."""
+    model_config = ConfigDict(populate_by_name=True, extra='allow')
+
+    sensor_path: str = Field(...)
+    position: List[float] = Field(...)
+    size: Optional[List[float]] = Field(None)
+    watched_path_pattern: Optional[str] = Field(None)
+    accuracy: Optional[float] = Field(None, description="0..1, default 1.0")
+    confusion: Optional[Dict[str, Any]] = Field(None)
+    classes: Optional[List[str]] = Field(None)
+    seed: Optional[int] = Field(None)
+
+
 class CreatePhysicsJointArgs(BaseModel):
     """Author a revolute/prismatic joint with body0/body1 as REAL relationships."""
     model_config = ConfigDict(populate_by_name=True, extra='allow')
@@ -4511,6 +4525,7 @@ MODEL_REGISTRY = {
     "create_rigid_body_array": CreateRigidBodyArrayArgs,
     "verify_articulation": VerifyArticulationArgs,
     "create_physics_joint": CreatePhysicsJointArgs,
+    "add_classification_sensor": AddClassificationSensorArgs,
     "simulate_articulation_check": SimulateArticulationCheckArgs,
     "diagnose_task_outcome": DiagnoseTaskOutcomeArgs,
 }

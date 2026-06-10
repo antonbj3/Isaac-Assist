@@ -10143,6 +10143,27 @@ ISAAC_SIM_TOOLS = [
     {
         "type": "function",
         "function": {
+            "name": "add_classification_sensor",
+            "description": "Scan-station classification sensor [P2-11]: trigger volume that on item entry writes isaac_sensor:class (+confidence) ON THE ITEM — the attr controllers route from. V0 honesty: reads Semantics internally through a DECLARED, SEEDED error model (accuracy + optional confusion matrix); interface-honest, and the gate stays on raw Semantics so MISROUTED measures the sensor+controller chain.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "sensor_path": {"type": "string"},
+                    "position": {"type": "array", "items": {"type": "number"}},
+                    "size": {"type": "array", "items": {"type": "number"}, "description": "Default [0.15,0.15,0.15]"},
+                    "watched_path_pattern": {"type": "string", "description": "Default '/World/'"},
+                    "accuracy": {"type": "number", "description": "0..1, default 1.0 (perfect)"},
+                    "confusion": {"type": "object", "description": "{true_class: {wrong_class: weight}} for wrong-draws"},
+                    "classes": {"type": "array", "items": {"type": "string"}, "description": "Label universe for uniform wrong-draws"},
+                    "seed": {"type": "integer", "description": "Error-model RNG seed (N-of-M reproducibility). Default 42"},
+                },
+                "required": ["sensor_path", "position"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "create_physics_joint",
             "description": "Author a revolute/prismatic joint CORRECTLY: body0/body1 as USD RELATIONSHIPS (the set_attribute string pattern creates dual-spec broken properties — pcp throws and the joint never binds; live drawer-open finding). Axis, limits, local anchors.",
             "parameters": {

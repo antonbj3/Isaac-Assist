@@ -1280,8 +1280,126 @@ def register(
 
     # Code-gen handlers (5)
     codegen["add_proximity_sensor"] = _gen_add_proximity_sensor
+    codegen["add_classification_sensor"] = _gen_add_classification_sensor
     codegen["add_sensor_to_prim"] = _gen_add_sensor
     codegen["configure_camera"] = _gen_configure_camera
     codegen["set_camera_look_at"] = _gen_set_camera_look_at
     codegen["set_camera_params"] = _gen_set_camera_params
 
+
+
+def _gen_add_classification_sensor(args: Dict) -> str:
+    """Scan-station classification sensor [P2-11]: a trigger volume that, on
+    item entry, writes ``isaac_sensor:class`` + ``isaac_sensor:class_confidence``
+    on the ITEM prim — the attr the controller routes from (read-order change
+    lands separately, UR10-COORD).
+
+    V0 honesty model: reads Semantics INTERNALLY through a DECLARED error
+    model — ``accuracy`` (default 1.0) + optional ``confusion``
+    ({true: {wrong: p}}); sampling is SEEDED so N-of-M is reproducible.
+    Interface-honest: consumers see only the attr. The gate stays on raw
+    Semantics = ground truth, so MISROUTED finally measures this chain.
+
+    Args:
+        sensor_path (str, required), position (list[3], required),
+        size (list[3], default [0.15,0.15,0.15]),
+        watched_path_pattern (str, default "/World/"),
+        accuracy (float 0..1, default 1.0),
+        confusion (dict, optional), classes (list[str], optional — the
+        label universe for wrong-draws; derived from confusion if absent),
+        seed (int, default 42).
+    """
+    sensor_path = args["sensor_path"]
+    position = args["position"]
+    size = args.get("size", [0.15, 0.15, 0.15])
+    pattern = args.get("watched_path_pattern", "/World/")
+    accuracy = float(args.get("accuracy", 1.0))
+    if not (0.0 <= accuracy <= 1.0):
+        _msg = f"add_classification_sensor: accuracy must be 0..1, got {accuracy}"
+        return f"raise ValueError({_msg!r})\n"
+    confusion = args.get("confusion") or {}
+    classes = args.get("classes") or sorted(
+        {c for v in confusion.values() for c in v} | set(confusion))
+    seed = int(args.get("seed", 42))
+    return f"""\
+import omni.usd
+import omni.physx
+import random as _rnd
+from pxr import UsdGeom, UsdPhysics, PhysxSchema, Sdf, Gf, Semantics
+
+stage = omni.usd.get_context().get_stage()
+_sp = {sensor_path!r}
+_vol = UsdGeom.Cube.Define(stage, _sp)
+_xf = UsdGeom.Xformable(_vol.GetPrim())
+_xf.ClearXformOpOrder()
+_xf.AddTranslateOp().Set(Gf.Vec3d({float(position[0])}, {float(position[1])}, {float(position[2])}))
+_xf.AddScaleOp().Set(Gf.Vec3f({float(size[0])/2}, {float(size[1])/2}, {float(size[2])/2}))
+_vol.GetPrim().GetAttribute('visibility').Set('invisible')
+UsdPhysics.CollisionAPI.Apply(_vol.GetPrim())
+PhysxSchema.PhysxTriggerAPI.Apply(_vol.GetPrim())
+
+_RNG = _rnd.Random({seed})
+_ACC = {accuracy}
+_CONF = {confusion!r}
+_CLASSES = {classes!r}
+_scanned = set()
+
+def _true_class(p):
+    for _sn in ('Semantics_color', 'Semantics_colour', 'Semantics_class'):
+        try:
+            _sem = Semantics.SemanticsAPI.Get(p, _sn)
+            if not _sem: continue
+            _da = _sem.GetSemanticDataAttr()
+            if _da and _da.IsValid() and _da.Get():
+                return str(_da.Get()).lower()
+        except Exception: continue
+    return None
+
+def _classify(true_cls):
+    # DECLARED error model, seeded: accuracy draw, then confusion row or
+    # uniform wrong-draw over the label universe.
+    if true_cls is None:
+        return None, 0.0
+    if _RNG.random() < _ACC:
+        return true_cls, _ACC
+    _row = _CONF.get(true_cls)
+    if _row:
+        _r = _RNG.random() * sum(_row.values())
+        _acc = 0.0
+        for _k, _p in _row.items():
+            _acc += _p
+            if _r <= _acc:
+                return _k, 1.0 - _ACC
+    _others = [c for c in _CLASSES if c != true_cls]
+    return (_RNG.choice(_others) if _others else true_cls), 1.0 - _ACC
+
+def _on_step(_dt):
+    import omni.physx
+    _iface = omni.physx.get_physx_scene_query_interface()
+    _c = Gf.Vec3d({float(position[0])}, {float(position[1])}, {float(position[2])})
+    _h = Gf.Vec3f({float(size[0])/2}, {float(size[1])/2}, {float(size[2])/2})
+    def _hit(hit):
+        _path = str(hit.rigid_body)
+        if _path.startswith({pattern!r}) and _path not in _scanned and _path != _sp:
+            _p = stage.GetPrimAtPath(_path)
+            if _p and _p.IsValid():
+                _tc = _true_class(_p)
+                _cls, _confd = _classify(_tc)
+                if _cls is not None:
+                    _a = _p.CreateAttribute('isaac_sensor:class', Sdf.ValueTypeNames.String)
+                    _a.Set(_cls)
+                    _p.CreateAttribute('isaac_sensor:class_confidence', Sdf.ValueTypeNames.Float).Set(float(_confd))
+                    _scanned.add(_path)
+                    print('classification_sensor scanned', _path, 'true=', _tc, 'reported=', _cls)
+        return True
+    _iface.overlap_box(_h, _c, Gf.Quatd(1.0), _hit, False)
+
+import builtins
+_subs = getattr(builtins, '_classification_sensor_subs', {{}})
+_old = _subs.get(_sp)
+if _old:
+    _old.unsubscribe()
+_subs[_sp] = omni.physx.get_physx_interface().subscribe_physics_step_events(_on_step)
+builtins._classification_sensor_subs = _subs
+print('classification_sensor armed at', _sp, 'accuracy=', _ACC, 'seed=', {seed})
+"""
