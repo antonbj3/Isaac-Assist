@@ -41,17 +41,11 @@ _ROBOT_REACH_M: Dict[str, float] = {
     "default": 0.800,
 }
 
-# Fallback z-extents (metres) for palette classes whose ObjectClass.height_m is 0.
-# A height is needed for support / fit / drop-Z. Explicit per-object bbox overrides this.
-_CLASS_HEIGHTS_M: Dict[str, float] = {
-    "cube_small": 0.05, "cube_medium": 0.05, "cube_large": 0.10,
-    "cylinder_small": 0.05, "cylinder_medium": 0.07, "cylinder_large": 0.10,
-    "sphere": 0.05, "screw": 0.03, "nut": 0.01, "bolt": 0.03,
-    "bin": 0.15, "bin_large": 0.20, "kit_tray": 0.05, "shelf": 1.2,
-    "table_small": 0.40, "table_medium": 0.40, "table_large": 0.75,
-    "conveyor_short": 0.05, "conveyor_long": 0.05, "rotary_table": 0.10,
-    "gravity_dispenser": 0.30, "obstacle_box": 0.50, "obstacle_cylinder": 0.50,
-}
+# PALETTE.height_m is the canonical source of truth for every known asset class.
+# _CLASS_HEIGHTS_M is kept as a forward-compatibility fallback ONLY for ad-hoc /
+# unknown asset names that are not in the palette (e.g. user-supplied custom assets).
+# Do NOT re-populate this dict with palette entries — edit object_palette.py instead.
+_CLASS_HEIGHTS_M: Dict[str, float] = {}
 
 # Static reach-shell band: a pick within (reach - margin) is a comfortable PASS;
 # within [reach - margin, reach] is UNCERTAIN (near the non-convex floor -> needs
