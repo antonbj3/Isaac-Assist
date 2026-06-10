@@ -11,8 +11,8 @@ and tighten over time"). Unknown property shapes fall back to `Any`;
 mixed-type unions (anyOf/oneOf) collapse to `Any`; `extra="allow"`
 on every model so unrecognised keys do not 400.
 
-Generated: 2026-05-14T08:32:36+00:00
-Tool count: 435
+Generated: 2026-06-10T06:50:51+00:00
+Tool count: 439
 
 Per spec/IA_FULL_SPEC_2026-05-10.md Phase 10.
 """
@@ -351,8 +351,7 @@ class SimulateTraversalCheckArgs(BaseModel):
     """FUNCTION GATE for pick-place / assembly-line scenes — counterpart to verify_pickplace_pipeline's FORM gate. Plays the timeline for duration_s of sim time, captures the cube's position twice (for veloc"""
     model_config = ConfigDict(populate_by_name=True, extra='allow')
 
-    cube_path: Optional[str] = Field(None, description="Prim path of the cube to track (e.g. /World/Cube_1). Optional if cube_paths is provided (multi-cube mode).")
-    cube_paths: Optional[List[str]] = Field(None, description="MULTI-CUBE mode: list of cube prim paths. Either cube_path OR cube_paths required. Takes precedence over cube_path when both provided.")
+    cube_path: str = Field(..., description="Prim path of the cube to track (e.g. /World/Cube_1).")
     target_path: str = Field(..., description="Prim path of the destination whose world bbox is the target (e.g. /World/Bin).")
     duration_s: Optional[float] = Field(None, description="Sim duration in seconds. Default 60. Use 30 for smoke tests.")
     xy_tolerance: Optional[float] = Field(None, description="Extra xy slack on target bbox in meters. Default 0.0 (strict).")
@@ -385,6 +384,15 @@ class DiagnoseSceneFeasibilityArgs(BaseModel):
     seed: Optional[int] = Field(None, description="Random seed for IK + sampling. Default 42.")
     use_cache: Optional[bool] = Field(None, description="Use 60s scene-graph-hash cache. Default true. Set false for baseline/CI runs.")
     lang: Optional[str] = Field(None, description="Message language: 'sv' (Swedish, default) or 'en'.")
+
+
+class DiagnosePickExecutionArgs(BaseModel):
+    """POST-RUN FAILURE LOCALIZER — call AFTER simulate_traversal_check returns success=false to find out WHY. Reads the controller's own ctrl:* USD records off the robot prim + tails the always-on plan-fail"""
+    model_config = ConfigDict(populate_by_name=True, extra='allow')
+
+    robot_path: str = Field(..., description="USD path to the robot prim that ran the pick-place (e.g. /World/UR10). The ctrl:* observability attrs live here.")
+    with_contacts: Optional[bool] = Field(None, description="Also capture ongoing PhysX arm-vs-scene contact pairs by briefly re-stepping the live scene. Best-effort; default false (fast pure read).")
+    contact_window_s: Optional[float] = Field(None, description="Seconds to step when with_contacts=true. Default 2.0.")
 
 
 class SetupRos2ControlCompatArgs(BaseModel):
@@ -939,29 +947,29 @@ class ReleaseComplianceArgs(BaseModel):
 
 
 class SetupInsertionControllerArgs(BaseModel):
-    """Tier D composite — install insertion-class impedance controller + run strategy-specific descent trajectory in one call. Replaces 50+ line manual blocks across narrow-clearance-insertion, screw-driving"""
+    """Tier D composite — installs an insertion-class impedance controller and runs a strategy-specific descent trajectory in one call. Replaces the 50+ line setup_impedance_controller + set_compliance_param"""
     model_config = ConfigDict(populate_by_name=True, extra='allow')
 
     robot_path: str = Field(..., description="USD path to the robot articulation root, e.g. '/World/Franka'.")
-    strategy: str = Field(..., description="One of 'spiral_search', 'helical_screw', 'snap_fit', 'impedance_descent'.")
+    strategy: str = Field(..., description="spiral_search: planar XY oscillation on Z descent (narrow-clearance peg-in-hole). helical_screw: coupled Δz+Δrz, ~1.25 turns over descent (M3-M6 screw-driving). snap_fit: pure Z press, identity orient")
     start_pose: List[float] = Field(..., description="[x, y, z] hover-above-target start position for descent.")
     target_pose: List[float] = Field(..., description="[x, y, z] final seated position at end of descent.")
-    target_path: Optional[str] = Field(None, description="Optional USD path to insertion target for plan-dict traceability.")
-    target_frame: Optional[str] = Field(None, description="Tool/end-effector frame. Default 'tool0'.")
-    Kx: Optional[List[float]] = Field(None, description="Override translational stiffness [N/m].")
-    Kr: Optional[List[float]] = Field(None, description="Override rotational stiffness [N·m/rad].")
-    Dx: Optional[List[float]] = Field(None, description="Override translational damping [N·s/m].")
-    Dr: Optional[List[float]] = Field(None, description="Override rotational damping [N·m·s/rad].")
+    target_path: Optional[str] = Field(None, description="Optional USD path to the insertion target (peg-hole, bottle neck, etc.) for plan-dict traceability.")
+    target_frame: Optional[str] = Field(None, description="Tool/end-effector frame name for impedance controller. Default 'tool0'; templates pass 'panda_hand' for Franka.")
+    Kx: Optional[List[float]] = Field(None, description="Override translational stiffness [N/m]. Default per strategy.")
+    Kr: Optional[List[float]] = Field(None, description="Override rotational stiffness [N·m/rad]. Default per strategy.")
+    Dx: Optional[List[float]] = Field(None, description="Override translational damping [N·s/m]. Default per strategy.")
+    Dr: Optional[List[float]] = Field(None, description="Override rotational damping [N·m·s/rad]. Default per strategy.")
     null_space_stiffness: Optional[float] = Field(None, description="Null-space stiffness scalar. Default 0.5.")
     null_space_damping: Optional[float] = Field(None, description="Null-space damping scalar. Default 0.5.")
-    compliance_controller: Optional[str] = Field(None, description="Override compliance mode. Default 'cartesian_impedance'.")
-    compliance_handoff_at: Optional[float] = Field(None, description="Override rigid→compliant handoff fraction (per-strategy default).")
-    velocity_scaling: Optional[float] = Field(None, description="Override trajectory velocity multiplier (per-strategy default).")
-    timeout_s: Optional[float] = Field(None, description="Override live-mode watchdog timeout (per-strategy default).")
-    n_waypoints: Optional[int] = Field(None, description="Override waypoint count (per-strategy default).")
-    spiral_amplitude_m: Optional[float] = Field(None, description="spiral_search only — XY oscillation amplitude. Default 0.002.")
-    total_rotation_deg: Optional[float] = Field(None, description="helical_screw / impedance_descent only — total Z rotation over descent.")
-    dry_run: Optional[bool] = Field(None, description="If true (default), return composite plan dict without touching Kit.")
+    compliance_controller: Optional[str] = Field(None, description="Override compliance mode. Default 'cartesian_impedance' for all four strategies.")
+    compliance_handoff_at: Optional[float] = Field(None, description="Override rigid→compliant handoff fraction. Defaults: 0.0 (spiral_search / helical_screw / snap_fit — entire trajectory compliant); 0.5 (impedance_descent).")
+    velocity_scaling: Optional[float] = Field(None, description="Override trajectory velocity multiplier. Defaults: 0.10 (spiral_search), 0.15 (snap_fit), 0.20 (helical_screw), 0.30 (impedance_descent).")
+    timeout_s: Optional[float] = Field(None, description="Override live-mode watchdog timeout (seconds). Defaults: 15 (snap_fit), 30 (helical_screw / impedance_descent), 45 (spiral_search).")
+    n_waypoints: Optional[int] = Field(None, description="Override waypoint count. Defaults: 3 (snap_fit / impedance_descent), 6 (helical_screw), 10 (spiral_search).")
+    spiral_amplitude_m: Optional[float] = Field(None, description="spiral_search only — XY oscillation amplitude. Default 0.002 (2 mm).")
+    total_rotation_deg: Optional[float] = Field(None, description="helical_screw / impedance_descent only — total rotation about Z over the descent. Defaults: 450 deg (helical_screw, ~1.25 turns), 90 deg (impedance_descent).")
+    dry_run: Optional[bool] = Field(None, description="If true (default), return the composite plan dict without touching Kit. Set false only when Kit RPC + ros2_control bridge + torque-mode robot is provisioned.")
 
 
 class FollowTrajectoryWithComplianceArgs(BaseModel):
@@ -1378,7 +1386,7 @@ class IterateRewardArgs(BaseModel):
     prev_reward_code: str = Field(..., description="Previous iteration's reward function code")
     metrics: Dict[str, Any] = Field(..., description="Training metrics: { fitness: float, components: { name: { mean: [float], converged: bool } }, task_success_rate: float }")
     user_feedback: Optional[str] = Field(None, description="Optional user feedback — e.g. 'it keeps dropping the handle'")
-    run_id: Optional[str] = Field(None, description="Optional Eureka run identifier — threads iteration state through EUREKA.runs[run_id] so eureka_status / eureka_history reflect the iter_count increment. Without it the handler still runs the mutation but the run-state bookkeeping does not advance.")
+    run_id: Optional[str] = Field(None, description="Optional Eureka run identifier returned by generate_reward. When supplied, EUREKA.runs[run_id] is updated and the response echoes back run_status / current_iteration / best_fitness.")
 
 
 class EurekaStatusArgs(BaseModel):
@@ -1746,10 +1754,12 @@ class SetupPickPlaceControllerArgs(BaseModel):
     curobo_world_yml: Optional[str] = Field(None, description="curobo mode: path to cuRobo world_config YAML (cuboid/mesh obstacles). If omitted, the live USD stage is used to auto-build a Cuboid scene for collision checking.")
     planning_obstacles: Optional[List[str]] = Field(None, description="curobo mode: list of USD paths to include as collision obstacles during planning. Each prim's world-bound is converted to a Cuboid. Use to avoid the conveyor/table/walls during transit.")
     color_routing: Optional[Dict[str, Any]] = Field(None, description="curobo mode (SORT-01 enabler): dict mapping semantic class_name → destination prim path. When present, the controller looks up each picked cube's Semantics_color (or Semantics_class) class_name and ro")
-    drop_targets: Optional[Any] = Field(None, description="curobo mode (stack-placement enabler): dict mapping cube_path → world drop position [x,y,z], OR list of [x,y,z] parallel to source_paths. When set, each cube is dropped at its specified position inste")
-    gripper_rotation: Optional[Any] = Field(None, description="curobo mode (Tier B brick-pattern enabler): dict mapping cube_path → yaw_deg (degrees), OR list of yaw_deg parallel to source_paths, OR scalar yaw_deg for all cubes. Rotates gripper around world Z-axi")
+    drop_targets: Optional[Dict[str, Any]] = Field(None, description="curobo mode (stack-placement enabler): dict mapping cube_path → world drop position [x,y,z], OR list of [x,y,z] parallel to source_paths. When set, each cube is dropped at its specified position inste")
+    gripper_rotation: Optional[Dict[str, Any]] = Field(None, description="curobo mode (Tier B brick-pattern enabler): dict mapping cube_path → yaw_deg (degrees), OR list of yaw_deg parallel to source_paths, OR scalar yaw_deg for all cubes. Rotates gripper around world Z-axi")
     robot_family: Optional[str] = Field(None, description="curobo mode: which robot family the controller targets. 'franka' (default) — 7-DOF Franka Panda + ParallelGripper, panda_hand tool frame, franka.yml cuRobo config. 'ur10'/'ur10e' — 6-DOF Universal Rob")
+    arm_scope: Optional[str] = Field(None, description="curobo + g1_arm only: which G1 arm the planner controls. Required when robot_family='g1_arm'; auto-set when robot_family is 'g1_left_arm'/'g1_right_arm'. Per-arm planners are cached separately under b")
     diffik_method: Optional[str] = Field(None, description="diffik mode: Jacobian inversion method. 'dls' (damped least-squares, default, λ=0.05) handles singularities gracefully; 'pinv' is Moore-Penrose pseudoinverse; 'svd' is truncated SVD. Use 'dls' unless ")
+    phase_id: Optional[str] = Field(None, description="Track K (2026-05-28): per-phase subscription scoping for the same robot. Default 'default' preserves legacy single-PPC behaviour. Pass a unique string per call when the SAME robot needs multiple seque")
 
 
 class ListAvailableControllersArgs(BaseModel):
@@ -2531,7 +2541,7 @@ class SetupContactSensorsArgs(BaseModel):
 
 
 class SetupBimanualPickPlaceControllerArgs(BaseModel):
-    """Install TWO coordinated cuRobo pick-place state machines on a single humanoid articulation (one per arm). V0 supports G1 only (robot_family='g1_arm'). Sequential coordination only (Kit RPC is single-tenant). 2026-05-28 J1."""
+    """Install TWO coordinated cuRobo pick-place state machines on a single humanoid articulation (one per arm). V0 supports G1 only (robot_family='g1_arm'). Both arms share one Articulation; per-arm cuRobo"""
     model_config = ConfigDict(populate_by_name=True, extra='allow')
 
     robot_path: str = Field(..., description="USD prim path of the humanoid articulation root (e.g. /World/G1).")
@@ -2540,12 +2550,12 @@ class SetupBimanualPickPlaceControllerArgs(BaseModel):
     left_destination: str = Field(..., description="Drop prim path for LEFT arm.")
     right_destination: str = Field(..., description="Drop prim path for RIGHT arm.")
     robot_family: Optional[str] = Field(None, description="Humanoid family. Only 'g1_arm' supported in V0.")
-    coordination_mode: Optional[str] = Field(None, description="sequential (default, V0 only) / parallel (falls back) / handoff.")
-    plant_feet: Optional[bool] = Field(None, description="Default True. USD FixedJoint between each ankle_roll_link and ground.")
-    planning_obstacles: Optional[List[str]] = Field(None, description="Extra obstacle prim paths.")
+    coordination_mode: Optional[str] = Field(None, description="sequential: LEFT runs then RIGHT (V0 only). parallel: V0 falls back to sequential with warning. handoff: uses mutex_path for hold-zone hand-off (sequential-style).")
+    plant_feet: Optional[bool] = Field(None, description="Default True. Drop a USD FixedJoint between each ankle_roll_link and ground so the humanoid lower body is rigidly anchored. V0 lacks WBC runtime — set False only if external anchor exists.")
+    planning_obstacles: Optional[List[str]] = Field(None, description="Extra USD prim paths to register as cuRobo collision obstacles. The OTHER arm is not auto-included as obstacle in V0; sequential coordination avoids overlap via state-machine timing.")
     mutex_path: Optional[str] = Field(None, description="Shared coordination mutex prim path for handoff mode.")
     ee_offset: Optional[List[float]] = Field(None, description="EE→fingertip offset (m). Default [0.0, 0.0, 0.10].")
-    scenario_profile: Optional[str] = Field(None, description="Forwarded to per-arm cuRobo handler.")
+    scenario_profile: Optional[str] = Field(None, description="Forwarded to per-arm cuRobo handler (e.g. 'single_belt_pick', 'obstacle_rich', or omit for default).")
 
 
 class SetupWholeBodyControlArgs(BaseModel):
@@ -2566,15 +2576,6 @@ class DiagnoseWholeBodyArgs(BaseModel):
     articulation_path: str = Field(..., description="USD path to the humanoid articulation")
     support_polygon_margin_m: Optional[float] = Field(None, description="Minimum acceptable distance from CoM projection to support polygon edge, in meters. Default: 0.05")
     ee_accel_threshold_m_s2: Optional[float] = Field(None, description="Maximum acceptable EE acceleration during gait, m/s^2. Default: 5.0")
-
-
-class DiagnosePickExecutionArgs(BaseModel):
-    """Post-run failure localizer for a pick-place run. Reads the controller's own ctrl:* USD records + the always-on plan-fail / grip logs to report which segment the plan died at, whether the arm moved, why a cube was rejected, and a recommended fix. Call AFTER simulate_traversal_check returns success=false. Does NOT re-run the sim (unless with_contacts)."""
-    model_config = ConfigDict(populate_by_name=True, extra='allow')
-
-    robot_path: str = Field(..., description="USD path to the robot prim that ran the pick-place (e.g. '/World/UR10' or '/World/Franka'); the ctrl:* observability attrs live here.")
-    with_contacts: Optional[bool] = Field(False, description="If true, briefly re-steps the LIVE settled scene with a PhysX contact-report subscription to capture ONGOING arm-vs-scene contact pairs (e.g. 'upper_arm_link|Cube_2'). Best-effort: catches current/persistent contacts, not historical ones. Default false (fast pure post-run read).")
-    contact_window_s: Optional[float] = Field(None, description="Seconds to step when with_contacts=true. Default: 2.0")
 
 
 class SetupLocoManipulationTrainingArgs(BaseModel):
@@ -2968,7 +2969,6 @@ class SetSemanticLabelArgs(BaseModel):
     prim_path: str = Field(..., description="USD path to the prim to label")
     class_name: str = Field(..., description="Semantic class name, e.g. 'cube', 'robot', 'table'")
     semantic_type: Optional[str] = Field(None, description="Semantic type token. Default: 'class'")
-    label: Optional[str] = Field(None, description="Optional per-instance label string for finer-grained metadata alongside the broader class_name (e.g. class_name='pack_item' + label='consumable_tube'). The class is what Replicator emits; label is bookkeeping metadata.")
 
 
 class GetJointLimitsArgs(BaseModel):
@@ -3995,6 +3995,13 @@ class RebindRoleArgs(BaseModel):
     target: str = Field(..., description="object_id in the LayoutSpec to bind the role to.")
 
 
+class StaticEyesArgs(BaseModel):
+    """Fast no-physics geometric verdict on a scene layout BEFORE building (milliseconds, no Kit): tiered reachability (fail / pass / uncertain->needs live IK probe), interpenetration/clump, support (floatin"""
+    model_config = ConfigDict(populate_by_name=True, extra='allow')
+
+    layout: Dict[str, Any] = Field(..., description="The layout to verify: {robots:[{path, family (e.g. 'ur10'/'franka_panda'), base:[x,y,z]}], objects:[{path, position:[x,y,z], asset_name (palette class) OR bbox:[[xmin,ymin,zmin],[xmax,ymax,zmax]]}], p")
+
+
 # ---------------------------------------------------------------------------
 # Tool-name → model-class lookup
 
@@ -4036,6 +4043,7 @@ MODEL_REGISTRY = {
     "verify_pickplace_pipeline": VerifyPickplacePipelineArgs,
     "simulate_traversal_check": SimulateTraversalCheckArgs,
     "diagnose_scene_feasibility": DiagnoseSceneFeasibilityArgs,
+    "diagnose_pick_execution": DiagnosePickExecutionArgs,
     "setup_ros2_control_compat": SetupRos2ControlCompatArgs,
     "emit_ros2_control_yaml": EmitRos2ControlYamlArgs,
     "modbus_tcp_bridge_attach": ModbusTcpBridgeAttachArgs,
@@ -4097,8 +4105,8 @@ MODEL_REGISTRY = {
     "setup_impedance_controller": SetupImpedanceControllerArgs,
     "set_compliance_params": SetComplianceParamsArgs,
     "release_compliance": ReleaseComplianceArgs,
-    "follow_trajectory_with_compliance": FollowTrajectoryWithComplianceArgs,
     "setup_insertion_controller": SetupInsertionControllerArgs,
+    "follow_trajectory_with_compliance": FollowTrajectoryWithComplianceArgs,
     "setup_assembly_constraint": SetupAssemblyConstraintArgs,
     "setup_zone_partition": SetupZonePartitionArgs,
     "setup_cortex_behavior": SetupCortexBehaviorArgs,
@@ -4268,7 +4276,6 @@ MODEL_REGISTRY = {
     "setup_bimanual_pick_place_controller": SetupBimanualPickPlaceControllerArgs,
     "setup_whole_body_control": SetupWholeBodyControlArgs,
     "diagnose_whole_body": DiagnoseWholeBodyArgs,
-    "diagnose_pick_execution": DiagnosePickExecutionArgs,
     "setup_loco_manipulation_training": SetupLocoManipulationTrainingArgs,
     "setup_rsi_from_demos": SetupRsiFromDemosArgs,
     "setup_multi_rate": SetupMultiRateArgs,
@@ -4437,4 +4444,5 @@ MODEL_REGISTRY = {
     "validate_joint_post": ValidateJointPostArgs,
     "execute_contact_sequence_plan": ExecuteContactSequencePlanArgs,
     "rebind_role": RebindRoleArgs,
+    "static_eyes": StaticEyesArgs,
 }

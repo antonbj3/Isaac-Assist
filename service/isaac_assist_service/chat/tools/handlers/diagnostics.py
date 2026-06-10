@@ -4024,6 +4024,25 @@ async def _handle_simulate_traversal_check(args: Dict) -> Dict:
     seed = int(args.get("seed", 42))
     n_runs = max(1, min(int(args.get("n_runs", 1)), 50))
 
+    # P0-18 HONEST DELIVERY GATE — new optional args (backwards compatible).
+    # `targets`/`routing` give per-bin destinations for sort templates;
+    # `completeness` switches the multi-cube aggregation policy. When neither
+    # is supplied the generated code falls back to the legacy verdict and the
+    # gate is byte-identical to the pre-P0-18 behavior.
+    targets_map = args.get("targets") or {}
+    routing_list = args.get("routing") or []
+    completeness = args.get("completeness", "any")
+    # Resolve per-cube destination using the SAME pure logic the tests cover.
+    from ....qa import honest_gate as _honest_gate  # noqa: PLC0415
+    per_cube_target = _honest_gate.normalize_routing(
+        cube_paths, target_path, targets_map, routing_list
+    )
+    distinct_targets = _honest_gate.all_targets(per_cube_target)
+    routing_active = len(distinct_targets) > 1
+    # Misroute detection needs a raycast-down support read per cube — only
+    # worth the extra per-cube physics query when routing is actually active.
+    # Legacy single-target calls keep `routing_active=False` and never run it.
+
     code = f"""\
 import omni.usd, omni.timeline, omni.kit.app, json, time as _t
 import random as _rand
@@ -4073,6 +4092,7 @@ def _world_bbox(path):
 # from "cube on table/floor at same height as target". Verified against
 # Anton's 4 ground-truth tags (CP-01 yes, CP-13/14/18 no) — 4/4 agreement
 # (vs old bbox-only check which gave 3/4 false positives).
+# P0-18 reuses THIS verified raycast for misroute detection (no duplicate).
 def _cube_support(cube_path_arg, target_path_arg):
     \"\"\"Raycast down from below cube's bottom face; return (support_path,
     under_target, distance). Origin 1 cm below cube_min_z so the cube
@@ -4108,6 +4128,31 @@ def _cube_support(cube_path_arg, target_path_arg):
     except Exception:
         return (None, False, None)
 
+# P0-18: per-cube target resolution + misroute/completeness grading.
+# Mirrors service.isaac_assist_service.qa.honest_gate (unit-tested). Keep in
+# lock-step with that module.
+def _gate_under(support, target):
+    if not support or not target: return False
+    sp = str(support)
+    return sp == target or sp.startswith(target + "/")
+
+def _gate_min_delivered(comp, total):
+    if comp is None or comp == "" or comp == "any": return 1
+    if comp == "all": return total
+    if isinstance(comp, dict):
+        try: n = int(comp.get("min_delivered", 1))
+        except Exception: n = 1
+        return max(1, min(n, total))
+    if isinstance(comp, (int, float)) and not isinstance(comp, bool):
+        return max(1, min(int(comp), total))
+    return 1
+
+def _gate_mode(comp, min_required):
+    if isinstance(comp, dict): return "min_delivered=" + str(min_required)
+    if comp in (None, "", "any"): return "any"
+    if comp == "all": return "all"
+    return str(comp)
+
 cube_paths = {cube_paths!r}
 cube_path = cube_paths[0] if cube_paths else ""  # primary cube for legacy fields
 target_path = {target_path!r}
@@ -4119,6 +4164,14 @@ require_upright = {require_upright}
 upright_tol = {upright_tol}
 seed_base = {seed}
 n_runs = {n_runs}
+
+# P0-18 honest-delivery-gate parameters (see handler docstring). When
+# routing_active is False and completeness == 'any' the new branches below
+# are inert and `success` keeps the exact legacy value.
+per_cube_target = {per_cube_target!r}
+distinct_targets = {distinct_targets!r}
+routing_active = {routing_active!r}
+completeness = {completeness!r}
 
 def _world_up_dot(path):
     \"\"\"Read prim's world rotation, return cube_up_vector · world_up.
@@ -4443,10 +4496,92 @@ def _do_one_run(run_idx, target_bbox):
     upright_dot = _world_up_dot(cube_path)
     upright_ok = (not require_upright) or (upright_dot is not None and upright_dot >= upright_tol)
 
+    # ---- Legacy verdict (UNCHANGED — byte-identical for old callers) ----
     if len(cube_paths) > 1:
-        success = bool(delivered) and upright_ok
+        legacy_success = bool(delivered) and upright_ok
     else:
-        success = bool(in_xy and above_floor and at_rest and upright_ok)
+        legacy_success = bool(in_xy and above_floor and at_rest and upright_ok)
+
+    # ---- P0-18 honest-delivery grade ----
+    # Activates ONLY when routing is active OR a non-legacy completeness
+    # policy is requested. Otherwise `success` == legacy_success exactly.
+    honest_per_cube = []
+    honest_agg = None
+    honest_active = bool(routing_active) or (completeness not in (None, "", "any"))
+    if honest_active:
+        # Per-target bbox cache (each distinct destination once).
+        _tbbox = {{}}
+        for _t_path in distinct_targets:
+            _tbbox[_t_path] = _world_bbox(_t_path)
+        if target_path not in _tbbox:
+            _tbbox[target_path] = target_bbox
+        for cp in cube_paths:
+            cp_final = final_pos_per_cube.get(cp)
+            cp_pre = pre_pos_per_cube.get(cp)
+            assigned = per_cube_target.get(cp, target_path)
+            tb = _tbbox.get(assigned) or target_bbox
+            if cp_final is None or tb is None:
+                honest_per_cube.append({{
+                    'cube': cp, 'delivered': False, 'target': assigned,
+                    'actual_location': None, 'misrouted': False,
+                    'in_xy': False, 'above_floor': False, 'at_rest': False,
+                    'upright_ok': True, 'support': None, 'final': cp_final,
+                }})
+                continue
+            h_in_xy = (tb['min'][0] - xy_tol <= cp_final[0] <= tb['max'][0] + xy_tol
+                       and tb['min'][1] - xy_tol <= cp_final[1] <= tb['max'][1] + xy_tol)
+            h_above = cp_final[2] >= tb['min'][2] - floor_tol
+            if cp_pre is not None:
+                _hv = [(cp_final[i] - cp_pre[i]) / dt for i in range(3)]
+                h_speed = (_hv[0]**2 + _hv[1]**2 + _hv[2]**2) ** 0.5
+            else:
+                h_speed = speed
+            h_at_rest = h_speed < rest_speed
+            # Per-cube upright reuses the single global require_upright gate.
+            h_up_dot = _world_up_dot(cp)
+            h_upright = (not require_upright) or (h_up_dot is not None and h_up_dot >= upright_tol)
+            # Misroute via raycast support — only when routing distinguishes
+            # bins. Reuses the 2026-05-19 ground-truth-verified _cube_support
+            # (4/4 vs Anton's tags) instead of a duplicate raycast helper.
+            h_support = _cube_support(cp, assigned)[0] if routing_active else None
+            h_misrouted = False
+            h_actual = assigned if _gate_under(h_support, assigned) else None
+            if h_at_rest and routing_active:
+                for _ot in distinct_targets:
+                    if _ot == assigned: continue
+                    if _gate_under(h_support, _ot):
+                        h_misrouted = True; h_actual = _ot; break
+            h_delivered = bool(h_in_xy and h_above and h_at_rest and h_upright and not h_misrouted)
+            honest_per_cube.append({{
+                'cube': cp, 'delivered': h_delivered, 'target': assigned,
+                'actual_location': h_actual, 'misrouted': h_misrouted,
+                'in_xy': h_in_xy, 'above_floor': h_above, 'at_rest': h_at_rest,
+                'upright_ok': h_upright, 'support': h_support, 'final': cp_final,
+            }})
+        _h_total = len(honest_per_cube)
+        _h_delivered = sum(1 for c in honest_per_cube if c['delivered'])
+        _h_misrouted = sum(1 for c in honest_per_cube if c['misrouted'])
+        _h_min = _gate_min_delivered(completeness, _h_total)
+        honest_agg = {{
+            'delivered_count': _h_delivered,
+            'total': _h_total,
+            'min_required': _h_min,
+            'completeness_mode': _gate_mode(completeness, _h_min),
+            'misrouted_count': _h_misrouted,
+            'success': bool(_h_total > 0 and _h_delivered >= _h_min),
+        }}
+        success = honest_agg['success']
+    else:
+        success = legacy_success
+        # Always report aggregate counts (even in legacy mode) for visibility.
+        honest_agg = {{
+            'delivered_count': len(delivered),
+            'total': len(cube_paths),
+            'min_required': 1,
+            'completeness_mode': 'any',
+            'misrouted_count': 0,
+            'success': legacy_success,
+        }}
 
     # Shadow metric: cube delivery was reached IF cube_ever_in_target_xy
     # AND cube is at_rest somewhere by sim end (not necessarily in bbox).
@@ -4509,6 +4644,14 @@ def _do_one_run(run_idx, target_bbox):
         'sim_t_reached': cur_t,
         'delivered_cubes': delivered,
         'per_cube_status': per_cube,
+        'legacy_success': legacy_success,
+        'honest_active': honest_active,
+        'honest_per_cube': honest_per_cube,
+        'delivered_count': honest_agg['delivered_count'],
+        'total': honest_agg['total'],
+        'completeness_mode': honest_agg['completeness_mode'],
+        'misrouted_count': honest_agg['misrouted_count'],
+        'min_delivered_required': honest_agg['min_required'],
         'seed': seed_base + run_idx,
     }}
 
