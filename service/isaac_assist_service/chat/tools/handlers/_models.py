@@ -2568,6 +2568,15 @@ class DiagnoseWholeBodyArgs(BaseModel):
     ee_accel_threshold_m_s2: Optional[float] = Field(None, description="Maximum acceptable EE acceleration during gait, m/s^2. Default: 5.0")
 
 
+class DiagnosePickExecutionArgs(BaseModel):
+    """Post-run failure localizer for a pick-place run. Reads the controller's own ctrl:* USD records + the always-on plan-fail / grip logs to report which segment the plan died at, whether the arm moved, why a cube was rejected, and a recommended fix. Call AFTER simulate_traversal_check returns success=false. Does NOT re-run the sim (unless with_contacts)."""
+    model_config = ConfigDict(populate_by_name=True, extra='allow')
+
+    robot_path: str = Field(..., description="USD path to the robot prim that ran the pick-place (e.g. '/World/UR10' or '/World/Franka'); the ctrl:* observability attrs live here.")
+    with_contacts: Optional[bool] = Field(False, description="If true, briefly re-steps the LIVE settled scene with a PhysX contact-report subscription to capture ONGOING arm-vs-scene contact pairs (e.g. 'upper_arm_link|Cube_2'). Best-effort: catches current/persistent contacts, not historical ones. Default false (fast pure post-run read).")
+    contact_window_s: Optional[float] = Field(None, description="Seconds to step when with_contacts=true. Default: 2.0")
+
+
 class SetupLocoManipulationTrainingArgs(BaseModel):
     """Set up a joint locomotion + manipulation RL training run. Picks an approach (decoupled HOVER+IK / hierarchical dual-agent / joint end-to-end) and emits a reward-mixing advisor with a 3-phase weight sc"""
     model_config = ConfigDict(populate_by_name=True, extra='allow')
@@ -4259,6 +4268,7 @@ MODEL_REGISTRY = {
     "setup_bimanual_pick_place_controller": SetupBimanualPickPlaceControllerArgs,
     "setup_whole_body_control": SetupWholeBodyControlArgs,
     "diagnose_whole_body": DiagnoseWholeBodyArgs,
+    "diagnose_pick_execution": DiagnosePickExecutionArgs,
     "setup_loco_manipulation_training": SetupLocoManipulationTrainingArgs,
     "setup_rsi_from_demos": SetupRsiFromDemosArgs,
     "setup_multi_rate": SetupMultiRateArgs,

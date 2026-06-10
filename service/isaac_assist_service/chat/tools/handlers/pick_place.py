@@ -4503,7 +4503,13 @@ try:
     _has_raw_follower = False
     try: _has_raw_follower = stage.GetPrimAtPath(Sdf.Path(ROBOT_PATH + "_SGFollower")).IsValid()
     except Exception: pass
-    if _sg_path and stage.GetPrimAtPath(_sg_path).IsValid() and not _has_raw_follower:
+    # 2026-06-05: UR10/UR10e suction (procedural cone OR asset short_gripper.usd) is engaged by the RAW
+    # surface_gripper interface (close_gripper) — the wrapper's initialize() puts the SG in a managed state
+    # that BLOCKS the raw close ("stuck Closing", validated CP-70). Procedural already skips via the follower;
+    # the asset gripper (no follower) must skip too. So NEVER build the wrapper for UR10 -> always raw. Non-UR10
+    # suction (none today) keeps the wrapper fallback. The 37 Franka passes are unaffected (Franka _sg_path=None).
+    _skip_wrapper = _has_raw_follower or (ROBOT_FAMILY in ("ur10", "ur10e"))
+    if _sg_path and stage.GetPrimAtPath(_sg_path).IsValid() and not _skip_wrapper:
         from isaacsim.robot.manipulators.grippers.surface_gripper import SurfaceGripper as _SG
         _ee_path = "/".join(_sg_path.split("/")[:-1])
         _surface_gripper = _SG(end_effector_prim_path=_ee_path, surface_gripper_path=_sg_path)
@@ -4545,6 +4551,10 @@ if ROBOT_FAMILY == "franka":
     _HOME_Q = np.array([0.0, -0.785, 0.0, -2.356, 0.0, 1.571, 0.785, 0.04, 0.04], dtype=np.float32)
 else:  # ur10/ur10e — 6-DOF home pose
     _HOME_Q = np.array([0.0, -1.571, 1.571, -1.571, -1.571, 0.0], dtype=np.float32)
+# 2026-06-05 UR10 WOUND-HOME: the UR10 arm is normalised to home EARLY by canonical_instantiator's injected
+# __ur10_home__ step (replicates robot_wizard's home application BEFORE the cone/gripper init and before physics
+# steps the wound arm into the table). A late re-home HERE diverges (the wound arm has accumulated collision
+# state by this point — measured wrist_3 -> 51.78 rad), so it is NOT repeated here; we just re-affirm home below.
 try:
     _n_dof = len(franka.dof_names) if franka.dof_names else len(_HOME_Q)
     franka.set_joint_positions(_HOME_Q[:_n_dof])
@@ -4874,6 +4884,11 @@ def _world_to_base(xyz_world):
 _w, _x, _y, _z = float(_usd_quat[0]), float(_usd_quat[1]), float(_usd_quat[2]), float(_usd_quat[3])
 _iw, _ix, _iy, _iz = _w, -_x, -_y, -_z   # inverse of unit quat = conjugate
 _world_down_w, _world_down_x, _world_down_y, _world_down_z = 0.0, 0.0, 1.0, 0.0
+# 2026-06-06 NVIDIA-CUP descend-repoint (part 2) was tried here (gated _sg_nvidia_cup, _world_down rotated +/-90
+# about Y to aim the tool +X = cup axis down). BOTH signs BROKE CP-70 -> changing the GLOBAL world-down quat
+# mis-orients the whole trajectory (approach/lift/transit/drop). REVERTED. The clean NVIDIA out-the-end mount needs
+# a proper cuRobo tool-frame aligned with the cup axis (or a clean cup-vs-tool0 measurement), NOT a guessed
+# world-down rotation. Production keeps the -90 side-mount (_sg_nvidia_cup OFF). See NIGHT_MISSION_2026_06_05.md.
 # wxyz quat product (i_b * world_down)
 _dw = _iw*_world_down_w - _ix*_world_down_x - _iy*_world_down_y - _iz*_world_down_z
 _dx = _iw*_world_down_x + _ix*_world_down_w + _iy*_world_down_z - _iz*_world_down_y
@@ -5074,11 +5089,96 @@ def _build_scene_cfg(exclude_path=None):
     # mount table). Bin/walls/pillars stay as real obstacles (this is what the restored
     # collision correctly avoids). GATED to UR10 -> Franka obstacle set byte-identical (37 hold).
     if ROBOT_FAMILY in ("ur10", "ur10e"):
+        # NOTE (2026-06-05): do NOT add "pedestal" here — CP-79/82/86 PASS with their Pedestal as a
+        # hard obstacle, and excluding it would change their working obstacle set (regression risk).
+        # CP-84/85's no-pick root is the MISSING gripper (auto-repaired in canonical_instantiator) +
+        # the architectural suction-cone instability, NOT the pedestal blocking the descent.
         _SUPPORT_KW = ("table", "belt", "conveyor", "feeder", "ground", "floor")
         def _is_support(_p):
             _tail = _p.strip("/").rsplit("/", 1)[-1].lower()
             return any(_kw in _tail for _kw in _SUPPORT_KW)
         static_paths = [p for p in static_paths if not _is_support(p)]
+    # 2026-06-06 MULTI-CUBE SCENE-COLLISION FIX (gated _ur10_multicube_obs, default ON; multi-cube UR10 only).
+    # CP-83 RCA (scene_eyes CONTACTS, not the cup-distance-only view): the function-gate passes
+    # simulate_args.planning_obstacles=None -> PLANNING_OBSTACLES=[] -> the two pick PEDESTALS + the
+    # NON-TARGET cube are ABSENT from cuRobo's collision world -> cuRobo plans 157-239deg joint sweeps that
+    # PHYSICALLY sweep through Pedestal_1/2 + Cube_2 (contacts: upper_arm|Cube_2 t=3.3s, upper_arm|Pedestal_2,
+    # Cube_2 knocked off its pedestal -0.15m z) -> the cup never reaches within maxGripDist of EITHER cube
+    # (min 0.26m vs CP-84's working 0.042m at the SAME [-0.5,0.4] xy) -> 0/2. FIX: auto-add the non-target
+    # source cubes + any Pedestal/Stand/Pillar prim to the planning collision world. The TARGET cube stays
+    # excluded (it is exclude_path), so the descend onto it is unaffected. GATED to MULTI-CUBE (len(SOURCE_PATHS)>1)
+    # -> the 8 single-cube UR10 passers add ZERO cuboids = byte-identical. Generalizes to every multi-pick
+    # scene (CP-81/71/73) with no per-template obstacle list (the template already names them in diagnose_args,
+    # which the gate's simulate_args drops). Franka/dual-Franka untouched (UR10-gated -> CP-52/51/53 byte-identical).
+    # 2026-06-09 A1 CARRY-SCOPED OBSTACLES (gated _ur10_multicube_obs_carry_only, default OFF -> byte-identical).
+    # [MEASURED] on the straight cup the non-target cube + pedestals (needed to keep the TRANSIT crash-safe) ALSO block
+    # the high behind-side APPROACH plan (seg-0 BUILD_NONE: reaching Cube_1 sweeps the upper_arm through the Cube_2
+    # column). Fix: scope the auto-added obstacles to the CARRY phase only (seg idx>=3, set by _build_segments via
+    # builtins._mc_carry_phase) so the approach/pick (idx 0-2) plan obstacle-light while transit keeps full collision.
+    # _world_sig (below) folds _mc_carry_phase so the cuRobo world REBUILDS once when the phase flips at idx 3.
+    _mc_carry_only = getattr(__import__("builtins"), "_ur10_multicube_obs_carry_only", False)
+    _mc_phase_is_carry = getattr(__import__("builtins"), "_mc_carry_phase", True)
+    if (len(SOURCE_PATHS) > 1 and ROBOT_FAMILY in ("ur10", "ur10e")
+            and getattr(__import__("builtins"), "_ur10_multicube_obs", True)
+            and ((not _mc_carry_only) or _mc_phase_is_carry)):
+        # 2026-06-06 STACKED-SOURCE skip (CP-71 dispenser): the 4 Items are STACKED at ONE point, so adding the
+        # non-target ones as obstacles puts a cuboid AT the pick -> the descend onto the (excluded) target is flagged
+        # in-collision -> res_None, never picks. Skip any SOURCE cube within _STACK_R of the target cube (exclude_path).
+        # CP-83's cubes are 0.4m apart (>_STACK_R) -> none skipped -> CP-83 BYTE-IDENTICAL (verified 3/3). Pedestals are
+        # ALWAYS added (support structures, never stacked on the cube) -> CP-83's pedestal set unchanged.
+        _excl = exclude_path if isinstance(exclude_path, (list, tuple, set)) else ([exclude_path] if exclude_path else [])
+        _tgt_pos = []
+        for _ep in _excl:
+            try:
+                _wp = _world_pos(_ep)
+                if _wp is not None: _tgt_pos.append(np.asarray(_wp, dtype=float))
+            except Exception: pass
+        _STACK_R = 0.12
+        def _near_target(_path):
+            try:
+                _wp = _world_pos(_path)
+                if _wp is None: return False
+                _wp = np.asarray(_wp, dtype=float)
+                return any(float(np.linalg.norm(_wp - _tp)) < _STACK_R for _tp in _tgt_pos)
+            except Exception: return False
+        _mc_deliv = getattr(__import__("builtins"), "_mc_delivered", set())  # 2026-06-09: a delivered cube in the bin must not block the next place there
+        _auto_obs = [_sc for _sc in SOURCE_PATHS if not _near_target(_sc) and _sc not in _mc_deliv]
+        # 2026-06-09 RANK-4 (gated _ur10_struct_obs_v2, default OFF -> byte-identical): also add BINS as obstacles so the
+        # carry-phase place/transit routes AROUND the NON-target bin (CP-82 [GUI]: cube2's place collided Bin_blue). Exclude
+        # the CURRENT cube's resolved destination bin so the place INTO it is not blocked. Routing-safe: _destination_path_for
+        # returns a PATH (COLOR_ROUTING) OR a coord-array (DROP_TARGETS) -> only a str is a path to exclude. Carry-phase
+        # scoped by the same _mc_carry_phase gate above (bins ABSENT during pick idx0-3, PRESENT idx>=4) so the pick is
+        # unaffected. multi-cube UR10 only.
+        _sv2 = getattr(__import__("builtins"), "_ur10_struct_obs_v2", False) and len(SOURCE_PATHS) > 1 and ROBOT_FAMILY in ("ur10", "ur10e")
+        _cur_dest_name = None
+        if _sv2:
+            try:
+                _exp0 = (exclude_path[0] if isinstance(exclude_path, (list, tuple)) else exclude_path)
+                _cd = _destination_path_for(_exp0) if _exp0 else None
+                if isinstance(_cd, str): _cur_dest_name = _cd.strip("/").rsplit("/", 1)[-1].lower()
+                elif isinstance(DEST_PATH, str) and DEST_PATH: _cur_dest_name = DEST_PATH.strip("/").rsplit("/", 1)[-1].lower()
+            except Exception: _cur_dest_name = None
+        try:
+            for _pp in stage.Traverse():
+                _ps = str(_pp.GetPath())
+                _pt = _ps.strip("/").rsplit("/", 1)[-1].lower()
+                _hit = any(_kw in _pt for _kw in ("pedestal", "stand", "pillar"))
+                if _sv2 and (not _hit) and ("bin" in _pt) and (_pt != _cur_dest_name):
+                    _hit = True
+                # 2026-06-10 OWN-SUPPORT EXCLUSION (gated _ur10_excl_own_support, default OFF -> byte-identical).
+                # [HYPOTHESIS->probe] the target cube's OWN pedestal sits directly UNDER it (3D dist ~0.1 < _STACK_R
+                # 0.12); treating it as an obstacle marks every cup-down config at the pick "in collision" (the
+                # freeik=False) even though the descend never goes below the cube top. Skip the own support (same
+                # logic exclude_path already applies to the cube itself); NEIGHBOUR pedestals STAY obstacles -> the
+                # approach must route around them honestly (no sweep-through).
+                if _hit and getattr(__import__("builtins"), "_ur10_excl_own_support", False) and _near_target(_ps):
+                    _hit = False
+                if _hit:
+                    _auto_obs.append(_ps)
+        except Exception: pass
+        for _ap in _auto_obs:
+            if _ap not in static_paths:
+                static_paths.append(_ap)
     cuboids = {{}}
     # Pre-compute inverse base quat (wxyz)
     _iqw = float(_usd_quat[0]); _iqx = -float(_usd_quat[1])
@@ -5115,15 +5215,63 @@ def _build_scene_cfg(exclude_path=None):
         print(f"(scene_cfg: sibling keep-out skip: {{_se}})")
     return _CuroboSceneCfg.create({{"cuboid": cuboids}})
 
-def _plan_to_world_point(point_world, current_q7, exclude_obs=None, yaw_deg=0.0, vhold_mode=0):
+def _plan_to_world_point(point_world, current_q7, exclude_obs=None, yaw_deg=0.0, vhold_mode=0, branch_pin=False):
     # vhold_mode: 0=off, 1=PCM hold_partial_pose project_to_goal_frame=False weight=1
     #             2=PCM hold_partial_pose project_to_goal_frame=True weight=1
     #             3=PCM hold_partial_pose weight=0.1 (gentle)
     #             4=PCM reach_partial_pose weight=1
+    # 2026-06-06 NVIDIA-CUP cup-offset (gated _sg_nvidia_cup), now TUNABLE (default 0.0).
+    # MEASURED (scene_eyes CP-83, straight cup): a blanket +0.158 here DOUBLE-COUNTS the cup-below-tool0 offset that
+    # the goal-z values ALREADY bake in — pz (L6086, asset path) = cube_z-0.05+0.035+_SG_TOOL_L(~0.162) puts tool0
+    # high enough that the straight cup (0.158 below tool0) reaches the cube; the S5 drop goal similarly bakes
+    # _drop_tip_release(0.16). Adding +0.158 on top lifted the cup ~0.12 m ABOVE the cube -> grip-miss abort
+    # (cup>0.12m), 0 picks. So the goals are CORRECT tool0-targets and the offset must be 0.0. Kept as a tunable
+    # (_sg_nvidia_cup_offset) for empirical sweep; default 0.0 = no double-count. _sg_nvidia_cup gated -> the -90
+    # production cup path never reaches here changed (byte-identical when the flag is OFF).
+    point_world = list(point_world)
+    # 2026-06-10 HANG-LOCALIZER (gated _ur10_hangloc, default OFF -> no-op byte-identical). Rolling file-flush sentinel:
+    # when CP-71 hard-hangs in a single blocking cuRobo call (Kit main thread frozen), the LAST label written = the call
+    # that blocked. Pinpoints update_world vs ik_solve vs plan_cspace vs plan_pose for the next CP-71 attempt.
+    def _HL(_lbl):
+        try:
+            if getattr(__import__("builtins"), "_ur10_hangloc", False):
+                with open("/tmp/cp71_hangloc.txt", "w") as _hf: _hf.write(str(_lbl) + " goal=" + str([round(float(_v), 2) for _v in point_world]) + "\\n")
+        except Exception: pass
+    # 2026-06-09 RANK-2 BUILD-DEADLINE check (gated via _ur10_plan_deadline, set by _build_segments only when
+    # _ur10_build_budget_s>0; default 0.0 here -> byte-identical). Once the build's wall-clock budget is spent, every
+    # further plan call returns None INSTANTLY so the segment fan-out can't grind/hang the Kit. [MEASURED CP-71 hang].
+    try:
+        _pdl = float(getattr(__import__("builtins"), "_ur10_plan_deadline", 0.0))
+        if _pdl > 0.0 and time.monotonic() > _pdl: return None
+    except Exception: pass
+    if getattr(__import__("builtins"), "_sg_nvidia_cup", False):
+        point_world[2] = float(point_world[2]) + float(getattr(__import__("builtins"), "_sg_nvidia_cup_offset", 0.0))
     p_base = _world_to_base(point_world)
     pos_t = torch.tensor([[[[[float(p_base[0]), float(p_base[1]), float(p_base[2])]]]]],
                          dtype=torch.float32, device='cuda')
     quat_base = _rotated_down_quat_base(yaw_deg) if yaw_deg else _DOWN_Q_BASE
+    # 2026-06-07 NVIDIA-CUP descend-repoint (gated _sg_nvidia_cup + tunable _sg_descend_repoint_deg, default 0=no-op).
+    # MEASURED (scene_eyes CP-83, _ca_deg=0 straight cup, PLAYED): the cup-suction axis stays at its BUILD orientation
+    # (tool-local -X, since the _ca_deg=0 fixup applies no rotation) -> with the standard tool0 +Z-down descend the
+    # out-the-end cup points SIDEWAYS -> grip-miss (cup lands 0.2m beside the cube, 0 picks). To grasp top-down the
+    # gripper AXIS (the -X out-the-end direction) must point world-DOWN. Post-multiply the goal quat by a rotation
+    # about the tool-local Y so a different tool axis takes over the world-down role. Sign resolved EMPIRICALLY
+    # (measure which value grips) -- NOT guessed (the earlier ad-hoc +/-90 attempts failed on sign). Clones the quat
+    # (never mutates the _DOWN_Q_BASE global). Gated -> production (-90 cup, _sg_nvidia_cup OFF) byte-identical.
+    import builtins as _bi_rp
+    _rp = float(getattr(_bi_rp, "_sg_descend_repoint_deg", (-90.0 if getattr(_bi_rp, "_sg_nvidia_cup", False) else 0.0)))  # 2026-06-07 WINNING: nvidia default -90 -> the descend goal-quat points the CUP straight DOWN (ee_joint rpy=π,-π/2 makes ee+Z-down != cup-down). GATE-VERIFIED on CP-84 (real SG grip + deliver, no FJ). Production (nvidia OFF) default 0 = byte-identical.
+    if _rp != 0.0 and getattr(_bi_rp, "_sg_nvidia_cup", False):
+        import math as _mrp
+        _ha = _mrp.radians(_rp) * 0.5
+        _cc = _mrp.cos(_ha); _ss = _mrp.sin(_ha)
+        _w1 = float(quat_base[..., 0]); _x1 = float(quat_base[..., 1])
+        _y1 = float(quat_base[..., 2]); _z1 = float(quat_base[..., 3])
+        # q_new = quat_base (x) q_localY(_rp) ; q_localY = (cos, 0, sin, 0)
+        _nw = _w1 * _cc - _y1 * _ss
+        _nx = _x1 * _cc - _z1 * _ss
+        _ny = _w1 * _ss + _y1 * _cc
+        _nz = _x1 * _ss + _z1 * _cc
+        quat_base = torch.tensor([[[[[_nw, _nx, _ny, _nz]]]]], dtype=torch.float32, device='cuda')
     goal = GoalToolPose(tool_frames=[_TOOL_FRAME], position=pos_t, quaternion=quat_base)
     q = torch.tensor([[float(x) for x in current_q7[:_ARM_DOF]]], dtype=torch.float32, device='cuda')
     start = JointState.from_position(q, joint_names=_PLANNER_JOINT_NAMES)
@@ -5204,11 +5352,27 @@ def _plan_to_world_point(point_world, current_q7, exclude_obs=None, yaw_deg=0.0,
                 _sib_sig = _sibling_pose_sig()
             except Exception:
                 _sib_sig = ""
+            # 2026-06-09 A1: fold the carry-phase flag so the world REBUILDS when _build_segments flips approach->carry
+            # (the carry-scoped multicube obstacles change between phases). Constant when the flag is OFF -> byte-identical.
+            _mc_sig = ("|c" + str(getattr(__import__("builtins"), "_mc_carry_phase", True))
+                       if getattr(__import__("builtins"), "_ur10_multicube_obs_carry_only", False) else "")
+            # 2026-06-10 STALE-WORLD FIX [MEASURED CP-83 exclown probe]: the sig did NOT fold the current TARGET
+            # (exclude_path) nor the delivered-set, so switching Cube_2->Cube_1 NEVER re-ran update_world -> Cube_1's
+            # plans hit Cube_2-era obstacles (own Pedestal_1 PRESENT, Pedestal_2 absent = inverted). Fold the target
+            # when _ur10_excl_own_support is on + the delivered-set when _ur10_obs_exclude_delivered is on. Both
+            # gated -> flags off = sig byte-identical (constant suffixes "" as before).
+            _exo_sig = ("|exo" + str(exclude_obs)
+                        if getattr(__import__("builtins"), "_ur10_excl_own_support", False) else "")
+            _del_sig = ("|del" + str(sorted(getattr(__import__("builtins"), "_mc_delivered", set()) or []))
+                        if getattr(__import__("builtins"), "_ur10_obs_exclude_delivered", False) else "")
             _world_sig = (("|".join(sorted(PLANNING_OBSTACLES)) if PLANNING_OBSTACLES else "")
-                          + "@" + _base_sig + "#" + _sib_sig)
+                          + "@" + _base_sig + "#" + _sib_sig + _mc_sig + _exo_sig + _del_sig)
             if getattr(_planner, "_pp_world_sig", None) != _world_sig:
+                _HL("before_worldbuild")
                 scene_cfg = _build_scene_cfg(exclude_path=exclude_obs)
+                _HL("before_updateworld nobs=%d" % (len(getattr(scene_cfg, "cuboid", []) or []) if scene_cfg is not None else -1))
                 _planner.update_world(scene_cfg)
+                _HL("after_updateworld")
                 try: _planner._pp_world_sig = _world_sig
                 except Exception: pass
         except Exception as _swe:
@@ -5236,27 +5400,77 @@ def _plan_to_world_point(point_world, current_q7, exclude_obs=None, yaw_deg=0.0,
         # current (use_implicit_goal=True frees the goal config). plan_cspace fixes the GOAL JOINT CONFIG
         # (IK-from-current -> closest branch) so trajopt CANNOT flip. Gated => off = byte-identical (Franka
         # + default UR10). Falls back to plan_pose on any failure. Returns same TrajOptSolverResult type.
-        if getattr(builtins, "_ur10_plan_cspace", False):
+        if (branch_pin or getattr(builtins, "_ur10_plan_cspace", False)) and ROBOT_FAMILY in ("ur10", "ur10e"):
             _csdbg = []
             try:
+                _HL("before_ik")
                 _ikr = _planner.ik_solver.solve_pose(goal, current_state=start, return_seeds=16)
+                _HL("after_ik")
                 _ikok = bool(_ikr.success.any().item()) if (_ikr is not None and hasattr(_ikr, "success")) else False
                 _csdbg.append("ik_ok=" + str(_ikok))
+                # 2026-06-09 FREE-IK PROBE (gated _ur10_freeik_probe, default OFF, READ-ONLY diagnostic — does NOT
+                # change res/planning): when the wound-seeded solve fails, test whether ANY down-lock IK exists at
+                # this goal via a FREE solve (no current_state, broad seeds). FREEIK_ok=False => the cup CANNOT point
+                # straight-down at this pose at all (FUNDAMENTAL kinematic limit). FREEIK_ok=True => a clean config
+                # exists far from the wound branch (fixable via a deliberate cspace reconfig-before-descend).
+                if (not _ikok) and getattr(builtins, "_ur10_freeik_probe", False):
+                    try:
+                        _ikf = _planner.ik_solver.solve_pose(goal, return_seeds=16)
+                        _fok = bool(_ikf.success.any().item()) if (_ikf is not None and hasattr(_ikf, "success")) else False
+                        _csdbg.append("FREEIK_ok=" + str(_fok))
+                        if _fok:
+                            _fs = _ikf.solution.reshape(-1, _ikf.solution.shape[-1]); _fsu = _ikf.success.reshape(-1)
+                            for _fi in range(_fs.shape[0]):
+                                if bool(_fsu[_fi].item()):
+                                    _csdbg.append("FREEIK_q=" + str([round(float(_x), 2) for _x in _fs[_fi].detach().cpu().numpy()])); break
+                    except Exception as _fe:
+                        _csdbg.append("FREEIK_EXC=" + str(_fe)[:80])
+                # 2026-06-09 DOWN-LOCK SEED (gated _ur10_descend_downlock_seed, default OFF). [MEASURED] the close-pick
+                # descend down-IK EXISTS (CP-69 same-pose goal: ik_ok=True, gq=[-0.934,-1.557,2.083,-2.096,-1.571,
+                # -2.504]) but the wound-seeded + free 16-seed solves MISS it from CP-75's wound over-bin start. Re-solve
+                # SEEDED at that known down-lock config so solve_pose finds the existing down-config; then the existing
+                # closest-L1 + plan_cspace block (below) does a CONTROLLED joint-space reconfig wound->down (no fling).
+                # Reliable delivery for the close picks (CP-70/75/80) at the cost of one controlled reconfig move.
+                if (not _ikok) and getattr(builtins, "_ur10_descend_downlock_seed", False):
+                    try:
+                        _dlq = torch.tensor([[-0.934, -1.557, 2.083, -2.096, -1.571, -2.504]], dtype=torch.float32, device='cuda')
+                        _dljs = JointState.from_position(_dlq, joint_names=_PLANNER_JOINT_NAMES)
+                        _ikr2 = _planner.ik_solver.solve_pose(goal, current_state=_dljs, return_seeds=16)
+                        _ik2ok = bool(_ikr2.success.any().item()) if (_ikr2 is not None and hasattr(_ikr2, "success")) else False
+                        _csdbg.append("DLSEED_ok=" + str(_ik2ok))
+                        if _ik2ok:
+                            _ikr = _ikr2; _ikok = True; _csdbg.append("DLSEED_USED")
+                    except Exception as _dle:
+                        _csdbg.append("DLSEED_EXC=" + str(_dle)[:80])
                 if _ikok:
                     # branch-continuity: of ALL successful IK seeds, pick the one CLOSEST (L1 joint dist)
                     # to the current config — forbids the elbow/wrist flip if a continuous solution exists.
                     _sols = _ikr.solution.reshape(-1, _ikr.solution.shape[-1])
                     _succ = _ikr.success.reshape(-1)
                     _sp = start.position.reshape(-1)
+                    # 2026-06-09 CSPACE WRIST-UNWRAP (gated _ur10_cspace_unwrap, default OFF -> byte-identical).
+                    # [MEASURED CP-83] the down-IK EXISTS (ik_ok=True) but bestd_rad=7.41 = 6.28 (2pi continuous-wrist
+                    # wrap) + 1.13 (real) -> the L1 metric + plan_cspace see a 2pi gap -> cspace_ok=False (would 360-spin
+                    # the wrist) -> RES_NONE, cup frozen 0.27m high. Unwrap each candidate's joints toward the CURRENT
+                    # config (add k*2pi to land within pi) BEFORE the L1 + before feeding plan_cspace -> true dist 1.13,
+                    # continuous interp -> cspace_ok=True. The RAWSEED idea (close-pick fix) for the cspace-pin path.
+                    _unwrap = getattr(builtins, "_ur10_cspace_unwrap", False)
+                    _TWO_PI = 2.0 * float(np.pi)
                     _best = None; _bestd = 1e9
                     for _si in range(_sols.shape[0]):
                         if not bool(_succ[_si].item()): continue
-                        _d = float((_sols[_si] - _sp).abs().sum().item())
-                        if _d < _bestd: _bestd = _d; _best = _sols[_si:_si + 1]
+                        _solr = _sols[_si:_si + 1]
+                        if _unwrap:
+                            _k = torch.round((_sp.reshape(1, -1) - _solr) / _TWO_PI)
+                            _solr = _solr + _k * _TWO_PI
+                        _d = float((_solr.reshape(-1) - _sp).abs().sum().item())
+                        if _d < _bestd: _bestd = _d; _best = _solr
                     _csdbg.append("bestd_rad=" + (str(round(_bestd, 2)) if _best is not None else "none"))
                     _gq = _best if _best is not None else _sols[0:1]
                     _gjs = JointState.from_position(_gq, joint_names=_PLANNER_JOINT_NAMES)
+                    _HL("before_cspace")
                     _cres = _planner.plan_cspace(_gjs, start, max_attempts=3)
+                    _HL("after_cspace")
                     _csok = bool(_cres.success[0, 0].item()) if (_cres is not None and hasattr(_cres, "success")) else False
                     _csdbg.append("cspace_ok=" + str(_csok))
                     _csdbg.append("gq=" + str([round(float(_x), 3) for _x in _gq.reshape(-1).detach().cpu().numpy()]))
@@ -5271,8 +5485,21 @@ def _plan_to_world_point(point_world, current_q7, exclude_obs=None, yaw_deg=0.0,
             except Exception: pass
         if res is None:
             for _pra in range(_PLAN_RETRY):
+                # 2026-06-09 RANK-2: abort the retry fan-out if the build deadline is spent (gated; 0.0 -> never trips).
                 try:
-                    res = _planner.plan_pose(goal, start, max_attempts=3)
+                    _pdl3 = float(getattr(__import__("builtins"), "_ur10_plan_deadline", 0.0))
+                    if _pdl3 > 0.0 and time.monotonic() > _pdl3: break
+                except Exception: pass
+                try:
+                    # 2026-06-10 RANK-2b NO-GRAPH (gated _ur10_no_graph, default OFF -> enable_graph_attempt=1 = byte-identical).
+                    # [MEASURED CP-71] the hang is a SINGLE blocking cuRobo solve at build seg-0 (froze t=1.0s, 0 nudges); the
+                    # graph planner (_get_graph_seed_trajectories, PRM search) fires when current_attempt>=enable_graph_attempt
+                    # and can explore UNBOUNDED on a tight/unreachable scene. enable_graph_attempt=99 (> max_attempts) makes the
+                    # graph branch NEVER fire -> IK+trajopt only (both bounded) -> plan fails FAST instead of hanging the Kit.
+                    _ega = 99 if getattr(__import__("builtins"), "_ur10_no_graph", False) else 1
+                    _HL("before_planpose")
+                    res = _planner.plan_pose(goal, start, max_attempts=3, enable_graph_attempt=_ega)
+                    _HL("after_planpose")
                     break
                 except Exception:
                     if _pra == _PLAN_RETRY - 1:
@@ -5378,7 +5605,15 @@ def _apply_belt_pause_curobo():
     # driven behavior, so the 37 verified-passing are untouched. Names resolve at
     # call time (callback fires only during sim, after the full codegen has run).
     try:
-        if (len(_curobo_live_pp_subs()) > 1 and _belt_sv is not None and (
+        # 2026-06-05 (CP-80 ride-off fix): the standing pre-step belt-freeze was gated multi-robot-only, so a
+        # SINGLE-robot MOVING conveyor fell through to the request-driven pause set from INSIDE _on_step — which the
+        # PhysX integrator caches independently and effectively IGNORES (the cube rides off the belt end before a
+        # clean pick: CP-80 cube ended x=0.13 past the belt end, y still on the belt centerline). Extend the standing
+        # freeze to ANY moving belt (single or multi robot), gated by belt speed so STATIC feeders (CP-70 v≈0.001 <
+        # 0.05) stay byte-identical -- they never rode off, never needed it. _resume_belt_if_clear still lets upstream
+        # cubes flow to the sensor (no deadlock; freeze only while a cube is imminent OR this arm is actively picking).
+        _belt_is_moving = sum(abs(v) for v in _nominal_belt) > 0.05
+        if ((len(_curobo_live_pp_subs()) > 1 or _belt_is_moving) and _belt_sv is not None and (
                 (_sensor_xy_v is not None and _cube_imminent_at_sensor())
                 # 2026-06-05 CP-52 ride-off fix: hold the SHARED belt while THIS robot is
                 # actively picking (claimed→delivering). Otherwise the robot's SECOND cube
@@ -5495,14 +5730,110 @@ try:
     _sgm_attr = stage.GetPrimAtPath(ROBOT_PATH).GetAttribute("isaac_assist:surface_gripper_path")
     _SG_PATH_RAW = _sgm_attr.Get() if (_sgm_attr and _sgm_attr.IsDefined()) else None
     _folp = stage.GetPrimAtPath(Sdf.Path(ROBOT_PATH + "_SGFollower"))
-    if _SG_PATH_RAW and _folp and _folp.IsValid():
+    # 2026-06-05: acquire the RAW surface_gripper interface whenever the marker points at a valid SurfaceGripper
+    # -- BOTH the procedural cone (follower present -> per-tick follower tracking) AND the asset short_gripper.usd
+    # (child of ee_link, NO follower -> moves with the arm naturally, only needs the per-tick raw close re-assert).
+    _sg_prim_ok = bool(_SG_PATH_RAW and stage.GetPrimAtPath(Sdf.Path(_SG_PATH_RAW)).IsValid())
+    if _sg_prim_ok:
         import isaacsim.robot.surface_gripper._surface_gripper as _sgmod_raw
         _SG_IFACE = _sgmod_raw.acquire_surface_gripper_interface()
-        _fol_ops = [o for o in UsdGeom.Xformable(_folp).GetOrderedXformOps() if o.GetOpName() == "xformOp:translate"]
-        _SG_FOLLOWER_OP = _fol_ops[0] if _fol_ops else None
-        print("(curobo: suction follower-track + raw-grip wiring active for " + str(_SG_PATH_RAW) + ")")
+        if _folp and _folp.IsValid():
+            _fol_ops = [o for o in UsdGeom.Xformable(_folp).GetOrderedXformOps() if o.GetOpName() == "xformOp:translate"]
+            _SG_FOLLOWER_OP = _fol_ops[0] if _fol_ops else None
+        print("(curobo: suction raw-grip wiring active for " + str(_SG_PATH_RAW) +
+              (" + follower-track" if _SG_FOLLOWER_OP is not None else " (asset, no follower)") + ")")
 except Exception as _se:
     print("(curobo: suction follower-track setup soft-fail: " + str(_se) + ")")
+# 2026-06-05 ASSET-GRIPPER step 2: the suction LOGIC keyed on the procedural follower (_SG_FOLLOWER_OP). Both the
+# procedural cone AND the asset short_gripper.usd now acquire the RAW interface (_SG_IFACE), so key the suction
+# gate on it. PROCEDURAL UR10: _SG_IFACE set -> True == old gate. ASSET UR10: _SG_IFACE set -> True (now works).
+# Franka: _sg_path None -> _SG_IFACE None -> False. -> the 37 Franka + procedural UR10 passes are byte-identical.
+_SG_IS_SUCTION = (_SG_IFACE is not None)
+# cup/cone world-position source for the grip-proximity gates: procedural cone OR the asset suction_cup frame.
+if _SG_FOLLOWER_OP is not None:
+    _SG_CUP_PATH = ROBOT_PATH + "_SGCone"
+elif _SG_PATH_RAW:
+    _SG_CUP_PATH = "/".join(str(_SG_PATH_RAW).split("/")[:-1]) + "/suction_cup"
+else:
+    _SG_CUP_PATH = ROBOT_PATH + "_SGCone"
+# ASSET cup sits ~0.159m along the tool axis from the flange (vs the procedural cone's 0.08) -> set the virtual
+# tool length so the pick descend lands the cup on the cube top. Asset-mode only (no follower + wrapper + UR10).
+if (_SG_IFACE is not None) and (_SG_FOLLOWER_OP is None) and ROBOT_FAMILY in ("ur10", "ur10e"):
+    _SG_TOOL_L = 0.159
+    _sg_tool_l_dyn[0] = _SG_TOOL_L
+    # 2026-06-09 FAITHFUL-CUP DEFAULT master switch (gated _ur10_faithful_default; UR10 asset-suction ONLY,
+    # scoped by this block). [MEASURED] the proven winning config that makes ALL 6 deterministic passers clean on the
+    # straight (faithful) cup (CP-69/70/75/79/80/86, pan-swing 0deg, deliver dead-center). Enables the 7 pieces as a unit:
+    # straight nvidia mount + H7 transit (sign -1) + S5 RELIVE descend + branch-pin + RAW(unwrapped) relive seed (the
+    # wrap-fling fix) + droptip 0.21 (down-IK reach). NEVER clobbers an explicit external flag (hasattr guard) so the
+    # gate harness / A-B overrides win.
+    # DEFAULT FLIPPED OFF->ON 2026-06-09 after the motion-clean adversarial verify (fresh-Kit, warp-cleared): the close
+    # picks CP-70/75/80 all deliver dead-center at_rest, trajsrc seg=7 relive pan-range=0 (no fling), grip_log
+    # bin_approaches=1 (no varv/extra lap) — the wrap/seed root of the descend flip is fixed, NOT a geometry limit. This
+    # ships the faithful straight cup (Anton: "sidokopp är inte acceptabelt"). Side-mount remains reachable by setting
+    # _ur10_faithful_default=False explicitly (A/B). UR10-asset-scoped => Franka/other families byte-identical.
+    try:
+        import builtins as _bi_fd
+        # DEFAULT = ON (straight faithful cup). 2026-06-09: Anton's directive is unambiguous and overriding — "sidokopp
+        # är inte acceptabelt". The side (90°) mount is OFF THE TABLE; the straight cup is the ONLY acceptable production
+        # mount. I briefly reverted to side-OFF to "protect" CP-85's side-cup delivery (it regresses on straight) but
+        # that was the WRONG call — it protected a cup Anton rejected. Correct stance: ship the straight cup; CP-85's
+        # straight-cup delivery + multi-cube are OPEN WORK ON the straight cup (root-caused: ROOT-1 fixed by IKSEEDS=64;
+        # ROOT-2 = place can't reach bin-center from the wound behind-side arrival), NOT a reason to revert. On the
+        # straight cup 7/8 passers deliver dead-center motion-clean (CP-69/70/75/79/80/86 + CP-84). Side-mount still
+        # reachable for A/B via explicit _ur10_faithful_default=False. UR10-asset-scoped => Franka byte-identical.
+        if getattr(_bi_fd, "_ur10_faithful_default", True):
+            if not hasattr(_bi_fd, "_sg_nvidia_cup"): _bi_fd._sg_nvidia_cup = True
+            if not hasattr(_bi_fd, "_ur10_jointspace_transit"): _bi_fd._ur10_jointspace_transit = True
+            if not hasattr(_bi_fd, "_ur10_jointspace_sign"): _bi_fd._ur10_jointspace_sign = -1.0
+            if not hasattr(_bi_fd, "_ur10_s5_relive"): _bi_fd._ur10_s5_relive = True
+            if not hasattr(_bi_fd, "_ur10_s5_relive_branch_pin"): _bi_fd._ur10_s5_relive_branch_pin = True
+            # 2026-06-09 RANK-1 FIX (regression Anton flagged in GUI review): the PLACE close-loop PL-nudge (L7741/7748)
+            # re-plans the held cube to the bin via FREE-IK plan_pose unless _ur10_place_nudge_branch_pin is set -> the
+            # un-pinned re-plan flips the IK branch each tick = the ~356deg release SPIN/pirouette + micro-adjust hover
+            # (RCA wwz8g0ox8: master switch set the S5-descend pin above but NOT the analogous NUDGE pin, so the clean
+            # cspace descend was immediately overridden by the free-IK nudge). Mirror the descend pin -> pin the nudge
+            # to the live branch (cspace + wrist-unwrap path at L7746-7747). getattr-default False => OFF byte-identical.
+            if not hasattr(_bi_fd, "_ur10_place_nudge_branch_pin"): _bi_fd._ur10_place_nudge_branch_pin = True
+            if not hasattr(_bi_fd, "_ur10_relive_seed_raw"): _bi_fd._ur10_relive_seed_raw = True
+            if not hasattr(_bi_fd, "_sg_drop_tip_release"): _bi_fd._sg_drop_tip_release = 0.21
+            # 2026-06-09: added IK-seed bump + lower H7 far-reach. [MEASURED] the behind-side-HIGH pick class (CP-85,
+            # multi-cube CP-83/81/82) failed _build_segments seg-0 (no down-locked IK at the high pick goal z~1.15) AND
+            # the place couldn't reach bin-center from the wound ~180deg arrival. IKSEEDS=64 finds the high approach IK
+            # (planfails 485->0); far_reach=0.5 makes H7 (the jointspace pan-rotate transit) fire for reach>0.5 so the
+            # behind->front transit ARRIVES CLEAN -> place reaches bin-center -> delivers. A/B-VERIFIED: CP-85 0/3->2/2
+            # AND all 6 deterministic passers (CP-69/70/75/79/80/86) still deliver dead-center (FARREACH=0.5 does NOT
+            # regress them — they were already clean via RELIVE/RAWSEED, H7 firing keeps them clean). => 8/8 passers.
+            if not hasattr(_bi_fd, "_ur10_ik_seeds"): _bi_fd._ur10_ik_seeds = 64
+            if not hasattr(_bi_fd, "_ur10_jointspace_far_reach"): _bi_fd._ur10_jointspace_far_reach = 0.5
+            print("(curobo: _ur10_faithful_default ON -> straight cup + H7(far0.5) + relive + branch_pin + raw-seed + droptip 0.21 + ikseeds 64)", flush=True)
+    except Exception: pass
+# 2026-06-07 FAITHFUL-SUCTION FIX (gated _sg_nvidia_cup): the asset short_gripper.usd Suction_Joint has
+# forwardAxis=Z but the cup OPENING is along the joint's -X; with the +90 cup mount the opening points world-down
+# (correct visual) while the SG RAYCAST (forwardAxis Z) points SIDEWAYS -> the REAL IsaacSurfaceGripper never sees
+# the cube under the cup (proven: get_gripped_objects=[] at 19mm) even though it closes (status Open->Closed). The
+# "articulation-link bug" was actually this raycast/forwardAxis MISALIGNMENT, not a sim limitation. EMPIRICAL FIX
+# (localRot sweep: only -90X gripped Cube_2 in isolation): rotate the Suction_Joint's localRot0 AND localRot1 by
+# -90deg about X so forwardAxis-Z aligns with the cup opening -> the raycast follows the cup at EVERY pose -> at
+# descend it points down at the cube within maxGripDistance(0.10) -> the real SG latches (no FJ cheat). Rotating
+# BOTH frames by the same delta preserves the physical mount (cup does not move). Pose-invariant (body-relative).
+# Gated -> production (-90 cup, _sg_nvidia_cup OFF) byte-identical.
+# NOTE: build-time application is DEFAULT OFF (`_sg_fwdaxis_at_build`) — the SG reads the attachment frame at
+# registration (play-start), and the working isolation grip rotated localRot LIVE after registration; a build-time
+# (pre-registration) rotation does NOT engage (CP-83 reached 7cm but never latched). The LIVE one-shot in _on_step
+# (`_fwdaxis_fix_done`) is the default for nvidia. This block stays for A/B.
+if getattr(__import__("builtins"), "_sg_nvidia_cup", False) and getattr(__import__("builtins"), "_sg_fwdaxis_at_build", False) and _SG_PATH_RAW:
+    try:
+        _sjp = stage.GetPrimAtPath(Sdf.Path(_SG_CUP_PATH + "/Suction_Joint"))
+        if _sjp and _sjp.IsValid():
+            _dqfa = Gf.Quatf(Gf.Rotation(Gf.Vec3d(1.0, 0.0, 0.0), -90.0).GetQuat())
+            for _attrn in ("physics:localRot0", "physics:localRot1"):
+                _afa = _sjp.GetAttribute(_attrn)
+                if _afa and _afa.IsValid() and _afa.Get() is not None:
+                    _afa.Set(Gf.Quatf(_afa.Get()) * _dqfa)
+            print("(curobo: nvidia forwardAxis fix at BUILD — Suction_Joint localRot0/1 rotated -90X)")
+    except Exception as _fae:
+        print("(curobo: nvidia forwardAxis fix soft-fail: " + str(_fae) + ")")
 # render-shaft (gripper body) handle — stretched each tick to bridge flange<->cup so the "mellandel" stays
 # rendered even while the release tool-extend telescopes the cup deep into the bin (Anton's render complaint).
 _SG_SHAFT = [None, None]
@@ -5542,7 +5873,15 @@ def _track_suction_follower():
     # FJ'd cone sits just over the cube top for the raycast-down grip. No-op for non-suction robots.
     # Per-step delta is clamped to 0.15m so the first tick (follower authored at ee REST pose -> live
     # HOME pose) can't teleport the cone and explode the cone<->follower FixedJoint (validated 2026-06-02).
-    if _SG_FOLLOWER_OP is None: return
+    # ASSET gripper (no follower) is a real child of ee_link -> it co-moves with the arm and needs NO follower
+    # tracking, but it DOES need the per-tick raw close re-assert (a single close_gripper only flickers "Closing").
+    # This top re-assert runs ONLY in asset mode (_SG_FOLLOWER_OP is None) so the procedural path below is 100%
+    # byte-identical (procedural re-asserts at the END of the tracking block, unchanged).
+    if _SG_FOLLOWER_OP is None:
+        if _sg_grip_intent[0] and _SG_IFACE is not None and _SG_PATH_RAW:
+            try: _SG_IFACE.close_gripper(_SG_PATH_RAW)
+            except Exception: pass
+        return
     try:
         _jq = franka.get_joint_positions()
         if _jq is None: return
@@ -5577,6 +5916,44 @@ def _track_suction_follower():
         # the tracked cone is over the cube (-> "Closed"), then HOLDS through lift/transport (validated CP-70).
         if _sg_grip_intent[0] and _SG_IFACE is not None and _SG_PATH_RAW:
             try: _SG_IFACE.close_gripper(_SG_PATH_RAW)
+            except Exception: pass
+    except Exception: pass
+_sg_item_rp = {{}}  # gripped-item path -> SingleRigidPrim (cached, lazy)
+def _clamp_gripped_velocity():
+    # 2026-06-05 FLING GUARD (generalizing): the kinematic-follower USD-xform teleport can spike the gripped
+    # cube's velocity (lag-snap), and the follower->FJ->cone->grip->(rubber) chain amplifies it to 20-50 m/s /
+    # NaN-infinity -> the cube is flung off-scene (CP-71 Item_3 -> ~7600 m; CP-73 cube @ 23.7 m/s). Cap the gripped
+    # body's linear velocity each tick. Honest pick-place motion is ~1 m/s, so a 3 m/s ceiling is transparent to
+    # real picks (CP-70 never exceeds it -> byte-identical) but kills the explosion. Suction-only + only while a
+    # cube is gripped; Franka/parallel-jaw + no-grip ticks are untouched.
+    if not _SG_IS_SUCTION: return
+    _p = S.get("picked_path")
+    if not _p: return
+    try:
+        _rp = _sg_item_rp.get(_p, False)
+        if _rp is False:
+            try:
+                from isaacsim.core.prims import SingleRigidPrim as _SRP
+                _rp = _SRP(_p); _rp.initialize()
+            except Exception:
+                _rp = None
+            _sg_item_rp[_p] = _rp
+        if _rp is None: return
+        _lv = _rp.get_linear_velocity()
+        if _lv is None: return
+        _vx, _vy, _vz = float(_lv[0]), float(_lv[1]), float(_lv[2])
+        _spd = (_vx*_vx + _vy*_vy + _vz*_vz) ** 0.5
+        if _spd != _spd or _spd > 1e6:
+            # already exploded to NaN/inf/absurd (the velocity clamp must run BEFORE the position integrates to NaN,
+            # but if a single step jumps straight to NaN the prior tick missed it) -> HARD-RESET velocity to zero so
+            # the solver does not propagate NaN and HANG the whole sim (CP-73 NaN-fling hung the Kit RPC -> 504).
+            _rp.set_linear_velocity(np.array([0.0, 0.0, 0.0], dtype=np.float32))
+            try: _rp.set_angular_velocity(np.array([0.0, 0.0, 0.0], dtype=np.float32))
+            except Exception: pass
+        elif _spd > 3.0:
+            _sc = 3.0 / _spd
+            _rp.set_linear_velocity(np.array([_vx*_sc, _vy*_sc, _vz*_sc], dtype=np.float32))
+            try: _rp.set_angular_velocity(np.array([0.0, 0.0, 0.0], dtype=np.float32))
             except Exception: pass
     except Exception: pass
 def _grip_open():
@@ -5633,6 +6010,51 @@ def _sensor_xy():
 _sensor_xy_v = _sensor_xy()
 
 def _cube_to_pick():
+    # 2026-06-09 MULTI-CUBE recipe AUTO-ON (set HERE — _cube_to_pick runs FIRST, before _build_segments, with
+    # SOURCE_PATHS populated; it decides the PICK-ORDER so the order flag must be live here). DEFAULT-ON for multi-cube
+    # UR10 asset-suction faithful (len>1); single-cube (len==1) skips -> the 8 passers byte-identical. [MEASURED]
+    # CP-81/83 deliver 2/2 (CP-83 3/3). hasattr guards -> external A/B overrides win. Idempotent (re-set each tick).
+    try:
+        import builtins as _bi_mc
+        _mc_cond = (len(SOURCE_PATHS) > 1 and ROBOT_FAMILY in ("ur10", "ur10e") and _SG_IS_SUCTION
+                and getattr(_bi_mc, "_ur10_faithful_default", True))
+        if _mc_cond:
+            # 2026-06-10 RECIPE v2 [MEASURED CP-83 2/2, planfail=0, full-authority session]: REPLACED carry_only with
+            # _ur10_excl_own_support + all-phases obstacles. Roots fixed: (1) the target's OWN pedestal blocked every
+            # cup-down IK (freeik=False) -> exclude it (neighbour pedestals STAY obstacles -> no sweep-through, the
+            # honest fix for Anton's "axel i andra kubens plattform"); (2) the STALE-WORLD sig bug (world never rebuilt
+            # on cube switch) is fixed by folding |exo/|del into _world_sig. carry_only (which removed ALL obstacles
+            # during approach = the sweep-through) is NO LONGER set by default; external MCUBECARRY=1 still A/Bs it.
+            # v2.2 [MEASURED]: approach-pin at the MAIN call only (v2.1) was insufficient — the knock comes from an
+            # UNPINNED fallback/sub-step plan. The successful probe ran GLOBAL `_ur10_plan_cspace` (pins every
+            # _plan_to_world_point incl fallbacks). Set it here: multi-cube-only (this auto-on) -> single-cube
+            # passers untouched; CP-81/82/73 re-verified under it. (06-07's "plan_cspace refuted" was the
+            # single-cube transit-swing context, not multi-cube.)
+            for _mcf in ("_ur10_excl_own_support", "_ur10_plan_cspace", "_ur10_pick_approach_panrotate",
+                         "_ur10_pick_descend_pin", "_ur10_place_descend_pin", "_ur10_descend_downlock_seed",
+                         "_ur10_cspace_unwrap", "_ur10_obs_exclude_delivered", "_ur10_place_failopen"):
+                if not hasattr(_bi_mc, _mcf): setattr(_bi_mc, _mcf, True)
+            # v2.3 [MEASURED bisect]: the FINAL lever for CP-83 Cube_1 = the rank-2 BUILD DEADLINE (20s). Without it,
+            # a grinding plan fan-out (slower per-call under plan_cspace) runs long inside _on_step -> slow-motion sim
+            # -> the wall-clock seg/_gate_to logic desyncs -> the arm knocks the cube / marks it failed. With it,
+            # failing plans bail fast -> sane timings -> the good plan executes. B-only run delivered BOTH cubes.
+            if not hasattr(_bi_mc, "_ur10_build_budget_s"): _bi_mc._ur10_build_budget_s = 20.0
+        try:
+            with open("/tmp/mc_autoon_sentinel.txt", "w") as _sf:
+                _sf.write("cond=%s nsrc=%s fam=%s suction=%s faithful=%s\\n" % (
+                    _mc_cond, len(SOURCE_PATHS), ROBOT_FAMILY, _SG_IS_SUCTION,
+                    getattr(_bi_mc, "_ur10_faithful_default", True)))
+                _sf.write("carry=%s pan=%s pickpin=%s placepin=%s dl=%s unwrap=%s excl=%s failopen=%s\\n" % (
+                    getattr(_bi_mc, "_ur10_multicube_obs_carry_only", None),
+                    getattr(_bi_mc, "_ur10_pick_approach_panrotate", None),
+                    getattr(_bi_mc, "_ur10_pick_descend_pin", None),
+                    getattr(_bi_mc, "_ur10_place_descend_pin", None),
+                    getattr(_bi_mc, "_ur10_descend_downlock_seed", None),
+                    getattr(_bi_mc, "_ur10_cspace_unwrap", None),
+                    getattr(_bi_mc, "_ur10_obs_exclude_delivered", None),
+                    getattr(_bi_mc, "_ur10_place_failopen", None)))
+        except Exception: pass
+    except Exception: pass
     # Earlier hard-coded z-range [0.83, 0.95] assumed cubes on a thin
     # belt above a tall table; broke table-top scenarios where cubes
     # rest at z=0.775. Now base-relative: -0.30/+0.50m from robot base
@@ -5770,6 +6192,21 @@ def _cube_to_pick():
                 _ra2.Set(("dbg_exc:" + str(_de))[:200])
             except Exception: pass
         return None
+    # 2026-06-09 A1 PICK-ORDER (gated _ur10_multicube_obs_carry_only): for the carry-scoped multi-cube class, pick the
+    # cube CLOSEST to the robot base FIRST. [MEASURED] the straight cup's long-tool arm body sweeps the NEIGHBOUR cube's
+    # column when reaching a far cube (approach/lift/transit all blocked by it). Delivering the nearer cube first removes
+    # it as an obstacle for the farther one -> the farther cube's transit is then clear. Generalizes to stacking (nearest
+    # = top). Default OFF -> the _d_sensor sort (belt/sensor templates) is byte-identical.
+    if getattr(__import__("builtins"), "_ur10_multicube_obs_carry_only", False) and len(cands) > 1:
+        try:
+            _bx = base_xy
+            def _bdist(_c):
+                _w = _world_pos(_c[1])
+                return float(np.linalg.norm(np.asarray(_w)[:2] - _bx)) if _w is not None else 1e9
+            cands.sort(key=_bdist)
+            return cands[0][1]
+        except Exception:
+            pass
     cands.sort(); return cands[0][1]
 
 def _bin_bounds(dest_path=None):
@@ -5902,7 +6339,21 @@ def _build_segments(cube_pos, drop_pos, current_q):
                 _clr = max(_clr, float(UsdGeom.Imageable(_opp).ComputeWorldBound(0, UsdGeom.Tokens.default_).ComputeAlignedRange().GetMax()[2]))
         except Exception:
             pass
-    h1 = min(float(h1), _clr + 0.20)
+    # 2026-06-07 HIGH-PICK APPROACH (gated _ur10_highpick_approach, default OFF). MEASURED (CP-81): the +0.20
+    # pre-grasp cap puts the above-cube goal at cube_z+0.20=1.175 for a 0.975 cube, which cuRobo can't reach
+    # (res_None — ctrl:last_fail_goal) even though the GRASP at the cube top IS reachable (reach_validate Cube_2
+    # 3/3). For HIGH cubes (cube_z > base_z+0.15) shrink the pre-grasp margin so it drops into the reachable zone;
+    # LOW cubes (the 8 passers, z~0.835 < 0.90) keep +0.20 => byte-identical. Suction descends straight down so
+    # less above-cube clearance is fine. Gated OFF until A/B-verified it unlocks a high pick without regression.
+    _appr_margin = 0.20
+    try:
+        import builtins as _bi_hp
+        if getattr(_bi_hp, "_ur10_highpick_approach", False) and ROBOT_FAMILY in ("ur10", "ur10e") \
+                and float(cube_pos[2]) > float(_usd_pos[2]) + 0.15:
+            _appr_margin = float(getattr(_bi_hp, "_ur10_highpick_margin", 0.06))
+    except Exception:
+        pass
+    h1 = min(float(h1), _clr + _appr_margin)
     # Tool-tip Z offset relative to the planner's tool_frame origin.
     # Franka panda_hand → finger tips: +0.105m straight along local +Z.
     # UR10 tool0 → suction_cup tip: +0.158m in local +X (NOT +Z); during a
@@ -5914,7 +6365,7 @@ def _build_segments(cube_pos, drop_pos, current_q):
     pz = float(cube_pos[2]) + FL + float(EE_OFFSET[2])
     # SUCTION: descend the FLANGE to cube_top+0.02+tool_L (not into the cube) so the cone (flange-tool_L)
     # lands just above the cube top and the wrist clears it (CP-70 root-cause fix). Gated to suction.
-    if _SG_FOLLOWER_OP is not None:
+    if _SG_IS_SUCTION:
         # 2026-06-03 TELEPATHY fix: descend the flange so the cone bottom lands JUST ABOVE the cube top (was +0.045
         # -> cone 15mm above -> SG grabs across a gap -> cube held 51mm below = Anton's "osynliga gap"). Geometry:
         # cone_bottom - cube_top = offset - 0.030. offset 0.026 put the cone 4mm INTO the cube -> the collision push
@@ -5922,6 +6373,20 @@ def _build_segments(cube_pos, drop_pos, current_q):
         # the grip apart -> cube FLUNG. 0.035 = cone bottom 5mm ABOVE the cube top: clean grab (no interpenetration),
         # cube hangs ~5mm below the cup (still near-flush, telepathy fixed) AND the grip is stable like baseline (0.045).
         pz = float(cube_pos[2]) + 0.035 + _SG_TOOL_L
+        # 2026-06-05 ASSET-GRIPPER descend-deepen: the asset short_gripper is a RIGID FixedJoint mount with NO
+        # kinematic follower, so it CANNOT telescope to compensate for cuRobo's ~0.05m descend UNDER-shoot the way
+        # the procedural cone does (the follower-telescope) -> measured: cup stops 0.05m ABOVE the cube top -> the
+        # grip raycast can't reach. Descend the goal ~0.05m deeper in asset mode so the cup lands on the cube top.
+        # Procedural (follower present) is byte-identical. Flag-tunable for validation.
+        if _SG_FOLLOWER_OP is None and ROBOT_FAMILY in ("ur10", "ur10e"):
+            pz = float(cube_pos[2]) - float(getattr(builtins, "_sg_asset_descend_extra", 0.05)) + 0.035 + _SG_TOOL_L
+        # 2026-06-07 STRAIGHT-CUP pz (gated _sg_nvidia_cup) — the SHARED fix across all UR10 templates. The side-cup
+        # _SG_TOOL_L gives pz~0.97 = BELOW the MEASURED straight-down IK reach floor (ee z~1.05 at the [-0.5,0]
+        # column; reach-probe: 1.05 OK, 1.00 FAIL) -> res_None -> the descend never executes -> grip-miss. With the
+        # +90 mount the cup hangs ~0.158 below ee along the down axis, so target ee = cube_top(+0.025) + cup_off(0.158)
+        # - contact(0.02) ~ cube_z+0.163 -> ee~1.09 (reach-probe verified OK) -> cup ~0.93 = contact on the cube top.
+        if getattr(builtins, "_sg_nvidia_cup", False):
+            pz = float(cube_pos[2]) + 0.025 + float(getattr(builtins, "_sg_nvidia_cup_below_ee", 0.158)) - 0.02
     # 2026-05-30 drop-symmetry fix: the DROP goal (S5) is on the planner's
     # tool_frame (panda_hand), exactly like the PICK descend goal (pz above).
     # Without the same tool-tip lift, panda_hand is commanded straight TO
@@ -5936,19 +6401,19 @@ def _build_segments(cube_pos, drop_pos, current_q):
     # cuRobo plan-FAIL on the bin-wall collision (validated CP-70: plan_fails=4, arm undershot the bin by
     # 0.15 -> cube 0.26 off vs xy_tol 0.1). The cube hangs below the cone and dangles into the bin from the
     # high, collision-free pose. Gated to suction.
-    if _SG_FOLLOWER_OP is not None:
+    if _SG_IS_SUCTION:
         _drop_tip = 0.45
     # SUCTION S5 release height: with the RIGID grip the cube hangs only ~0.13m below the flange (cone 0.08 +
     # grip ~0.05), so descend the flange to drop_z+0.16 (=~0.91, just above the bin top 0.80) -> cube at ~0.78
     # just above the bin floor -> tiny fall on release (no overshoot/bounce). The bin is excluded from cuRobo
     # collision for S5 (below) so the planner can descend over it. Transit/mid stay high (_drop_tip=0.45).
-    _drop_tip_release = 0.16 if _SG_FOLLOWER_OP is not None else _drop_tip
+    _drop_tip_release = (float(getattr(__import__("builtins"), "_sg_drop_tip_release", 0.16)) if _SG_IS_SUCTION else _drop_tip)  # 2026-06-09 GATED z-raise lever: default 0.16 = byte-identical; raise (e.g. 0.19) to lift the S5 descend goal ~3cm where a down-IK EXISTS for low-bin close picks (CP-75 bin 3cm below CP-69) -> clean down descend, release the small gap.
     # SUCTION soft-place target (anti-topple): the S5 planner goal stays SAFE at drop_z+0.16 (cuRobo-reachable, no
     # bin-wall plan-fail), but the step-loop tool-extend telescopes the cup+cube down to ~3cm above the bin FLOOR
     # before releasing. drop_pos[2] is bin_top+0.05 (an ON-TOP ref) so the cube would otherwise release ~18cm high
     # -> TOPPLE (CP-70). Read the dest-bbox floor; target flange = floor + cube_half(.025)+clear(.03)+hang(.11) ~ floor+.165.
     _sg_release_target = float(drop_pos[2]) + _drop_tip_release  # safe fallback = the planner goal (no extend)
-    if _SG_FOLLOWER_OP is not None:
+    if _SG_IS_SUCTION:
         _floor_z = float(drop_pos[2]) - 0.13  # fallback: empirical bin-floor offset below the drop ref
         try:
             if DEST_PATH:
@@ -5960,7 +6425,7 @@ def _build_segments(cube_pos, drop_pos, current_q):
         _sg_release_target = _floor_z + 0.165
     h_mid_pick = float(cube_pos[2]) + 0.18  # 18cm above cube
     h_mid_drop = float(drop_pos[2]) + _drop_tip + 0.18  # 18cm above lifted drop goal
-    if _SG_FOLLOWER_OP is not None:
+    if _SG_IS_SUCTION:
         # 2026-06-03 SWING fix (cone-track RCA): the suction _drop_tip=0.45 made h_mid_drop=drop_z+0.63 (flange 1.42),
         # ABOVE the S4 transit (h1~1.03) -> the arm transited low then SWUNG UP to 1.42 before descending, riding
         # the cup+cube to z=1.53 = Anton's "kastar runt / planeringsfel". The "mid" must be a DESCENT step just above
@@ -5968,7 +6433,7 @@ def _build_segments(cube_pos, drop_pos, current_q):
         # plan-fail, no up-swing; the cube (hanging ~32mm below the cone) clears the bin rim on the descent.
         h_mid_drop = float(drop_pos[2]) + 0.22
     drop_yaw = _yaw_for_cube(S.get("picked_path") or "")
-    if _SG_FOLLOWER_OP is not None:
+    if _SG_IS_SUCTION:
         # 2026-06-03 SWING ROOT (cone-track RCA): an axisymmetric suction cup CANNOT control the cube's yaw (single-
         # point grip, no friction couple) -> a commanded drop-yaw is physically meaningless AND forces a violent UR10
         # wrist reconfiguration on the drop-side segments: the arm reached the bin (0.38,-0.28,1.22) then swung AWAY to
@@ -5980,22 +6445,69 @@ def _build_segments(cube_pos, drop_pos, current_q):
     # 2026-05-27 FALLBACK: cuRobo PoseCostMetric + AttachmentManager BOTH verified broken on this
     # NV custom MotionPlanner (96mm XY drift identical with/without). Using sub-step waypoints.
     # Generic: any caller-defined goal sequence with same-XY/diff-Z gets sub-stepped automatically.
+    # 2026-06-07 REACH PROBE (gated _reach_probe, one-shot): quantify the straight-down IK reach floor at the pick
+    # column [-0.5,0] from the HOME seed, isolated from mid-pick state. Logs which ee z plan OK vs FAIL.
+    import builtins as _bi_rpb
+    if getattr(_bi_rpb, "_reach_probe", False) and not getattr(_bi_rpb, "_reach_probe_done", False):
+        _bi_rpb._reach_probe_done = True
+        try:
+            _qh = np.asarray(current_q, dtype=np.float32)[:_ARM_DOF]
+            _rl = []
+            for _z in (1.35, 1.25, 1.15, 1.10, 1.05, 1.00, 0.95, 0.90, 0.85, 0.80, 0.75):
+                _nok = 0
+                for _tryi in range(3):
+                    _rr = _plan_to_world_point(np.array([float(cube_pos[0]), float(cube_pos[1]), float(_z)], dtype=np.float32), _qh, exclude_obs=None, yaw_deg=0.0, vhold_mode=0)
+                    if _rr is not None: _nok += 1
+                _rl.append("%.2f=%d/3" % (_z, _nok))
+            with open("/tmp/reachprobe.log", "a") as _rf:
+                _rf.write("REACH_SWEEP cube_xy=[%.2f,%.2f] cube_top=%.2f ee_z_straightdown: %s\\n" % (float(cube_pos[0]), float(cube_pos[1]), float(cube_pos[2]) + 0.025, " ".join(_rl)))
+            # cup-vs-FK-ee offset: the number that decides reachability for the straight cup
+            from curobo.types import JointState as _JS_rp
+            _tq = torch.tensor([[float(_x) for _x in _qh]], dtype=torch.float32, device="cuda")
+            _kk = _planner.compute_kinematics(_JS_rp.from_position(_tq, joint_names=_PLANNER_JOINT_NAMES))
+            _eeb = _kk.tool_poses.position[0, 0, 0].detach().cpu().numpy()
+            _eeq = _kk.tool_poses.quaternion[0, 0, 0].detach().cpu().numpy()
+            _cupw = _world_pos(_SG_CUP_PATH)
+            # ee world pose = base * ee_base ; compute cup-in-ee-LOCAL (the FIXED mount offset, orientation-independent)
+            _bm = Gf.Matrix4d().SetRotate(Gf.Quatd(float(_usd_quat[0]), Gf.Vec3d(float(_usd_quat[1]), float(_usd_quat[2]), float(_usd_quat[3])))); _bm.SetTranslateOnly(Gf.Vec3d(float(_usd_pos[0]), float(_usd_pos[1]), float(_usd_pos[2])))
+            _fm = Gf.Matrix4d().SetRotate(Gf.Quatd(float(_eeq[0]), Gf.Vec3d(float(_eeq[1]), float(_eeq[2]), float(_eeq[3])))); _fm.SetTranslateOnly(Gf.Vec3d(float(_eeb[0]), float(_eeb[1]), float(_eeb[2])))
+            _eeW = _fm * _bm; _eewp = _eeW.ExtractTranslation(); _eeR = _eeW.ExtractRotationMatrix(); _eeRinv = _eeR.GetTranspose()
+            _dw = [float(_cupw[_i]) - float(_eewp[_i]) for _i in range(3)] if _cupw is not None else None
+            _dl = [round(sum(_eeRinv[_r][_c] * _dw[_c] for _c in range(3)), 3) for _r in range(3)] if _dw is not None else None
+            with open("/tmp/reachprobe.log", "a") as _rf:
+                _rf.write("CUPEE ee_world=%s cup_world=%s cup_minus_ee_world=%s cup_in_ee_LOCAL=%s\\n" % ([round(float(_eewp[_i]), 3) for _i in range(3)], ([round(float(_cupw[_i]), 3) for _i in range(3)] if _cupw is not None else None), ([round(_x, 3) for _x in _dw] if _dw is not None else None), _dl))
+        except Exception as _rpe:
+            try:
+                with open("/tmp/reachprobe.log", "a") as _rf: _rf.write("REACH_ERR " + str(_rpe)[:140] + "\\n")
+            except Exception: pass
+    # 2026-06-07 nvidia STATIC TOOL-OFFSET (gated _sg_nvidia_cup): the out-the-end cup is ~0.158 along ee+X, so a
+    # descend that targets ee at the cube xy lands the cup OFFSET (overshoot ~[-0.139,-0.008,-0.049] world). Offsetting
+    # the pick-column goal by -cup_offset (tunable _sg_nvidia_goal_off) makes the WORKING main descend land the CUP on
+    # the cube directly (the closed-loop nudge from the overshoot is res_None at this pose). Default 0 -> byte-identical.
+    _nv_goff = (list(getattr(__import__("builtins"), "_sg_nvidia_goal_off", [0.0, 0.0, 0.0])) if getattr(__import__("builtins"), "_sg_nvidia_cup", False) else [0.0, 0.0, 0.0])
     goals = [
-        (np.array([cube_pos[0], cube_pos[1], h1]),         None,    0.0),       # S1 above cube
-        (np.array([cube_pos[0], cube_pos[1], h_mid_pick]), None,    0.0),       # S1.5 mid-height
-        (np.array([cube_pos[0], cube_pos[1], pz]),         "close", 0.0),       # S2 descend + close
-        (np.array([cube_pos[0], cube_pos[1], h1]),         None,    0.0),       # S3 lift
+        (np.array([cube_pos[0] + _nv_goff[0], cube_pos[1] + _nv_goff[1], h1]),         None,    0.0),       # S1 above cube
+        (np.array([cube_pos[0] + _nv_goff[0], cube_pos[1] + _nv_goff[1], h_mid_pick]), None,    0.0),       # S1.5 mid-height
+        (np.array([cube_pos[0] + _nv_goff[0], cube_pos[1] + _nv_goff[1], pz + _nv_goff[2]]), "close", 0.0), # S2 descend + close
+        (np.array([cube_pos[0] + _nv_goff[0], cube_pos[1] + _nv_goff[1], h1]),         None,    0.0),       # S3 lift
         (np.array([drop_pos[0], drop_pos[1], h1]),         None,    drop_yaw),  # S4 transit (rotated)
         (np.array([drop_pos[0], drop_pos[1], h_mid_drop]), None,    drop_yaw),  # S4.5 mid
         (np.array([drop_pos[0], drop_pos[1], float(drop_pos[2]) + _drop_tip_release]),"open",  drop_yaw),  # S5 descend + open (suction: lower release height)
     ]
+    # 2026-06-06 NOTE (REVERTED experiment): a gated _ur10_telescope_descend that replaced the S5 cuRobo descend
+    # with the soft-place telescope (S5 goal -> h_mid_drop) was tested fresh-isolated and REJECTED: CP-80 -> dead-
+    # center PASS, but CP-81 REGRESSED (delivered in prod, but flag-on released SHORT at [0.382,-0.206]) and CP-83
+    # still FAILED short [0.404,-0.183]. Mechanism: the telescope lowers STRAIGHT DOWN from the S4.5 above-bin pose;
+    # when cuRobo under-reaches the bin XY there (~[0.40,-0.20]) the cube drops short. The cuRobo S5 descend, despite
+    # its IK-flip, was doing necessary XY convergence. So the right fix is to keep the descend but stop its IK-branch
+    # flip (joint-continuity/seed), NOT to remove it. See docs/notes/NIGHT_MISSION_2026_06_05.md ~22:45.
     # 2026-06-02 EDIT 1: Franka clean post-place STRAIGHT-UP retract (S6). After releasing, lift the EE
     # vertically to the clamped transit height h1 BEFORE any lateral move, so the arm doesn't sweep
     # sideways through the just-placed item/stack toward the next pick (the ASCENT-KNOCK: measured —
     # CP-42 Brick_4|Brick_2 + Brick_3|Brick_1 collisions, CP-09 stack topples). XY pinned to the drop
     # xy = pure vertical column; action_after=None = pure transit, no grip dwell. Franka-gated
     # (suction/UR10 byte-identical); fail-open in the dispatch (skip if unplannable, never fail the cube).
-    if _SG_FOLLOWER_OP is None:
+    if not _SG_IS_SUCTION:
         goals.append((np.array([drop_pos[0], drop_pos[1], h1]), None, drop_yaw))  # S6 retract straight up
     # 2026-06-04 UR10 TRANSIT-ARC (Anton: swing+collision are the priority root). FLAG-GATED OFF by default
     # (builtins._ur10_transit_arc) → byte-identical until verified, so the 6 + Franka + GUI-review are untouched.
@@ -6008,7 +6520,7 @@ def _build_segments(cube_pos, drop_pos, current_q):
     # UR10/suction-gated → Franka byte-identical. UNTESTED — pending Kit verify + radius/apex/step tuning.
     try:
         import math as _math_ta, builtins as _bi_ta
-        if _SG_FOLLOWER_OP is not None and getattr(_bi_ta, "_ur10_transit_arc", True):
+        if _SG_IS_SUCTION and getattr(_bi_ta, "_ur10_transit_arc", False):
             _bx, _by = float(_usd_pos[0]), float(_usd_pos[1])
             _cdx, _cdy = float(cube_pos[0]) - _bx, float(cube_pos[1]) - _by
             _ddx, _ddy = float(drop_pos[0]) - _bx, float(drop_pos[1]) - _by
@@ -6030,17 +6542,21 @@ def _build_segments(cube_pos, drop_pos, current_q):
         print("(curobo: transit-arc soft-fail: " + str(_tae) + ")")
     segs = []
     q = np.asarray(current_q, dtype=np.float32)
+    # NOTE (2026-06-05): a UR10 pick-seed wrap to (-pi,pi] was tested (flag _ur10_seed_wrap) — VERIFIED SAFE
+    # (CP-70/79 still pass with it) but did NOT fix CP-84/85 (cube stays at spawn; the arm winds to ee[1.1,0.58,0.58]
+    # WITH the gripper installed). The deeper CP-84/85 blocker is a cuRobo-suction-pick-geometry issue, not the
+    # unwrapped home — left for the architectural suction pass. Reverted (no dormant flag).
 
     # 2026-05-27 GENERIC SUB-STEP HELPER: sub-step any goal where start_xy ≈ goal_xy + Z differs.
     # Plans intermediate waypoints (4 steps if Z-distance > 50mm) so cuRobo can't curve much per step.
-    def _plan_sub_step(start_q_arr, goal_world, exclude_obs, yaw_deg):
+    def _plan_sub_step(start_q_arr, goal_world, exclude_obs, yaw_deg, branch_pin=False):
         from curobo.types import JointState as _JS
         try:
             _start_t = torch.tensor([[float(x) for x in start_q_arr[:_ARM_DOF]]], dtype=torch.float32, device='cuda')
             _start_js = _JS.from_position(_start_t, joint_names=_PLANNER_JOINT_NAMES)
             _start_ee = _planner.compute_kinematics(_start_js).tool_poses.position[0,0,0].detach().cpu().numpy()
         except Exception:
-            return _plan_to_world_point(goal_world, start_q_arr, exclude_obs=exclude_obs, yaw_deg=yaw_deg)
+            return _plan_to_world_point(goal_world, start_q_arr, exclude_obs=exclude_obs, yaw_deg=yaw_deg, branch_pin=branch_pin)
         _dxy = ((float(goal_world[0])-float(_start_ee[0]))**2 + (float(goal_world[1])-float(_start_ee[1]))**2) ** 0.5
         _dz = abs(float(goal_world[2]) - float(_start_ee[2]))
         if _dxy < 0.06 and _dz > 0.12:  # relaxed (was 0.005/0.20): the suction drop-descent enters with some
@@ -6051,13 +6567,13 @@ def _build_segments(cube_pos, drop_pos, current_q):
             for _s in range(1, _n_steps+1):
                 _interp_z = float(_start_ee[2]) + (_dz if float(goal_world[2]) > float(_start_ee[2]) else -_dz) * (_s/_n_steps)
                 _sub_goal = np.array([float(goal_world[0]), float(goal_world[1]), _interp_z], dtype=np.float32)
-                _r = _plan_to_world_point(_sub_goal, _q_cur, exclude_obs=exclude_obs, yaw_deg=yaw_deg)
+                _r = _plan_to_world_point(_sub_goal, _q_cur, exclude_obs=exclude_obs, yaw_deg=yaw_deg, branch_pin=branch_pin)
                 if _r is None: return None
                 _t, _m = _r
                 _trajs.append(_t); _mts += _m
                 _q_cur = _t[-1]
             return (np.concatenate(_trajs, axis=0), _mts)
-        return _plan_to_world_point(goal_world, start_q_arr, exclude_obs=exclude_obs, yaw_deg=yaw_deg)
+        return _plan_to_world_point(goal_world, start_q_arr, exclude_obs=exclude_obs, yaw_deg=yaw_deg, branch_pin=branch_pin)
 
     import builtins as _bi
     # Default vhold_mode=1 enables ToolPoseCriteria.linear_motion (cuRobo native).
@@ -6073,13 +6589,158 @@ def _build_segments(cube_pos, drop_pos, current_q):
     _vmode = getattr(_bi, '_vhold_mode_test', 1) if ROBOT_FAMILY == "franka" else 0
     _attach_enabled = getattr(_bi, '_attach_test', False)  # disabled — broken
     _attached = False
+    _carry = False  # True between the grip-close and the release -> the cube is held (loaded transit)
+    _bs_start = time.monotonic()  # PLAN-BUDGET start (see budget check at the top of the loop)
+    # 2026-06-09 RANK-2 BUILD DEADLINE (gated _ur10_build_budget_s, default 0 = OFF = byte-identical). [MEASURED CP-71]
+    # the existing per-SEGMENT budget (L6533) is checked only at the TOP of each segment iter, so a SINGLE segment's
+    # plan fan-out (_PLAN_RETRY=5 x plan_pose(max_attempts=3) x substeps x fallbacks) on an unreachable high-tight-grid
+    # goal grinds for minutes and HANGS the Kit (grip_log froze at settling t=1.8s, 0 nudges). Publish a wall-clock
+    # DEADLINE that _plan_to_world_point itself checks (top + retry loop) so the fan-out aborts MID-segment -> the build
+    # returns res_None fast -> the pick fails gracefully -> the gate gives a verdict instead of freezing. Reset each
+    # build so a slow first build doesn't permanently disable planning. UR10-gated -> Franka byte-identical.
+    try:
+        _bb = float(getattr(__import__("builtins"), "_ur10_build_budget_s", 0.0))
+        __import__("builtins")._ur10_plan_deadline = (_bs_start + _bb) if (_bb > 0.0 and ROBOT_FAMILY in ("ur10", "ur10e")) else 0.0
+    except Exception: pass
+    # 2026-06-09 EXCLUDE-DELIVERED bridge (gated _ur10_obs_exclude_delivered, default OFF -> byte-identical). [MEASURED
+    # CP-83] after Cube_2 is delivered INTO the bin, the multicube-obs auto-add still lists it as a collision obstacle
+    # -> Cube_1's PLACE descend into the SAME bin is blocked (seg-6 res_None). A delivered cube in the destination must
+    # NOT block the next place there. Publish S["delivered"] to builtins so _build_scene_cfg (different scope) can drop
+    # them from the obstacle set. Set here (S is in scope in the controller); read in _ur10_multicube_obs.
+    try: __import__("builtins")._mc_delivered = set(S.get("delivered", set())) if getattr(__import__("builtins"), "_ur10_obs_exclude_delivered", False) else set()
+    except Exception:
+        try: __import__("builtins")._mc_delivered = set()
+        except Exception: pass
     for idx, (goal_world, action_after, yaw_deg) in enumerate(goals):
+        try:
+            if getattr(__import__("builtins"), "_ur10_hangloc", False):
+                with open("/tmp/cp71_hangloc.txt", "w") as _hf: _hf.write("seg_build idx=%d goal=%s act=%s\\n" % (idx, str([round(float(_v), 2) for _v in goal_world]), str(action_after)))
+        except Exception: pass
+        # 2026-06-09 A1: mark this segment's phase so the carry-scoped multicube obstacles (added in _build_scene_cfg)
+        # are PRESENT only for the LATERAL-TRANSIT segments (idx>=4: transit/over-bin/place — where the arm sweeps the
+        # neighbour-cube column) and ABSENT for approach+pick+LIFT (idx 0-3). [MEASURED] seg-3 is a straight-UP lift at
+        # the pick xy (low sweep risk); the original obstacle need was the seg-4 transit. idx>=3 blocked the lift; idx>=4
+        # frees it so H7 routes the transit around. Gated _ur10_multicube_obs_carry_only (default OFF -> byte-identical).
+        if getattr(__import__("builtins"), "_ur10_multicube_obs_carry_only", False):
+            try: __import__("builtins")._mc_carry_phase = (idx >= 4)
+            except Exception: pass
+        # 2026-06-06 PLAN-BUDGET (time-series-confirmed CP-81): an UNPLANNABLE cube (e.g. the far Cube_1 whose
+        # bin-drop is blocked by the already-delivered Cube_2) makes _build_segments grind ~150 plan_pose retries
+        # = a slow-motion sim -> the function-gate's wall-clock timeout (duration_s+60) fires before sim-end ->
+        # stale cp_pre -> a SPURIOUS huge velocity on the already-delivered cube -> false fail. Cap each build
+        # attempt at 8s wall-clock so the caller's 3-strike abandon fires within ~24s and the sim COMPLETES inside
+        # the gate's budget -> correct measurement. Bail = None (the caller treats it as a plan failure). UR10-gated
+        # so the 37 Franka friction-passes are byte-identical.
+        if ROBOT_FAMILY in ("ur10", "ur10e") and (time.monotonic() - _bs_start) > float(getattr(__import__("builtins"), "_ur10_plan_budget_s", (20.0 if getattr(__import__("builtins"), "_sg_nvidia_cup", False) else 8.0))):
+            # 2026-06-07: budget flag-raisable (default 8.0 = byte-identical). Hypothesis test for #3: more trajopt
+            # seeds (anti-spin) make each plan slower, so the 8s cap may bail _build_segments before the pick is
+            # planned -> the "trajopt=8 breaks the pick" may be a BUDGET timeout, not seed instability. Raise to test.
+            if _attached:
+                try: _planner.trajopt_solver.core.attachment_manager.detach(link_name=_TOOL_FRAME)
+                except Exception: pass
+            return None
         # 2026-06-02 EDIT 2: vhold (linear_motion axis=z + reset_seed) on S3 grasp-lift (idx 3),
         # S5 place-descent (idx 6), and S6 retract (last) — all pure vertical columns so the descent/
         # ascent doesn't swing laterally (cures placement tilt). _vmode=0 for non-Franka (UR10 +Z is
         # the flange normal -> R6 ValueError) so UR10/suction byte-identical. Franka panda_hand +Z =
         # world-down; S3 vhold proven 10/10. The unconstrained fallback below covers any vhold plan-miss.
         _seg_vmode = _vmode if (idx in (3, 6) or idx == len(goals) - 1) else 0
+        # 2026-06-09 H7-APPROACH pan-rotate (gated _ur10_pick_approach_panrotate, default OFF -> byte-identical).
+        # [MEASURED CP-83, TS-verified] the pick ARRIVES folded-back (live jdeg pan~20, lift~-175 = upper-arm folded
+        # back over the base to reach behind) instead of BASE-ROTATED to face the behind cube (the down-grasp config is
+        # pan~146 ~= cube azimuth). The two are different IK branches 7.39 rad apart (genuine, NOT a 2pi-wrist wrap —
+        # cspace_unwrap left bestd unchanged) so the descend down-config is unbridgeable from the fold-back arrival.
+        # FIX (mirror the H7 transit): BEFORE the approach (idx 0), insert a pure cspace pan-rotate of shoulder_pan from
+        # the current config toward the CUBE azimuth so the arm arrives base-facing (down-near) and the descend is
+        # in-branch. UR10 suction + big rotation only; fail-open (plan fail -> normal approach). Generalizes to the 25
+        # stacking plates (same arrive-base-facing-the-pick need).
+        if (idx == 0 and ROBOT_FAMILY in ("ur10", "ur10e") and _SG_IS_SUCTION
+                and getattr(_bi, "_ur10_pick_approach_panrotate", False)):
+            try:
+                import math as _m_ap
+                _bxa, _bya = float(_usd_pos[0]), float(_usd_pos[1])
+                _cube_az = _m_ap.atan2(float(cube_pos[1]) - _bya, float(cube_pos[0]) - _bxa)
+                _qaa = np.asarray(q, dtype=np.float32)
+                _cur_pan = float(_qaa[0])
+                _dpan_a = _cube_az - _cur_pan
+                while _dpan_a > _m_ap.pi: _dpan_a -= 2.0 * _m_ap.pi
+                while _dpan_a < -_m_ap.pi: _dpan_a += 2.0 * _m_ap.pi
+                try:
+                    with open("/tmp/h7_sentinel.log", "a") as _aps: _aps.write("H7APPR cube_az=%.3f cur_pan=%.3f dpan=%.3f fire=%s\\n" % (_cube_az, _cur_pan, _dpan_a, str(abs(_dpan_a) > 0.5)))
+                except Exception: pass
+                if abs(_dpan_a) > 0.5:
+                    _tqa = _qaa.copy(); _tqa[0] = _cur_pan + _dpan_a
+                    _sqa = torch.tensor([[float(x) for x in _qaa[:_ARM_DOF]]], dtype=torch.float32, device='cuda')
+                    _gqa = torch.tensor([[float(x) for x in _tqa[:_ARM_DOF]]], dtype=torch.float32, device='cuda')
+                    _sjsa = JointState.from_position(_sqa, joint_names=_PLANNER_JOINT_NAMES)
+                    _gjsa = JointState.from_position(_gqa, joint_names=_PLANNER_JOINT_NAMES)
+                    try: _planner.reset_seed()
+                    except Exception: pass
+                    _ares = _planner.plan_cspace(_gjsa, _sjsa, max_attempts=3)
+                    if _ares is not None and bool(_ares.success[0, 0].item()):
+                        _ain = _ares.get_interpolated_plan()
+                        _atj = _ain.position[0, 0, :, :7].detach().cpu().numpy()
+                        _amt = float(_ares.motion_time()) if callable(_ares.motion_time) else float(_ares.motion_time)
+                        segs.append({{"traj": _atj, "motion_time": _amt, "action_after": None,
+                                      "grip_done": False, "drop_pos": None, "release_flange_z": None}})
+                        q = _atj[-1]
+                        print("(curobo: H7-APPROACH pan-rotate dpan=%.2f pan %.2f->%.2f knots=%d)"
+                              % (_dpan_a, float(_qaa[0]), float(_atj[-1][0]), len(_atj)))
+                    else:
+                        print("(curobo: H7-APPROACH plan_cspace FAILED -> normal approach)")
+            except Exception as _ape:
+                print("(curobo: H7-APPROACH soft-fail: " + str(_ape) + ")")
+        # 2026-06-09 H7 JOINT-SPACE PAN-ROTATE TRANSIT (gated _ur10_jointspace_transit, default OFF -> byte-identical).
+        # The transit swing (RCA 2026-06-04) is a GEOMETRICALLY-forced IK branch flip: far-behind pick (x~-1.0) and front
+        # bin (x~+0.5) sit on different IK branches, NO continuous IK across the front-center crossing. Cartesian levers
+        # (arc/cspace/seeds/ori_tol) all MEASURED-refuted. FIX: before the Cartesian transit (idx 4), insert a PURE cspace
+        # hop rotating ONLY shoulder_pan by the cube->bin azimuth delta (arm shape fixed). Base rotation about world-z
+        # PRESERVES the tool's straight-down approach axis (only azimuthal roll changes -> axisymmetric cup ignores it),
+        # so no IK branch flip is possible (plan_cspace interpolates to a fixed config). The existing transit then plans a
+        # small move from the bin-facing config. UR10 suction + big behind->front rotation (|dpan|>0.5) only; fail-open.
+        if (idx == 4 and ROBOT_FAMILY in ("ur10", "ur10e") and _SG_IS_SUCTION
+                and getattr(_bi, "_ur10_jointspace_transit", False)):
+            try:
+                import math as _m_h7
+                _bx7, _by7 = float(_usd_pos[0]), float(_usd_pos[1])
+                _dpan = (_m_h7.atan2(float(drop_pos[1]) - _by7, float(drop_pos[0]) - _bx7)
+                         - _m_h7.atan2(float(cube_pos[1]) - _by7, float(cube_pos[0]) - _bx7))
+                while _dpan > _m_h7.pi: _dpan -= 2.0 * _m_h7.pi
+                while _dpan < -_m_h7.pi: _dpan += 2.0 * _m_h7.pi
+                _cube_reach = ((float(cube_pos[0]) - _bx7) ** 2 + (float(cube_pos[1]) - _by7) ** 2) ** 0.5
+                _h7_far = float(getattr(_bi, "_ur10_jointspace_far_reach", 1.0))
+                try:
+                    with open("/tmp/h7_sentinel.log", "a") as _h7s: _h7s.write("H7_GATE reach=%.3f dpan=%.3f far=%.3f fire=%s\\n" % (_cube_reach, _dpan, _h7_far, str(abs(_dpan) > 0.5 and _cube_reach > _h7_far)))
+                except Exception: pass
+                if abs(_dpan) > 0.5 and _cube_reach > _h7_far:
+                    _sign7 = float(getattr(_bi, "_ur10_jointspace_sign", -1.0))
+                    _qa7 = np.asarray(q, dtype=np.float32)
+                    _tq7 = _qa7.copy(); _tq7[0] = float(_tq7[0]) + _sign7 * float(_dpan)
+                    _sq7 = torch.tensor([[float(x) for x in _qa7[:_ARM_DOF]]], dtype=torch.float32, device='cuda')
+                    _gq7 = torch.tensor([[float(x) for x in _tq7[:_ARM_DOF]]], dtype=torch.float32, device='cuda')
+                    _sjs7 = JointState.from_position(_sq7, joint_names=_PLANNER_JOINT_NAMES)
+                    _gjs7 = JointState.from_position(_gq7, joint_names=_PLANNER_JOINT_NAMES)
+                    try: _planner.reset_seed()
+                    except Exception: pass
+                    _hres = _planner.plan_cspace(_gjs7, _sjs7, max_attempts=3)
+                    if _hres is not None and bool(_hres.success[0, 0].item()):
+                        _hin = _hres.get_interpolated_plan()
+                        _htj = _hin.position[0, 0, :, :7].detach().cpu().numpy()
+                        _hmt = float(_hres.motion_time()) if callable(_hres.motion_time) else float(_hres.motion_time)
+                        _vmax7 = float(getattr(_bi, "_sg_loaded_vmax_fast", 0) or getattr(_bi, "_sg_loaded_vmax", 1.2))  # GATED faster ceiling; falsy _sg_loaded_vmax_fast -> falls back to _sg_loaded_vmax (1.2) -> byte-identical
+                        if _vmax7 > 1e-6 and _hmt > 1e-6:
+                            _sw7 = float(np.max(np.abs(np.asarray(_htj[-1], dtype=np.float64)[:_ARM_DOF]
+                                                        - np.asarray(_htj[0], dtype=np.float64)[:_ARM_DOF])))
+                            _hmt = max(_hmt, _sw7 / _vmax7)
+                        segs.append({{"traj": _htj, "motion_time": _hmt, "action_after": None,
+                                      "grip_done": False, "drop_pos": None, "release_flange_z": None}})
+                        q = _htj[-1]
+                        print("(curobo: H7 pan-rotate hop dpan=%.2f sign=%.0f q0 %.2f->%.2f knots=%d mt=%.2f)"
+                              % (_dpan, _sign7, float(_qa7[0]), float(_htj[-1][0]), len(_htj), _hmt))
+                    else:
+                        print("(curobo: H7 pan-rotate hop plan_cspace FAILED -> normal transit)")
+            except Exception as _h7e:
+                print("(curobo: H7 hop soft-fail: " + str(_h7e) + ")")
         # ATTACH cube_M BEFORE S3 lift so cuRobo collision-checker treats attached cube as robot geometry
         if idx == 3 and _attach_enabled and not _attached:
             try:
@@ -6098,11 +6759,66 @@ def _build_segments(cube_pos, drop_pos, current_q):
                 _planner.trajopt_solver.core.attachment_manager.attach(joint_states=_js_grip, obstacles=[_cube_obs], link_name=_TOOL_FRAME)
                 _attached = True
             except Exception: pass
+        # 2026-06-06 CUP-FRAME-DOWN (gated _ur10_cupframe_down, default ON since 2026-06-06 flip). With the -90 mount (Edit A) the cup
+        # points STRAIGHT DOWN; this ITERATIVE FK descend-correction lands the cup TIP on the cube TOP in DIRECT
+        # CONTACT (Anton's req: no gap, cup lower face touching the cube, hotswap-ready geometry). Method (frame-
+        # correct, all world poses): (1) measure the CONSTANT cup-in-tool0 offset at the ACTUAL current config
+        # (FK actual joints -> tool0 world; live suction_cup USD -> cup world; project into the tool0 frame so the
+        # live cup matches the live FK — NOT the planned q, which was the earlier garbage-offset bug); (2) iterate
+        # plan -> FK planned config -> cup_world = tool0 + R_tool·offset_tool0 -> err to cube_top -> correct the
+        # goal. Close segment only; when disabled -> byte-identical to the 11 passers.
+        if (action_after == "close" and getattr(__import__("builtins"), "_ur10_cupframe_down", True)
+                and _SG_IS_SUCTION and ROBOT_FAMILY in ("ur10", "ur10e")):
+            try:
+                from curobo.types import JointState as _JS_cf
+                def _fk_world_cf(_jarr):
+                    _t = torch.tensor([[float(_x) for _x in np.asarray(_jarr)[:_ARM_DOF]]], dtype=torch.float32, device="cuda")
+                    _ks = _planner.compute_kinematics(_JS_cf.from_position(_t, joint_names=_PLANNER_JOINT_NAMES))
+                    _p = _ks.tool_poses.position[0, 0, 0].detach().cpu().numpy()
+                    _qq = _ks.tool_poses.quaternion[0, 0, 0].detach().cpu().numpy()
+                    _bm = Gf.Matrix4d().SetRotate(Gf.Quatd(float(_usd_quat[0]), Gf.Vec3d(float(_usd_quat[1]), float(_usd_quat[2]), float(_usd_quat[3])))); _bm.SetTranslateOnly(Gf.Vec3d(float(_usd_pos[0]), float(_usd_pos[1]), float(_usd_pos[2])))
+                    _fm = Gf.Matrix4d().SetRotate(Gf.Quatd(float(_qq[0]), Gf.Vec3d(float(_qq[1]), float(_qq[2]), float(_qq[3])))); _fm.SetTranslateOnly(Gf.Vec3d(float(_p[0]), float(_p[1]), float(_p[2])))
+                    _w = _fm * _bm
+                    return _w.ExtractTranslation(), _w.ExtractRotationMatrix()
+                _jq_now = franka.get_joint_positions()
+                _cupprim = stage.GetPrimAtPath(_SG_CUP_PATH)
+                if _jq_now is not None and _cupprim and _cupprim.IsValid():
+                    _tp0, _tr0 = _fk_world_cf(_jq_now)
+                    _cw0 = UsdGeom.Xformable(_cupprim).ComputeLocalToWorldTransform(0).ExtractTranslation()
+                    _ow = [float(_cw0[_i]) - float(_tp0[_i]) for _i in range(3)]
+                    _otool = [sum(_ow[_k] * float(_tr0.GetRow(_j)[_k]) for _k in range(3)) for _j in range(3)]
+                    try:
+                        _w3p = stage.GetPrimAtPath("/".join(ROBOT_PATH.split("/")) + "/wrist_3_link")
+                        _w3t = UsdGeom.Xformable(_w3p).ComputeLocalToWorldTransform(0).ExtractTranslation() if (_w3p and _w3p.IsValid()) else None
+                        with open("/tmp/cupframe_dbg.log", "a") as _cfd:
+                            _cfd.write("MEAS fk_tool0=%s cup=%s wrist3=%s ow_world=%s\\n" % (
+                                [round(float(_tp0[_i]),3) for _i in range(3)], [round(float(_cw0[_i]),3) for _i in range(3)],
+                                ([round(float(_w3t[_i]),3) for _i in range(3)] if _w3t is not None else None),
+                                [round(_ow[_i],3) for _i in range(3)]))
+                    except Exception: pass
+                    _cube_top = [float(cube_pos[0]), float(cube_pos[1]), float(cube_pos[2]) + 0.025]
+                    _gg = np.array([float(cube_pos[0]), float(cube_pos[1]), float(cube_pos[2]) + 0.025 + 0.16], dtype=np.float32)
+                    for _it in range(3):
+                        _rr = _plan_to_world_point(_gg, q, exclude_obs=S["picked_path"], yaw_deg=yaw_deg, vhold_mode=0)
+                        if _rr is None: break
+                        _tpf, _trf = _fk_world_cf(_rr[0][-1])
+                        _cupf = [float(_tpf[_k]) + sum(_otool[_j] * float(_trf.GetRow(_j)[_k]) for _j in range(3)) for _k in range(3)]
+                        _err = [_cube_top[_k] - _cupf[_k] for _k in range(3)]
+                        _en = (_err[0] ** 2 + _err[1] ** 2 + _err[2] ** 2) ** 0.5
+                        with open("/tmp/cupframe_dbg.log", "a") as _cfd:
+                            _cfd.write("it%d otool=%s cupf=%s err=%s en=%.3f\\n" % (_it, [round(_x, 3) for _x in _otool], [round(_x, 3) for _x in _cupf], [round(_x, 3) for _x in _err], _en))
+                        if _en < 0.008: break
+                        _gg = np.array([float(_gg[_k]) + _err[_k] for _k in range(3)], dtype=np.float32)
+                    goal_world = _gg
+            except Exception as _cfe:
+                try:
+                    with open("/tmp/cupframe_dbg.log", "a") as _cfd: _cfd.write("cupframe_fail " + str(_cfe)[:140] + "\\n")
+                except Exception: pass
         # SUCTION drop-descent (S5/open): (2b) re-seed from the LIVE joint state — break the open-loop q=traj[-1]
         # chain that compounds upstream drift; (2a) route through _plan_sub_step which forces a VERTICAL descent
         # over the bin center via goal-xy sub-goals. The default loop calls _plan_to_world_point directly, letting
         # cuRobo curve the descent to an off-center+high terminal (RCA: S5 missed goal by 0.13xy+0.38z, plan_fails=0).
-        if _SG_FOLLOWER_OP is not None and action_after == "open":
+        if _SG_IS_SUCTION and action_after == "open":
             # 2026-06-02 CP-83 RCA (segment-level fail log): S6/open (idx6) FAILS while S4.5
             # (idx5, the HIGHER 1.58 mid) SUCCEEDS → not a reach/height issue → a SEED issue.
             # The live re-seed below reads the live joints, which during _build_segments = the
@@ -6121,16 +6837,60 @@ def _build_segments(cube_pos, drop_pos, current_q):
                     if ROBOT_FAMILY in ("ur10", "ur10e"):
                         q = ((q + np.pi) % (2.0 * np.pi) - np.pi).astype(np.float32)
             except Exception: pass
-            res = _plan_sub_step(q, goal_world, exclude_obs=S["picked_path"], yaw_deg=yaw_deg)
+            res = None
+            # 2026-06-07 SCOPED DROP BRANCH-PIN (gated _ur10_drop_branch_pin, default OFF). The drop-descend swing
+            # (cup over bin @t=9 [0.49,-0.41,1.03] -> flies to [0.2,0.54,1.57] -> late release) is cuRobo re-IKing
+            # the 5cm descend into a DIFFERENT arm branch. The plan_cspace branch-pin (L5335) fixes this BUT only if
+            # it pins to the OVER-BIN branch: pass _q_chained (the transit-end config = where the arm WILL be) as the
+            # start + branch_pin=True so it stays in-branch. SCOPED to THIS S5 call only (branch_pin kwarg, NOT the
+            # global _ur10_plan_cspace flag) so the deep place-descent / pick / transit do NOT get cspace (global
+            # cspace TIMES OUT on the z~0.47 place-descent). OFF (or Franka) = original live-seed path, byte-identical.
+            import builtins as _bi_dbp
+            if getattr(_bi_dbp, "_sg_grip_log", False) or getattr(_bi_dbp, "_ur10_drop_branch_pin", False):
+                try:
+                    with open("/tmp/s5goal.log", "a") as _s5g:
+                        _s5g.write("S5 drop_pos=%s drop_tip_release=%.3f goal_world=%s\\n" % (
+                            [round(float(_x), 3) for _x in drop_pos], float(_drop_tip_release),
+                            [round(float(_x), 3) for _x in goal_world]))
+                except Exception: pass
+            if ROBOT_FAMILY in ("ur10", "ur10e") and getattr(_bi_dbp, "_ur10_drop_branch_pin", False):
+                res = _plan_sub_step(_q_chained, goal_world, exclude_obs=S["picked_path"], yaw_deg=yaw_deg, branch_pin=True)
+            if res is None:
+                # GATED (_ur10_drop_seed_chained, default OFF): seed the S5 fallback from _q_chained (the transit-end
+                # OVER-BIN config) instead of the live-reseed q (= robot HOME during _build_segments). The home seed
+                # plans a home->bin descend that the arm executes as the "varv till" up-out-back lap [MEASURED CP-69
+                # 2026-06-09: seg7 pan -47->-6->-47]. Over-bin seed -> short in-branch descend, no home detour.
+                _s5_seed = (_q_chained if (ROBOT_FAMILY in ("ur10", "ur10e")
+                                           and getattr(_bi_dbp, "_ur10_drop_seed_chained", False)) else q)
+                res = _plan_sub_step(_s5_seed, goal_world, exclude_obs=S["picked_path"], yaw_deg=yaw_deg)
             if res is None and ROBOT_FAMILY in ("ur10", "ur10e"):
                 res = _plan_sub_step(_q_chained, goal_world, exclude_obs=S["picked_path"], yaw_deg=yaw_deg)
+            try:
+                if res is not None and (getattr(_bi_dbp, "_sg_grip_log", False) or getattr(_bi_dbp, "_ur10_drop_seed_chained", False)):
+                    with open("/tmp/s5path.log", "a") as _s5p:
+                        _s5p.write("S5 traj0=%s qchain=%s homeq=%s nknots=%d\\n" % (
+                            [round(float(_x), 2) for _x in np.asarray(res[0])[0][:6]],
+                            [round(float(_x), 2) for _x in np.asarray(_q_chained)[:6]],
+                            [round(float(_x), 2) for _x in np.asarray(q)[:6]], len(res[0])))
+            except Exception: pass
             if res is None and DEST_PATH:
                 # 2026-06-04 drop-IK fix: descend onto destination has no collision-free IK (ik_solver uses
                 # scene collision; destination in-world, only held cube excluded). Retry excluding the
                 # DESTINATION too. ADDITIVE (only on failure) -> zero regression. Fixes pedestal->dest drops.
                 res = _plan_sub_step(_q_chained, goal_world, exclude_obs=[S["picked_path"], DEST_PATH], yaw_deg=yaw_deg)
         else:
-            res = _plan_to_world_point(goal_world, q, exclude_obs=S["picked_path"], yaw_deg=yaw_deg, vhold_mode=_seg_vmode)
+            # 2026-06-09 PLACE-DESCEND BRANCH-PIN (gated _ur10_place_descend_pin, default OFF -> byte-identical). The
+            # OPEN/place descend, like the pick descend, can res_None from the transit-arrival config (CP-81/83 2nd
+            # cube). branch_pin routes the place plan through the cspace-pin + wrist-unwrap path (the proven pick fix)
+            # so the existing down-config at the bin is reached. OPEN segment only -> non-place plans byte-identical.
+            _place_pin = (action_after == "open" and getattr(__import__("builtins"), "_ur10_place_descend_pin", False))
+            # 2026-06-10 APPROACH-PIN (gated _ur10_approach_pin, default OFF -> byte-identical): branch-pin ALL
+            # build-time segment plans through the cspace closest-L1 path. [MEASURED CP-83] the explicit probe
+            # (CSPACE=1) delivered BOTH cubes; pure-default recipe v2 (descend/relive pins only) leaves the APPROACH
+            # plans free plan_pose -> the wound->down reconfig after delivering Cube_2 flips/knocks Cube_1 off its
+            # pedestal (rep1 z=0.53 floor). Surgical recipe equivalent of the probe's global CSPACE.
+            _bp_appr = getattr(__import__("builtins"), "_ur10_approach_pin", False)
+            res = _plan_to_world_point(goal_world, q, exclude_obs=S["picked_path"], yaw_deg=yaw_deg, vhold_mode=_seg_vmode, branch_pin=(_place_pin or _bp_appr))
             if res is None and _seg_vmode != 0:
                 # EDIT 2 fallback: the vertical (vhold) constraint missed -> retry UNCONSTRAINED so a
                 # vhold plan-fail never fails the cube (no regression vs the pre-vhold single plan).
@@ -6151,19 +6911,47 @@ def _build_segments(cube_pos, drop_pos, current_q):
         if res is None and action_after == "open":
             _gb = np.asarray(goal_world, dtype=np.float32)
             _exd = [S["picked_path"], DEST_PATH] if DEST_PATH else S["picked_path"]
+            # GATED (_ur10_drop_seed_chained): the z-backoff is the path that actually delivers when the S5
+            # descend res_None's. Default seeds from q (= live-reseed HOME during _build_segments) -> the plan
+            # is a home->bin detour the arm executes as the "varv till" [MEASURED CP-69 2026-06-09]. Seed from
+            # _q_chained (transit-end OVER-BIN config) -> short in-branch descend, no lap. UR10 suction only.
+            _zseed = (_q_chained if (_SG_IS_SUCTION and ROBOT_FAMILY in ("ur10", "ur10e")
+                                     and getattr(__import__("builtins"), "_ur10_drop_seed_chained", False)) else q)
             for _dz in (0.06, 0.12, 0.18, 0.26):
                 _gz = np.array([float(_gb[0]), float(_gb[1]), float(_gb[2]) + _dz], dtype=np.float32)
-                if _SG_FOLLOWER_OP is not None:
-                    res = _plan_sub_step(q, _gz, exclude_obs=_exd, yaw_deg=yaw_deg)
+                if _SG_IS_SUCTION:
+                    res = _plan_sub_step(_zseed, _gz, exclude_obs=_exd, yaw_deg=yaw_deg, branch_pin=_place_pin)
                 else:
                     res = _plan_to_world_point(_gz, q, exclude_obs=_exd, yaw_deg=yaw_deg, vhold_mode=0)
+                try:
+                    if getattr(__import__("builtins"), "_sg_grip_log", False):
+                        with open("/tmp/s5path.log", "a") as _zp:
+                            _zp.write("ZBACKOFF dz=%.2f seed_pan=%.1f res=%s traj0_pan=%s trajN_pan=%s\\n" % (
+                                _dz, float(np.asarray(_zseed)[0]), ("None" if res is None else "ok"),
+                                ("-" if res is None else round(float(np.asarray(res[0])[0][0]), 1)),
+                                ("-" if res is None else round(float(np.asarray(res[0])[-1][0]), 1))))
+                except Exception: pass
                 if res is not None:
                     print(f"(curobo: drop z-backoff +{{_dz}}m -> feasible z={{round(float(_gz[2]), 3)}})")
                     break
-        if res is None and action_after is None and idx == len(goals) - 1 and _SG_FOLLOWER_OP is None:
+        if res is None and action_after is None and idx == len(goals) - 1 and not _SG_IS_SUCTION:
             # EDIT 1 fail-open: the S6 straight-up retract is a safety lift, not load-bearing. If it
             # won't plan, SKIP it (arm stays at the S5 release pose = legacy behavior) rather than
             # failing the just-PLACED cube. Never aborts a successful place.
+            continue
+        # 2026-06-09 PLACE FAIL-OPEN (gated _ur10_place_failopen, default OFF -> byte-identical). The build-time place
+        # plan uses the CHAINED (build-time) over-bin config; for the 2nd cube (CP-81/83 Cube_1) that config can't reach
+        # the bin (res_None) -> the WHOLE cube is abandoned at build, so the execution-time RELIVE (which delivered the
+        # 1st cube's place LIVE) never gets a chance. Instead of abandoning, append a PLACEHOLDER open segment that holds
+        # at the current over-bin config; the executor enters it and RELIVE re-plans the descend from the REAL live
+        # arrival -> delivers like the 1st cube. Fail-open: if RELIVE also fails live, the cube just isn't placed (no crash).
+        if (res is None and action_after == "open" and _SG_IS_SUCTION and ROBOT_FAMILY in ("ur10", "ur10e")
+                and getattr(__import__("builtins"), "_ur10_place_failopen", False)):
+            _ph = np.asarray(q, dtype=np.float32)
+            segs.append({{"traj": np.stack([_ph, _ph]), "motion_time": 0.3, "action_after": "open", "grip_done": False,
+                          "drop_pos": [float(drop_pos[0]), float(drop_pos[1]), float(drop_pos[2])],
+                          "release_flange_z": (_sg_release_target if _SG_IS_SUCTION else None)}})
+            print("(curobo: place build FAIL-OPEN -> placeholder over-bin seg; RELIVE re-plans live)", flush=True)
             continue
         if res is None:
             print(f"(curobo: plan failed for goal {{goal_world.tolist()}})")
@@ -6177,9 +6965,21 @@ def _build_segments(cube_pos, drop_pos, current_q):
             return None
         traj, mt = res
         q = traj[-1]
-        # NOTE (2026-06-02): tried mt*=2.0 slow-transit for suction to reduce soft-grip swing; REVERTED —
-        # combined with early-open it destabilized the SG grip joint (cube exploded to x=1.36). The soft/
-        # unstable SG grip joint is the fundamental drop-precision blocker (see ledger). Left at mt.
+        # 2026-06-05 LOADED-TRANSIT slowdown (asset/UR10 suction). The carry segments (S3 lift / S4 transit /
+        # S4.5 mid -- action_after=None and BETWEEN the close and the open) move the arm through big
+        # reconfigurations (CP-80 eyes: 177deg elbow + 180deg wrist swing) whose angular velocity FLINGS the
+        # compliantly-held cube off the cup (cube separates at the start of S4 -> lands on the table). Cap the
+        # loaded-carry angular velocity by STRETCHING this segment's motion_time so the centripetal load stays
+        # within the suction grip. Scoped to the LOADED TRANSIT only (NOT descend/close/open) so it does NOT
+        # recreate the 2026-06-02 blanket mt*=2 + early-open instability (the open segment's timing is untouched).
+        # UR10 suction only -> Franka/procedural byte-identical. Flag-tunable (_sg_loaded_vmax rad/s).
+        if (_carry and action_after is None and _SG_IS_SUCTION and ROBOT_FAMILY in ("ur10", "ur10e")):
+            import builtins as _bi_lt
+            _vmax = float(getattr(_bi_lt, "_sg_loaded_vmax", 1.2))  # angular-velocity cap (rad/s) for the carry
+            if _vmax > 1e-6 and mt > 1e-6:
+                _sweep = float(np.max(np.abs(np.asarray(traj[-1], dtype=np.float64)[:_ARM_DOF]
+                                            - np.asarray(traj[0], dtype=np.float64)[:_ARM_DOF])))
+                mt = max(mt, _sweep / _vmax)
         segs.append({{"traj": traj, "motion_time": mt, "action_after": action_after,
                       "grip_done": False,
                       "drop_pos": [float(drop_pos[0]), float(drop_pos[1]), float(drop_pos[2])]
@@ -6187,17 +6987,249 @@ def _build_segments(cube_pos, drop_pos, current_q):
                       # the DESIGNED soft-place flange-z (bin-floor based); the step-loop telescopes the virtual tool
                       # to make the cup+cube reach this even when cuRobo under-descends the arm at the near bin.
                       "release_flange_z": _sg_release_target
-                                  if (action_after == "open" and _SG_FOLLOWER_OP is not None) else None}})
+                                  if (action_after == "open" and _SG_IS_SUCTION) else None}})
+        # advance the loaded-carry tracker: the cube is HELD after the close completes, RELEASED at the open.
+        if action_after == "close":
+            _carry = True
+        elif action_after == "open":
+            _carry = False
     if _attached:
         try: _planner.trajopt_solver.core.attachment_manager.detach(link_name=_TOOL_FRAME)
         except Exception: pass
     return segs
 
+# 2026-06-05 ASSET-GRIPPER runtime joint fixup. The hotswap asset gripper (short_gripper.usd) is FixedJoint-bolted
+# to wrist_3_link, but that joint is authored DISABLED at build (the articulation is unposed there -> the ee-in-
+# wrist_3 localPose is degenerate). Here, at the first POSED tick, re-author localPose0 from the now-correct world
+# poses and ENABLE the joint -> the gripper locks exactly at the ee_link (cup-correct) pose and tracks the arm
+# (proven exact in conv_test). Asset-mode only (raw iface + no follower); latched; Franka/procedural untouched.
+_asset_joint_fixed = [False]
+def _fixup_asset_gripper_joint():
+    # 2026-06-05 RE-ENABLED (wound-start root-fix synergy): this was disabled because the WOUND start pose made
+    # wrist_3's runtime USD pose unreliable at the first ticks -> garbage localPose0 -> joint snap exploded the
+    # gripper. The wound-start root fix (robot_wizard home spawn) now poses the arm at home at build AND from
+    # frame 0, so the live FK ee pose and the wrist_3 USD pose are consistent. Re-author localPose0 =
+    # ee_world * wrist_3_world^-1 and place /Root at ee_world, then ENABLE -> a snap-free rigid mount that tracks
+    # the arm at the (cup-correct) ee pose. The build-time FlangeMount is authored DISABLED (degenerate link
+    # transforms at t=0), so THIS runtime fixup is the enable path. Latched (runs once).
+    if _asset_joint_fixed[0]:
+        return
+    if (_SG_IFACE is None) or (_SG_FOLLOWER_OP is not None) or (not _SG_PATH_RAW):
+        _asset_joint_fixed[0] = True; return  # not asset mode
+    try:
+        _groot = "/".join(str(_SG_PATH_RAW).split("/")[:-1])   # /World/<robot>_ShortGripper
+        _jpath = _groot + "/FlangeMount"
+        _jp = stage.GetPrimAtPath(Sdf.Path(_jpath))
+        _w3p = stage.GetPrimAtPath(Sdf.Path(ROBOT_PATH + "/wrist_3_link"))
+        if not (_jp and _jp.IsValid() and _w3p and _w3p.IsValid()):
+            _asset_joint_fixed[0] = True; return
+        # Gate on wrist_3 USD being genuinely POSED (off the degenerate stacked rest where all links read ~the same
+        # world pose). At the rest transient, FK (live home joints) and wrist_3 USD (still stacked) are INCONSISTENT
+        # -> garbage localPose0 (validated 2026-06-05). Require wrist_3 to have lifted well above the base first.
+        _w3chk = UsdGeom.Xformable(_w3p).ComputeLocalToWorldTransform(0).ExtractTranslation()
+        if (float(_w3chk[2]) - float(_usd_pos[2])) < 0.2:
+            return  # wrist_3 USD not posed yet (still ~stacked at base height) -> retry next tick
+        # ee_link is a VIRTUAL frame -> its USD transform is FROZEN at home (never tracks the arm). So get the LIVE ee
+        # pose from cuRobo FK (the same FK the suction follower uses, reliable at any config), NOT from USD. wrist_3 IS
+        # a real link and its USD pose tracks. ee-in-wrist_3 is a constant -> a correct localPose0 at any posed tick.
+        _jq = franka.get_joint_positions()
+        if _jq is None:
+            return
+        from curobo.types import JointState as _JS_fx
+        _tq = torch.tensor([[float(x) for x in np.asarray(_jq)[:_ARM_DOF]]], dtype=torch.float32, device="cuda")
+        _ks = _planner.compute_kinematics(_JS_fx.from_position(_tq, joint_names=_PLANNER_JOINT_NAMES))
+        _fp = _ks.tool_poses.position[0, 0, 0].detach().cpu().numpy()       # ee position in base frame
+        _fq = _ks.tool_poses.quaternion[0, 0, 0].detach().cpu().numpy()     # ee quaternion (w,x,y,z) in base frame
+        # base (robot root) world transform, then ee_world = ee_in_base then base->world.
+        _baseM = Gf.Matrix4d().SetRotate(Gf.Quatd(float(_usd_quat[0]), Gf.Vec3d(float(_usd_quat[1]), float(_usd_quat[2]), float(_usd_quat[3]))))
+        _baseM.SetTranslateOnly(Gf.Vec3d(float(_usd_pos[0]), float(_usd_pos[1]), float(_usd_pos[2])))
+        _fkM = Gf.Matrix4d().SetRotate(Gf.Quatd(float(_fq[0]), Gf.Vec3d(float(_fq[1]), float(_fq[2]), float(_fq[3]))))
+        _fkM.SetTranslateOnly(Gf.Vec3d(float(_fp[0]), float(_fp[1]), float(_fp[2])))
+        _eeW = _fkM * _baseM
+        # 2026-06-05 CUP-AXIS ALIGNMENT: /Root mounts AT the ee (position+orientation) correctly, but the asset
+        # suction_cup sits along /Root local +X while the cuRobo DESCEND axis is /Root +Z (DOWN_QUAT sends +Z
+        # world-down — PROVEN: at the pick /Root +Z=down but the cup is along +X = 90deg off -> cup misses the cube
+        # by ~0.32m). Rotate /Root's frame about its own Y so its +X (the cup) aligns with the +Z descend axis. Sign
+        # is flag-controllable for empirical validation (builtins._sg_cup_align_deg, default -90).
+        try:
+            import builtins as _bi_ca
+            # 2026-06-06 NVIDIA-CUP ALIGN (gated _sg_nvidia_cup, default OFF): NVIDIA mounts the cup as a clean
+            # child of ee_link along ee_link +X (out the END, collinear with the flange normal) — no mount rotation.
+            # Our build mount is ALREADY that (measured: cup-Z = ee_link +X, identical to NVIDIA). The -90 below
+            # rotates it OUT THE SIDE (the 90deg-to-wrist Anton sees). _sg_nvidia_cup=True keeps _ca_deg=0 so the
+            # runtime cup stays in the NVIDIA-correct ee_link +X orientation; the cup-frame closed-loop still drives
+            # the cup to the cube. Reversible; OFF = byte-identical to the current -90 mount.
+            _ca_deg = (float(getattr(_bi_ca, "_sg_nvidia_ca_deg", 0.0)) if getattr(_bi_ca, "_sg_nvidia_cup", False)  # 2026-06-07 FIX: _ca_deg=0 = native mount; the gripper extends STRAIGHT out-the-end (cup straight DOWN at descend, VISUALLY VERIFIED). The old +90 mounted it 90deg OFF (gripper sideways from a downward flange — measured + rendered). Gated nvidia -> production byte-identical.
+                       else (-90.0 if getattr(_bi_ca, "_ur10_cupframe_down", True)
+                             else float(getattr(_bi_ca, "_sg_cup_align_deg", -110.0))))
+            _eeQ0 = _eeW.ExtractRotationQuat(); _eeT0 = _eeW.ExtractTranslation()
+            _eeQ1 = _eeQ0 * Gf.Rotation(Gf.Vec3d(0.0, 1.0, 0.0), _ca_deg).GetQuat()
+            _eeW = Gf.Matrix4d().SetRotate(_eeQ1); _eeW.SetTranslateOnly(_eeT0)
+        except Exception: pass
+        _w3m = UsdGeom.Xformable(_w3p).ComputeLocalToWorldTransform(0)
+        _et = _eeW.ExtractTranslation(); _wt = _w3m.ExtractTranslation()
+        _sep = ((_et[0]-_wt[0])**2 + (_et[1]-_wt[1])**2 + (_et[2]-_wt[2])**2) ** 0.5
+        # 2026-06-05: lowered 0.3 -> 0.015. MEASURED (sentinel): the home-posed FK-ee-to-wrist_3 separation is only
+        # ~0.032m (cuRobo's tool frame = ee_link sits ~3cm off wrist_3), NOT the ~0.1-0.3m assumed. The old gate
+        # NEVER passed at home (_sep 0.032 < 0.3/0.04) -> fixup never enabled -> gripper stayed DETACHED. With the
+        # wound-start fix there is no degenerate transient (arm is home from frame 1, _sep ~0.032 immediately), so
+        # 0.015 admits the posed arm while still rejecting a true both-at-base degeneracy (_sep ~0). Confirmed: the
+        # fixup now ENABLES on the first valid tick and the gripper TRACKS the arm.
+        if _sep < 0.015:
+            return  # wrist_3 USD genuinely degenerate (both at base) -> retry next tick
+        # 2026-06-07 FLUSH+COAXIAL MOUNT (gated _sg_flush_mount, default OFF). MEASURED (wrist_3 frame): the
+        # runtime fixup places /Root at the cuRobo FK ee, which sits +28.5mm out + ~11mm LATERAL of the flange
+        # (/World/UR10/wrist_3_link/flange == wrist_3 origin == [0,0,0]). That is the visible cup<->arm gap +
+        # off-centre cup Anton flagged, AND it pushes the cup 158.5mm beyond /Root => 187mm from the flange while
+        # the controller models 159mm => the cup overshoots the cube (the "through the cube" look). Mounting /Root
+        # AT the flange (coaxial), keeping the cup-correct orientation, closes the gap + centres the cup + makes the
+        # tool-length honest. Gated OFF => the nvidia path + the 8 passers stay byte-identical until A/B-proven.
+        try:
+            import builtins as _bi_fm
+            # 2026-06-07 FLUSH+COAXIAL MOUNT, DEFAULT ON for the faithful nvidia cup. Mounts /Root at the wrist_3
+            # flange (== wrist_3 origin, MEASURED) instead of the cuRobo FK-ee (which sits +28.5mm + 11mm-lateral
+            # off the flange). Closes the visible cup<->arm GAP (24->0mm) + centres the cup (lateral 11->0mm),
+            # keeping the cup orientation. VERIFIED on FRESH Kit: CP-69 delivers WITH flush (build-1 cleanest) ==
+            # flush OFF — the earlier "cup stalls 236mm above cube" was KIT DEGRADATION (builds 10-13), NOT a flush
+            # regression (fresh A/B disproved it). 8 passers gate-pass with flush. OFF for the legacy cupframe(-90)
+            # path (byte-identical). Explicit builtins._sg_flush_mount overrides either way.
+            if getattr(_bi_fm, "_sg_flush_mount", getattr(_bi_fm, "_sg_nvidia_cup", False)):
+                _flush = Gf.Matrix4d().SetRotate(_eeW.ExtractRotationQuat())
+                _flush.SetTranslateOnly(_w3m.ExtractTranslation())
+                _eeW = _flush
+        except Exception:
+            pass
+        # ee-in-wrist_3 = ee_world * w3_world^-1 (verified: rel*w3 reconstructs ee exactly).
+        _rel = _eeW * _w3m.GetInverse()
+        _rt = _rel.ExtractTranslation(); _rq = _rel.ExtractRotationQuat(); _rqi = _rq.GetImaginary()
+        # place /Root at the live ee (so enabling the joint causes no snap-yank), author localPose0, enable.
+        UsdGeom.Xformable(stage.GetPrimAtPath(Sdf.Path(_groot))).ClearXformOpOrder()
+        UsdGeom.Xformable(stage.GetPrimAtPath(Sdf.Path(_groot))).AddTransformOp().Set(_eeW)
+        _jp.GetAttribute("physics:localPos0").Set(Gf.Vec3f(float(_rt[0]), float(_rt[1]), float(_rt[2])))
+        _jp.GetAttribute("physics:localRot0").Set(Gf.Quatf(float(_rq.GetReal()), float(_rqi[0]), float(_rqi[1]), float(_rqi[2])))
+        _je = _jp.GetAttribute("physics:jointEnabled")
+        if not (_je and _je.IsDefined()):
+            _je = _jp.CreateAttribute("physics:jointEnabled", Sdf.ValueTypeNames.Bool)
+        _je.Set(True)
+        _asset_joint_fixed[0] = True
+        print("(curobo: asset gripper FlangeMount re-authored from FK ee + enabled -> tracks the arm at ee)")
+    except Exception as _fje:
+        print("(curobo: asset joint fixup soft-fail: " + str(_fje) + ")")
+        _asset_joint_fixed[0] = True
+
 def _on_step(dt):
     try:
         S["ticks"] += 1
         _a_tick.Set(S["ticks"]); _a_phase.Set(S["mode"])
+        _fixup_asset_gripper_joint()  # asset gripper: re-author its wrist_3 FixedJoint from correct runtime poses (once)
         _track_suction_follower()  # suction: keep the FJ'd cone on the live ee so the SG can grip (no-op for Franka)
+        _clamp_gripped_velocity()  # fling guard: cap the gripped cube's velocity (kills the kinematic-follower NaN-fling)
+
+        # 2026-06-07 PER-TARGET REACH SWEEP (gated _reach_probe, tick-1 one-shot). For EVERY pick target in
+        # SOURCE_PATHS, probe the straight-down IK/trajectory reach to the object TOP from the home seed and log
+        # REACHABLE / MARGINAL / UNREACHABLE. Fires on the first play tick (joints valid) so it does NOT depend on
+        # the controller progressing to the per-cube goal-builder -- complex 6-SKU/carousel/palletizer scenes never
+        # reach that builder inside an 18s probe, which is why the old _build_segments probe stayed silent on them.
+        # This is the data source for the layout REACHABILITY VALIDATOR (flag picks the UR10 cannot reach top-down).
+        # Gated OFF in production -> byte-identical control flow.
+        import builtins as _bi_rs
+        if getattr(_bi_rs, "_reach_probe", False) and not getattr(_bi_rs, "_reach_probe_done", False):
+            _bi_rs._reach_probe_done = True
+            try:
+                _sq = None
+                try: _sq = np.asarray(franka.get_joint_positions(), dtype=np.float32)
+                except Exception: _sq = None
+                if _sq is None or len(_sq) < _ARM_DOF:
+                    _sq = np.asarray(_HOME_Q, dtype=np.float32)
+                _sq = _sq[:_ARM_DOF]
+                _extra_paths = list(getattr(_bi_rs, "_reach_probe_extra_paths", []) or [])  # validator: also probe the destination/place target(s); empty by default -> byte-identical
+                for _sp in list(SOURCE_PATHS) + _extra_paths:
+                    _cp = _world_pos(_sp)
+                    if _cp is None:
+                        with open("/tmp/reachprobe.log", "a") as _rf: _rf.write("REACH_TGT path=" + str(_sp) + " MISSING\\n")
+                        continue
+                    _ztop = float(_cp[2]) + 0.025
+                    try:
+                        _pp = stage.GetPrimAtPath(_sp)
+                        if _pp and _pp.IsValid():
+                            _rng = UsdGeom.BBoxCache(0.0, [UsdGeom.Tokens.default_]).ComputeWorldBound(_pp).ComputeAlignedRange()
+                            if not _rng.IsEmpty(): _ztop = float(_rng.GetMax()[2])
+                    except Exception: pass
+                    _nok = 0
+                    for _ti in range(3):
+                        try:
+                            _rzo = float(getattr(__import__("builtins"), "_reach_probe_z_off", 0.0))  # 2026-06-07: for CUP-DOWN, set 0.193 so the probe tests ee at cube_top+cup_offset (where the down-cup tip is at the cube), not at cube_top (confound fix).
+                            _rr = _plan_to_world_point(np.array([float(_cp[0]), float(_cp[1]), float(_ztop) + _rzo], dtype=np.float32), _sq, exclude_obs=None, yaw_deg=0.0, vhold_mode=0)
+                            if _rr is not None: _nok += 1
+                        except Exception: pass
+                    _verdict = ("REACHABLE" if _nok == 3 else ("MARGINAL" if _nok >= 1 else "UNREACHABLE"))
+                    with open("/tmp/reachprobe.log", "a") as _rf:
+                        _rf.write("REACH_TGT path=" + str(_sp) + " xy=[%.3f,%.3f] top=%.3f top@%.3f=%d/3 -> %s\\n" % (float(_cp[0]), float(_cp[1]), float(_ztop), float(_ztop), _nok, _verdict))
+            except Exception as _rse:
+                try:
+                    with open("/tmp/reachprobe.log", "a") as _rf: _rf.write("REACH_SWEEP_ERR " + str(_rse)[:160] + "\\n")
+                except Exception: pass
+
+        # 2026-06-07 GRIP LOGGER (gated _sg_grip_log): RELIABLE per-tick grip observation written from INSIDE _on_step
+        # (no separate exec -> no timeout; scene_eyes' GripperView is BLIND to this SG so it is untrustworthy). Logs
+        # get_gripped_objects (raw interface), SG status, seg mode, and nearest-cube distance to the cup. Gated OFF ->
+        # production byte-identical. The single source of truth for faithful-cup grip debugging.
+        if getattr(__import__("builtins"), "_sg_grip_log", False) and (S["ticks"] % 6 == 0):
+            try:
+                _gl = "iface=None"; _glst = "?"
+                if _SG_IFACE is not None and _SG_PATH_RAW:
+                    try: _gl = str(list(_SG_IFACE.get_gripped_objects(_SG_PATH_RAW)))
+                    except Exception as _e1: _gl = "gripped_err:" + str(_e1)[:40]
+                    try: _glst = str(_SG_IFACE.get_gripper_status(_SG_PATH_RAW)).split(".")[-1]
+                    except Exception: _glst = "stat_err"
+                _cupp = _world_pos(_SG_CUP_PATH) if _SG_CUP_PATH else None
+                _md = -1.0; _mc = "?"
+                for _spl in SOURCE_PATHS:
+                    _cpl = _world_pos(_spl)
+                    if _cpl is not None and _cupp is not None:
+                        _dl2 = ((_cpl[0]-_cupp[0])**2 + (_cpl[1]-_cupp[1])**2 + (_cpl[2]-_cupp[2])**2) ** 0.5
+                        if _md < 0 or _dl2 < _md: _md = _dl2; _mc = _spl.split("/")[-1]
+                _jdeg = "None"
+                try:
+                    _jpw = np.asarray(franka.get_joint_positions(), dtype=np.float64)
+                    _jdeg = str([round(float(_jpw[_k]) * 57.29578, 1) for _k in range(min(6, len(_jpw)))])
+                except Exception: _jdeg = "jerr"
+                # 2026-06-09 per-cube position trace (find the Cube_2 bin->source revert source): log EVERY source cube's
+                # world xyz each tick so the exact tick + cause of a delivered cube reverting can be pinpointed.
+                _cubestr = "|".join("%s=[%.2f,%.2f,%.2f]" % (_spc.split("/")[-1], _wpc[0], _wpc[1], _wpc[2])
+                                    for _spc in SOURCE_PATHS for _wpc in [_world_pos(_spc)] if _wpc is not None)
+                with open("/tmp/grip_log.txt", "a") as _glf:
+                    _glf.write("tick=%d t=%.1f mode=%s seg=%s/%s suction=%s status=%s gripped=%s mind=%.3f(%s) cup=%s jdeg=%s cubes=%s\\n" % (S["ticks"], S["ticks"]/60.0, str(S.get("mode")), str(S.get("seg_idx")), str(len(S.get("segments") or [])), str(_SG_IS_SUCTION), _glst, _gl, _md, _mc, str([round(float(_cupp[_i]), 3) for _i in range(3)]) if _cupp is not None else "None", _jdeg, _cubestr))
+            except Exception as _gle:
+                try:
+                    with open("/tmp/grip_log.txt", "a") as _glf: _glf.write("GRIPLOG_ERR tick=%d %s\\n" % (S["ticks"], str(_gle)[:80]))
+                except Exception: pass
+
+        # 2026-06-07 FAITHFUL-SUCTION forwardAxis fix — LIVE one-shot (DEFAULT for nvidia). Rotate the Suction_Joint
+        # localRot0/1 by -90 about X so the SG raycast (forwardAxis Z) aligns with the cup opening. Applied AFTER the
+        # SG registers (>30 ticks into play) because the SG reads the attach frame at registration; a build-time
+        # rotation does NOT engage (CP-83 reached 7cm but never latched). Rotating BOTH frames by the same delta keeps
+        # the physical mount. One-shot via S["_fwdaxis_done"] (per-controller, not shared). Gated _sg_nvidia_cup ->
+        # production byte-identical.
+        # DEFAULT OFF (`_sg_fwdaxis_live`): the live localRot rotation is the raycast-alignment theory but it MAY
+        # disturb the descent (the first unmodified nvidia run reached cup-cube d=0.019; runs WITH it stall ~26cm —
+        # could be the rotation jerking the Suction_Joint, or Kit degradation). Opt-in until proven non-disturbing.
+        if (getattr(__import__("builtins"), "_sg_nvidia_cup", False) and getattr(__import__("builtins"), "_sg_fwdaxis_live", False)
+                and not S.get("_fwdaxis_done") and S["ticks"] > 30 and _SG_PATH_RAW):
+            try:
+                _sjpl = stage.GetPrimAtPath(Sdf.Path(_SG_CUP_PATH + "/Suction_Joint"))
+                if _sjpl and _sjpl.IsValid():
+                    _dqfal = Gf.Quatf(Gf.Rotation(Gf.Vec3d(1.0, 0.0, 0.0), -90.0).GetQuat())
+                    for _attrnl in ("physics:localRot0", "physics:localRot1"):
+                        _afal = _sjpl.GetAttribute(_attrnl)
+                        if _afal and _afal.IsValid() and _afal.Get() is not None:
+                            _afal.Set(Gf.Quatf(_afal.Get()) * _dqfal)
+                S["_fwdaxis_done"] = True
+                try:
+                    with open("/tmp/grip_log.txt", "a") as _glf3: _glf3.write("FWDAXIS_FIX_APPLIED_LIVE tick=%d\\n" % S["ticks"])
+                except Exception: pass
+            except Exception:
+                S["_fwdaxis_done"] = True
 
         if S["mode"] == "wait_sensor":
             # Multi-robot mutex guard: if another robot holds the mutex,
@@ -6323,6 +7355,10 @@ def _on_step(dt):
             picked = S["picked_path"]
             # Pass cube_path so COLOR_ROUTING can dispatch destination per cube.
             cp, dp = _world_pos(picked), _bin_drop_pos(picked)
+            try:
+                if getattr(__import__("builtins"), "_sg_grip_log", False):
+                    with open("/tmp/settle_dbg.log", "a") as _sd: _sd.write("SETTLE picked=%s cp=%s dp=%s\\n" % (picked, ([round(float(x),3) for x in cp] if cp is not None else None), ([round(float(x),3) for x in dp] if dp is not None else None)))
+            except Exception: pass
             if cp is None or dp is None:
                 S["mode"] = "wait_sensor"; S["picked_path"] = None
                 _resume_belt()
@@ -6332,11 +7368,46 @@ def _on_step(dt):
             if jp is None: return
             # Fix 2: seed from home config first (consistent IK branch);
             # fallback to current state if home-seeded planning fails.
-            _seed_q = _HOME_Q[:_ARM_DOF]
-            segs = _build_segments(cp, dp, _seed_q)
+            # 2026-06-05 UR10 SPIN ROOT FIX (probe-confirmed): the UR10 asset starts the arm at a WOUND
+            # authored config (wrist_2=-298deg=-5.2rad — within cuRobo's +/-2pi limit). Seeding cuRobo from
+            # _HOME_Q while the arm is physically at -5.2 makes traj[0]=home != physical -> executing the
+            # home-based traj OPEN-LOOP slews the CONTINUOUS wrists multi-turn = the visible SPIN + floor-stick
+            # (eyes: wrist_3 swept 38 rad; a teleport-to-home is dragged back by the running controller). FIX:
+            # seed UR10 from the LIVE joint state so traj[0]==physical -> continuous execution, no slew. cuRobo
+            # plans minimal-motion from the live branch and reaches the goal. Franka keeps the home-seed (its
+            # joints are limited <+/-3.8 so no multi-turn wind; the 37 passes are byte-identical).
+            if ROBOT_FAMILY in ("ur10", "ur10e"):
+                _seed_q = np.asarray(jp[:_ARM_DOF], dtype=np.float32)
+            else:
+                _seed_q = _HOME_Q[:_ARM_DOF]
+            # 2026-06-06 FREEZE FIX (time-series-confirmed on CP-81): _build_segments can RAISE (cuRobo
+            # "planning failed for <cube>") instead of returning None for an UNPLANNABLE cube. Unhandled, the
+            # raise escaped to the outer except WITHOUT releasing the plan-token acquired above -> the controller
+            # FROZE on that cube for the rest of the episode (eyes: pc/pf stuck at 466/63 for 140s, picked_path
+            # never cleared). The frozen tick ran the sim in SLOW-MOTION -> the function-gate's wall-clock timeout
+            # (duration_s+60) fired BEFORE sim-time reached the end -> the gate's pre-position capture never ran
+            # -> cp_pre stayed at the cube's t=0 PEDESTAL pos -> a SPURIOUS 72.9 m/s on the ALREADY-DELIVERED
+            # OTHER cube (= total-trajectory-displacement / one-frame) -> false at_rest fail. Catch the raise and
+            # treat it as a plan failure so the 3-strike abandon below fires (mark cube failed, RELEASE the token,
+            # idle) -> sim runs at normal speed, gate measures correctly. Generalizes to every multi-cube template.
+            try:
+                segs = _build_segments(cp, dp, _seed_q)
+                if segs is None:
+                    segs = _build_segments(cp, dp, jp[:_ARM_DOF])
+                if segs is None and ROBOT_FAMILY in ("ur10", "ur10e"):
+                    segs = _build_segments(cp, dp, _HOME_Q[:_ARM_DOF])
+            except Exception as _bse:
+                _record_err(_bse)
+                segs = None
+                try:
+                    if getattr(__import__("builtins"), "_sg_grip_log", False):
+                        with open("/tmp/settle_dbg.log", "a") as _sd: _sd.write("BUILD_RAISE %s\\n" % str(_bse)[:160])
+                except Exception: pass
             if segs is None:
-                segs = _build_segments(cp, dp, jp[:_ARM_DOF])
-            if segs is None:
+                try:
+                    if getattr(__import__("builtins"), "_sg_grip_log", False):
+                        with open("/tmp/settle_dbg.log", "a") as _sd: _sd.write("BUILD_NONE picked=%s\\n" % picked)
+                except Exception: pass
                 # Fix 1: 3-strike counter — mark cube permanently failed after
                 # 3 consecutive plan failures so wait_sensor moves to next cube.
                 _record_err(RuntimeError(f"planning failed for {{picked}}"))
@@ -6407,7 +7478,7 @@ def _on_step(dt):
                     # within the bin footprint). Marking delivered stops wait_sensor from re-picking the still-
                     # in-z-window cube and carrying it back out (validated CP-70: cube reached bin xy 0.005 then
                     # got re-picked). Gated to suction (Franka places precisely -> _is_near_dest already True).
-                    if _is_near_dest(S["picked_path"]) or (_SG_FOLLOWER_OP is not None and _is_in_bin(S["picked_path"])):
+                    if _is_near_dest(S["picked_path"]) or (_SG_IS_SUCTION and _is_in_bin(S["picked_path"])):
                         S["delivered"].add(S["picked_path"])
                         _a_cubes.Set(len(S["delivered"]))
                     else:
@@ -6459,6 +7530,63 @@ def _on_step(dt):
                 return
 
             cur_seg = segs[S["seg_idx"]]
+            try:
+                if getattr(__import__("builtins"), "_sg_grip_log", False):
+                    _ts_src = cur_seg.get("traj_src", "static"); _ts_tj = cur_seg.get("traj")
+                    _ts_key = (S["seg_idx"], _ts_src, id(_ts_tj))
+                    if S.get("_last_ts_key") != _ts_key and _ts_tj is not None:
+                        S["_last_ts_key"] = _ts_key
+                        import math as _m_ts
+                        _ts_p0 = _m_ts.degrees(float(np.asarray(_ts_tj)[0][0])); _ts_pN = _m_ts.degrees(float(np.asarray(_ts_tj)[-1][0]))
+                        with open("/tmp/trajsrc.log", "a") as _tsf: _tsf.write("seg=%d src=%s pan0=%.0f panN=%.0f range=%.0f knots=%d\\n" % (S["seg_idx"], _ts_src, _ts_p0, _ts_pN, abs(_ts_pN - _ts_p0), len(np.asarray(_ts_tj))))
+            except Exception: pass
+            # 2026-06-09 S5-RELIVE (gated _ur10_s5_relive, default OFF, UR10-suction only): the static S5/open
+            # descend in cur_seg["traj"] was planned in _build_segments while the arm was at HOME (the pick had not
+            # executed), so it is a HOME->bin trajectory. Replaying it here — when the arm is already OVER-BIN — drives
+            # the arm HOME then back = the "varv till" lap (MEASURED pan -47 -> -2 -> -47). The genuine over-bin config
+            # exists ONLY now (live), which is why the two plan-time seed fixes (_ur10_drop_branch_pin / _drop_seed_chained,
+            # both ~unwrapped-HOME) failed. ONE-SHOT on entry: re-plan the SAME down-locked drop goal from the LIVE
+            # over-bin joints, BEFORE the static traj is ever sampled, so the lap never plays. Mirrors the proven
+            # PL-nudge idiom: overwrite traj/motion_time, grip_done=False, reset seg_start_t, return.
+            # Fail-open: if the live plan is None, mark relived and fall through to the static traj (= current
+            # production -> delivery still occurs via the DROP z-backoff fallback), so worst case == today.
+            if (getattr(__import__("builtins"), "_ur10_s5_relive", False)
+                    and _SG_IS_SUCTION and ROBOT_FAMILY in ("ur10", "ur10e")
+                    and cur_seg.get("action_after") == "open" and not cur_seg.get("_s5_relive")):
+                cur_seg["_s5_relive"] = True
+                try:
+                    _rl_jl = franka.get_joint_positions()
+                    _rl_dp = cur_seg.get("drop_pos")
+                    if _rl_jl is not None and _rl_dp is not None:
+                        _rl_seed = np.asarray(_rl_jl, dtype=np.float32)[:_ARM_DOF]
+                        # 2026-06-09 [MEASURED traj_src diag]: the WRAP to (-pi,pi] is the FLING ROOT for wound transits.
+                        # CP-80 over-bin physical pan=320deg (out-of-range, wound transit); wrapping -> relive traj at -40deg
+                        # == 320 physically, but the controller drives the joint 320->-40 = a 360deg swing. Seed RAW
+                        # (unwrapped physical) -> traj continuous with physical -> no swing. In-range (CP-69 pan=-47): raw==wrap.
+                        # GATED _ur10_relive_seed_raw (default OFF = keep wrap, byte-identical).
+                        if not getattr(__import__("builtins"), "_ur10_relive_seed_raw", False):
+                            _rl_seed = ((_rl_seed + np.pi) % (2.0 * np.pi) - np.pi).astype(np.float32)
+                        _rl_goal = np.array([float(_rl_dp[0]), float(_rl_dp[1]), float(_rl_dp[2]) + float(getattr(__import__("builtins"), "_sg_drop_tip_release", 0.16))], dtype=np.float32)  # 2026-06-09: honor the gated z-raise (default 0.16 = byte-identical)
+                        _rl_excl = ([S["picked_path"], DEST_PATH] if (S.get("picked_path") and DEST_PATH)
+                                    else (S.get("picked_path") or DEST_PATH))
+                        # 2026-06-09 S5-DESCEND BRANCH-PIN (gated _ur10_s5_relive_branch_pin, default OFF, additive to
+                        # _ur10_s5_relive). On the straight cup w/ reach<1.0 (CP-75/80) H7 doesn't fire -> over-bin is a
+                        # WOUND branch (pan=153) -> the plain RELIVE plan_pose free-IKs the down goal to a FAR pan branch
+                        # -> ~207deg PAN flip (the lap). branch_pin=True routes through the UR10 cspace-pin path (IK-from-
+                        # live-seed return_seeds=16 -> closest-L1 seed -> plan_cspace joint-space interp) so pan stays on
+                        # the live branch. EFFICACY is UNVERIFIED (adversary: IK may not return a seed on the wound branch
+                        # for the orientation-locked down goal -> measure cspace_dbg). Fail-open: cspace fail -> plan_pose
+                        # (today); None -> static traj + z-backoff. Default OFF -> byte-identical (branch_pin->False).
+                        _rl_bp = bool(getattr(__import__("builtins"), "_ur10_s5_relive_branch_pin", False))
+                        _rl_rr = _plan_to_world_point(_rl_goal, _rl_seed, exclude_obs=_rl_excl, yaw_deg=0.0, vhold_mode=0, branch_pin=_rl_bp)
+                        if _rl_rr is not None:
+                            cur_seg["traj"] = _rl_rr[0]; cur_seg["traj_src"] = "relive"
+                            cur_seg["motion_time"] = max(float(_rl_rr[1]), 0.25)
+                            cur_seg["grip_done"] = False
+                            S["seg_start_t"] = time.monotonic()
+                            with open("/tmp/cupframe_dbg.log", "a") as _cfd: _cfd.write("S5 relive seed_pan=%.1f goal=%s\\n" % (float(np.degrees(_rl_seed[0])), [round(float(_x), 3) for _x in _rl_goal]))
+                            return
+                except Exception: pass
             elapsed = time.monotonic() - S["seg_start_t"]
             traj = cur_seg["traj"]
             mt = cur_seg["motion_time"]
@@ -6495,7 +7623,7 @@ def _on_step(dt):
                 # transit velocity DAMPS to ~0 before opening — else it's released with the arm's decel velocity
                 # and flung out of the bin (validated CP-70: cube flung to y=-0.8). The rigid grip keeps it
                 # straight below the cone (xy_err<0.08 already passes), so a settle is all that's needed.
-                if cur_seg["action_after"] == "open" and _SG_FOLLOWER_OP is not None:
+                if cur_seg["action_after"] == "open" and _SG_IS_SUCTION:
                     pre_grip_settle = 1.2
                 if not cur_seg["grip_done"] and elapsed >= mt + pre_grip_settle:
                     if cur_seg["action_after"] == "close":
@@ -6509,15 +7637,27 @@ def _on_step(dt):
                         # Decisive probe: delivers CP-83 => the offset was arm-lag (cured); times out at
                         # ~0.30m => the offset is the tool-frame lever arm (needs the GoalToolPose fix
                         # flagged in _build_segments). Writes ctrl:graspdiag for the post-run read.
-                        _do_close = True
-                        if _SG_FOLLOWER_OP is not None and S.get("picked_path"):
+                        _do_close = True; _grip_miss = False
+                        if _SG_IS_SUCTION and S.get("picked_path"):
                             try:
-                                _conp = _world_pos(ROBOT_PATH + "_SGCone")
+                                _conp = _world_pos(_SG_CUP_PATH)
                                 _cubp = _world_pos(S["picked_path"])
                                 if _conp is not None and _cubp is not None:
                                     _gripd = float(((_conp[0]-_cubp[0])**2 + (_conp[1]-_cubp[1])**2 + (_conp[2]-_cubp[2])**2) ** 0.5)
                                     _gate_to = elapsed >= mt + pre_grip_settle + 6.0
-                                    _do_close = (_gripd < 0.12) or _gate_to
+                                    # nvidia straight-cup: close ONLY on real contact (_gripd<0.12). The wall-clock
+                                    # _gate_to fallback fires the close prematurely at ~0.4m while the capped nudge is
+                                    # still descending -> false grab -> lift -> wander. Dropping it lets the nudge
+                                    # descend uninterrupted to contact (bounded by convergence/sim-end). Gated -> the
+                                    # -90 path keeps the _gate_to fallback (byte-identical in production).
+                                    _nv_close = getattr(__import__("builtins"), "_sg_nvidia_cup", False)
+                                    # 2026-06-10 rank-3 center-lock REFUTED [MEASURED]: an xy<6mm close-gate
+                                    # (_ur10_pick_center_lock) regressed CP-69+CP-70 to 0 picks (cube untouched, no
+                                    # latch, 0 nudges — the delayed close interacts with the grip-miss abort). REVERTED
+                                    # to the production expression. Off-center (~7-11mm) stays a documented cosmetic;
+                                    # do NOT re-attempt via the close gate.
+                                    _do_close = (_gripd < 0.12) or (_gate_to and not _nv_close)
+                                    _grip_miss = bool(_gate_to and (_gripd >= 0.12) and not _nv_close)
                                     try:
                                         _gp = stage.GetPrimAtPath(ROBOT_PATH)
                                         _gda = _gp.GetAttribute("ctrl:graspdiag")
@@ -6525,6 +7665,112 @@ def _on_step(dt):
                                         _gda.Set(("gd=" + str(round(_gripd, 3)) + " el=" + str(round(float(elapsed), 1)) + " to=" + str(_gate_to) + " cone=" + str([round(float(x), 2) for x in _conp]) + " cube=" + str([round(float(x), 2) for x in _cubp]))[:200])
                                     except Exception: pass
                             except Exception: pass
+                        # 2026-06-06 GRIP-MISS ABORT (time-series-confirmed CP-81): if the 6s close-timeout fired
+                        # with the cup still >0.12m from the cube, the grip NEVER engaged (e.g. the far/unpickable
+                        # Cube_1). Do NOT force-close + proceed to the transit+bin-drop — that GRINDS (the drop plan
+                        # fails on the bin already occupied by the delivered cube, re-planning ~150x = slow-motion
+                        # sim -> the function-gate wall-clock timeout fires before sim-end -> stale cp_pre -> a
+                        # SPURIOUS 72.9 m/s on the ALREADY-DELIVERED cube) AND the empty cup descending into the bin
+                        # DISTURBS the delivered cube. Mark this cube failed + abort the cycle -> controller idles ->
+                        # sim runs at normal speed -> gate measures correctly. UR10 suction only; the 0.12m gate means
+                        # a normally-gripped cube (cup near at close) NEVER triggers this -> the 8 passing are untouched.
+                        # 2026-06-07 nvidia straight-cup: SKIP the grip-miss abort. elapsed is WALL-CLOCK, and the
+                        # nvidia path's extra descend planning burns it before the close-block -> _gate_to fires
+                        # prematurely -> the abort short-circuits the descend-to-contact closed-loop below before it
+                        # gets its first nudge (which resets seg_start_t). Let the closed-loop run + bound the pick
+                        # (convergence or sim-end), exactly like the -90 path. Gated -> production byte-identical.
+                        if (_grip_miss and ROBOT_FAMILY in ("ur10", "ur10e")
+                                and not getattr(__import__("builtins"), "_sg_nvidia_cup", False)):
+                            try: S.setdefault("failed", set()).add(S.get("picked_path"))
+                            except Exception: pass
+                            try: _record_err(RuntimeError("grip-miss abort: " + str(S.get("picked_path")) + " cup>0.12m at 6s close-timeout"))
+                            except Exception: pass
+                            _grip_open()
+                            S["mode"] = "wait_sensor"; S["picked_path"] = None
+                            S["segments"] = None; S["seg_idx"] = 0; S["seg_start_t"] = None
+                            return
+                        # 2026-06-06 CUP-FRAME CLOSED-LOOP descend-to-contact (gated _ur10_cupframe_down, default ON since 2026-06-06 flip).
+                        # The compliant cup has NO static cup-tool0 offset (planning-time prediction impossible, MEAS-
+                        # proven). Instead, at close-time read the LIVE cup + cube and NUDGE tool0 by the live cup-error
+                        # so the cup lower face reaches the cube TOP (direct contact, zero gap = Anton's req), THEN grip.
+                        # Frame-free (uses live USD + FK of live joints). UR10 suction + flag only -> 11 passers
+                        # byte-identical (block skipped when off). BOUND (corrected 2026-06-06): each nudge resets
+                        # seg_start_t, so the 6s _gate_to does NOT bound this loop. The real bound is convergence
+                        # (_ddn<=0.012 -> the `if _ddn>0.012` guard below is skipped -> falls through to _grip_close)
+                        # or sim-duration. A convergent pick grips normally; a marginal-REACH pick (cup can't get
+                        # within 1.2cm) nudges until sim end = slow (observed ~100 nudges on CP-71's dispenser items).
+                        # No hard hang (sim-duration caps it). PLANNED hardening: a per-segment nudge cap (verify it
+                        # doesn't cut CP-71's legit multi-item picks before applying).
+                        # nvidia straight-cup: run the closed-loop even when _gate_to is (prematurely, wall-clock)
+                        # True — the first nudge resets seg_start_t so _gate_to clears and the descend-to-contact
+                        # proceeds normally. Gated on _sg_nvidia_cup -> the -90/cupframe path keeps its `not _gate_to`
+                        # guard exactly (byte-identical in production).
+                        if (ROBOT_FAMILY in ("ur10", "ur10e") and _SG_IS_SUCTION
+                                and ((not _gate_to) or getattr(__import__("builtins"), "_sg_nvidia_cup", False))
+                                and (getattr(__import__("builtins"), "_ur10_cupframe_down", True)
+                                     or getattr(__import__("builtins"), "_sg_nvidia_cup", False))
+                                and S.get("picked_path")):
+                            try:
+                                _cupw = _world_pos(_SG_CUP_PATH); _cubw = _world_pos(S["picked_path"])
+                                if _cupw is not None and _cubw is not None:
+                                    _ctgt = [float(_cubw[0]), float(_cubw[1]), float(_cubw[2]) + float(getattr(__import__("builtins"), "_sg_nvidia_grip_z_off", 0.025))]  # 2026-06-07 tunable: nudge target above the cube top; default 0.025 (byte-identical). Negative = descend to CONTACT to test real-SG engagement.
+                                    _dd = [_ctgt[_i] - float(_cupw[_i]) for _i in range(3)]
+                                    _ddn = (_dd[0] ** 2 + _dd[1] ** 2 + _dd[2] ** 2) ** 0.5
+                                    # 2026-06-07 NVIDIA NUDGE CAP (gated _sg_nvidia_cup): the closed-loop nudges until the cup is within
+                                    # 12mm of the target; if the grip never latches the cube can drift and the loop nudges FOREVER (run
+                                    # hangs -> gate TimeoutError). Cap the per-segment nudge count so the controller falls through to the
+                                    # grip-close (latches if within maxGripDistance) or PROCEEDS -> the run completes -> the gate gives a
+                                    # deterministic verdict. Production (-90 path, flag OFF) keeps the uncapped loop = byte-identical.
+                                    _nv_capped = (getattr(__import__("builtins"), "_sg_nvidia_cup", False)
+                                                  and cur_seg.get("_nv_nudges", 0) >= int(getattr(__import__("builtins"), "_sg_nvidia_nudge_max", 60)))
+                                    if _ddn > 0.012 and not _nv_capped:
+                                        from curobo.types import JointState as _JS_cl
+                                        _jl = franka.get_joint_positions()
+                                        _tl = torch.tensor([[float(_x) for _x in np.asarray(_jl)[:_ARM_DOF]]], dtype=torch.float32, device="cuda")
+                                        _kk = _planner.compute_kinematics(_JS_cl.from_position(_tl, joint_names=_PLANNER_JOINT_NAMES))
+                                        _ep = _kk.tool_poses.position[0, 0, 0].detach().cpu().numpy()
+                                        _eq = _kk.tool_poses.quaternion[0, 0, 0].detach().cpu().numpy()
+                                        _bm = Gf.Matrix4d().SetRotate(Gf.Quatd(float(_usd_quat[0]), Gf.Vec3d(float(_usd_quat[1]), float(_usd_quat[2]), float(_usd_quat[3])))); _bm.SetTranslateOnly(Gf.Vec3d(float(_usd_pos[0]), float(_usd_pos[1]), float(_usd_pos[2])))
+                                        _fm = Gf.Matrix4d().SetRotate(Gf.Quatd(float(_eq[0]), Gf.Vec3d(float(_eq[1]), float(_eq[2]), float(_eq[3])))); _fm.SetTranslateOnly(Gf.Vec3d(float(_ep[0]), float(_ep[1]), float(_ep[2])))
+                                        _eew = (_fm * _bm).ExtractTranslation()
+                                        # 2026-06-07 nvidia straight-cup: CAP the nudge step. The direct one-shot plan
+                                        # to the full (far/low) cup-error fails with the repoint orientation (bad seed);
+                                        # the main S2 descend reaches the same low pose only via _plan_sub_step's chained
+                                        # small sub-goals. Mirror that here: cap the per-tick step to 0.06m so each plan
+                                        # is a near, well-seeded descent that accumulates over ticks. Gated -> the -90
+                                        # path keeps the full-_dd nudge (byte-identical in production).
+                                        _ddstep = _dd
+                                        _capn = float(getattr(__import__("builtins"), "_sg_nvidia_nudge_cap", 0.10))
+                                        if getattr(__import__("builtins"), "_sg_nvidia_cup", False) and _ddn > _capn:
+                                            _scl = _capn / _ddn
+                                            _ddstep = [_dd[_i] * _scl for _i in range(3)]
+                                        _cg = np.array([float(_eew[_i]) + _ddstep[_i] for _i in range(3)], dtype=np.float32)
+                                        # 2026-06-07 nvidia: exclude the picked cube AND the planning obstacles (pedestals/supports) from the
+                                        # collision world during the FINAL descend nudge. The cup descends straight onto the cube (which sits ON
+                                        # the support), so the support is not a real obstacle here — keeping it made the descend nudge silently
+                                        # res_None -> the closed-loop stalled ~26cm up. Gated nvidia -> production keeps single-path exclude.
+                                        _excl = S["picked_path"]
+                                        if getattr(__import__("builtins"), "_sg_nvidia_cup", False):
+                                            _excl = [S["picked_path"]] + list(PLANNING_OBSTACLES)
+                                        # 2026-06-09 PICK-DESCEND BRANCH-PIN (gated _ur10_pick_descend_pin, default OFF -> byte-identical).
+                                        # [MEASURED CP-83] the PICK CL-nudge froze 0.27m above the cube (mind=0.284, repeated CL RES_NONE):
+                                        # from the wound arrival config the down-IK is on a DIFFERENT branch the closest-continuous solve can't
+                                        # cross. branch_pin routes through the cspace-pin + down-lock-seed path (the proven CP-70/75 descend fix)
+                                        # so the nudge reaches the existing down-config. Generalizes to the 25 stacking-plate descend-from-arrival.
+                                        _pdp = getattr(__import__("builtins"), "_ur10_pick_descend_pin", False)
+                                        _rr = _plan_to_world_point(_cg, np.asarray(_jl)[:_ARM_DOF], exclude_obs=_excl, yaw_deg=0.0, vhold_mode=0, branch_pin=_pdp)
+                                        if _rr is not None:
+                                            cur_seg["traj"] = _rr[0]; cur_seg["motion_time"] = max(float(_rr[1]), 0.25); cur_seg["grip_done"] = False; cur_seg["traj_src"] = "clnudge"
+                                            S["seg_start_t"] = time.monotonic()
+                                            cur_seg["_nv_nudges"] = cur_seg.get("_nv_nudges", 0) + 1
+                                            with open("/tmp/cupframe_dbg.log", "a") as _cfd: _cfd.write("CL nudge d=%.3f cup=%s -> goal=%s\\n" % (_ddn, [round(float(_cupw[_i]), 3) for _i in range(3)], [round(float(_x), 3) for _x in _cg]))
+                                            return
+                                        else:
+                                            with open("/tmp/cupframe_dbg.log", "a") as _cfd: _cfd.write("CL RES_NONE d=%.3f cup=%s -> goal=%s\\n" % (_ddn, [round(float(_cupw[_i]), 3) for _i in range(3)], [round(float(_x), 3) for _x in _cg]))
+                            except Exception as _cle:
+                                try:
+                                    with open("/tmp/cupframe_dbg.log", "a") as _cfd: _cfd.write("CL fail " + str(_cle)[:120] + "\\n")
+                                except Exception: pass
                         if not _do_close:
                             return  # hold: re-check the grip gate next tick; don't clamp/advance yet
                         _grip_close()
@@ -6542,7 +7788,7 @@ def _on_step(dt):
                         _rfz = cur_seg.get("release_flange_z")
                         if _rfz is not None:
                             try:
-                                _conp2 = _world_pos(ROBOT_PATH + "_SGCone")
+                                _conp2 = _world_pos(_SG_CUP_PATH)
                                 _cubp_sp = _world_pos(S["picked_path"]) if S.get("picked_path") else None
                                 _drop_sp = cur_seg.get("drop_pos")
                                 # SAFETY GATE: only telescope the cup DOWN when the cube is CENTERED over the bin opening
@@ -6577,6 +7823,57 @@ def _on_step(dt):
                         # The SG grip joint's softness/instability is the fundamental drop blocker (see ledger).
                         # Cap hold at +4s past mt to prevent infinite hold
                         _hold_cap = elapsed > mt + pre_grip_settle + 4.0
+                        # 2026-06-06 CUP-FRAME PLACE CLOSED-LOOP (gated _ur10_cupframe_down). With the straight-down
+                        # cup the cube hangs COAXIAL (below the cup), so the -110-tuned drop releases it OFF-target
+                        # (CP-84 stack: cube landed 0.092 beside BaseCube). Symmetric to the pick loop: actively nudge
+                        # tool0 in XY by the live cube-vs-drop error so the held cube centers OVER the target, then it
+                        # falls on release. UR10 suction + flag only -> passers byte-identical. BOUND (corrected
+                        # 2026-06-06): like the pick loop, each nudge resets seg_start_t so _hold_cap doesn't fire;
+                        # the bound is convergence (_dxy<=0.02 -> release centered) or sim-duration. Here the
+                        # non-early-give-up is BENEFICIAL — keeps centering until aligned instead of releasing off-target.
+                        if (ROBOT_FAMILY in ("ur10", "ur10e") and _SG_IS_SUCTION and (not _hold_cap)
+                                and (getattr(__import__("builtins"), "_ur10_cupframe_down", True)
+                                     or getattr(__import__("builtins"), "_sg_nvidia_cup", False))
+                                and S.get("picked_path")):
+                            try:
+                                _cubp_cl = _world_pos(S["picked_path"]); _drop_cl = cur_seg.get("drop_pos")
+                                if _cubp_cl is not None and _drop_cl is not None:
+                                    _dxy = ((_cubp_cl[0] - _drop_cl[0]) ** 2 + (_cubp_cl[1] - _drop_cl[1]) ** 2) ** 0.5
+                                    _pl_capped = (int(getattr(__import__("builtins"), "_sg_place_nudge_max", 0)) > 0
+                                                  and cur_seg.get("_pl_nudges", 0) >= int(getattr(__import__("builtins"), "_sg_place_nudge_max", 0)))
+                                    _pl_early = (getattr(__import__("builtins"), "_sg_place_early_release", False)
+                                                 and _dxy < float(getattr(__import__("builtins"), "_sg_place_release_xy", 0.05)))
+                                    if _dxy > 0.02 and not _pl_capped and not _pl_early:
+                                        from curobo.types import JointState as _JS_pl
+                                        _jl = franka.get_joint_positions()
+                                        _tl = torch.tensor([[float(_x) for _x in np.asarray(_jl)[:_ARM_DOF]]], dtype=torch.float32, device="cuda")
+                                        _kk = _planner.compute_kinematics(_JS_pl.from_position(_tl, joint_names=_PLANNER_JOINT_NAMES))
+                                        _ep = _kk.tool_poses.position[0, 0, 0].detach().cpu().numpy(); _eq = _kk.tool_poses.quaternion[0, 0, 0].detach().cpu().numpy()
+                                        _bm = Gf.Matrix4d().SetRotate(Gf.Quatd(float(_usd_quat[0]), Gf.Vec3d(float(_usd_quat[1]), float(_usd_quat[2]), float(_usd_quat[3])))); _bm.SetTranslateOnly(Gf.Vec3d(float(_usd_pos[0]), float(_usd_pos[1]), float(_usd_pos[2])))
+                                        _fm = Gf.Matrix4d().SetRotate(Gf.Quatd(float(_eq[0]), Gf.Vec3d(float(_eq[1]), float(_eq[2]), float(_eq[3])))); _fm.SetTranslateOnly(Gf.Vec3d(float(_ep[0]), float(_ep[1]), float(_ep[2])))
+                                        _eew = (_fm * _bm).ExtractTranslation()
+                                        _cg = np.array([float(_eew[0]) + (float(_drop_cl[0]) - float(_cubp_cl[0])), float(_eew[1]) + (float(_drop_cl[1]) - float(_cubp_cl[1])), float(_eew[2])], dtype=np.float32)
+                                        # 2026-06-09 GATED (_ur10_place_nudge_branch_pin): the place-nudge re-plan (plan_pose, free IK)
+                                        # OVERRIDES the clean RELIVE cspace descend [MEASURED CP-80: clean cspace_ok=True descend, then
+                                        # 3 PL-nudges fling seg7 356deg]. branch_pin keeps the nudge in-branch (cspace from the live seed).
+                                        # Default OFF -> byte-identical.
+                                        _pl_bp = bool(getattr(__import__("builtins"), "_ur10_place_nudge_branch_pin", False))
+                                        # 2026-06-09 H3: WRAP the PL-nudge seed to (-pi,pi] when branch_pin'd (matches the RELIVE seed
+                                        # L7242). Unwrapped, the cspace-pin closest-L1 (L5380) measures distance against a +/-2pi-offset
+                                        # config -> picks a FAR branch despite branch_pin -> the 356deg fling. Default OFF -> byte-identical.
+                                        _pl_seed = np.asarray(_jl)[:_ARM_DOF]
+                                        if _pl_bp:
+                                            _pl_seed = ((_pl_seed + np.pi) % (2.0 * np.pi) - np.pi).astype(np.float32)
+                                        _rr = _plan_to_world_point(_cg, _pl_seed, exclude_obs=([S["picked_path"], DEST_PATH] if DEST_PATH else S["picked_path"]), yaw_deg=0.0, vhold_mode=0, branch_pin=_pl_bp)
+                                        if _rr is not None:
+                                            cur_seg["traj"] = _rr[0]; cur_seg["motion_time"] = max(float(_rr[1]), 0.2); cur_seg["grip_done"] = False; cur_seg["traj_src"] = "plnudge"
+                                            S["seg_start_t"] = time.monotonic(); cur_seg["_pl_nudges"] = cur_seg.get("_pl_nudges", 0) + 1
+                                            with open("/tmp/cupframe_dbg.log", "a") as _cfd: _cfd.write("PL nudge dxy=%.3f cube=%s -> goal=%s\\n" % (_dxy, [round(float(_cubp_cl[_i]), 3) for _i in range(3)], [round(float(_x), 3) for _x in _cg]))
+                                            return
+                            except Exception as _ple:
+                                try:
+                                    with open("/tmp/cupframe_dbg.log", "a") as _cfd: _cfd.write("PL fail " + str(_ple)[:120] + "\\n")
+                                except Exception: pass
                         if _drop_close or _hold_cap:
                             _grip_open()
                             _sg_tool_l_dyn[0] = _SG_TOOL_L  # reset the release tool-extend; the cube is free now,

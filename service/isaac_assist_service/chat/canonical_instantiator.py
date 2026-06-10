@@ -58,6 +58,7 @@ benchmark_vs_alternatives, blocked (when shipping is paused).
 """
 from __future__ import annotations
 
+import json
 import logging
 from typing import Any, Dict, List
 
@@ -962,10 +963,105 @@ async def execute_template_canonical(
             "instantiated": False,
         }
 
+    # 2026-06-05 AUTO-REPAIR (generalizing — "auto-detect+repair malformed scenes"). Two repairs for UR10
+    # cuRobo pick-place templates authored with a RAW add_reference of ur10.usd (CP-84/85 + future LLM gen):
+    #  (1) HOME POSE: the raw ur10.usd asset starts the arm at a WOUND pose (wrist_2=-298deg, root-caused on
+    #      CP-84) with the wrist IN the table -> cuRobo seed mismatch -> multi-turn wrist SPIN + floor-stick.
+    #      The wound pose is baked in the asset's BODY TRANSFORMS (authoring the JointStateAPI does NOT fix it,
+    #      and a build-time teleport is wiped by settle/eyes/gate's tl.stop()). The PROVEN fix is how the
+    #      WORKING CP-70 spawns its UR10: via robot_wizard (applies home_joints). So REPLACE the raw
+    #      create_prim+add_reference(ur10.usd)+teleport_prim triple with a robot_wizard spawn carrying home_joints.
+    #  (2) GRIPPER: a UR10 cuRobo pick MUST install a SurfaceGripper (the surface_gripper() marker the pick
+    #      handler reads to engage suction); inject one right before the controller if the template omitted it.
+    # No-op for templates that already spawn via robot_wizard / already call surface_gripper (e.g. CP-70/CP-83).
+    _UR10_HOME_JOINTS = [0.0, -1.5708, 1.5708, -1.5708, -1.5708, 0.0]
+    _ur10_pp_paths = {
+        a["robot_path"] for (t, a) in captured
+        if t == "setup_pick_place_controller"
+        and str(a.get("robot_family", "")).lower() in ("ur10", "ur10e")
+        and str(a.get("target_source", "")).lower() == "curobo"
+        and a.get("robot_path")
+    }
+    _ur10_teleport_pos = {
+        a["prim_path"]: a["position"] for (t, a) in captured
+        if t == "teleport_prim" and a.get("prim_path") in _ur10_pp_paths and a.get("position")
+    }
+    _sg_robots = {a.get("robot_path") for (t, a) in captured if t == "surface_gripper"}
+    _repaired: List[tuple] = []
+    for tool_name, args in captured:
+        # (1) Drop the raw create_prim / teleport_prim for a UR10 pp robot; replace its add_reference(ur10.usd)
+        #     with a robot_wizard spawn that applies home_joints (so the arm starts at home, like CP-70).
+        if tool_name in ("create_prim", "teleport_prim") and args.get("prim_path") in _ur10_pp_paths:
+            continue
+        if (tool_name == "add_reference" and args.get("prim_path") in _ur10_pp_paths
+                and "ur10" in str(args.get("reference_path", "")).lower()):
+            _rp = args["prim_path"]
+            _pos = list(_ur10_teleport_pos.get(_rp, [0.0, 0.0, 0.75]))
+            # 2026-06-06 GENERALIZING SPAWN-COLLISION REPAIR (verified on CP-80): a UR10 can spawn with its
+            # home upper_arm CLIPPING a tall static obstacle (CP-80: the ConveyorStand at y:0.25-0.55; the home
+            # upper_arm reaches y~0.27 -> penetration -> shoulder_pan blows up to 16 rad/s -> the arm never
+            # executes the pick; base-nudge probe -> CP-80 delivers x2). Push the base OUT of any tall static
+            # Cube obstacle's footprint (inflated by the arm radius) along the axis of LEAST penetration. The 9
+            # passing single-cube scenes have no obstacle inside the arm footprint -> no nudge -> byte-identical.
+            try:
+                _bz = float(_pos[2]); _ARMR = 0.32; _CLR = 0.12
+                for (_ot, _oa) in captured:
+                    if _ot != "create_prim" or str(_oa.get("prim_type", "")).lower() != "cube":
+                        continue
+                    _op = _oa.get("position"); _os = _oa.get("scale")
+                    if not (_op and _os) or len(_op) < 3 or len(_os) < 3:
+                        continue
+                    _ozmn, _ozmx = _op[2] - _os[2], _op[2] + _os[2]
+                    if _ozmx < _bz + 0.1 or (_ozmx - _ozmn) > 0.6:
+                        continue  # below the arm column (table/ground) or a big floor slab -> not an arm obstacle
+                    _ix0, _ix1 = _op[0] - _os[0] - _ARMR, _op[0] + _os[0] + _ARMR
+                    _iy0, _iy1 = _op[1] - _os[1] - _ARMR, _op[1] + _os[1] + _ARMR
+                    if not (_ix0 < _pos[0] < _ix1 and _iy0 < _pos[1] < _iy1):
+                        continue  # base outside the inflated footprint -> no clip
+                    _px = min(_pos[0] - _ix0, _ix1 - _pos[0]); _pxd = -1 if (_pos[0] - _ix0) < (_ix1 - _pos[0]) else 1
+                    _py = min(_pos[1] - _iy0, _iy1 - _pos[1]); _pyd = -1 if (_pos[1] - _iy0) < (_iy1 - _pos[1]) else 1
+                    if _px <= _py:
+                        _pos[0] = round(_pos[0] + _pxd * (_px + _CLR), 3)
+                    else:
+                        _pos[1] = round(_pos[1] + _pyd * (_py + _CLR), 3)
+                    logger.info(f"[CanonicalInst] {task_id} AUTO-REPAIR: spawn-collision nudge {_rp} -> {_pos} (cleared {_oa.get('prim_path')})")
+            except Exception as _nudge_e:
+                logger.info(f"[CanonicalInst] {task_id} spawn-nudge soft-fail: {_nudge_e}")
+            _repaired.append(("robot_wizard", {
+                "robot_name": "ur10", "dest_path": _rp,
+                "position": _pos, "orientation": [1.0, 0.0, 0.0, 0.0],
+                "home_joints": list(_UR10_HOME_JOINTS),
+            }))
+            logger.info(f"[CanonicalInst] {task_id} AUTO-REPAIR: replaced raw add_reference(ur10.usd) with robot_wizard(home_joints) for {_rp}")
+            continue
+        # (2) SurfaceGripper must be installed BEFORE the controller (the pick handler reads its marker).
+        if (tool_name == "setup_pick_place_controller" and args.get("robot_path") in _ur10_pp_paths
+                and args["robot_path"] not in _sg_robots):
+            _rp = args["robot_path"]
+            _repaired.append(("surface_gripper", {
+                "robot_path": _rp, "ee_link": _rp + "/ee_link",
+                "grip_threshold": 0.02, "force_limit": 200.0, "torque_limit": 200.0,
+            }))
+            _sg_robots.add(_rp)
+            logger.info(f"[CanonicalInst] {task_id} AUTO-REPAIR: injected surface_gripper for UR10 cuRobo {_rp} (template had none)")
+        _repaired.append((tool_name, args))
+    captured = _repaired
+
     # Execute phase — actually invoke each captured call via execute_tool_call
     executed: List[Dict[str, Any]] = []
     errors: List[str] = []
     for tool_name, args in captured:
+        # Injected UR10 home-pose normalisation — run the raw script via exec_sync (NOT run_usd_script,
+        # which routes through queue_exec_patch and cannot pump app.update()). Replicates robot_wizard.
+        if tool_name == "__ur10_home__":
+            try:
+                from .tools import kit_tools as _kt_home
+                await _kt_home.exec_sync(args["code"], timeout=120)
+                executed.append({"tool": "__ur10_home__", "ok": True, "args_preview": str(args.get("robot_path", ""))[:60]})
+            except Exception as e:
+                executed.append({"tool": "__ur10_home__", "ok": False, "args_preview": ""})
+                errors.append(f"__ur10_home__ raised: {type(e).__name__}: {e}")
+            continue
         try:
             result = await execute_tool_call(tool_name, args)
             rtype = result.get("type")
@@ -984,6 +1080,37 @@ async def execute_template_canonical(
         f"[CanonicalInst] {task_id} instantiated: "
         f"{n_ok}/{len(executed)} tool calls succeeded, {len(errors)} errors"
     )
+
+    # 2026-06-05 CONSTRAINT-DETECTION form-gate caller (Anton's requested feature; run_form_gate had ZERO callers).
+    # ADVISORY ONLY: run the existing static reach verifier (verify_pickplace_pipeline) on the template's declared
+    # stages and LOG any out-of-reach pick/place — catches the malformed-scene class at gen-time (the CP-84/85
+    # missing-gripper + out-of-reach-target bugs would surface here). Never blocks the build (the gate measures
+    # delivery; this only annotates) → zero regression. Skips non-pick-place templates (no stages).
+    form_gate = None
+    try:
+        _stages = (template.get("verify_args") or {}).get("stages")
+        if _stages:
+            _fg = await execute_tool_call("verify_pickplace_pipeline", {"stages": _stages})
+            # the verifier data is a JSON in the `output` text (last {...} line), not top-level.
+            _out = _fg.get("output") if isinstance(_fg, dict) else None
+            _data = {}
+            if isinstance(_out, str):
+                _jl = [l for l in _out.splitlines() if l.strip().startswith("{")]
+                if _jl:
+                    try: _data = json.loads(_jl[-1])
+                    except Exception: _data = {}
+            elif isinstance(_out, dict):
+                _data = _out
+            _issues = _data.get("issues") or []
+            # WARN only on genuine REACH/workspace issues — the controller-subscription + cube-source checks
+            # false-fail when the verifier runs standalone (post-build, no live sub), so filter them out.
+            _reach_issues = [i for i in _issues if any(k in str(i).lower() for k in ("reach", "unreachable", "workspace", "out of", "too far", "z-window"))]
+            form_gate = {"pipeline_ok": _data.get("pipeline_ok"), "reach_issues": _reach_issues[:8], "all_issues": len(_issues)}
+            if _reach_issues:
+                logger.warning(f"[CanonicalInst] {task_id} FORM-GATE advisory (constraint detection): out-of-reach -> {_reach_issues[:4]}")
+    except Exception as _fge:
+        logger.debug(f"[CanonicalInst] {task_id} form-gate advisory soft-fail: {type(_fge).__name__}: {_fge}")
+
     return {
         "task_id": task_id,
         "n_calls": len(executed),
@@ -992,6 +1119,7 @@ async def execute_template_canonical(
         "errors": errors,
         "instantiated": True,
         "effective_params": effective_params,
+        "form_gate": form_gate,
     }
 
 

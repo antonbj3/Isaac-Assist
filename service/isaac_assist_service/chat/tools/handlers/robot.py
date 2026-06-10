@@ -4877,26 +4877,63 @@ async def _handle_create_gravity_dispenser(args: Dict) -> Dict:
     drop_height = float(args.get("drop_height", 1.1))
     n_items = int(args.get("n_items", 4))
     item_size = float(args.get("item_size", 0.05))
+    # GUARD (2026-06-05): a gravity dispenser must spawn items ABOVE the pick surface so they fall onto it and
+    # stay robot-reachable. drop_height is the ABSOLUTE z of the topmost item (default 1.1 ≈ above a typical
+    # feeder/table at z≈0.78). Callers sometimes pass it as a small "gap above the surface" (e.g. 0.10) -> items
+    # spawn near the floor (z≈0.1), far below the arm's reach -> never delivered (validated CP-71: items at
+    # z=0.15, UR10 base z=0.75, gate FAIL). An absolute z below 0.6 is implausible for any robot-pickable
+    # dispenser, so clamp it to the sane default. Correct (>=0.6) callers are byte-identical. Generalizes to
+    # every gravity-dispenser canonical.
+    if drop_height < 0.6:
+        drop_height = 1.1
 
-    # Create marker prim for dispenser (visual)
+    # 2026-06-06 ROOT FIX (generalizing): dispenser_path must be an UNSCALED Xform parent. It was a scaled Cube
+    # (scale=[item_size*1.5, item_size*1.5, 0.025]) and the Item_i CHILDREN inherited that scale -> the
+    # size=item_size items were crushed to ~6x6x2mm thin chips AND the 0.025 z-scale crushed the vertical stacking
+    # into an interpenetrating clump. That made the items physics-unstable (CP-71: explode on transit -> 14m off /
+    # penetrate the thin bin floor -> 0 delivered). The robot/gripper/cuRobo were never the problem -- only this
+    # scene-build bug, in the ONE template (CP-71) that uses the gravity dispenser. The scaled visual housing is now
+    # a separate /Housing child so it does not affect the items. Generalizes to every gravity-dispenser canonical.
     await execute_tool_call("create_prim", {
         "prim_path": dispenser_path,
+        "prim_type": "Xform",
+    })
+    # 2026-06-06: Housing is a VISUAL marker only -> NO collision (a collision slab at drop_height+0.05 caught a
+    # dispensed item mid-air, CP-71 Item_4 stuck at z=1.2 on the housing). Placed well ABOVE the items so it never
+    # overlaps them visually either.
+    await execute_tool_call("create_prim", {
+        "prim_path": dispenser_path + "/Housing",
         "prim_type": "Cube",
-        "position": [target_xy[0], target_xy[1], drop_height + 0.05],
+        "position": [target_xy[0], target_xy[1], drop_height + 0.15],
         "scale": [item_size * 1.5, item_size * 1.5, 0.025],
     })
-    await execute_tool_call("apply_api_schema", {
-        "prim_path": dispenser_path, "schema_name": "PhysicsCollisionAPI",
-    })
 
-    # Spawn N items stacked vertically below dispenser
+    # Spawn N items stacked vertically below dispenser.
+    # NOTE (2026-06-05): items spawned at one xy collapse into an interpenetrating clump on landing (CP-71); a
+    # tried xy-SPREAD made them individually pickable BUT then the procedural follower's USD-xform-teleport grip
+    # FLUNG the gripped (rubber) items to solver-NaN infinity on the bin transit (the known follower velocity-
+    # spike, [[project_isaac_assist_cp70_suction_solved]] / Agent B RCA). So the spread is reverted until the
+    # grip-fling is fixed (ties to the asset-gripper rework). The drop_height clamp above (floor -> reachable)
+    # stays. CP-71 still fails (clump unpickable) but STABLY (no explosion). Re-add the spread WITH the fling fix.
+    # 2026-06-06 SPREAD (generalizing): spawn items on a small XY GRID, not stacked at one xy. Stacking at one xy
+    # makes the (now-correct 50mm) cubes settle into a TALL TOWER (CP-71: top cube at z~1.0) whose top is at the
+    # UR10's marginal reach -> the cup stops ~5cm short -> the pick-nudge never converges -> grip-close never fires
+    # -> 0 delivered. A flat grid -> each cube settles INDIVIDUALLY on the feeder (low z) -> cup reaches DIRECT
+    # CONTACT -> clean grip (no telepathic gap). The earlier spread was reverted because the PROCEDURAL follower
+    # flung the TINY chips; that path is gone (asset gripper is the default) and 50mm cubes are stable, so the
+    # spread is safe now. Grid spacing = item_size*2 (no overlap). Generalizes to every gravity-dispenser canonical.
+    import math as _mh_disp
+    _cols = max(1, int(_mh_disp.ceil(n_items ** 0.5)))
+    _sp = item_size * 2.0
     item_paths = []
     for i in range(n_items):
-        z = drop_height - i * (item_size + 0.005)
+        _gx = (i % _cols - (_cols - 1) / 2.0) * _sp
+        _gy = (i // _cols - (_cols - 1) / 2.0) * _sp
+        z = drop_height - (i % 2) * (item_size + 0.005)  # tiny per-column z stagger DOWN (below the housing) to avoid spawn-overlap
         path = f"{dispenser_path}/Item_{i+1}"
         await execute_tool_call("create_prim", {
             "prim_path": path, "prim_type": "Cube",
-            "position": [target_xy[0], target_xy[1], z], "size": item_size,
+            "position": [target_xy[0] + _gx, target_xy[1] + _gy, z], "size": item_size,
         })
         for api in ("PhysicsRigidBodyAPI", "PhysicsCollisionAPI", "PhysicsMassAPI"):
             await execute_tool_call("apply_api_schema",
@@ -6258,7 +6295,126 @@ if sg_prim and sg_prim.IsValid():
     # currently-working SG is disturbed. UR10 is the only family with the proven
     # broken-pre-wired-AP problem + the validated follower-cone fix (CP-70/83).
     _is_ur10 = "ur10" in robot_path.lower()
-    if (not _has_parallel_jaw) and (not _cone_exists) and ((not _already_wired) or _is_ur10):
+    # 2026-06-05 HOTSWAP ASSET GRIPPER (Anton's mandate: use NVIDIA's real short_gripper.usd as THE
+    # active UR10 gripper, not procedural cylinders). DEFAULT NOW True (was False). UR10-only. Mounts the
+    # REAL asset (blue mesh + compliant Suction_Joint + IsaacSurfaceGripper) rigidly to the arm ee via a
+    # FixedJoint (faithful, physics-driven; no kinematic-teleport oracle). The asset's SurfaceGripper
+    # becomes sg_path so the marker + the cuRobo controller's wrapper drive IT; pick_place.py adapts the
+    # suction-logic (cup-axis -110deg align + 0.05m descend-deepen, both GEOMETRIC -> generalize).
+    # GATE-VERIFIED 2026-06-05 (simulate_traversal_check, fresh Kit): CP-84/85/70 success=True with the
+    # asset gripper, zero regression vs procedural. builtins._sg_use_asset_gripper=False still forces the
+    # procedural fallback (debug/A-B). Falls back to procedural automatically on asset soft-fail (below).
+    import builtins as _bi_ag
+    _USE_ASSET_GRIPPER = bool(getattr(_bi_ag, "_sg_use_asset_gripper", True)) and _is_ur10 and (not _cone_exists) and (not _has_parallel_jaw)
+    if _USE_ASSET_GRIPPER:
+        try:
+            from pxr import UsdPhysics as _UPa, UsdGeom as _UGa, Sdf as _Sa, Gf as _Ga
+            _SHORT = "/mnt/shared_data/isaac-sim-assets-complete-5.0.0/Assets/Isaac/5.0/Isaac/Robots/UniversalRobots/ur10/grippers/short_gripper.usd"
+            # Mount as a SEPARATE TOP-LEVEL rigid body FixedJoint-bolted to the flange (NOT baked into ee_link).
+            # WHY: the asset's IsaacSurfaceGripper grips a cube by filling body1 of the COMPLIANT Suction_Joint
+            # (D6 drives, body0=/Root). For close_gripper() to engage, /Root MUST stay a valid rigid body. Baking
+            # it into the ee_link articulation link (stripping RigidBody) makes close_gripper() a silent no-op
+            # (status stuck Open -- validated 2026-06-05). PhysX also rejects a rigid body nested under an
+            # articulation link, so /Root cannot be a USD child of ee_link. Solution: a top-level prim + FixedJoint
+            # to the flange = the real tool-structure mount; the cube<->gripper grip stays the compliant suction
+            # (NOT an EE<->cube weld -> faithful, honours the no-FJ-grip rule).
+            _gname = art_path.split("/")[-1] + "_ShortGripper"
+            _agp = "/World/" + _gname
+            _agpp = stage.DefinePrim(_Sa.Path(_agp), "Xform")
+            _agpp.GetReferences().AddReference(_SHORT)
+            # place /Root coincident with ee_link (identity relative): short_gripper /Root local +X == ee_link tool
+            # axis, so an identity mount puts the cup at flange +X*0.1585 (validated visually -- Anton confirmed).
+            # The FixedJoint then holds that identity offset rigidly as the arm moves.
+            _eexf = _UGa.Xformable(stage.GetPrimAtPath(_Sa.Path(art_path))).ComputeLocalToWorldTransform(0)
+            _UGa.Xformable(_agpp).ClearXformOpOrder()
+            _UGa.Xformable(_agpp).AddTransformOp().Set(_eexf)
+            # FixedJoint to the last REAL dynamic link (wrist_3_link). ee_link is a VIRTUAL frame (RigidBody=False,
+            # no mass), so a FixedJoint to it transmits NO motion -> the gripper stays frozen at spawn while the arm
+            # moves away (validated 2026-06-05: gripper /Root froze for 2400 frames). Bolt to wrist_3_link instead
+            # and bake ee_link's offset-from-wrist_3 into localPose0 so /Root is held exactly at the (cup-correct)
+            # ee_link pose AND tracks the arm as wrist_3 moves.
+            _w3path = "/".join(art_path.split("/")[:-1]) + "/wrist_3_link"
+            _w3p = stage.GetPrimAtPath(_Sa.Path(_w3path))
+            _mount_link = _w3path if (_w3p and _w3p.IsValid() and _w3p.HasAPI(_UPa.RigidBodyAPI)) else art_path
+            _w3xf = _UGa.Xformable(stage.GetPrimAtPath(_Sa.Path(_mount_link))).ComputeLocalToWorldTransform(0)
+            _rel = _eexf * _w3xf.GetInverse()   # gripper (=ee_link) pose expressed in the mount-link frame
+            _rt = _rel.ExtractTranslation(); _rq = _rel.ExtractRotationQuat(); _rqi = _rq.GetImaginary()
+            _rtmag = (float(_rt[0])**2 + float(_rt[1])**2 + float(_rt[2])**2) ** 0.5
+            # The UR10 USD REST pose is DEGENERATE at build time (the articulation is unposed -> ee_link and wrist_3
+            # read the SAME world transform), so the computed ee-in-wrist_3 offset collapses to ~0 and the gripper
+            # would snap to the wrist origin (~0.8 m back -> cup never reaches the cube, validated 2026-06-05).
+            # ee_link is FIXED-jointed to wrist_3, so ee-in-wrist_3 is a pose- AND base-invariant kinematic CONSTANT;
+            # use the value measured post-play when the build-time offset is degenerate. (Computed value is used as-is
+            # for any future robot whose build-time link poses are already correct -> generalizes beyond UR10.)
+            _mount_degenerate = (_mount_link == _w3path and _rtmag < 0.05)
+            if _mount_degenerate:
+                _lp0 = _Ga.Vec3f(0.315732, -0.577236, 0.466859)
+                _lr0 = _Ga.Quatf(0.010394, 0.807584, -0.579306, -0.110021)
+            else:
+                _lp0 = _Ga.Vec3f(float(_rt[0]), float(_rt[1]), float(_rt[2]))
+                _lr0 = _Ga.Quatf(float(_rq.GetReal()), float(_rqi[0]), float(_rqi[1]), float(_rqi[2]))
+            _fjp = _agp + "/FlangeMount"
+            _afj = _UPa.FixedJoint.Define(stage, _Sa.Path(_fjp))
+            _afj.CreateBody0Rel().SetTargets([_Sa.Path(_mount_link)])
+            _afj.CreateBody1Rel().SetTargets([_Sa.Path(_agp)])
+            _afj.CreateLocalPos0Attr(_lp0); _afj.CreateLocalRot0Attr(_lr0)
+            _afj.CreateLocalPos1Attr(_Ga.Vec3f(0.0, 0.0, 0.0)); _afj.CreateLocalRot1Attr(_Ga.Quatf(1.0, 0.0, 0.0, 0.0))
+            # 2026-06-05: ENABLE the joint at build when the mount pose is NON-degenerate. The wound-start root fix
+            # (robot_wizard home spawn runs BEFORE this surface_gripper step) now POSES the arm at home at build time,
+            # so ee_link and wrist_3 read DISTINCT world transforms -> the computed ee-in-wrist_3 localPose0 is correct
+            # and deterministic. Authoring ENABLED here mounts the gripper rigidly at the (cup-correct) ee pose and it
+            # tracks the arm from frame 0 (no runtime _fixup_asset_gripper_joint snap/explosion needed). DEGENERATE
+            # fallback (unposed build, e.g. non-robot_wizard spawns) stays DISABLED for the runtime re-author path.
+            _afj.CreateJointEnabledAttr(not _mount_degenerate)
+            print("(surface_gripper: asset FlangeMount jointEnabled=" + str(not _mount_degenerate) +
+                  " (mount_degenerate=" + str(_mount_degenerate) + ", rtmag=" + str(round(_rtmag, 3)) + "))")
+            # high solver iterations + no gravity on the gripper body so the FixedJoint tracks the fast cuRobo
+            # motion without lag/droop (the cube's own gravity still loads the compliant grip -> honest hold).
+            try:
+                _agpp.AddAppliedSchema("PhysxRigidBodyAPI")
+                _sia = _agpp.GetAttribute("physxRigidBody:solverPositionIterationCount")
+                if not (_sia and _sia.IsDefined()): _sia = _agpp.CreateAttribute("physxRigidBody:solverPositionIterationCount", _Sa.ValueTypeNames.Int)
+                _sia.Set(32)
+                _dga = _agpp.GetAttribute("physxRigidBody:disableGravity")
+                if not (_dga and _dga.IsDefined()): _dga = _agpp.CreateAttribute("physxRigidBody:disableGravity", _Sa.ValueTypeNames.Bool)
+                _dga.Set(True)
+                # Keep the gripper mass LOW (asset default 1.0 kg). cuRobo plans the arm WITHOUT the gripper in its
+                # model, so a heavy dynamic body FixedJoint'd to wrist_3 adds untracked inertia -> the position
+                # controller drifts off cuRobo's trajectory (validated 2026-06-05: 1.0 kg -> arm misses the pick by
+                # ~0.8 m). 0.05 kg is negligible to the arm yet keeps a sane gripper:cube ratio for the compliant grip.
+                _ma = _agpp.GetAttribute("physics:mass")
+                if not (_ma and _ma.IsDefined()): _ma = _agpp.CreateAttribute("physics:mass", _Sa.ValueTypeNames.Float)
+                _ma.Set(0.05)
+            except Exception: pass
+            # disable the gripper meshes' collision: the SG grips by RAYCAST (hits the cube's collision), not by
+            # the gripper's own collision. A separate FixedJoint'd body is NOT in the arm's articulation, so its
+            # meshes (overlapping wrist_3_link at the flange) would self-collide -> penetration/jitter. Off.
+            for _gc in _agpp.GetChildren():
+                try:
+                    _ca = _gc.GetAttribute("physics:collisionEnabled")
+                    if not (_ca and _ca.IsDefined()): _ca = _gc.CreateAttribute("physics:collisionEnabled", _Sa.ValueTypeNames.Bool)
+                    _ca.Set(False)
+                except Exception: pass
+            # SG force limits default 0.0 -> the grip can't hold; set them so the compliant suction can lift the cube.
+            # 2026-06-06 maxGripDistance: the asset SG ships at only 0.02m. During the violent cuRobo transit swing
+            # (gripped cube whipped to z~2.0 — CP-81/83) the COMPLIANT Suction_Joint lets the cube lag >0.02m -> the
+            # IsaacSurfaceGripper auto-RELEASES -> stochastic fling. Widen the hold window so a transient swing-lag
+            # does NOT drop the cube. NB the 2026-06 research "0.30 EXPLODES" was the PROCEDURAL cone-grip (different
+            # mechanism); the asset's compliant joint tolerates a moderate widen, WITH the loaded-transit speed cap
+            # (_sg_loaded_vmax) already in place. Flag-tunable; conservative default 0.10. Verify CP-84/85/70 no-regress.
+            _mgd = float(getattr(_bi_ag, "_sg_asset_maxgrip", 0.10))
+            _aasg = stage.GetPrimAtPath(_Sa.Path(_agp + "/SurfaceGripper"))
+            if _aasg and _aasg.IsValid():
+                for _aln, _alv in (("isaac:coaxialForceLimit", 500.0), ("isaac:shearForceLimit", 500.0), ("isaac:maxGripDistance", _mgd)):
+                    _ala = _aasg.GetAttribute(_aln)
+                    if _ala and _ala.IsDefined():
+                        _ala.Set(_alv)
+            sg_path = _agp + "/SurfaceGripper"
+            print("(surface_gripper: ASSET short_gripper.usd FixedJoint-mounted at " + _agp + " -> SG=" + sg_path + ")")
+        except Exception as _age:
+            print("(surface_gripper: asset-gripper soft-fail -> procedural fallback: " + str(_age) + ")")
+            _USE_ASSET_GRIPPER = False
+    if (not _USE_ASSET_GRIPPER) and (not _has_parallel_jaw) and (not _cone_exists) and ((not _already_wired) or _is_ur10):
         try:
             from pxr import UsdPhysics as _UP, UsdGeom as _UG, Sdf as _S, Gf as _G
             import omni.physx as _physx, builtins as _bi

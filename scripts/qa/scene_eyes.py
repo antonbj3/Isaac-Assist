@@ -64,7 +64,13 @@ def _first(paths):
 EE = _first([ROBOT + "/ee_link", ROBOT + "/panda_hand", ROBOT + "/wrist_3_link"]) if ROBOT else None
 CONE = ROBOT + "_SGCone" if (ROBOT and stage.GetPrimAtPath(Sdf.Path(ROBOT + "_SGCone")).IsValid()) else None
 FOLL = ROBOT + "_SGFollower" if (ROBOT and stage.GetPrimAtPath(Sdf.Path(ROBOT + "_SGFollower")).IsValid()) else None
-TOOL = CONE or FOLL or EE   # tool proxy: cone is USD-live (teleported each step)
+# ASSET (blue short_gripper.usd) suction cup — a *_ShortGripper/suction_cup prim (asset mode has no cone/follower).
+# In asset mode the cup is the REAL suction tip; ee_link is a frozen virtual frame, so track the cup explicitly.
+CUP = None
+for _gpr in stage.Traverse():
+    _gp = str(_gpr.GetPath())
+    if _gp.endswith("_ShortGripper/suction_cup"): CUP = _gp; break
+TOOL = CONE or FOLL or CUP or EE   # tool proxy: cone/cup is USD-live (tracks the suction tip)
 
 def xform(p):
     pr = stage.GetPrimAtPath(Sdf.Path(p)) if p else None
@@ -74,7 +80,7 @@ def xform(p):
     return ([round(float(t[0]), 4), round(float(t[1]), 4), round(float(t[2]), 4)],
             [round(float(q.GetReal()), 4), round(float(im[0]), 4), round(float(im[1]), 4), round(float(im[2]), 4)])
 
-CUBES = [str(pr.GetPath()) for pr in stage.Traverse() if pr.GetName().startswith("Cube")]
+CUBES = [str(pr.GetPath()) for pr in stage.Traverse() if pr.GetName().startswith("Cube") or pr.GetName().startswith("Item")]  # 2026-06-06: track dispenser Item_* (CP-71) too, not just Cube_*
 
 # cuRobo PLAN EVENTS — the handler writes USD-live ctrl: counters on the ROBOT prim
 # (plan_calls/plan_fails/picked_path/last_error/last_fail_goal). Reading them each sample
@@ -167,6 +173,43 @@ def jpos():
         q = ART.get_joint_positions()
         return None if q is None else [round(float(x), 4) for x in list(q)]
     except Exception: return None
+def jvel():
+    if ART is None: return None
+    try:
+        v = ART.get_joint_velocities()
+        return None if v is None else [round(float(x), 3) for x in list(v)]
+    except Exception: return None
+
+# SurfaceGripper status (GripperView, Isaac 5.x) — THE grip-release signal: status int over time + gripped set.
+# status: 0=Open, 1=Closing, 2=Closed (validated empirically). When it drops 2->0 mid-transit = the grip released.
+_GV = None; _SGPATH = None
+try:
+    from isaacsim.robot.surface_gripper import GripperView as _GVcls
+    _sgp = [str(pr.GetPath()) for pr in stage.Traverse() if str(pr.GetTypeName()) == "IsaacSurfaceGripper"]
+    _sgp_use = [p for p in _sgp if "ShortGripper" in p] or _sgp
+    if _sgp_use:
+        _SGPATH = _sgp_use[0]; _GV = _GVcls(paths=_SGPATH)
+        print("GV_OK", _SGPATH)
+except Exception as _gve:
+    print("GV_UNAVAIL", repr(_gve)[:120])
+def gstat():
+    if _GV is None: return None
+    try: return [int(x) for x in list(_GV.get_surface_gripper_status())]
+    except Exception: return None
+def gripped():
+    if _GV is None: return None
+    try:
+        g = _GV.get_gripped_objects()
+        if not g: return []
+        inner = g[0] if (isinstance(g, (list, tuple)) and len(g) and isinstance(g[0], (list, tuple))) else g
+        return [str(x).split("/")[-1] for x in inner][:6]
+    except Exception: return None
+def gprops():
+    if _GV is None: return None
+    try:
+        p = _GV.get_surface_gripper_properties()
+        return [round(float(p[0][0]), 4), round(float(p[1][0]), 1), round(float(p[2][0]), 1)]
+    except Exception: return None
 
 N = int(DUR * 60); CAP = max(1, N // max(1, NFRAMES)); fi = 0; rows = []
 for i in range(N):
@@ -177,15 +220,30 @@ for i in range(N):
         cubes = {}
         for c in CUBES:
             cx = xform(c); cubes[c.split("/")[-1]] = (cx[0] if cx else None)
+        cupx = xform(CUP) if CUP else None
+        _w3 = xform("/World/UR10/wrist_3_link")
         rows.append({"t": round(i / 60.0, 2),
                      "tool_p": (tool[0] if tool else None), "tool_q": (tool[1] if tool else None),
+                     "w3_p": (_w3[0] if _w3 else None), "w3_q": (_w3[1] if _w3 else None),
+                     "cup_p": (cupx[0] if cupx else None), "cup_q": (cupx[1] if cupx else None),
                      "foll_p": (foll[0] if foll else None), "elong_mm": elong,
-                     "j": jpos(), "cubes": cubes,
+                     "j": jpos(), "jv": jvel(), "gv": gstat(), "grp": gripped(), "cubes": cubes,
                      "pc": int(cattr("ctrl:plan_calls", 0)), "pf": int(cattr("ctrl:plan_fails", 0)),
                      "pick": str(cattr("ctrl:picked_path", "")), "err": str(cattr("ctrl:last_error", "")),
                      "fgoal": str(cattr("ctrl:last_fail_goal", "")),
                      "contacts": sorted(["%s|%s" % (a, c) for (a, c) in _contacts])})
         _contacts.clear()
+        # INCREMENTAL dump every ~100 rows (~10s) so a slow/long template (CP-83 2-cube) that exceeds the
+        # exec_sync timeout still leaves partial data on disk (robust observation, never a blind NO_EYES_JSON).
+        if len(rows) % 100 == 0:
+            try:
+                import builtins as _bpd
+                json.dump({"template": "__TPL__", "robot": ROBOT, "ee": EE, "cone": CONE, "follower": FOLL,
+                           "tool": TOOL, "dof_names": DOFN, "rows": rows, "nframes": fi, "gripper_props": gprops(),
+                           "sg_path": _SGPATH, "partial": True,
+                           "plan_log": list(getattr(_bpd, "_eyes_plan_log", []) or []),
+                           "plan_fields": list(getattr(_bpd, "_eyes_plan_fields", []) or [])}, open(OUT + "/eyes.json", "w"))
+            except Exception: pass
     if FRAMES and vp is not None and i % CAP == 0:
         try:
             vpu.capture_viewport_to_file(vp, file_path=OUT + "/f%03d.png" % fi)
@@ -197,7 +255,7 @@ import builtins as _ebd
 _plan_log = list(getattr(_ebd, "_eyes_plan_log", []) or [])
 _plan_fields = list(getattr(_ebd, "_eyes_plan_fields", []) or [])
 json.dump({"template": "__TPL__", "robot": ROBOT, "ee": EE, "cone": CONE, "follower": FOLL,
-           "tool": TOOL, "dof_names": DOFN, "rows": rows, "nframes": fi,
+           "tool": TOOL, "dof_names": DOFN, "rows": rows, "nframes": fi, "gripper_props": gprops(), "sg_path": _SGPATH,
            "plan_log": _plan_log, "plan_fields": _plan_fields}, open(OUT + "/eyes.json", "w"))
 print("EYES_DONE rows=%d frames=%d robot=%s tool=%s foll=%s dofs=%d" % (len(rows), fi, ROBOT, TOOL, FOLL, len(DOFN)))
 '''
@@ -367,6 +425,35 @@ def _analyse(js):
                 out.append("      t=%5.1fs  %s" % (t, c))
     else:
         out.append("CONTACTS: none recorded (check CONTACT_SETUP_FAIL)")
+    # GRIP TIMELINE — THE grip-release signal: SurfaceGripper status (0=Open 1=Closing 2=Closed) + gripped set
+    # + cup<->gripped-cube distance + max joint velocity, logged at every transition. If status falls to 0 (or the
+    # gripped set empties) MID-TRANSIT while cup-cube_d just exceeded maxGripDistance -> the grip auto-RELEASED on
+    # distance (candidate b). If it falls while jvmax spiked but d small -> speed/contact knocked it (candidate a/c).
+    import math as _mm
+    grows = [r for r in rows if r.get("gv") is not None]
+    if grows:
+        props = js.get("gripper_props")
+        out.append("GRIP TIMELINE (status 0=Open 1=Closing 2=Closed; SG props[maxGripDist,coaxF,shearF]=%s):" % props)
+        _prev = None
+        for r in grows:
+            gv = r.get("gv"); s = (gv[0] if gv else None)
+            grp = r.get("grp") or []
+            cup = r.get("cup_p"); d = None; cz = None
+            if cup and grp:
+                cp = (r.get("cubes") or {}).get(grp[0])
+                if cp: d = round(_mm.dist(cup, cp), 3); cz = round(cp[2], 3)
+            jv = r.get("jv") or []
+            jvmax = round(max([abs(x) for x in jv], default=0.0), 2)
+            key = (s, tuple(grp))
+            if key != _prev:
+                out.append("    t=%5.1fs  status=%s gripped=%s  cup-cube_d=%s cubeZ=%s  jvmax=%.2f rad/s"
+                           % (r["t"], s, grp, d, cz, jvmax))
+                _prev = key
+        _held = [r for r in grows if r.get("grp")]
+        if _held:
+            out.append("    -> LAST tick with a gripped object: t=%.1fs (after this the cube is free)." % _held[-1]["t"])
+        else:
+            out.append("    -> NO tick ever reported a gripped object (grip never latched, or GripperView blind to this SG).")
     return "\n".join(out)
 
 
@@ -418,6 +505,62 @@ async def main():
         await kit_tools.exec_sync(
             "import builtins\nbuiltins._eyes_plan_capture=True\nbuiltins._eyes_plan_log=[]\n"
             "try:\n    del builtins._eyes_plan_fields\nexcept Exception:\n    pass\n", timeout=15)
+        # gated UR10 experiment flags (test a fix without editing the handler)
+        for _flag in ("--posonly", "--oritol", "--cspace", "--transitarc", "--assetgripper"):
+            if _flag in OPTS:
+                _bn = {"--posonly": "_ur10_pos_only", "--oritol": "_ur10_ori_tol",
+                       "--cspace": "_ur10_plan_cspace", "--transitarc": "_ur10_transit_arc",
+                       "--assetgripper": "_sg_use_asset_gripper"}[_flag]
+                await kit_tools.exec_sync("import builtins\nbuiltins.%s=True\n" % _bn, timeout=10)
+                print("FLAG_SET %s" % _bn)
+        # 2026-06-06: CUP_ALIGN env sets the asset-gripper cup-align mount angle (default -110) for A/B observation.
+        _ca = os.environ.get("CUP_ALIGN")
+        if _ca:
+            await kit_tools.exec_sync("import builtins\nbuiltins._sg_cup_align_deg=%s\n" % _ca, timeout=10)
+            print("FLAG_SET _sg_cup_align_deg=%s" % _ca)
+        _de = os.environ.get("DESCEND_EXTRA")
+        if _de:
+            await kit_tools.exec_sync("import builtins\nbuiltins._sg_asset_descend_extra=%s\n" % _de, timeout=10)
+            print("FLAG_SET _sg_asset_descend_extra=%s" % _de)
+        if os.environ.get("CUPFRAME") == "1":
+            await kit_tools.exec_sync("import builtins\nbuiltins._ur10_cupframe_down=True\n", timeout=10)
+            print("FLAG_SET _ur10_cupframe_down=True")
+        if os.environ.get("CUPFRAME") == "0":
+            await kit_tools.exec_sync("import builtins\nbuiltins._ur10_cupframe_down=False\n", timeout=10)
+            print("FLAG_SET _ur10_cupframe_down=False")
+        if os.environ.get("NVCUP") == "1":
+            await kit_tools.exec_sync("import builtins\nbuiltins._sg_nvidia_cup=True\n", timeout=10)
+            print("FLAG_SET _sg_nvidia_cup=True")
+        if os.environ.get("MCUBEOBS") == "0":
+            await kit_tools.exec_sync("import builtins\nbuiltins._ur10_multicube_obs=False\n", timeout=10)
+            print("FLAG_SET _ur10_multicube_obs=False")
+        if os.environ.get("REACHPROBE")=="1":
+            await kit_tools.exec_sync("import builtins\nbuiltins._reach_probe=True\nbuiltins._reach_probe_done=False\n", timeout=10)
+            print("FLAG_SET _reach_probe=True")
+        if os.environ.get("GRIPLOG")=="1":
+            await kit_tools.exec_sync("import builtins\nbuiltins._sg_grip_log=True\n", timeout=10)
+            print("FLAG_SET _sg_grip_log=True")
+        if os.environ.get("GOALOFF"):
+            await kit_tools.exec_sync("import builtins, json\nbuiltins._sg_nvidia_goal_off=json.loads('%s')\n" % os.environ["GOALOFF"], timeout=10)
+            print("FLAG_SET _sg_nvidia_goal_off=%s" % os.environ["GOALOFF"])
+        if os.environ.get("NUDGEMAX"):
+            await kit_tools.exec_sync("import builtins\nbuiltins._sg_nvidia_nudge_max=%s\n" % os.environ["NUDGEMAX"], timeout=10)
+            print("FLAG_SET _sg_nvidia_nudge_max=%s" % os.environ["NUDGEMAX"])
+        if os.environ.get("TELEDESCEND") == "1":
+            await kit_tools.exec_sync("import builtins\nbuiltins._ur10_telescope_descend=True\n", timeout=10)
+            print("FLAG_SET _ur10_telescope_descend=True")
+        _rp = os.environ.get("REPOINT")
+        if _rp:
+            await kit_tools.exec_sync("import builtins\nbuiltins._sg_descend_repoint_deg=%s\n" % _rp, timeout=10)
+            print("FLAG_SET _sg_descend_repoint_deg=%s" % _rp)
+        if os.environ.get("MULTIOBS") == "0":
+            await kit_tools.exec_sync("import builtins\nbuiltins._ur10_multicube_obs=False\n", timeout=10)
+            print("FLAG_SET _ur10_multicube_obs=False")
+        for _ev,_bn in (("IKSEEDS","_ur10_ik_seeds"),("TRAJSEEDS","_ur10_trajopt_seeds"),("GRIPZOFF","_sg_nvidia_grip_z_off"),("CUPBELOW","_sg_nvidia_cup_below_ee"),("ORITOL","_ur10_ori_tol"),("ZOFF","_reach_probe_z_off"),("CHAINSEED","_ur10_chained_drop_seed"),("CSPACE","_ur10_plan_cspace"),("DROPPIN","_ur10_drop_branch_pin"),("JOINTSPACE","_ur10_jointspace_transit"),("JSIGN","_ur10_jointspace_sign"),("POSONLY","_ur10_transit_posonly")):
+            _vv=os.environ.get(_ev)
+            if _vv:
+                await kit_tools.exec_sync("import builtins\nbuiltins.%s=%s\n" % (_bn,_vv), timeout=10)
+                print("FLAG_SET %s=%s" % (_bn,_vv))
         b = await asyncio.wait_for(execute_template_canonical(tpl), timeout=600)
         if not b.get("instantiated"):
             print("BUILD_FAIL", str(b.get("errors"))[:400]); return
@@ -425,16 +568,24 @@ async def main():
             await asyncio.wait_for(settle_after_canonical(tpl), timeout=30)
         except Exception:
             pass
+    try: os.remove(os.path.join(OUT, "eyes.json"))  # drop any stale json so a failed run can't read old data
+    except Exception: pass
     raw = (_KIT.replace("__OUT__", OUT).replace("__DUR__", repr(DUR))
            .replace("__NFRAMES__", repr(NFRAMES)).replace("__FRAMES__", repr(FRAMES))
            .replace("__TPL__", TPL))
-    r = await asyncio.wait_for(kit_tools.exec_sync(raw, timeout=int(DUR) + 200), timeout=int(DUR) + 220)
-    out = r.get("output") or ""
+    # Tolerate exec_sync timeout/RPC error: the loop dumps eyes.json INCREMENTALLY, so even a timed-out long
+    # play leaves partial data on disk. Read whatever exists instead of a blind NO_EYES_JSON.
+    try:
+        r = await asyncio.wait_for(kit_tools.exec_sync(raw, timeout=int(DUR) + 200), timeout=int(DUR) + 220)
+        out = r.get("output") or ""
+    except Exception as _ee:
+        out = ""; print("EXEC_TIMEOUT_OR_ERR", repr(_ee)[:120], "-> reading partial eyes.json")
     for l in out.splitlines():
         if any(k in l for k in ("EYES_DONE", "JOINTS_UNAVAIL", "ART_INIT_FAIL", "CAM_FAIL", "CAP_FAIL", "BUILD_FAIL")):
             print(l)
     try:
         js = json.load(open(os.path.join(OUT, "eyes.json")))
+        if js.get("partial"): print("PARTIAL eyes.json (%d rows, exec did not finish cleanly)" % len(js.get("rows") or []))
     except Exception as e:
         print("NO_EYES_JSON", e); return
     print("=== MOTION ANALYSIS ===")

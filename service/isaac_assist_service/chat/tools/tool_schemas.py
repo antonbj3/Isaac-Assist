@@ -800,6 +800,40 @@ ISAAC_SIM_TOOLS = [
     {
         "type": "function",
         "function": {
+            "name": "diagnose_pick_execution",
+            "description": (
+                "POST-RUN FAILURE LOCALIZER — call AFTER simulate_traversal_check "
+                "returns success=false to find out WHY. Reads the controller's own "
+                "ctrl:* USD records off the robot prim + tails the always-on plan-fail "
+                "/ grip / settle logs (no re-sim), then reports: which segment the plan "
+                "died at + the goal, whether the arm ever moved, whether the grip "
+                "latched, why a source cube was rejected (reach / 3-strike), and a "
+                "recommended fix. This is the LOCALIZE leg of the diagnose loop: "
+                "diagnose_scene_feasibility (pre-flight) -> simulate_traversal_check "
+                "(run/gate) -> diagnose_pick_execution (localize) -> fix. Returns: "
+                "{root_cause, recommendation, planning:{plan_calls,plan_fails,"
+                "failed_segments[],last_fail_goal}, behaviour:{cubes_delivered,"
+                "arm_moved,grip_latched,pick_reject,graspdiag}, contacts:{arm_vs_scene[]}}. "
+                "root_cause one of: controller_never_planned, pick_target_out_of_reach, "
+                "cube_marked_failed_after_plan_strikes, plan_failed_at_segment, "
+                "pick_grip_never_latched, carried_but_not_delivered, delivered_ok. "
+                "Set with_contacts=true to also capture live PhysX arm-vs-scene contact "
+                "pairs (e.g. 'upper_arm_link|Cube_2') — best-effort, briefly re-steps."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "robot_path": {"type": "string", "description": "USD path to the robot prim that ran the pick-place (e.g. /World/UR10). The ctrl:* observability attrs live here."},
+                    "with_contacts": {"type": "boolean", "description": "Also capture ongoing PhysX arm-vs-scene contact pairs by briefly re-stepping the live scene. Best-effort; default false (fast pure read).", "default": False},
+                    "contact_window_s": {"type": "number", "description": "Seconds to step when with_contacts=true. Default 2.0.", "default": 2.0},
+                },
+                "required": ["robot_path"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "setup_ros2_control_compat",
             "description": (
                 "PHASE 6 M1: configure Isaac Sim's ROS2 bridge to use the standard "

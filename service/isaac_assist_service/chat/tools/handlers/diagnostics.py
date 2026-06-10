@@ -3341,6 +3341,198 @@ async def _handle_diagnose_whole_body(args: Dict) -> Dict:
 
 
 @with_telemetry
+async def _handle_diagnose_pick_execution(args: Dict) -> Dict:
+    """POST-RUN pick-place failure localizer. Reads the controller's own ctrl:* USD
+    records off the robot prim + tails the always-on plan-fail / grip / settle logs,
+    then maps the localized facts to a root_cause + recommendation. Call AFTER
+    simulate_traversal_check returns success=false. Pure read (no re-sim) unless
+    with_contacts=true (then briefly re-steps the live scene with a PhysX contact sub).
+    The missing LOCALIZE leg of the diagnose loop: feasibility -> gate -> THIS -> fix."""
+    from .. import kit_tools  # noqa: PLC0415
+    import json as _json, os as _os, re as _re
+
+    robot_path = args["robot_path"]
+    with_contacts = bool(args.get("with_contacts") or False)
+    win_s = float(args.get("contact_window_s") or 2.0)
+    n_steps = max(1, int(win_s * 60))
+
+    # --- Kit-side: read ctrl:* attrs off the robot prim (+ optional contact re-step) ---
+    code = f"""\
+import omni.usd, json
+stage = omni.usd.get_context().get_stage()
+rp = stage.GetPrimAtPath({robot_path!r})
+out = {{'robot_path': {robot_path!r}}}
+if not rp or not rp.IsValid():
+    out['error'] = 'robot prim not found'
+else:
+    _attrs = ['ctrl:mode','ctrl:phase','ctrl:cubes_delivered','ctrl:cycles_attempted',
+              'ctrl:error_count','ctrl:last_error','ctrl:picked_path','ctrl:tick_count',
+              'ctrl:plan_calls','ctrl:plan_fails','ctrl:last_fail_goal','ctrl:pick_reject',
+              'ctrl:graspdiag']
+    _rec = {{}}
+    for _a in _attrs:
+        _at = rp.GetAttribute(_a)
+        try:
+            _rec[_a] = (_at.Get() if (_at and _at.IsValid() and _at.IsDefined()) else None)
+        except Exception:
+            _rec[_a] = None
+    out['ctrl'] = _rec
+    if {with_contacts!r}:
+        try:
+            from omni.physx import get_physx_simulation_interface
+            from pxr import PhysicsSchemaTools
+            import omni.kit.app
+            _pairs = set()
+            def _oc(headers, data):
+                for _ch in headers:
+                    try:
+                        _a0 = str(PhysicsSchemaTools.intToSdfPath(_ch.actor0)).split('/')[-1]
+                        _a1 = str(PhysicsSchemaTools.intToSdfPath(_ch.actor1)).split('/')[-1]
+                        _pairs.add('%s|%s' % (_a0, _a1))
+                    except Exception:
+                        pass
+            _sub = get_physx_simulation_interface().subscribe_contact_report_events(_oc)
+            _app = omni.kit.app.get_app()
+            for _ in range({n_steps}):
+                _app.update()
+            _sub = None
+            out['contact_pairs'] = sorted(p for p in _pairs if 'elt' not in p.lower())
+        except Exception as _ce:
+            out['contact_error'] = str(_ce)[:200]
+print(json.dumps(out, default=str))
+"""
+    kit_res = await kit_tools.queue_exec_patch(code, f"diagnose_pick_execution {robot_path}")
+    parsed = {}
+    try:
+        _out = (kit_res.get("output") if isinstance(kit_res, dict) else None) or ""
+        _jl = [l for l in _out.splitlines() if l.strip().startswith("{")]
+        if _jl:
+            parsed = _json.loads(_jl[-1])
+    except Exception:
+        parsed = {}
+    ctrl = (parsed.get("ctrl") or {}) if isinstance(parsed, dict) else {}
+
+    # --- Host-side: tail the always-on / gated controller logs (same machine as Kit) ---
+    def _tail(path, n=60):
+        try:
+            with open(path) as _f:
+                return _f.read().splitlines()[-n:]
+        except Exception:
+            return []
+
+    planfail = []
+    for ln in _tail("/tmp/cp_planfail_tagged.log", 80):
+        m = _re.search(r"cube=(\S+)\s+seg=(\d+)/(\d+)\s+act=(\S+)\s+goal=(\[[^\]]*\])", ln)
+        if m:
+            planfail.append({"cube": m.group(1), "seg": int(m.group(2)), "nseg": int(m.group(3)),
+                             "action": m.group(4), "goal": m.group(5)})
+    # collapse to the distinct (cube,seg,action) failures, most-recent last
+    seen = {}
+    for p in planfail:
+        seen[(p["cube"], p["seg"], p["action"])] = p
+    planfail_distinct = list(seen.values())
+
+    grip_lines = _tail("/tmp/grip_log.txt", 200)
+    arm_moved = None
+    grip_latched = None
+    if grip_lines:
+        segs = set()
+        latched = False
+        for ln in grip_lines:
+            ms = _re.search(r"seg=(\d+)/", ln)
+            if ms:
+                segs.add(int(ms.group(1)))
+            if "gripped=[" in ln and "gripped=[]" not in ln:
+                latched = True
+        arm_moved = bool(segs - {0})  # advanced past seg 0
+        grip_latched = latched
+
+    settle = [l for l in _tail("/tmp/settle_dbg.log", 40) if ("BUILD_NONE" in l or "BUILD_RAISE" in l)]
+
+    # --- rule layer: localized facts -> root_cause + recommendation ---
+    def _as_int(v):
+        try: return int(v)
+        except Exception: return None
+    plan_calls = _as_int(ctrl.get("ctrl:plan_calls"))
+    plan_fails = _as_int(ctrl.get("ctrl:plan_fails"))
+    cubes = _as_int(ctrl.get("ctrl:cubes_delivered"))
+    picked = ctrl.get("ctrl:picked_path") or ""
+    reject = (ctrl.get("ctrl:pick_reject") or "")
+    grasp = (ctrl.get("ctrl:graspdiag") or "")
+    last_fail_goal = ctrl.get("ctrl:last_fail_goal") or ""
+    contacts = parsed.get("contact_pairs") or []
+    arm_contacts = [c for c in contacts if any(k in c.lower() for k in ("upper_arm", "forearm", "wrist", "_link"))
+                    and any(k in c.lower() for k in ("cube", "pedestal", "stand", "pillar", "table", "wall", "bin"))]
+
+    root_cause = None
+    recommendation = None
+    if parsed.get("error"):
+        root_cause = "robot_prim_not_found"
+        recommendation = f"No prim at {robot_path}: check the robot path / that the scene built."
+    elif plan_calls == 0 and not arm_moved:
+        root_cause = "controller_never_planned"
+        recommendation = ("The controller never issued a motion plan (plan_calls=0, arm stayed home). "
+                          "This is a build/spawn issue, not a planner failure — verify the robot spawned "
+                          "in a usable home config (robot_wizard) and the source cubes were detected.")
+    elif reject and (("3d_" in reject) or ("xy_" in reject) or ("zwin_" in reject)):
+        root_cause = "pick_target_out_of_reach"
+        recommendation = (f"A pick source was rejected for REACH: ctrl:pick_reject='{reject}'. The target is "
+                          "outside the robot's reachable envelope — run diagnose_scene_feasibility for the "
+                          "pre-flight verdict, then reposition the object/robot or pick a closer target.")
+    elif ":failed" in reject:
+        root_cause = "cube_marked_failed_after_plan_strikes"
+        seg_info = planfail_distinct[-1] if planfail_distinct else None
+        recommendation = ("Source cube(s) hit the 3-strike plan-fail limit and were abandoned "
+                          f"(ctrl:pick_reject='{reject}'). The plan died at "
+                          f"{('segment %d (%s) goal %s' % (seg_info['seg'], seg_info['action'], seg_info['goal'])) if seg_info else 'a segment (see planfail log)'}. "
+                          + ("Arm-vs-scene contact detected (" + ", ".join(arm_contacts) + "): a non-target cube/pedestal "
+                             "is in the planning collision world and blocks the approach — scope obstacles to the carry phase "
+                             "or route the approach above them." if arm_contacts else
+                             "If the goal is reachable (diagnose_scene_feasibility), the obstacle set or IK seeds are blocking it."))
+    elif (plan_fails or 0) > 0:
+        seg_info = planfail_distinct[-1] if planfail_distinct else None
+        root_cause = "plan_failed_at_segment"
+        recommendation = (f"cuRobo plan failed (plan_fails={plan_fails}) at "
+                          f"{('segment %d (%s) goal %s' % (seg_info['seg'], seg_info['action'], seg_info['goal'])) if seg_info else ('goal ' + last_fail_goal)}. "
+                          + ("Arm contact (" + ", ".join(arm_contacts) + ") -> obstacle in the collision world. " if arm_contacts else "")
+                          + "Try: confirm reach (diagnose_scene_feasibility), more IK/trajopt seeds, or scope obstacles.")
+    elif picked and grip_latched is False:
+        root_cause = "pick_grip_never_latched"
+        recommendation = (f"The arm reached the pick (picked_path={picked}) but the suction grip never latched "
+                          f"(graspdiag='{grasp}'). Likely cup-short / close-loop not converging — check the descend depth "
+                          "and the grip-close distance gate.")
+    elif (cubes or 0) == 0 and picked and grip_latched:
+        root_cause = "carried_but_not_delivered"
+        recommendation = (f"The arm gripped+carried {picked} but delivered 0 cubes — the place/release did not complete "
+                          "(cup couldn't reach within the release xy gate, or release fired off-target). Check the place "
+                          "descend reach to bin-center and the release-xy tolerance.")
+    elif (cubes or 0) == 0:
+        root_cause = "no_delivery_unclassified"
+        recommendation = ("0 cubes delivered but no single localized cause matched. Inspect ctrl + planfail below; "
+                          "re-run with the _sg_grip_log flag for the per-tick behaviour trace.")
+    else:
+        root_cause = "delivered_ok"
+        recommendation = f"{cubes} cube(s) delivered — no execution fault localized."
+
+    return {
+        "robot_path": robot_path,
+        "root_cause": root_cause,
+        "recommendation": recommendation,
+        "planning": {"plan_calls": plan_calls, "plan_fails": plan_fails,
+                     "last_fail_goal": last_fail_goal, "failed_segments": planfail_distinct[-5:]},
+        "behaviour": {"mode": ctrl.get("ctrl:mode"), "phase": ctrl.get("ctrl:phase"),
+                      "cubes_delivered": cubes, "picked_path": picked, "arm_moved": arm_moved,
+                      "grip_latched": grip_latched, "pick_reject": reject, "graspdiag": grasp,
+                      "last_error": ctrl.get("ctrl:last_error"), "settle": settle[-3:]},
+        "contacts": {"requested": with_contacts, "arm_vs_scene": arm_contacts,
+                     "all_pairs": contacts, "error": parsed.get("contact_error")},
+        "ctrl_raw": ctrl,
+        "message": (f"LOCALIZE: {root_cause}. {recommendation} "
+                    "(Chain: diagnose_scene_feasibility -> simulate_traversal_check -> diagnose_pick_execution.)"),
+    }
+
+
+@with_telemetry
 async def _handle_get_active_state(args: Dict) -> Dict:
     """Return prim.IsActive() (active/deactivated state)."""
     from .. import kit_tools  # noqa: PLC0415
@@ -4131,11 +4323,28 @@ def _do_one_run(run_idx, target_bbox):
     ever_in_xy_main = False
     ever_in_xy_per_cube = {{cp: False for cp in cube_paths}}
     _sample_tick = [0]
+    # 2026-06-06 ROBUST recent-velocity buffer (gated _gate_robust_velocity, default ON). The old per-cube
+    # velocity = (final - cp_pre)/one-frame, where cp_pre is captured at sim-t=duration_s-0.15. If the SLOW
+    # sim hits the wall-clock break BEFORE that sim-t, cp_pre stays at the t=0 SPAWN -> velocity =
+    # whole-trajectory/one-frame = SPURIOUS huge (CP-73 Cube_4 = 99.7 m/s on a cube AT REST on the bin floor,
+    # in_xy + under_target + ever_in_target -> false-negatived as not-delivered). FIX: keep a rolling window of
+    # recent positions and compute the velocity over the actual last ~0.1s of SIM-time -> immune to the timeout
+    # AND the 9x one-frame-dt inflation. NOT a loosening: a genuinely-moving cube's recent window still reads
+    # high (CP-73 belt cubes ~23 m/s stay not-at-rest). _gate_robust_velocity=False restores the old method (A/B).
+    _RV_ON = bool(getattr(__import__("builtins"), "_gate_robust_velocity", True))
+    _RV_N = 8
+    _recent_pc = {{cp: [] for cp in cube_paths}}
+    _recent_main_rv = []
+    _pre_captured = [False]  # True once the cp_pre snapshot runs; if the wall-clock timeout fires first it stays
+    # False -> cp_pre is STALE (spawn) -> the old velocity is the 99.7 garbage -> use the rolling-window velocity.
     while True:
         app.update()
         cur_t = float(tl.get_current_time())
         _sample_tick[0] += 1
-        # sample bbox-presence every ~30 ticks (~0.5s at 60Hz)
+        # sample bbox-presence every ~30 ticks (~0.5s at 60Hz). The ROBUST-VELOCITY rolling buffer PIGGYBACKS
+        # here, reusing the SAME _world_pos calls -> ZERO extra per-tick work -> the gate sim is byte-identical
+        # for normal (non-timeout) templates (no wall-clock perturbation of the controller; the every-5-tick
+        # version added _world_pos overhead that risked nudging a borderline drop).
         if _sample_tick[0] % 30 == 0:
             _cp_now = _world_pos(cube_path)
             if _cp_now is not None:
@@ -4143,22 +4352,35 @@ def _do_one_run(run_idx, target_bbox):
                         and _bb_min[1] - xy_tol <= _cp_now[1] <= _bb_max[1] + xy_tol
                         and _cp_now[2] >= _bb_min[2] - floor_tol):
                     ever_in_xy_main = True
+                if _RV_ON:
+                    _recent_main_rv.append((cur_t, _cp_now))
+                    if len(_recent_main_rv) > _RV_N: _recent_main_rv.pop(0)
             for _cp in cube_paths:
                 _pp_now = _world_pos(_cp)
-                if _pp_now is not None and (
-                        _bb_min[0] - xy_tol <= _pp_now[0] <= _bb_max[0] + xy_tol
-                        and _bb_min[1] - xy_tol <= _pp_now[1] <= _bb_max[1] + xy_tol
-                        and _pp_now[2] >= _bb_min[2] - floor_tol):
-                    ever_in_xy_per_cube[_cp] = True
+                if _pp_now is not None:
+                    if (_bb_min[0] - xy_tol <= _pp_now[0] <= _bb_max[0] + xy_tol
+                            and _bb_min[1] - xy_tol <= _pp_now[1] <= _bb_max[1] + xy_tol
+                            and _pp_now[2] >= _bb_min[2] - floor_tol):
+                        ever_in_xy_per_cube[_cp] = True
+                    if _RV_ON:
+                        _recent_pc[_cp].append((cur_t, _pp_now))
+                        if len(_recent_pc[_cp]) > _RV_N: _recent_pc[_cp].pop(0)
         if cur_t >= duration_s - 0.15 and last_t < duration_s - 0.15:
             _p = _world_pos(cube_path)
             if _p is not None: p_pre = _p
             for cp in cube_paths:
                 _pp = _world_pos(cp)
                 if _pp is not None: pre_pos_per_cube[cp] = _pp
+            _pre_captured[0] = True  # the cp_pre snapshot ran -> the old (calibrated) velocity is valid
         if cur_t >= duration_s:
             break
-        if _t.time() - real_start > duration_s + 60:
+        # 2026-06-06 SLOW-SIM SAFETY MARGIN: UR10 cuRobo + asset-gripper sims run ~1.5-2x slower than real-time
+        # (per-tick planning cost), so the old `duration_s + 60` wall-clock cap fired at sim-t ~160s of a 180s
+        # task — BEFORE the pre-position capture (sim-t duration_s-0.15) ran. cp_pre then stayed at the cube's t=0
+        # spawn pos -> a SPURIOUS velocity = (final - spawn)/one-frame (CP-81: deterministic 72.9 m/s on a cube
+        # that is genuinely at rest in the bin). Widen the margin so a normally-slow sim COMPLETES and the capture
+        # runs. NOT a criterion change (no loosening) — just patience; a truly hung sim still breaks at ~2x+120s.
+        if _t.time() - real_start > duration_s * 2.0 + 120:
             break
         last_t = cur_t
 
@@ -4168,11 +4390,24 @@ def _do_one_run(run_idx, target_bbox):
     tl.stop()
 
     dt = max(cur_t - last_t, 1e-3)
+    def _rv_speed(_recent, _final):
+        # velocity over the last >=0.10s of SIM-time from the rolling buffer (robust to the wall-clock timeout
+        # AND the 1-frame-dt inflation). Returns None if the buffer is too short -> caller keeps the old value.
+        if (_final is None) or (len(_recent) < 2): return None
+        _tl = _recent[-1][0]; _base = _recent[0]
+        for (_tt, _pp) in _recent:
+            if _tl - _tt >= 0.10: _base = (_tt, _pp)
+        _dts = max(_tl - _base[0], 1e-3)
+        _vv = [(_final[i] - _base[1][i]) / _dts for i in range(3)]
+        return (_vv[0]**2 + _vv[1]**2 + _vv[2]**2) ** 0.5
     if p_final is None:
         velocity = [0.0, 0.0, 0.0]; speed = 0.0
     else:
         velocity = [(p_final[i] - p_pre[i]) / dt for i in range(3)]
         speed = (velocity[0]**2 + velocity[1]**2 + velocity[2]**2) ** 0.5
+        if _RV_ON and not _pre_captured[0]:
+            _rs = _rv_speed(_recent_main_rv, p_final)
+            if _rs is not None: speed = _rs
 
     bb = target_bbox
     delivered = []
@@ -4189,6 +4424,9 @@ def _do_one_run(run_idx, target_bbox):
             cp_speed = (cp_v[0]**2 + cp_v[1]**2 + cp_v[2]**2) ** 0.5
         else:
             cp_speed = speed
+        if _RV_ON and not _pre_captured[0]:
+            _rsc = _rv_speed(_recent_pc.get(cp, []), cp_final)
+            if _rsc is not None: cp_speed = _rsc
         cp_at_rest = cp_speed < rest_speed
         cp_delivered = bool(cp_in_xy and cp_above and cp_at_rest)
         per_cube[cp] = {{'final': cp_final, 'in_xy': cp_in_xy, 'above_floor': cp_above,
@@ -5613,6 +5851,7 @@ def register(
     data["diagnose_performance"] = _handle_diagnose_performance
     data["diagnose_physics_error"] = _handle_diagnose_physics_error
     data["diagnose_whole_body"] = _handle_diagnose_whole_body
+    data["diagnose_pick_execution"] = _handle_diagnose_pick_execution
     data["explain_error"] = None  # LLM-inline (no executor)
     data["get_active_state"] = _handle_get_active_state
     data["get_console_errors"] = _handle_get_console_errors
