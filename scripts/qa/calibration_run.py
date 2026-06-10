@@ -109,8 +109,11 @@ def template_to_layout(tpl: dict) -> tuple[dict, list]:
             place["drop_target"] = _vec(dm.group("pos"))
         else:
             # no explicit drop_target (destination_path-only controller call):
-            # the controller drops over the destination -> derive bin-center-top,
-            # mirroring the controller's implicit behavior.
+            # VERIFIED (pick_place.py:1356 _bin_pos): the controller falls back
+            # to the destination prim's bbox MIDPOINT (same XY = bin centre;
+            # z = half-height INSIDE the bin). We derive centre-XY + top-z as
+            # the static proxy — XY (aimed-into-bin) is the load-bearing part
+            # and is identical; the z convention differs and is noted here.
             dest_obj = next((o for o in objects if o["path"] == dest and "bbox" in o), None)
             if dest_obj:
                 lo, hi = dest_obj["bbox"]
