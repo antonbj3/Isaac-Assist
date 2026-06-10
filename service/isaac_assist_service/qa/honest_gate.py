@@ -167,17 +167,38 @@ def classify_cube(
     support = measured.get("support")
     final = measured.get("final")
 
-    # Misroute: at rest on/inside some OTHER listed target.
+    # Misroute (VERDICT-bearing): from the RAW support, exactly as P0-18
+    # shipped. The transitive resolution must never gate the verdict —
+    # QA-audit 2026-06-10 natt EXECUTED two counterexamples where it
+    # flipped success (adjacent-bin xy-overlap; chains that pass THROUGH an
+    # assigned cube-target). Resolution feeds the LABEL fields only.
+    raw_support = measured.get("support_raw") or support
     misrouted = False
-    actual_location = assigned_target if _under(support, assigned_target) else None
+    actual_location = assigned_target if _under(raw_support, assigned_target) else None
     if at_rest:
         for ot in other_targets:
             if ot == assigned_target:
                 continue
-            if _under(support, ot):
+            if _under(raw_support, ot):
                 misrouted = True
                 actual_location = ot
                 break
+
+    # Diagnosis-only labeling from the RESOLVED chain (tower-in-bin class):
+    # stops being a misroute-label when the chain lands in the assigned
+    # target; never touches `delivered`.
+    misrouted_label = misrouted
+    actual_location_label = actual_location
+    if at_rest and support and support != raw_support:
+        if _under(support, assigned_target):
+            misrouted_label = False
+            actual_location_label = assigned_target
+        else:
+            for ot in other_targets:
+                if ot != assigned_target and _under(support, ot):
+                    misrouted_label = True
+                    actual_location_label = ot
+                    break
 
     delivered = bool(in_xy and above and at_rest and upright_ok and not misrouted)
 
@@ -187,6 +208,8 @@ def classify_cube(
         "target": assigned_target,
         "actual_location": actual_location,
         "misrouted": misrouted,
+        "misrouted_label": misrouted_label,
+        "actual_location_label": actual_location_label,
         "in_xy": in_xy,
         "above_floor": above,
         "at_rest": at_rest,

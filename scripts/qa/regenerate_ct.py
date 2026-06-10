@@ -31,10 +31,25 @@ from service.isaac_assist_service.chat.canonical_instantiator import (  # noqa: 
 MIN_LIT = 8
 
 
+import re as _re
+
+
 def regenerate(template: dict, min_lit: int = MIN_LIT):
-    """(new_ct, roundtrip_ok) — never apply a False one."""
+    """(new_ct, roundtrip_ok) — never apply a False one.
+
+    Two guards beyond min-length (QA-agent findings 2026-06-10 natt, the
+    UNGUARDED first wave produced substring-corrupted placeholders like
+    ``{{kit_tray.slot_spacing}}0`` inside coordinates and AMBIGUOUS bindings
+    like the camera look_at bound to the robot position):
+
+    * token-boundary replacement — a literal is only replaced when not
+      embedded in a longer number/identifier (regex lookaround), so
+      ``0.14`` never matches inside ``0.140``;
+    * ambiguity guard — a literal claimed by MORE THAN ONE role-field is
+      left inline (binding it to either would silently rebind the other).
+    """
     code, rd = template["code"], template.get("role_defaults") or {}
-    pairs = []
+    claims: dict = {}
     for role, v in rd.items():
         items = enumerate(v) if isinstance(v, list) else [(None, v)]
         for i, item in items:
@@ -46,11 +61,15 @@ def regenerate(template: dict, min_lit: int = MIN_LIT):
                     continue
                 ph = (f"{{{{{role}[{i}].{f}}}}}" if i is not None
                       else f"{{{{{role}.{f}}}}}")
-                pairs.append((lit, ph))
-    pairs.sort(key=lambda x: -len(x[0]))
+                claims.setdefault(lit, set()).add(ph)
+    pairs = sorted(((lit, phs.pop()) for lit, phs in claims.items()
+                    if len(phs) == 1),
+                   key=lambda x: -len(x[0]))
     new_ct = code
     for lit, ph in pairs:
-        new_ct = new_ct.replace(lit, ph)
+        pat = _re.compile(
+            r"(?<![\w.])" + _re.escape(lit) + r"(?![\w.])")
+        new_ct = pat.sub(lambda m: ph, new_ct)
     ok = substitute_role_placeholders(new_ct, rd) == code
     return new_ct, ok
 

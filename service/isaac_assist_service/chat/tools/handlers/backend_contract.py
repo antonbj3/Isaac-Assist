@@ -25,17 +25,21 @@ BACKEND_CONTRACT: Dict[str, Dict[str, Any]] = {
     "curobo": {
         "families": ["franka", "ur10", "g1_arm"],
         "grip": {"franka": "parallel", "ur10": "suction_cup_frame",
-                 "g1_arm": "parallel"},
+                 # g1 dex hand V0 = surface-gripper FJ-attach (no finger
+                 # joints) — QA-audit 2026-06-10 vs pick_place.py ~4084
+                 "g1_arm": "surface_fj_attach"},
         "world_model": "manual_obstacles+ur10_multicube_auto",
         "multi_item": True,
-        "routing": ["drop_targets", "color_routing", "targets"],
+        # "targets" är simulate-GATENS vokabulär, inte controllerns
+        "routing": ["drop_targets", "color_routing"],
         "sim2real": "honest",
         "ctrl_records": True,
         "never_auto": False,
     },
     "spline": {
         "families": ["franka"],
-        "grip": {"franka": "friction_or_fixedjoint"},
+        # fixedjoint half was never emitted (QA-audit vs source 3061-3864)
+        "grip": {"franka": "friction"},
         "world_model": None,
         "multi_item": False,
         "routing": ["color_routing"],
@@ -86,11 +90,14 @@ BACKEND_CONTRACT: Dict[str, Dict[str, Any]] = {
     },
     "sensor_gated": {
         "families": ["*taught_poses"],
-        "grip": {"*": "fixedjoint"},
+        # "Grip is ALWAYS friction — no EE<->cube FixedJoint (Anton's
+        # rule)" (pick_place.py ~2276) — the FJ accusation was WRONG
+        # (QA-audit 2026-06-10); grip_style="fixed_joint" is dead arg surface
+        "grip": {"*": "friction"},
         "world_model": None,
         "multi_item": False,
         "routing": [],
-        "sim2real": "honest-cheat-grip",
+        "sim2real": "honest",
         "ctrl_records": True,   # C5-audit 2026-06-10: 15 ctrl:* refs in source
         "never_auto": True,   # mandatory sensor_path / taught poses
     },
@@ -106,7 +113,9 @@ BACKEND_CONTRACT: Dict[str, Dict[str, Any]] = {
     },
     "cube_tracking": {
         "families": ["franka"],
-        "grip": {"franka": "fixedjoint"},
+        # FRICTION-FIX: no FJ created (pick_place.py ~710) — omniscience
+        # is in the TARGETING (live pose polling), not the grip
+        "grip": {"franka": "friction"},
         "world_model": None,
         "multi_item": False,
         "routing": [],

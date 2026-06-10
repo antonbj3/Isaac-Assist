@@ -19,14 +19,14 @@ measured corpus (verification ledger + P0-07 controller-honesty audit).
 | selector | motion backend | grip mechanism | families | multi-item / routing | world model | sim2real class | verified (corpus) |
 |---|---|---|---|---|---|---|---|
 | `curobo` | cuRobo GPU global trajopt, 5 segments/cube | ParallelGripper (franka) / SurfaceGripper suction (ur10, cup-frame close-loop) / g1_arm | franka, ur10, g1_arm (auto-detect from path) | YES: `drop_targets`, `color_routing`, `mutex_path`, `arm_scope` | YES (manual `planning_obstacles` + `_ur10_multicube_obs` auto-add; **stale-world bug class — P2-12 generalizes**) | honest (suction = zero-compliance caveat) | **48 templates** |
-| `spline` | Lula IK warm-start chain + CubicSpline, 6 waypoints, CPU | friction grip or FixedJoint (`grip_style`) | franka-class | partial: `color_routing`, `mutex_path` | NO (cartesian lift-and-transit heuristic) | honest-deterministic | 0 |
+| `spline` | Lula IK warm-start chain + CubicSpline, 6 waypoints, CPU | friction (FJ half of `grip_style` never emitted — audit 06-10) | franka-class | partial: `color_routing`, `mutex_path` | NO (cartesian lift-and-transit heuristic) | honest-deterministic | 0 |
 | `native` | NVIDIA `PickPlaceController` (RMPflow), internal state machine | ParallelGripper | **Franka ONLY** (non-Franka auto-reroutes to `builtin`) | NO | NO | honest | 0 (work proven 2026-04-21, never corpus-tagged) |
 | `builtin` | NVIDIA per-family `PickPlaceController` | per-family (parallel / surface) | franka, ur10/e, cobotta_pro_900 | NO | NO | honest | 0 |
 | `diffik` | Isaac Lab DifferentialIKController (dls/pinv/svd/trans), local | franka gripper.forward | franka | NO | NO | honest | 0 |
 | `osc` | Isaac Lab OperationalSpaceController, simplified J^T impedance | effort-mode (drives zeroed at install) | franka | NO | NO | honest-experimental (0–2/4 expected; **teardown missing: drive gains never restored**) | 0 |
-| `sensor_gated` | pre-taught poses or RmpFlow-IK world-coords | **FixedJoint transport** | any with taught poses | NO | NO | honest pattern / FJ-grip = cheat class | 0 |
+| `sensor_gated` | pre-taught poses or RmpFlow-IK world-coords | friction ("ALWAYS friction — no EE↔cube FJ, Anton's rule"; FJ-claim REFUTED by audit 06-10) | any with taught poses | NO | NO | honest | 0 |
 | `fixed_poses` | timer-driven pose replay (JSON pose files) | none (no grasp logic) | any (DOF-name remap at runtime) | n/a | NO | honest (no manipulation claim) | 3 as `direct_joint` |
-| `cube_tracking` (default) | RmpFlow continuous retarget on live cube pose | FixedJoint transport | franka-class | NO | NO | **omniscient — NOT sim2real-honest (declared)** | 0 |
+| `cube_tracking` (default) | RmpFlow continuous retarget on live cube pose | friction (FRICTION-FIX; no FJ — audit 06-10) | franka-class | NO | NO | **omniscient — NOT sim2real-honest (declared)** | 0 |
 | `ros2_cmd` | external controller via topics; Kit = physics+I/O only | external | any | external | external | honest-by-delegation (**loop never closed — X-08b**) | 0 |
 | `auto` | resolver, see §4 | — | — | — | — | — | — |
 | ~~`cortex`~~ | retired (P0-09) | — | — | — | — | — | 1 failed |
@@ -60,9 +60,10 @@ ship all nine; today's compliance varies (gaps in §5).
   (plan calls/fails, grip latch, per-cube status) — `diagnose_pick_execution`
   reads ONLY these. A backend without ctrl:* is invisible to the diagnose loop.
 - **C6 — grip honesty**: the grip mechanism is part of the public contract.
-  FixedJoint transport = simulation shortcut class; allowed only where the backend
-  declares it (`cube_tracking`, `sensor_gated`, `spline(grip_style=fj)`) and the
-  template's `motion_controllers` record says so.
+  FixedJoint transport = simulation shortcut class. AUDIT 2026-06-10: no current
+  backend emits an EE↔cube FJ (sensor_gated/cube_tracking/spline are friction;
+  the g1 V0 dex hand uses a surface-gripper FJ-ATTACH, declared). Any future
+  FJ-transport must be declared here + in `motion_controllers`.
 - **C7 — scoping**: `phase_id` prefixes all controller state (multi-controller
   scenes); `mutex_path` is the cross-arm protocol (CP-52 per-cube mutex precedent).
   Kit RPC is single-tenant — emitted programs must never assume exclusive tenancy.

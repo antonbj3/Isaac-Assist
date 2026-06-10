@@ -192,7 +192,25 @@ def test_rebuild_merges_absolute_and_relative_paths(tmp_path, monkeypatch):
          "passed": True, "sha": "s2", "source": "nofm_gate"},
     ]
     led.write_text("".join(json.dumps(r) + "\n" for r in rows))
-    vl.rebuild_from_ledger(ledger_path=led, templates_dir=tdir)
+    vl.rebuild_from_ledger(ledger_path=led, templates_dir=tdir,
+                           repo_root=tmp_path)
     fg = vl.read_verification(p)["function_gate"]
     assert (fg["n"], fg["m"]) == (2, 2)          # combined, not last-write-wins
     assert fg["last_run_sha"] == "s2"
+
+
+def test_rebuild_survives_torn_ledger_line(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    tdir = tmp_path / "workspace" / "templates"
+    tdir.mkdir(parents=True)
+    p = tdir / "CP-TEST.json"
+    p.write_text(COMPACT, encoding="utf-8")
+    led = tmp_path / "led.jsonl"
+    led.write_text(
+        json.dumps({"ts": "t1", "template": str(p.resolve()), "passed": True,
+                    "sha": "s", "source": "nofm_gate"}) + "\n"
+        + '{"ts": "t2", "template": "CP-TRASIG'  # torn mid-write
+        + "\n")
+    out = vl.rebuild_from_ledger(ledger_path=led, templates_dir=tdir)
+    assert vl.read_verification(p)["function_gate"]["n"] == 1
+    assert out["_skipped_ledger_lines"] == 1

@@ -450,10 +450,13 @@ def test_transitive_support_cycle_resolves_to_none():
     assert r["/W/A"] is None and r["/W/B"] is None and r["/W/C"] == "/W/Table"
 
 
-def test_misrouted_cube_inside_stack_is_flagged():
-    # The live finding: red cube assigned RejectBin stands in a tower whose
-    # base rests in PassBin -> must read MISROUTED (actual=PassBin), not
-    # merely not-delivered.
+def test_stack_misroute_is_LABELED_never_verdict_bearing():
+    """QA-audit 2026-06-10 natt: transitive resolution EXECUTED two
+    verdict-flips (adjacent-bin xy-overlap; chain through an assigned
+    cube-target) -> resolution is diagnosis-LABELING only. The verdict-
+    bearing misrouted uses the RAW support exactly as P0-18 shipped; the
+    tower case still FAILS via completeness, and the label points at the
+    carrying bin for the fix loop."""
     from service.isaac_assist_service.qa.honest_gate import grade
     measured = {
         "/W/Cube_3": {"in_xy": False, "above_floor": True, "at_rest": True,
@@ -466,8 +469,28 @@ def test_misrouted_cube_inside_stack_is_flagged():
                 targets={"/W/Cube_3": "/W/RejectBin"},
                 completeness="all")
     c3 = next(c for c in out["per_cube"] if c["cube"] == "/W/Cube_3")
-    assert c3["misrouted"] is True
-    assert c3["actual_location"] == "/W/PassBin"
-    assert c3["support"] == "/W/PassBin/Floor"      # resolved
-    assert c3["support_raw"] == "/W/Cube_4"         # raw kept for reporting
-    assert out["success"] is False
+    assert c3["misrouted"] is False                  # raw support = a cube
+    assert c3["misrouted_label"] is True             # resolved chain -> PassBin
+    assert c3["actual_location_label"] == "/W/PassBin"
+    assert c3["support"] == "/W/PassBin/Floor"       # resolved (reporting)
+    assert c3["support_raw"] == "/W/Cube_4"
+    assert c3["delivered"] is False                  # not in RejectBin xy
+    assert out["success"] is False                   # completeness=all
+
+
+def test_resolution_can_never_flip_delivered():
+    """CE1 from the audit: xy inside ASSIGNED bin but stacked on a tower
+    based in ANOTHER bin — delivered must match the raw-support behavior
+    (True), with the conflict surfaced as a label."""
+    from service.isaac_assist_service.qa.honest_gate import grade
+    measured = {
+        "/W/C2": {"in_xy": True, "above_floor": True, "at_rest": True,
+                  "support": "/W/C1", "final": [0.1, 0, 0.9]},
+        "/W/C1": {"in_xy": True, "above_floor": True, "at_rest": True,
+                  "support": "/W/BinA/Floor", "final": [0.05, 0, 0.85]},
+    }
+    out = grade(["/W/C2", "/W/C1"], measured, global_target="/W/BinA",
+                targets={"/W/C2": "/W/BinB"}, completeness="any")
+    c2 = next(c for c in out["per_cube"] if c["cube"] == "/W/C2")
+    assert c2["misrouted"] is False and c2["delivered"] is True  # as shipped
+    assert c2["misrouted_label"] is True             # the conflict, surfaced

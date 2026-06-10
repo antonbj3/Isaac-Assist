@@ -172,6 +172,7 @@ def corpus_summary(templates_dir: str | Path = "workspace/templates") -> Dict[st
 def rebuild_from_ledger(
     ledger_path: str | Path = "workspace/qa_runs/verification_ledger.jsonl",
     templates_dir: str | Path = "workspace/templates",
+    repo_root: Optional[Path] = None,
 ) -> Dict[str, Any]:
     """Recompute every mentioned template's verification record FROM the run
     ledger (the ledger is the source of truth; template records are a cache).
@@ -186,10 +187,17 @@ def rebuild_from_ledger(
     if not lp.exists():
         return {}
     tallies: Dict[str, Dict[str, list]] = {}
+    skipped_lines = 0
     for line in lp.read_text(encoding="utf-8").splitlines():
         if not line.strip():
             continue
-        row = json.loads(line)
+        try:
+            row = json.loads(line)
+        except ValueError:
+            # a torn line (crash mid-append) must never brick the whole
+            # rebuild (QA-audit fynd 5) — skip and surface the count
+            skipped_lines += 1
+            continue
         axis = row.get("axis") or (
             "faithfulness" if row.get("source") == "nofm_scene_timeseries"
             else "function_gate")
@@ -198,7 +206,11 @@ def rebuild_from_ledger(
         # separate tallies and the last write wins.
         tp_key = Path(row["template"])
         if not tp_key.is_absolute():
-            tp_key = Path(templates_dir).parent.parent / row["template"]
+            # anchor on the REPO (this file lives in service/<pkg>/qa/), not
+            # the CWD — relative rows silently dropped when run from the
+            # wrong directory (QA-audit fynd 7). repo_root injectable for tests.
+            repo = repo_root or Path(__file__).resolve().parents[3]
+            tp_key = Path(repo) / row["template"]
         t = tallies.setdefault(str(tp_key.resolve()), {})
         t.setdefault(axis, []).append(row)
     out: Dict[str, Any] = {}
@@ -225,4 +237,6 @@ def rebuild_from_ledger(
             record[axis] = new_ax
         write_verification(tp, record)
         out[str(tp)] = record
+    if skipped_lines:
+        out["_skipped_ledger_lines"] = skipped_lines
     return out
