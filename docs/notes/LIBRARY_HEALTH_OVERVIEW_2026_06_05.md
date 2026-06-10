@@ -1,5 +1,17 @@
 # Canonical library health — overview for review (2026-06-05, autonomous run)
 
+> **CORRECTION (later 2026-06-05, IK probes):** the "UR10 reach/orientation ENVELOPE" and CP-51 "IK-infeasible"
+> framing below is **WRONG**. Lula IK probes (/tmp/ik_probe*.py) show CP-84 pick+drop and CP-51 handoff poses are
+> all **IK-FEASIBLE** (ok=True at ee_link/ee_suction_link; a 1.5 m far target correctly returns ok=False, so the
+> probe discriminates). The real failure layer is cuRobo **collision-aware PLANNING**, not pose reachability:
+> CP-84 = collision-aware IK rejects a goal in-contact-with-destination (BaseCube); CP-51 = no collision-free path.
+> So the "plannability constraint = flag IK-infeasible poses" recommendation (#1 below) is the WRONG fix — a pure-IK
+> check catches neither. Real levers = collision-aware-planning fixes (destination-exclusion, path/seed). Also: the
+> scene constraint-detection sweep (162 templates) found ZERO real scene bugs in the core CP-NN canonicals → gate
+> failures are 100% controller-side, confirming the "single-robot Franka works, failures are controller-side" thrust.
+> See docs/notes/AUTONOMOUS_MISSION_2026_06_04.md (2026-06-05 entries) for the full corrected analysis.
+
+
 Measured this run with the grader (scene_timeseries, now robust to missing primary_robot) + scene_eyes
 (virtual-eyes motion/IK probe). Honest delivery counts; roots verified, not guessed.
 

@@ -624,7 +624,7 @@ ROBUST now: 18 (prior 17 + CP-22 re-promoted).
 ### 2026-05-29 ~13:30 — Cache thread closed. 18 robust. PCH-disable = dead end (reverted).
 Warp cache corruption root cause = STRUCT-HASH mismatch ("CuboidDataWarp_<hash> undefined"), NOT PCH. From cuRobo recompiling collision kernels per-plan (update_world, varying exclude_obs) under heavy planning -> inconsistent struct hashes -> cache churn -> NVRTC_ERROR_COMPILATION -> plan_pose fails. Corrupts even a fresh cache WITHIN a heavy run (CP-62, 104 plan_calls -> 4 NVRTC).
 Tried use_precompiled_headers=False at Kit startup (extension on_startup, fired+confirmed) -> did NOT fix (NVRTC persisted). REVERTED both launch + extension edits. Active mitigation: reactive auto-clear in restart_kit.sh (cross-run). Heavy templates (>~40 plan_calls) remain cache-unreliable.
-Authorized sibling-project change: NONE net (launch reverted). Documented in sibling-project/ASSIST_LAUNCH_CHANGES.md.
+Authorized launcher-repo change: NONE net (launch reverted). Documented locally in the launcher repo.
 ROBUST PASSES: 18 (CP-35, rtx-sponge, CP-24, CP-77, CP-01, CP-04, CP-21, CP-23, CP-45, CP-31, CP-54, CP-40, CP-22, CP-37, CP-13, CP-NEW-dr-curriculum, CP-NEW-multi-cam-triangulation, CP-NEW-controller-shootout-cp). STOCHASTIC: CP-09.
 
 ### 2026-05-29 ~14:00 — build-collision-world-ONCE landed (brick-safe). Reduces cache churn.
