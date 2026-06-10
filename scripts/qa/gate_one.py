@@ -96,7 +96,7 @@ async def gate(tpl_name):
     # in simulate_args and get the joint-angle verdict instead of the
     # cube-delivery gate.
     if sa.get("gate_class") == "articulation":
-        art_args = {k: sa[k] for k in ("joint_path", "duration_s",
+        art_args = {k: sa[k] for k in ("joint_path", "body_path", "duration_s",
                                         "min_delta_deg", "target_angle_deg",
                                         "angle_tolerance_deg", "settle_eps_deg")
                     if k in sa}
