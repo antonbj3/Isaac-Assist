@@ -84,7 +84,12 @@ def restart_kit(timeout_s: int = 300) -> float:
 def run_gate(name: str) -> bool | None:
     p = subprocess.run([sys.executable, str(REPO / "scripts/qa/gate_one.py"), name],
                        capture_output=True, text=True, timeout=900)
-    m = re.search(r"GATE success=(\w+)", p.stdout + p.stderr)
+    out = p.stdout + p.stderr
+    m = re.search(r"GATE success=(\w+)", out)
+    if m is None:
+        # an unparseable gate is a FINDING, not a shrug — show why
+        print(f"  GATE UNPARSEABLE (exit={p.returncode}) tail: {out[-400:]}",
+              flush=True)
     return (m.group(1) == "True") if m else None
 
 

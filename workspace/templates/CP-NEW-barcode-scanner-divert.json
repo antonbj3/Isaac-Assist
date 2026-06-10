@@ -315,6 +315,8 @@
     "cube_path": "/World/Item_1"
   },
   "simulate_args": {
+    "completeness": "all",
+    "targets": {"/World/Item_1": "/World/LaneA", "/World/Item_2": "/World/LaneB", "/World/Item_3": "/World/LaneC", "/World/Item_4": "/World/LaneA", "/World/Item_5": "/World/LaneB", "/World/Item_6": "/World/LaneC"},
     "target_path": "/World/LaneA",
     "duration_s": 320,
     "cube_paths": [
@@ -354,5 +356,5 @@
     ]
   },
   "verified_status": "drafted-2026-05-16; form-gate \u23f3; function-gate \u23f3",
-  "verification": {"function_gate": {"status": "unmeasured", "legacy_claim": null, "claim_evidence": "e \u23f3; function-gate \u23f3", "n": 0, "m": 0, "wilson_lower": 0.0, "last_run_sha": null, "last_run_at": null}}
+  "verification": {"function_gate": {"status": "pass", "n": 1, "m": 1, "wilson_lower": 0.2065, "last_run_sha": "24abadf6", "last_run_at": "2026-06-10T14:29:14+00:00", "legacy_claim": null}, "faithfulness": {"status": "pass", "n": 1, "m": 1, "wilson_lower": 0.2065, "last_run_sha": "24abadf6", "last_run_at": "2026-06-10T14:31:51+00:00"}}
 }

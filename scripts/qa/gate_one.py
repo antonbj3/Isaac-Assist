@@ -90,7 +90,11 @@ async def gate(tpl_name):
         pass
     va = tpl.get("verify_args", {}) or {}
     sa = tpl.get("simulate_args", {}) or {}
-    args = {"cube_path": va.get("cube_path") or sa.get("cube_path"),
+    # primary cube: legacy scalar, else first of cube_paths (multi-item
+    # templates often carry ONLY the list — cube_path=None fails arg
+    # validation and the gate never runs; found on CP-NEW-inspect-reject)
+    args = {"cube_path": (va.get("cube_path") or sa.get("cube_path")
+                          or (sa.get("cube_paths") or [None])[0]),
             "target_path": sa.get("target_path"),
             "duration_s": int(sa.get("duration_s", 90))}
     # Forward the FULL honest-gate surface (P0-18): targets/routing/

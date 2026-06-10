@@ -109,6 +109,31 @@ def _under(support_path: Optional[str], target: str) -> bool:
     return sp == target or sp.startswith(target + "/")
 
 
+def resolve_transitive_support(
+    support_by_cube: Mapping[str, Optional[str]],
+) -> Dict[str, Optional[str]]:
+    """Follow cube-on-cube support chains down to the first NON-cube prim.
+
+    A stacked delivery (tower in a bin) raycasts each upper cube onto the
+    cube below it, so its direct support is e.g. ``/World/Cube_4`` rather
+    than the bin — which made a misrouted cube in a stack read as merely
+    "not delivered" instead of MISROUTED (live finding on
+    CP-NEW-inspect-reject: the red cube stood in a 5-cube tower in PassBin).
+    Resolution: while a cube's support is another cube in the set, adopt
+    THAT cube's support. Cycle-guarded; a support cycle (mutual support,
+    physics glitch) resolves to None.
+    """
+    resolved: Dict[str, Optional[str]] = {}
+    for cube in support_by_cube:
+        cur: Optional[str] = cube
+        seen = set()
+        while cur in support_by_cube and cur not in seen:
+            seen.add(cur)
+            cur = support_by_cube[cur]
+        resolved[cube] = None if cur in seen else cur
+    return resolved
+
+
 def classify_cube(
     cube: str,
     measured: Mapping[str, Any],
@@ -167,6 +192,7 @@ def classify_cube(
         "at_rest": at_rest,
         "upright_ok": upright_ok,
         "support": support,
+        "support_raw": measured.get("support_raw"),
         "final": final,
     }
 
@@ -260,12 +286,22 @@ def grade(
     per_cube_target = normalize_routing(cube_paths, global_target, targets, routing)
     targets_list = all_targets(per_cube_target)
 
+    # Stacked deliveries: resolve cube-on-cube support chains to the prim
+    # actually carrying the stack, so misroute detection sees the BIN a
+    # tower stands in, not the cube below. Raw support kept for reporting.
+    resolved_support = resolve_transitive_support(
+        {cp: (measured_by_cube.get(cp) or {}).get("support")
+         for cp in cube_paths if measured_by_cube.get(cp) is not None})
+
     per_cube: List[Dict[str, Any]] = []
     for cp in cube_paths:
         measured = measured_by_cube.get(cp)
         if measured is None:
             continue
         assigned = per_cube_target[cp]
+        if resolved_support.get(cp) != measured.get("support"):
+            measured = {**measured, "support": resolved_support.get(cp),
+                        "support_raw": measured.get("support")}
         per_cube.append(classify_cube(cp, measured, assigned, targets_list))
 
     agg = aggregate_completeness(per_cube, completeness)

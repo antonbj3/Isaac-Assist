@@ -429,3 +429,45 @@ async def test_handler_emits_codegen_with_correct_flags(monkeypatch):
     ast.parse(code2)
     assert "routing_active = False" in code2
     assert "completeness = 'any'" in code2
+
+
+# --- transitive support (stacked deliveries) — live CP-NEW-inspect-reject ---
+
+def test_transitive_support_resolves_tower_to_bin():
+    from service.isaac_assist_service.qa.honest_gate import resolve_transitive_support
+    chain = {"/W/Cube_1": "/W/Cube_2", "/W/Cube_2": "/W/Cube_3",
+             "/W/Cube_3": "/W/PassBin/Floor"}
+    r = resolve_transitive_support(chain)
+    assert r == {"/W/Cube_1": "/W/PassBin/Floor",
+                 "/W/Cube_2": "/W/PassBin/Floor",
+                 "/W/Cube_3": "/W/PassBin/Floor"}
+
+
+def test_transitive_support_cycle_resolves_to_none():
+    from service.isaac_assist_service.qa.honest_gate import resolve_transitive_support
+    r = resolve_transitive_support({"/W/A": "/W/B", "/W/B": "/W/A",
+                                    "/W/C": "/W/Table"})
+    assert r["/W/A"] is None and r["/W/B"] is None and r["/W/C"] == "/W/Table"
+
+
+def test_misrouted_cube_inside_stack_is_flagged():
+    # The live finding: red cube assigned RejectBin stands in a tower whose
+    # base rests in PassBin -> must read MISROUTED (actual=PassBin), not
+    # merely not-delivered.
+    from service.isaac_assist_service.qa.honest_gate import grade
+    measured = {
+        "/W/Cube_3": {"in_xy": False, "above_floor": True, "at_rest": True,
+                      "support": "/W/Cube_4", "final": [0.5, -0.3, 0.95]},
+        "/W/Cube_4": {"in_xy": True, "above_floor": True, "at_rest": True,
+                      "support": "/W/PassBin/Floor", "final": [0.5, -0.3, 0.85]},
+    }
+    out = grade(["/W/Cube_3", "/W/Cube_4"], measured,
+                global_target="/W/PassBin",
+                targets={"/W/Cube_3": "/W/RejectBin"},
+                completeness="all")
+    c3 = next(c for c in out["per_cube"] if c["cube"] == "/W/Cube_3")
+    assert c3["misrouted"] is True
+    assert c3["actual_location"] == "/W/PassBin"
+    assert c3["support"] == "/W/PassBin/Floor"      # resolved
+    assert c3["support_raw"] == "/W/Cube_4"         # raw kept for reporting
+    assert out["success"] is False
