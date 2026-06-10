@@ -232,8 +232,9 @@ def run(layout: Dict[str, Any]) -> StaticEyesReport:
         reach = _reach_radius(family)
         d = _dist(pos, base)
         # dynamic-feed pick: spawn position is not the fixed station -> warn
+        # (explicit dynamic_feed flag OR a dynamic-tagged asset; spec §6.4)
         src = by_path.get(label)
-        if src and _is_dynamic(src.get("asset_name", "")):
+        if src and (src.get("dynamic_feed") or _is_dynamic(src.get("asset_name", ""))):
             checks.append(Check("reach:shell", "warn", label,
                                 f"{label} is on a dynamic feed; reach checked at t=0 spawn — verify the fixed station position"))
             continue
