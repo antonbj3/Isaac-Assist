@@ -48,8 +48,10 @@ the repo. P0-20 versioned the two load-bearing ones (scene_timeseries, why_class
 are session-scratch by nature. New rule of thumb: a measurement tool used twice gets versioned.
 
 ## Where this is heading (planned)
-- **P2-06 `diagnose_task_outcome`** — wraps `scene_timeseries::_report` + a thin WHY-classifier
-  into THE LLM diagnose tool (closing PERCEIVE→…→DIAGNOSE→ITERATE).
+- **P2-06 `diagnose_task_outcome` — BUILT (2026-06-10)**: LLM-callable, reads the recorded
+  `ts_*.json`, classifies per-object WHY (DELIVERED_CLEAN/NOT_PICKED/RODE_OFF_BELT/
+  DISPLACED_NOT_DELIVERED/FLUNG/TOPPLED/DROP_IMPRECISE) from raw motion; live-validated
+  on all 88 artifacts. In Layer 4 now.
 - **P0-06 N-of-M harness** — gate_one + scene_timeseries per run, both fed into the
   verification ledger (`extras.verdict_vector` + `kit_session_age_s`) so every measured row
   carries delivery AND faithfulness.
