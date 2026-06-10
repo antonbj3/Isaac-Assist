@@ -170,5 +170,5 @@
       "moveit2"
     ]
   },
-  "verification": {"function_gate": {"status": "pass", "n": 1, "m": 1, "wilson_lower": 0.2065, "last_run_sha": "2dd2646c", "last_run_at": "2026-06-10T07:40:09+00:00"}}
+  "verification": {"function_gate": {"status": "pass", "n": 3, "m": 3, "wilson_lower": 0.4385, "last_run_sha": "08f6b357", "last_run_at": "2026-06-10T08:31:47+00:00"}}
 }

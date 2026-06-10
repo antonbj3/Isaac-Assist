@@ -52,3 +52,19 @@
 For the 13 measured passes, `record_gate_run` replaced the backfilled
 `legacy_claim` with the measured record — intended: measurement supersedes claim.
 The quarantined 6 keep their backfill (claims stand until honest measurement).
+
+## N-of-M batch closeout (same day, nofm_validate, fresh-Kit per template)
+
+**Delivery axis: 18/18 gate=True.** Faithfulness axis (scene_timeseries):
+**16/18** — two real findings the gate alone missed:
+- **CP-71 ts=FAIL**: Items 3-4 IN_FLIGHT/OFF_TARGET/TOPPLED while the lenient
+  ANY-delivered gate passes on Items 1-2 — **P0-18 hole (b) demonstrated live.**
+  Re-gate CP-71 with completeness="all" once templates adopt the new args.
+- **CP-09 ts=FAIL**: 5-cube tower topple + NON_RIGID_GRIP (known-hard class).
+Quality warns on passers: NON_RIGID_GRIP on Franka first-cubes (the documented
+first-carry jerk — real, delivers anyway) + STACK_DRIFT/MISALIGNED on stacks.
+
+**Refinement queued:** ledger rows tag their source (nofm_gate vs
+nofm_scene_timeseries) so the axes are separable, but the per-template n/m now
+mixes them — split `verification.function_gate` vs `verification.faithfulness`
+records (small P0-19 follow-up) so "mixed" isn't ambiguous.
