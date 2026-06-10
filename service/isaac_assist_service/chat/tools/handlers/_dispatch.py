@@ -30,6 +30,7 @@ from . import (
     ros2,
     scene_authoring,
     scene_blueprints,
+    scene_body,
     sdg,
     sensors,
     teleop,
@@ -46,6 +47,7 @@ logger = logging.getLogger(__name__)
 # Phase 9 byte-diff audit, so order is informational, not load-bearing.
 _THEME_MODULES = (
     scene_authoring,
+    scene_body,
     physics,
     robot,
     sensors,

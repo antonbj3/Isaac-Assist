@@ -10085,5 +10085,24 @@ ISAAC_SIM_TOOLS = [
             },
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "create_scene_baseline",
+            "description": "Author the canonical scene opening in ONE call: DomeLight (intensity), Ground slab with collision, optional Cell+work Table with collision, and the PhysicsScene config (CPU dynamics + MBP broadphase defaults — the verified-corpus settings). Replaces the hand-rolled ~10-line baseline that drifted across templates. Single source of truth; use expand=True (the expand contract) to inline the raw code when a one-off tweak is needed.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "root": {"type": "string", "description": "Parent path. Default '/World'"},
+                    "intensity": {"type": "number", "description": "Dome light intensity. Default 1000"},
+                    "ground_scale": {"type": "number", "description": "Ground half-extent (m). Default 20"},
+                    "include_table": {"type": "boolean", "description": "Author Cell+Table. Default true"},
+                    "table_size": {"type": "array", "items": {"type": "number"}, "description": "Table top [x,y] m. Default [1.5, 0.5]"},
+                    "table_height": {"type": "number", "description": "Table TOP height (m). Default 0.75"},
+                    "physics": {"type": "object", "description": "{enable_gpu_dynamics?: bool (default false), broadphase_type?: str (default 'MBP')}"},
+                },
+            },
+        },
+    },
 
 ]
