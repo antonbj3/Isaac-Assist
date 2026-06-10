@@ -4003,6 +4003,15 @@ class StaticEyesArgs(BaseModel):
     layout: Dict[str, Any] = Field(..., description="The layout to verify: {robots:[{path, family (e.g. 'ur10'/'franka_panda'), base:[x,y,z]}], objects:[{path, position:[x,y,z], asset_name (palette class) OR bbox:[[xmin,ymin,zmin],[xmax,ymax,zmax]]}], p")
 
 
+class DiagnoseTaskOutcomeArgs(BaseModel):
+    """Task-level WHY per object from the recorded ts_*.json time-series — raw-motion classification (DELIVERED_CLEAN/NOT_PICKED/RODE_OFF_BELT/FLUNG_TO_FLOOR/TOPPLED_IN_DEST/DROP_IMPRECISE_OR_EJECT), no Kit, no re-sim."""
+    model_config = ConfigDict(populate_by_name=True, extra='allow')
+
+    template: Optional[str] = Field(None, description="Template/task id, e.g. 'CP-70' — resolves ts_CP-70.json in the time-series output dir")
+    artifact_path: Optional[str] = Field(None, description="Explicit path to a ts_*.json artifact (overrides template lookup)")
+    outdir: Optional[str] = Field(None, description="Override artifact dir (default TS_OUTDIR env or ~/.isaac_qa/run)")
+
+
 class CreateRigidBodyArrayArgs(BaseModel):
     """Create N rigid-body workpieces in ONE call with the full verified physics stack (RigidBody/Collision/Mass/PhysxRigidBody + sleepThreshold=0 + material). asset_ref = the canonical->asset bridge: primitive when absent, add_reference when present."""
     model_config = ConfigDict(populate_by_name=True, extra='allow')
@@ -4465,4 +4474,5 @@ MODEL_REGISTRY = {
     "rebind_role": RebindRoleArgs,
     "static_eyes": StaticEyesArgs,
     "create_rigid_body_array": CreateRigidBodyArrayArgs,
+    "diagnose_task_outcome": DiagnoseTaskOutcomeArgs,
 }

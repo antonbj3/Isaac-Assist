@@ -3341,6 +3341,25 @@ async def _handle_diagnose_whole_body(args: Dict) -> Dict:
 
 
 @with_telemetry
+async def _handle_diagnose_task_outcome(args: Dict) -> Dict:
+    """Task-level WHY per object from RECORDED raw motion [P2-06] — the
+    PERCEIVE->DIAGNOSE leg of the diagnose loop. Reads a saved
+    ``ts_<template>.json`` time-series artifact (scripts/qa/scene_timeseries.py)
+    and classifies every workpiece (DELIVERED_CLEAN / NOT_PICKED /
+    RODE_OFF_BELT / FLUNG_TO_FLOOR / TOPPLED_IN_DEST /
+    DROP_IMPRECISE_OR_EJECT) purely from positions+tilt over time — never the
+    controller's self-report (honest-eyes contract: gates have a documented
+    false-positive history; raw motion does not lie). No Kit, no re-sim.
+    Complements diagnose_pick_execution (controller-side ctrl:* records):
+    that tool says where the CONTROLLER failed; this one says what actually
+    HAPPENED to each object."""
+    from ....qa.task_outcome import diagnose  # noqa: PLC0415
+    return diagnose(template=args.get("template"),
+                    artifact_path=args.get("artifact_path"),
+                    outdir=args.get("outdir"))
+
+
+@with_telemetry
 async def _handle_diagnose_pick_execution(args: Dict) -> Dict:
     """POST-RUN pick-place failure localizer. Reads the controller's own ctrl:* USD
     records off the robot prim + tails the always-on plan-fail / grip / settle logs,
@@ -5995,6 +6014,7 @@ def register(
     data["diagnose_physics_error"] = _handle_diagnose_physics_error
     data["diagnose_whole_body"] = _handle_diagnose_whole_body
     data["diagnose_pick_execution"] = _handle_diagnose_pick_execution
+    data["diagnose_task_outcome"] = _handle_diagnose_task_outcome
     data["explain_error"] = None  # LLM-inline (no executor)
     data["get_active_state"] = _handle_get_active_state
     data["get_console_errors"] = _handle_get_console_errors

@@ -834,6 +834,40 @@ ISAAC_SIM_TOOLS = [
     {
         "type": "function",
         "function": {
+            "name": "diagnose_task_outcome",
+            "description": (
+                "Task-level WHY per OBJECT from recorded raw motion — the "
+                "object-side complement to diagnose_pick_execution (which reads "
+                "the controller's records; this reads what actually HAPPENED). "
+                "Loads the saved ts_<template>.json time-series artifact "
+                "(scripts/qa/scene_timeseries.py writes it) and classifies every "
+                "workpiece purely from positions+tilt over time: DELIVERED_CLEAN, "
+                "NOT_PICKED (never engaged: sensor-gate/reach), RODE_OFF_BELT "
+                "(crossed the belt exit unpicked), DISPLACED_NOT_DELIVERED "
+                "(knocked/pushed aside unpicked — dispenser family), "
+                "FLUNG_TO_FLOOR, TOPPLED_IN_DEST (delivered "
+                "but fell over), DROP_IMPRECISE_OR_EJECT, UNCLASSIFIED. "
+                "Pick detection is rise-above-running-minimum, so dispenser "
+                "items that FALL before the pick grade correctly. No Kit, "
+                "no re-sim, never trusts gate/controller self-reports. Returns "
+                "{objects:{name:{why, evidence:{picked,in_dest,tilt_deg,final,...}}}, "
+                "counts, all_clean, artifact_age_s}. Errors honestly when no "
+                "artifact exists (run scene_timeseries first). Known gap: "
+                "MISROUTED (right class, wrong bin) is not graded here."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "template": {"type": "string", "description": "Template/task id, e.g. 'CP-70' — resolves ts_CP-70.json in the time-series output dir"},
+                    "artifact_path": {"type": "string", "description": "Explicit path to a ts_*.json artifact (overrides template lookup)"},
+                    "outdir": {"type": "string", "description": "Override the artifact directory (default: TS_OUTDIR env or ~/.isaac_qa/run)"},
+                },
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "setup_ros2_control_compat",
             "description": (
                 "PHASE 6 M1: configure Isaac Sim's ROS2 bridge to use the standard "
