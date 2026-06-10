@@ -44,3 +44,25 @@ def test_kit_prep_stays_repaired():
         substitute_role_placeholders)
     assert substitute_role_placeholders(
         t["code_template"], t["role_defaults"]) == t["code"]
+
+
+def test_capture_divergence_not_misread_as_drift():
+    """A statement crash drops its calls on one side — that's capture noise,
+    not proven drift (groot-data-mix class, found 2026-06-10 natt)."""
+    base = {"roles": {"r": {}}, "role_defaults": {"r": {}}}
+    t = dict(base,
+             code="undefined_name_boom()\ncreate_bin(prim_path='/W/B')",
+             code_template="create_bin(prim_path='/W/B')\ncreate_bin(prim_path='/W/C')")
+    assert classify(t)["class"] == "CAPTURE_DIVERGENCE"
+
+
+def test_sandbox_has_isinstance():
+    """isinstance was missing from the REAL sandbox — templates using it
+    silently dropped every call in the same statement. Mirror-by-import
+    keeps the audit replica honest; this pins the builtin itself."""
+    calls, errs = capture(
+        "x = [1, 2]\n"
+        "if isinstance(x, list):\n"
+        "    create_bin(prim_path='/W/B')\n")
+    assert calls == ["create_bin"]
+    assert errs == []

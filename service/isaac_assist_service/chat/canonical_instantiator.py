@@ -109,6 +109,11 @@ _SAFE_BUILTINS = {
     "str": str, "int": int, "float": float, "bool": bool, "bytes": bytes,
     "min": min, "max": max, "sum": sum, "abs": abs, "round": round,
     "sorted": sorted, "reversed": reversed, "zip": zip, "map": map, "filter": filter,
+    # 2026-06-10 natt: isinstance was MISSING — templates using it crashed
+    # their whole statement during capture and the calls inside were
+    # SILENTLY dropped from the build (sandbox_errors never surfaced).
+    # Found via the ct-drift audit's capture replica on groot-data-mix.
+    "isinstance": isinstance, "hasattr": hasattr, "getattr": getattr,
     "True": True, "False": False, "None": None,
     "print": print,  # diagnostic only
 }
@@ -1117,6 +1122,11 @@ async def execute_template_canonical(
         "n_ok": n_ok,
         "executed": executed,
         "errors": errors,
+        # capture-phase statement failures: every entry means a template
+        # statement whose tool calls were DROPPED from this build. Surfaced
+        # since 2026-06-10 (was silently swallowed); advisory — does not
+        # flip instantiated.
+        "capture_warnings": sandbox_errors,
         "instantiated": True,
         "effective_params": effective_params,
         "form_gate": form_gate,

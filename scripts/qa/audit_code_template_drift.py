@@ -45,13 +45,12 @@ sys.path.insert(0, str(REPO))
 from service.isaac_assist_service.chat.tools.tool_executor import (  # noqa: E402
     CODE_GEN_HANDLERS, DATA_HANDLERS)
 
-_SAFE = {"enumerate": enumerate, "range": range, "len": len, "list": list,
-         "dict": dict, "tuple": tuple, "set": set, "frozenset": frozenset,
-         "str": str, "int": int, "float": float, "bool": bool, "bytes": bytes,
-         "min": min, "max": max, "sum": sum, "abs": abs, "round": round,
-         "sorted": sorted, "reversed": reversed, "zip": zip, "map": map,
-         "filter": filter, "True": True, "False": False, "None": None,
-         "print": lambda *a, **k: None}
+# Mirror the REAL sandbox by construction — a copy drifts (proven: the
+# replica found isinstance missing in the real one).
+from service.isaac_assist_service.chat.canonical_instantiator import (  # noqa: E402
+    _SAFE_BUILTINS)
+_SAFE = dict(_SAFE_BUILTINS)
+_SAFE["print"] = lambda *a, **k: None
 TOOLS = set(DATA_HANDLERS) | set(CODE_GEN_HANDLERS) | {"run_usd_script"}
 
 # The opening-block tool families: a diff composed ONLY of these (plus the
@@ -113,7 +112,14 @@ def classify(template: dict):
     if ca == cb:
         return {"class": "IN_SYNC"}
     diff_tools = set((ca - cb) | (cb - ca))
-    cls = "BASELINE_ONLY" if diff_tools <= _BASELINE_TOOLS else "CONTENT_DRIFT"
+    if ea or eb:
+        # a crashed statement drops ALL its calls on that side — the
+        # multiset diff is then capture noise, not proven drift
+        cls = "CAPTURE_DIVERGENCE"
+    elif diff_tools <= _BASELINE_TOOLS:
+        cls = "BASELINE_ONLY"
+    else:
+        cls = "CONTENT_DRIFT"
     return {"class": cls,
             "missing_in_ct": dict(ca - cb), "extra_in_ct": dict(cb - ca),
             "sandbox_errs": {"code": len(ea), "ct": len(eb)}}
