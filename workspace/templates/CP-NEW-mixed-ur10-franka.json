@@ -23,5 +23,5 @@
   },
   "verified_status": "smoke-test-draft-2026-06-04 (mixed UR10+Franka coexistence; UNVERIFIED — run + read raw positions)",
   "motion_controllers": {"verified": [], "failed": {}, "untested": ["curobo"]},
-  "verification": {"function_gate": {"status": "unmeasured", "legacy_claim": null, "claim_evidence": "smoke-test-draft-2026-06-04 (mixed UR10+Franka coexistence; ", "n": 0, "m": 0, "wilson_lower": 0.0, "last_run_sha": null, "last_run_at": null}}
+  "verification": {"function_gate": {"status": "unmeasured", "legacy_claim": null, "claim_evidence": "smoke-test-draft-2026-06-04 (mixed UR10+Franka coexistence; ", "n": 0, "m": 0, "wilson_lower": 0.0, "last_run_sha": null, "last_run_at": null, "claim_downgraded": "2026-06-10 prune-audit: self-labeled smoke test; null verify_args/failure_modes; coexistence claim unmeasured"}}
 }
