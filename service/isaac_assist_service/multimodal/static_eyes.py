@@ -61,6 +61,14 @@ _SUPPORT_FLOAT_WARN_M = 0.15
 _DYNAMIC_TAGS = {"dynamic"}
 
 
+# Default per-status confidence (P1-08): how sure the STATIC verdict is.
+# Geometric pass/fail far from thresholds is high-confidence; warn is
+# advisory; uncertain is by definition low (it exists to route to tier-2).
+# Checks may override with a margin-derived value.
+_STATUS_CONFIDENCE = {"pass": 0.9, "fail": 0.9, "warn": 0.6,
+                      "uncertain": 0.35, "skipped": None}
+
+
 @dataclass
 class Check:
     """One static_eyes check result."""
@@ -69,6 +77,10 @@ class Check:
     target: str = ""
     message: str = ""
     fix: Optional[Dict[str, Any]] = None
+    confidence: Optional[float] = None  # explicit override; else status default
+
+    def effective_confidence(self) -> Optional[float]:
+        return self.confidence if self.confidence is not None             else _STATUS_CONFIDENCE.get(self.status)
 
 
 @dataclass
@@ -86,6 +98,7 @@ class StaticEyesReport:
                 {k: v for k, v in {
                     "id": c.id, "status": c.status, "target": c.target,
                     "message": c.message, "fix": c.fix,
+                    "confidence": c.effective_confidence(),
                 }.items() if v not in ("", None)}
                 for c in self.checks
             ],
@@ -262,10 +275,23 @@ def run(layout: Dict[str, Any]) -> StaticEyesReport:
         # uncertain band: near the radius limit, or BELOW base z (the non-convex
         # straight-down floor that defeats a radial formula — see spec §5)
         if d > reach - _REACH_MARGIN_M or pos[2] < base[2] - _BASE_Z_UNCERTAIN_M:
+            # deeper into the uncertain band -> lower confidence (P1-08):
+            # radial overshoot into the margin scales 0.45 (just entered)
+            # down to 0.25 (at the sphere); below-base-z pins to 0.25 (the
+            # non-convex floor a radial formula cannot judge at all)
+            if pos[2] < base[2] - _BASE_Z_UNCERTAIN_M:
+                conf = 0.25
+            else:
+                into = (d - (reach - _REACH_MARGIN_M)) / _REACH_MARGIN_M
+                conf = round(0.45 - 0.20 * max(0.0, min(1.0, into)), 3)
             checks.append(Check("reach:shell", "uncertain", label,
-                                f"{label} at radius {d:.2f}/{reach:.2f}, z={pos[2]:.2f} vs base z={base[2]:.2f} — borderline; needs a live cuRobo IK probe (tier-2)"))
+                                f"{label} at radius {d:.2f}/{reach:.2f}, z={pos[2]:.2f} vs base z={base[2]:.2f} — borderline; needs a live cuRobo IK probe (tier-2)",
+                                confidence=conf))
         else:
-            checks.append(Check("reach:shell", "pass", label))
+            # comfortable pass: confidence grows with margin to the band
+            margin = (reach - _REACH_MARGIN_M) - d
+            conf = round(min(0.95, 0.75 + 0.4 * margin / max(reach, 1e-6)), 3)
+            checks.append(Check("reach:shell", "pass", label, confidence=conf))
 
     # ---- interpenetration (3D AABB overlap among picked workpieces) ----
     pick_aabbs = [(p, aabbs[p]) for p in picks if p in aabbs]

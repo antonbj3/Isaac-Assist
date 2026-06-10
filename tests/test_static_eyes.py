@@ -100,3 +100,31 @@ def test_reach_diagnostics_shape():
     diag = se.reach_diagnostics(bad)
     assert diag["all_reachable"] is False
     assert "/World/Cube_1" in diag["unreachable"]
+
+
+def test_confidence_floats_on_checks():
+    """P1-08: every emitted check carries an explicit confidence; reach gets
+    margin-derived values (deep-uncertain < shallow-uncertain < pass)."""
+    layout = {
+        "robots": [{"path": "/World/UR10", "family": "ur10", "base": [0, 0, 0.75]}],
+        "objects": [
+            {"path": "/World/Near", "position": [0.4, 0.0, 0.80],
+             "bbox": [[0.37, -0.03, 0.775], [0.43, 0.03, 0.825]]},
+            {"path": "/World/Borderline", "position": [1.25, 0.0, 0.80],
+             "bbox": [[1.22, -0.03, 0.775], [1.28, 0.03, 0.825]]},
+        ],
+        "picks": ["/World/Near", "/World/Borderline"],
+        "places": [],
+    }
+    rep = se.run(layout).to_dict()
+    by = {}
+    for c in rep["checks"]:
+        if c["id"] == "reach:shell":
+            by[c.get("target")] = c
+    near, border = by["/World/Near"], by["/World/Borderline"]
+    assert near["status"] == "pass" and near["confidence"] > 0.8
+    assert border["status"] == "uncertain"
+    assert 0.2 <= border["confidence"] <= 0.5
+    assert near["confidence"] > border["confidence"]
+    # every non-skipped check carries a confidence
+    assert all("confidence" in c for c in rep["checks"] if c["status"] != "skipped")
