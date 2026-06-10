@@ -115,6 +115,9 @@ loop — then wrap the EMITTED program, not the generator.
 5. **Per-backend gate classes missing** (P5-22): only the delivery gate exists;
    spline/diffik/osc/builtin have no measured rows at all — their honesty rests on
    docstrings.
-6. **C5 compliance unaudited** outside curobo: which backends actually author
-   ctrl:* records is asserted, not measured — audit before relying on the diagnose
-   loop for them.
+6. **C5 compliance — AUDITED 2026-06-10 (source-level):** only `curobo`
+   (18 ctrl:* refs) and `sensor_gated` (15) author observability records;
+   native/builtin/spline/diffik/osc/fixed_poses/ros2_cmd author ZERO and are
+   therefore INVISIBLE to `diagnose_pick_execution`. Drift-guarded in
+   `tests/test_backend_contract.py::test_ctrl_records_matches_generator_source`.
+   Adding ctrl:* to the zero-backends is the C5-compliance work item.

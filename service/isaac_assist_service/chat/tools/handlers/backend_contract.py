@@ -40,7 +40,7 @@ BACKEND_CONTRACT: Dict[str, Dict[str, Any]] = {
         "multi_item": False,
         "routing": ["color_routing"],
         "sim2real": "honest",
-        "ctrl_records": False,   # unaudited — gap 6 in the contract doc
+        "ctrl_records": False,   # C5-audit 2026-06-10: 0 ctrl:* refs in source
         "never_auto": False,
     },
     "native": {
@@ -91,7 +91,7 @@ BACKEND_CONTRACT: Dict[str, Dict[str, Any]] = {
         "multi_item": False,
         "routing": [],
         "sim2real": "honest-cheat-grip",
-        "ctrl_records": False,
+        "ctrl_records": True,   # C5-audit 2026-06-10: 15 ctrl:* refs in source
         "never_auto": True,   # mandatory sensor_path / taught poses
     },
     "fixed_poses": {
