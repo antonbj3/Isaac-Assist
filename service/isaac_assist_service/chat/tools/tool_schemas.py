@@ -10143,6 +10143,41 @@ ISAAC_SIM_TOOLS = [
     {
         "type": "function",
         "function": {
+            "name": "verify_articulation",
+            "description": "Pre-flight articulation check (NO simulation) [P5-22]: articulation root present, revolute/prismatic joints enumerated with drive+limit sanity, optional named-joint check. The form-gate leg for door/valve/machine-tender/tool-swap verbs. Honest-eyes: reads the live stage.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "articulation_path": {"type": "string", "description": "Articulation root (or ancestor) prim path"},
+                    "joint_name": {"type": "string", "description": "Optional specific joint to validate (e.g. 'door_hinge')"},
+                },
+                "required": ["articulation_path"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "simulate_articulation_check",
+            "description": "The articulation FUNCTION-GATE [P5-22]: plays physics duration_s, samples the joint state before/after, PASS iff the joint moved past min_delta_deg (or reached target_angle_deg within angle_tolerance_deg) AND settled at stop. De-falses door/flip/twist/seat/tool-swap verbs that had no verdict class. Reads state:angular/linear physics position — never a controller self-report.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "joint_path": {"type": "string", "description": "Full prim path of the revolute/prismatic joint to grade"},
+                    "body_path": {"type": "string", "description": "Explicit moving-body prim to measure (world-position fallback). REQUIRED for passive joints whose body rels are broken/attr-typed and which never author joint-state (the drawer-open class)"},
+                    "duration_s": {"type": "number", "description": "Sim seconds to play. Default 30"},
+                    "min_delta_deg": {"type": "number", "description": "PASS requires |end-start| >= this (deg for revolute, units for prismatic)"},
+                    "target_angle_deg": {"type": "number", "description": "PASS requires |end-target| <= angle_tolerance_deg"},
+                    "angle_tolerance_deg": {"type": "number", "description": "Tolerance for target mode. Default 5"},
+                    "settle_eps_deg": {"type": "number", "description": "Settled = movement in the last frames <= this. Default 0.5"},
+                },
+                "required": ["joint_path"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "create_rigid_body_array",
             "description": "Create N rigid-body workpieces in ONE call with the full verified physics stack (RigidBodyAPI + CollisionAPI + MassAPI + PhysxRigidBodyAPI, sleepThreshold=0, optional physics material) — replaces the per-cube init loop ~170 templates hand-roll. asset_ref is the canonical→asset bridge: primitive Cube/Sphere when absent, add_reference to a real USD when present; physics APIs land on the body root either way so controllers and graders see an identical surface.",
             "parameters": {

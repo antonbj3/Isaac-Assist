@@ -19,6 +19,7 @@ async def gate(tpl_name):
     from service.isaac_assist_service.chat.tools.tool_executor import execute_tool_call
     tpl = json.load(open(f"{REPO}/workspace/templates/{tpl_name}.json"))
     import os as _os
+    import re as _re_gate
     await kit_tools.exec_sync("import omni.usd\nomni.usd.get_context().new_stage()\n", timeout=20)
     # faithful-cup verification hooks (mirror scene_eyes): set BEFORE build so the controller picks them up.
     _flags = []
@@ -90,6 +91,24 @@ async def gate(tpl_name):
         pass
     va = tpl.get("verify_args", {}) or {}
     sa = tpl.get("simulate_args", {}) or {}
+    # P5-22 gate-class dispatch: templates whose verb is an ARTICULATION
+    # (door/valve/tool-swap) declare gate_class="articulation" + joint args
+    # in simulate_args and get the joint-angle verdict instead of the
+    # cube-delivery gate.
+    if sa.get("gate_class") == "articulation":
+        art_args = {k: sa[k] for k in ("joint_path", "duration_s",
+                                        "min_delta_deg", "target_angle_deg",
+                                        "angle_tolerance_deg", "settle_eps_deg")
+                    if k in sa}
+        res = await asyncio.wait_for(
+            execute_tool_call("simulate_articulation_check", art_args),
+            timeout=int(sa.get("duration_s", 30)) + 200)
+        out = (res.get("output") or "").strip()
+        m = _re_gate.search(r'ARTICULATION_GATE=(\{.*\})', out)
+        verdict = json.loads(m.group(1)) if m else "?"
+        succ = verdict.get("success") if isinstance(verdict, dict) else "?"
+        print(f"{tpl_name}: GATE success={succ} class=articulation -> {json.dumps(verdict) if isinstance(verdict, dict) else verdict}")
+        return
     # primary cube: legacy scalar, else first of cube_paths (multi-item
     # templates often carry ONLY the list — cube_path=None fails arg
     # validation and the gate never runs; found on CP-NEW-inspect-reject)

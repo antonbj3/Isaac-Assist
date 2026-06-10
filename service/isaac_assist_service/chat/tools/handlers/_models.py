@@ -4012,6 +4012,26 @@ class DiagnoseTaskOutcomeArgs(BaseModel):
     outdir: Optional[str] = Field(None, description="Override artifact dir (default TS_OUTDIR env or ~/.isaac_qa/run)")
 
 
+class VerifyArticulationArgs(BaseModel):
+    """Pre-flight articulation check (no sim): root, joints, drives, limits."""
+    model_config = ConfigDict(populate_by_name=True, extra='allow')
+
+    articulation_path: str = Field(..., description="Articulation root (or ancestor) prim path")
+    joint_name: Optional[str] = Field(None, description="Optional specific joint to validate")
+
+
+class SimulateArticulationCheckArgs(BaseModel):
+    """Articulation function-gate: joint moved past min_delta_deg / reached target, settled at stop."""
+    model_config = ConfigDict(populate_by_name=True, extra='allow')
+
+    joint_path: str = Field(..., description="Revolute/prismatic joint prim path")
+    duration_s: Optional[float] = Field(None, description="Sim seconds. Default 30")
+    min_delta_deg: Optional[float] = Field(None, description="PASS requires |end-start| >= this")
+    target_angle_deg: Optional[float] = Field(None, description="PASS requires |end-target| <= tolerance")
+    angle_tolerance_deg: Optional[float] = Field(None, description="Default 5")
+    settle_eps_deg: Optional[float] = Field(None, description="Default 0.5")
+
+
 class CreateRigidBodyArrayArgs(BaseModel):
     """Create N rigid-body workpieces in ONE call with the full verified physics stack (RigidBody/Collision/Mass/PhysxRigidBody + sleepThreshold=0 + material). asset_ref = the canonical->asset bridge: primitive when absent, add_reference when present."""
     model_config = ConfigDict(populate_by_name=True, extra='allow')
@@ -4474,5 +4494,7 @@ MODEL_REGISTRY = {
     "rebind_role": RebindRoleArgs,
     "static_eyes": StaticEyesArgs,
     "create_rigid_body_array": CreateRigidBodyArrayArgs,
+    "verify_articulation": VerifyArticulationArgs,
+    "simulate_articulation_check": SimulateArticulationCheckArgs,
     "diagnose_task_outcome": DiagnoseTaskOutcomeArgs,
 }
