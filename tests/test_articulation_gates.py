@@ -71,3 +71,14 @@ def test_gate_body_path_fallback_emitted(monkeypatch):
     assert "'/W/Drawer'" in cap["code"]
     assert "body1_world" in cap["code"]
     assert "measure_mode" in cap["code"]
+
+
+def test_gate_axis_projection_emitted(monkeypatch):
+    """Body-world mode must grade ALONG the joint axis and flag orthogonal
+    drift — euclidean delta passed a yanked-loose drawer (live finding)."""
+    cap = _capture_code(monkeypatch)
+    asyncio.run(ag._handle_simulate_articulation_check(
+        {"joint_path": "/W/J", "body_path": "/W/D", "min_delta_deg": 0.1}))
+    ast.parse(cap["code"])
+    assert "physics:axis" in cap["code"]
+    assert "orthogonal_drift_flag" in cap["code"]

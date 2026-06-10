@@ -171,11 +171,23 @@ else:
     if _start is None or _end is None:
         _res["error"] = "joint state unreadable AND no body1 to fall back on"
     else:
+        _axis_i = {{"X": 0, "Y": 1, "Z": 2}}.get(str(_prim.GetAttribute("physics:axis").Get() or "X"), 0)
         def _d(a, b):
             if isinstance(a, list):
                 return sum((x - y) ** 2 for x, y in zip(a, b)) ** 0.5
             return b - a
-        _delta = _d(_start, _end)
+        if isinstance(_start, list):
+            # body-world mode: PROJECT onto the joint axis — euclidean delta
+            # passed a yanked-loose drawer (1.1 m with 0.36 m z-fall) before
+            # the joint fix. Along-axis is the verdict; orthogonal drift is
+            # flagged (loose/broken joint or body knocked sideways).
+            _along = _end[_axis_i] - _start[_axis_i]
+            _orth = (sum((_end[i] - _start[i]) ** 2 for i in range(3) if i != _axis_i)) ** 0.5
+            _delta = _along
+            _res["orthogonal_drift"] = round(_orth, 4)
+            _res["orthogonal_drift_flag"] = bool(_orth > max(0.02, abs(_along) * 0.5))
+        else:
+            _delta = _d(_start, _end)
         _ps = _pre_stop if _pre_stop is not None else _end
         _settled = abs(_d(_ps, _end)) <= {settle_eps}
         _res["measure_mode"] = _mode
