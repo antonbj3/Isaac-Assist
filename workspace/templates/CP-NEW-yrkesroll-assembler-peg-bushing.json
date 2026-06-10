@@ -409,5 +409,6 @@
     ],
     "duration_s": 240,
     "xy_tolerance": 0.01
-  }
+  },
+  "verification": {"function_gate": {"status": "unmeasured", "legacy_claim": null, "claim_evidence": "hema pending lint; function-gate pending Kit RPC + ros2_cont", "n": 0, "m": 0, "wilson_lower": 0.0, "last_run_sha": null, "last_run_at": null}}
 }

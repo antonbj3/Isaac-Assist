@@ -248,5 +248,6 @@
     "cube_path": "{{top_clip.path}}",
     "duration_s": 180,
     "xy_tolerance": 0.01
-  }
+  },
+  "verification": {"function_gate": {"status": "unmeasured", "legacy_claim": null, "claim_evidence": "hema pending; function-gate pending Kit RPC + ros2_control b", "n": 0, "m": 0, "wilson_lower": 0.0, "last_run_sha": null, "last_run_at": null}}
 }

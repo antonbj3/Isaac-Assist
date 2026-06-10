@@ -241,5 +241,6 @@
       "prev": null,
       "date": "2026-05-19"
     }
-  ]
+  ],
+  "verification": {"function_gate": {"status": "unmeasured", "legacy_claim": null, "claim_evidence": "build-verified-2026-05-08; form-gate \u2713; PRECISION DATA (3-ru", "n": 0, "m": 0, "wilson_lower": 0.0, "last_run_sha": null, "last_run_at": null}}
 }

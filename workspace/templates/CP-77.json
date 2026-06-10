@@ -297,5 +297,6 @@
       "rmpflow",
       "moveit2"
     ]
-  }
+  },
+  "verification": {"function_gate": {"status": "unmeasured", "legacy_claim": "pass", "claim_evidence": "e \u2713; function-gate \u2713 (multi-cube cube_paths \u2014 3/5 cubes deli", "n": 0, "m": 0, "wilson_lower": 0.0, "last_run_sha": null, "last_run_at": null}}
 }

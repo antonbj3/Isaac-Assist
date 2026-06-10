@@ -346,5 +346,6 @@
       "author": "QC correction pass",
       "note": "SOC code confirmed correct: 51-4011 (Machinists). Sonnet QC report 2026-05-28-cpnew-canonical-overview.md fabricated code 51-3093 — that code does not exist in BLS/ONET and was never in this template. onet_soc field unchanged; this entry documents the confirmation."
     }
-  ]
+  ],
+  "verification": {"function_gate": {"status": "unmeasured", "legacy_claim": null, "claim_evidence": "hema pending; smoke-test pending", "n": 0, "m": 0, "wilson_lower": 0.0, "last_run_sha": null, "last_run_at": null}}
 }

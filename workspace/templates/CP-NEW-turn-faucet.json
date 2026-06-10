@@ -119,5 +119,6 @@
     "untested": ["curobo", "direct_joint", "rmpflow"],
     "failed": {}
   },
-  "verified_status": "drafted-2026-05-16-patched-r-a-fix-3; form-gate ⏳ (plan_trajectory robot_path->articulation_path+waypoints, set_joint_targets robot_path->articulation_path+joint_name+target_position fixed); function-gate ⏳ diagnostic — success measured via FaucetJoint angle ≥ 85° (ManiSkill2 TurnFaucet-v0 success criterion), not cube delivery. Wave-2 self-ref redesign 2026-05-18."
+  "verified_status": "drafted-2026-05-16-patched-r-a-fix-3; form-gate ⏳ (plan_trajectory robot_path->articulation_path+waypoints, set_joint_targets robot_path->articulation_path+joint_name+target_position fixed); function-gate ⏳ diagnostic — success measured via FaucetJoint angle ≥ 85° (ManiSkill2 TurnFaucet-v0 success criterion), not cube delivery. Wave-2 self-ref redesign 2026-05-18.",
+  "verification": {"function_gate": {"status": "unmeasured", "legacy_claim": null, "claim_evidence": "ed); function-gate \u23f3 diagnostic \u2014 success measured via Fauce", "n": 0, "m": 0, "wilson_lower": 0.0, "last_run_sha": null, "last_run_at": null}}
 }

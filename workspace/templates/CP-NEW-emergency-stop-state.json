@@ -140,5 +140,6 @@
     ],
     "failed": {}
   },
-  "verified_status": "drafted-2026-05-16; second safety-category canonical (e-stop state machine, companion to CP-NEW-safety-clearance-monitor-stop); halt via drive-gain zero (kp=kd=0) wired via run_usd_script Tf.Notice.ObjectsChanged listener; baseline snapshot captured at callback-arm to avoid restore-overshoot; ack-before-clear race guarded with press_armed flag; form-gate ✓; function-gate ⏳ (requires Kit RPC to confirm get_drive_gains reports kp~0 within one sim step of estop:pressed True-edge)"
+  "verified_status": "drafted-2026-05-16; second safety-category canonical (e-stop state machine, companion to CP-NEW-safety-clearance-monitor-stop); halt via drive-gain zero (kp=kd=0) wired via run_usd_script Tf.Notice.ObjectsChanged listener; baseline snapshot captured at callback-arm to avoid restore-overshoot; ack-before-clear race guarded with press_armed flag; form-gate ✓; function-gate ⏳ (requires Kit RPC to confirm get_drive_gains reports kp~0 within one sim step of estop:pressed True-edge)",
+  "verification": {"function_gate": {"status": "unmeasured", "legacy_claim": null, "claim_evidence": "e \u2713; function-gate \u23f3 (requires Kit RPC to confirm get_drive_", "n": 0, "m": 0, "wilson_lower": 0.0, "last_run_sha": null, "last_run_at": null}}
 }

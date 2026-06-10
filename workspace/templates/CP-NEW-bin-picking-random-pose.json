@@ -295,5 +295,6 @@
     ],
     "failed": {}
   },
-  "verified_status": "drafted-2026-05-16; rebuilt-2026-05-28 (fixed broken Jinja `{{this.spawn_offset}}[N]` syntax that rendered to invalid Python `0+[a,b,c][0]`; workpieces.position now precomputed absolute world coords; overlap_sphere centre + drop_targets now use {{source_bin.position[N]}} / {{destination_bin.position[N]}} indexed substitution); form-gate-schema \u2713; function-gate \u23f3"
+  "verified_status": "drafted-2026-05-16; rebuilt-2026-05-28 (fixed broken Jinja `{{this.spawn_offset}}[N]` syntax that rendered to invalid Python `0+[a,b,c][0]`; workpieces.position now precomputed absolute world coords; overlap_sphere centre + drop_targets now use {{source_bin.position[N]}} / {{destination_bin.position[N]}} indexed substitution); form-gate-schema \u2713; function-gate \u23f3",
+  "verification": {"function_gate": {"status": "unmeasured", "legacy_claim": null, "claim_evidence": "a \u2713; function-gate \u23f3", "n": 0, "m": 0, "wilson_lower": 0.0, "last_run_sha": null, "last_run_at": null}}
 }

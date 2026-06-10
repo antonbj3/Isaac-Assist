@@ -51,5 +51,6 @@
     "untested": [
       "spline"
     ]
-  }
+  },
+  "verification": {"function_gate": {"status": "unmeasured", "legacy_claim": "fail", "claim_evidence": "gate stable_fail (pick-place controller cannot drive Prismat", "n": 0, "m": 0, "wilson_lower": 0.0, "last_run_sha": null, "last_run_at": null}}
 }

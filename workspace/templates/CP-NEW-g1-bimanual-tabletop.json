@@ -46,5 +46,6 @@
     "added_date": "2026-05-15",
     "controller_skip_date": "2026-05-28",
     "controller_unblocked_date": "2026-05-28"
-  }
+  },
+  "verification": {"function_gate": {"status": "unmeasured", "legacy_claim": null, "claim_evidence": "build-spec-2026-05-10; build 20/21 (G1 SimReady asset missin", "n": 0, "m": 0, "wilson_lower": 0.0, "last_run_sha": null, "last_run_at": null}}
 }

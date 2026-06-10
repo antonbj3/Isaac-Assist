@@ -412,5 +412,6 @@
       "author": "QC correction pass",
       "note": "SOC code confirmed correct: 51-9061 (Inspectors, Testers, Sorters, Samplers, and Weighers). Sonnet QC report 2026-05-28-cpnew-canonical-overview.md fabricated code 17-2112 (Industrial Engineers) — that is an engineering role, not an inspection/QC technician role. onet_soc field unchanged; this entry documents the confirmation."
     }
-  ]
+  ],
+  "verification": {"function_gate": {"status": "unmeasured", "legacy_claim": null, "claim_evidence": "hema pending; smoke-test pending", "n": 0, "m": 0, "wilson_lower": 0.0, "last_run_sha": null, "last_run_at": null}}
 }

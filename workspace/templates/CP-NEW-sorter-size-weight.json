@@ -424,5 +424,6 @@
     ],
     "failed": {}
   },
-  "verified_status": "drafted-2026-05-16; form-gate-schema pending lint; function-gate pending"
+  "verified_status": "drafted-2026-05-16; form-gate-schema pending lint; function-gate pending",
+  "verification": {"function_gate": {"status": "unmeasured", "legacy_claim": null, "claim_evidence": "hema pending lint; function-gate pending", "n": 0, "m": 0, "wilson_lower": 0.0, "last_run_sha": null, "last_run_at": null}}
 }

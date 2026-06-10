@@ -193,5 +193,6 @@
     "duration_s": 120,
     "xy_tolerance": 0.12
   },
-  "qa_status": "yrkesroll_canonical; structurally complete; not exercised in QA; classified 2026-05-16"
+  "qa_status": "yrkesroll_canonical; structurally complete; not exercised in QA; classified 2026-05-16",
+  "verification": {"function_gate": {"status": "unmeasured", "legacy_claim": null, "claim_evidence": "hema pending; function-gate UNTESTED (requires Kit RPC + plu", "n": 0, "m": 0, "wilson_lower": 0.0, "last_run_sha": null, "last_run_at": null}}
 }

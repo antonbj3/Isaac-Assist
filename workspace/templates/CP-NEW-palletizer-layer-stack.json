@@ -307,5 +307,6 @@
     ],
     "failed": {}
   },
-  "verified_status": "drafted-2026-05-16-patched-r-a-fix-2; rebuilt-2026-05-28 ({{#each workpieces}} loop replaces 6x unrolled box-spawn; explicit robot_family=\"ur10\"; surface_gripper added for UR10 ee_link); patched-2026-05-28 (orientation [0.7071,0,0,0.7071] \u2192 [1,0,0,0] identity \u2014 R6 fail mode: cuRobo plan_pose ValueError 30/30 with 90\u00b0-Z rotated UR10 base; same pattern in machine-tender-load-unload + palletizer-mixed-sku; all verified UR10+curobo templates use identity quat. Pallet at y=-0.55 still reachable from UR10 with identity rotation via shoulder swing); form-gate \u23f3; function-gate \u23f3"
+  "verified_status": "drafted-2026-05-16-patched-r-a-fix-2; rebuilt-2026-05-28 ({{#each workpieces}} loop replaces 6x unrolled box-spawn; explicit robot_family=\"ur10\"; surface_gripper added for UR10 ee_link); patched-2026-05-28 (orientation [0.7071,0,0,0.7071] \u2192 [1,0,0,0] identity \u2014 R6 fail mode: cuRobo plan_pose ValueError 30/30 with 90\u00b0-Z rotated UR10 base; same pattern in machine-tender-load-unload + palletizer-mixed-sku; all verified UR10+curobo templates use identity quat. Pallet at y=-0.55 still reachable from UR10 with identity rotation via shoulder swing); form-gate \u23f3; function-gate \u23f3",
+  "verification": {"function_gate": {"status": "unmeasured", "legacy_claim": null, "claim_evidence": "e \u23f3; function-gate \u23f3", "n": 0, "m": 0, "wilson_lower": 0.0, "last_run_sha": null, "last_run_at": null}}
 }

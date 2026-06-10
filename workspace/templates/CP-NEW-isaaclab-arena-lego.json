@@ -307,5 +307,6 @@
       "change": "baseplate scale 0.06\u00d70.06 \u2192 0.20\u00d70.20 \u2014 drop precision allows ~8-15cm drift in cuRobo per R6 data",
       "rationale": "R6 showed bricks landed 8-15cm beyond baseplate edge \u2014 bigger target absorbs cuRobo xy-drift"
     }
-  ]
+  ],
+  "verification": {"function_gate": {"status": "unmeasured", "legacy_claim": null, "claim_evidence": "e \u23f3; function-gate \u23f3 (requires runtime stack-z monotonicity ", "n": 0, "m": 0, "wilson_lower": 0.0, "last_run_sha": null, "last_run_at": null}}
 }

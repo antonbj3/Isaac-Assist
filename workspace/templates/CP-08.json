@@ -125,5 +125,6 @@
     "reason": "draft",
     "details": "2x2 grid palletizer; pick_place pattern fits but enumerate loop for 4-position grid placement; awaiting loop_substitution pattern",
     "added_date": "2026-05-15"
-  }
+  },
+  "verification": {"function_gate": {"status": "unmeasured", "legacy_claim": "pass", "claim_evidence": "e \u2713; function-gate \u2713 (multi-cube cube_paths + 16 IK seeds \u2014 ", "n": 0, "m": 0, "wilson_lower": 0.0, "last_run_sha": null, "last_run_at": null}}
 }

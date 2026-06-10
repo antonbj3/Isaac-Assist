@@ -145,5 +145,6 @@
     ],
     "failed": {}
   },
-  "verified_status": "drafted-2026-05-16; form-gate-schema \u2713 (R-A30-fix); function-gate \u23f3 Kit RPC"
+  "verified_status": "drafted-2026-05-16; form-gate-schema \u2713 (R-A30-fix); function-gate \u23f3 Kit RPC",
+  "verification": {"function_gate": {"status": "unmeasured", "legacy_claim": null, "claim_evidence": "ix); function-gate \u23f3 Kit RPC", "n": 0, "m": 0, "wilson_lower": 0.0, "last_run_sha": null, "last_run_at": null}}
 }

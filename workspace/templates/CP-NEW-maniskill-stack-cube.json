@@ -168,5 +168,6 @@
       "prev": 0.03,
       "date": "2026-05-19"
     }
-  ]
+  ],
+  "verification": {"function_gate": {"status": "unmeasured", "legacy_claim": null, "claim_evidence": "build-spec-2026-05-16; lint 1 OK 0 ERROR 0 WARN (--validate-", "n": 0, "m": 0, "wilson_lower": 0.0, "last_run_sha": null, "last_run_at": null}}
 }

@@ -262,5 +262,6 @@
       "direct_joint"
     ],
     "failed": {}
-  }
+  },
+  "verification": {"function_gate": {"status": "unmeasured", "legacy_claim": null, "claim_evidence": "ng); function-gate \u23f3 (requires Franka import from Isaac Sim ", "n": 0, "m": 0, "wilson_lower": 0.0, "last_run_sha": null, "last_run_at": null}}
 }

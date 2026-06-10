@@ -262,5 +262,6 @@
     ],
     "failed": {}
   },
-  "verified_status": "drafted-2026-05-16; first-bimanual-canonical; form-gate-schema ⏳ (awaiting lint); function-gate ⏳ (single-tenant Kit RPC limits true parallelism — sequential exec only)"
+  "verified_status": "drafted-2026-05-16; first-bimanual-canonical; form-gate-schema ⏳ (awaiting lint); function-gate ⏳ (single-tenant Kit RPC limits true parallelism — sequential exec only)",
+  "verification": {"function_gate": {"status": "unmeasured", "legacy_claim": null, "claim_evidence": "nt); function-gate \u23f3 (single-tenant Kit RPC limits true para", "n": 0, "m": 0, "wilson_lower": 0.0, "last_run_sha": null, "last_run_at": null}}
 }

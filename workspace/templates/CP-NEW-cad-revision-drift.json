@@ -172,5 +172,6 @@
       "rmpflow",
       "moveit2"
     ]
-  }
+  },
+  "verification": {"function_gate": {"status": "unmeasured", "legacy_claim": "fail", "claim_evidence": "old; env_blocked: isaaclab_tasks \u2014 module 'isaaclab_tasks.en", "n": 0, "m": 0, "wilson_lower": 0.0, "last_run_sha": null, "last_run_at": null}}
 }

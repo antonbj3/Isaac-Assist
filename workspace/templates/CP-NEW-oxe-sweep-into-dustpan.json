@@ -193,5 +193,6 @@
     "failed": {},
     "untested": ["rmpflow", "curobo", "direct_joint"]
   },
-  "verified_status": "drafted-2026-05-16; form-gate-schema ⏳ pending-lint; function-gate ⏳ Kit RPC; structural-simplifications-noted (rigid broom, 4-wall bin)"
+  "verified_status": "drafted-2026-05-16; form-gate-schema ⏳ pending-lint; function-gate ⏳ Kit RPC; structural-simplifications-noted (rigid broom, 4-wall bin)",
+  "verification": {"function_gate": {"status": "unmeasured", "legacy_claim": null, "claim_evidence": "int; function-gate \u23f3 Kit RPC; structural-simplifications-not", "n": 0, "m": 0, "wilson_lower": 0.0, "last_run_sha": null, "last_run_at": null}}
 }

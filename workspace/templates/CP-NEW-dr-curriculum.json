@@ -151,5 +151,6 @@
       "rmpflow",
       "moveit2"
     ]
-  }
+  },
+  "verification": {"function_gate": {"status": "unmeasured", "legacy_claim": null, "claim_evidence": "-10; smoke-test \u2713 1/1 (34s); DR Stage 2 of 4", "n": 0, "m": 0, "wilson_lower": 0.0, "last_run_sha": null, "last_run_at": null}}
 }

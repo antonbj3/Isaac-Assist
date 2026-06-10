@@ -184,5 +184,6 @@
     "success_condition": "files_on_disk == 5 AND all_valid == True AND demo_count == 5",
     "result_file": "/tmp/groot_teleop_demo_record_result.json"
   },
-  "verified_status": "drafted-2026-05-16-A111; form-gate-schema ✓; function-gate BLOCKED (requires SpaceMouse hardware + human operator for genuine demos; fallback keyboard path produces structurally-valid but operator-empty HDF5 files — validate_teleop_demo accepts T=0 as valid robomimic shape, so success_criterion 'files_on_disk == 5 AND all_valid' can PASS on a hardware-absent host with 5 zero-length action timeseries. See role_defaults.recording_output.requires_operator_input flag.)"
+  "verified_status": "drafted-2026-05-16-A111; form-gate-schema ✓; function-gate BLOCKED (requires SpaceMouse hardware + human operator for genuine demos; fallback keyboard path produces structurally-valid but operator-empty HDF5 files — validate_teleop_demo accepts T=0 as valid robomimic shape, so success_criterion 'files_on_disk == 5 AND all_valid' can PASS on a hardware-absent host with 5 zero-length action timeseries. See role_defaults.recording_output.requires_operator_input flag.)",
+  "verification": {"function_gate": {"status": "unmeasured", "legacy_claim": null, "claim_evidence": "drafted-2026-05-16-A111; form-gate-schema \u2713; function-gate B", "n": 0, "m": 0, "wilson_lower": 0.0, "last_run_sha": null, "last_run_at": null}}
 }

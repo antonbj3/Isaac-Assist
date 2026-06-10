@@ -344,5 +344,6 @@
     "cube_path": "{{workpieces[0].path}}",
     "target_path": "{{pallet_a.path}}",
     "duration_s": 180
-  }
+  },
+  "verification": {"function_gate": {"status": "unmeasured", "legacy_claim": "pass", "claim_evidence": "e \u2713; function-gate \u2713 [pre-fix; re-verify pending \u2014 rest_spee", "n": 0, "m": 0, "wilson_lower": 0.0, "last_run_sha": null, "last_run_at": null}}
 }

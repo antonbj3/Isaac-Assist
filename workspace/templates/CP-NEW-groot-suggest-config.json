@@ -87,5 +87,6 @@
       }
     }
   },
-  "code_template": "config_result = suggest_finetune_config(\n    task_type=\"similar_to_pretrain\",\n    hardware={{config_advisor.hardware}},\n    data_size={{config_advisor.data_size}},\n)\nmix_result = suggest_data_mix(\n    task_type={{data_mix_advisor.task_type}},\n    available_data={{data_mix_advisor.available_data}},\n)\nstats_result = finetune_stats()\npass  # removed sandbox-illegal `with open(...)` block\ncfg = config_result if isinstance(config_result, dict) else {}\nassert \"learning_rate\" in cfg and \"freeze_layers\" in cfg, f\"Missing keys in config result: {list(cfg.keys())}\""
+  "code_template": "config_result = suggest_finetune_config(\n    task_type=\"similar_to_pretrain\",\n    hardware={{config_advisor.hardware}},\n    data_size={{config_advisor.data_size}},\n)\nmix_result = suggest_data_mix(\n    task_type={{data_mix_advisor.task_type}},\n    available_data={{data_mix_advisor.available_data}},\n)\nstats_result = finetune_stats()\npass  # removed sandbox-illegal `with open(...)` block\ncfg = config_result if isinstance(config_result, dict) else {}\nassert \"learning_rate\" in cfg and \"freeze_layers\" in cfg, f\"Missing keys in config result: {list(cfg.keys())}\"",
+  "verification": {"function_gate": {"status": "unmeasured", "legacy_claim": null, "claim_evidence": "hema pending", "n": 0, "m": 0, "wilson_lower": 0.0, "last_run_sha": null, "last_run_at": null}}
 }

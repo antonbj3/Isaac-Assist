@@ -163,5 +163,6 @@
     ],
     "failed": {}
   },
-  "verified_status": "drafted-2026-05-16; form-gate pending; function-gate diagnostic — success measured via expected tool-call counts (check_singularity ×3, plan_trajectory.planner='lula_rrt', interpolate_trajectory.method='rmpflow'). Pending live Kit + UR10 USD. Wave-2 self-ref redesign 2026-05-18."
+  "verified_status": "drafted-2026-05-16; form-gate pending; function-gate diagnostic — success measured via expected tool-call counts (check_singularity ×3, plan_trajectory.planner='lula_rrt', interpolate_trajectory.method='rmpflow'). Pending live Kit + UR10 USD. Wave-2 self-ref redesign 2026-05-18.",
+  "verification": {"function_gate": {"status": "unmeasured", "legacy_claim": null, "claim_evidence": "gate pending; function-gate diagnostic \u2014 success measured vi", "n": 0, "m": 0, "wilson_lower": 0.0, "last_run_sha": null, "last_run_at": null}}
 }

@@ -128,5 +128,6 @@
     "details": "High-speed belt variant of CP-01; pick_place pattern fits but unrun — zero QA runs, no verified delivery",
     "added_date": "2026-05-15"
   },
-  "motion_controllers": {"verified": [], "failed": {}, "untested": ["curobo"]}
+  "motion_controllers": {"verified": [], "failed": {}, "untested": ["curobo"]},
+  "verification": {"function_gate": {"status": "unmeasured", "legacy_claim": null, "claim_evidence": "gate-pending; demoted 2026-05-15", "n": 0, "m": 0, "wilson_lower": 0.0, "last_run_sha": null, "last_run_at": null}}
 }

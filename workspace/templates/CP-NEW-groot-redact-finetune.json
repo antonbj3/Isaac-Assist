@@ -81,5 +81,6 @@
       "output_path": "/tmp/groot_redacted_demos.jsonl"
     }
   },
-  "code_template": "export_result = export_finetune_data(\n    format={{data_exporter.format}},\n    output_path={{data_exporter.output_path}},\n)\nredact_result = redact_finetune_data(\n    input_path={{privacy_filter.input_path}},\n    output_path={{privacy_filter.output_path}},\n)\nstats_result = finetune_stats()\npass  # removed sandbox-illegal `with open(...)` block\nredact_dict = redact_result if isinstance(redact_result, dict) else {}\nassert \"output_path\" in redact_dict, f\"Missing output_path in redact result: {list(redact_dict.keys())}\""
+  "code_template": "export_result = export_finetune_data(\n    format={{data_exporter.format}},\n    output_path={{data_exporter.output_path}},\n)\nredact_result = redact_finetune_data(\n    input_path={{privacy_filter.input_path}},\n    output_path={{privacy_filter.output_path}},\n)\nstats_result = finetune_stats()\npass  # removed sandbox-illegal `with open(...)` block\nredact_dict = redact_result if isinstance(redact_result, dict) else {}\nassert \"output_path\" in redact_dict, f\"Missing output_path in redact result: {list(redact_dict.keys())}\"",
+  "verification": {"function_gate": {"status": "unmeasured", "legacy_claim": null, "claim_evidence": "hema pending", "n": 0, "m": 0, "wilson_lower": 0.0, "last_run_sha": null, "last_run_at": null}}
 }
