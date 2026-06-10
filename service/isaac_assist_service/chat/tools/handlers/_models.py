@@ -4002,6 +4002,24 @@ class StaticEyesArgs(BaseModel):
     layout: Dict[str, Any] = Field(..., description="The layout to verify: {robots:[{path, family (e.g. 'ur10'/'franka_panda'), base:[x,y,z]}], objects:[{path, position:[x,y,z], asset_name (palette class) OR bbox:[[xmin,ymin,zmin],[xmax,ymax,zmax]]}], p")
 
 
+class CreateRigidBodyArrayArgs(BaseModel):
+    """Create N rigid-body workpieces in ONE call with the full verified physics stack (RigidBody/Collision/Mass/PhysxRigidBody + sleepThreshold=0 + material). asset_ref = the canonical->asset bridge: primitive when absent, add_reference when present."""
+    model_config = ConfigDict(populate_by_name=True, extra='allow')
+
+    positions: List[List[float]] = Field(..., description="World [x,y,z] per body")
+    prim_type: Optional[str] = Field(None, description="'Cube' (default) or 'Sphere'; ignored with asset_ref")
+    size: Optional[float] = Field(None, description="Cube size attr / Sphere diameter (m). Default 0.05")
+    base_path: Optional[str] = Field(None, description="Parent path. Default '/World'")
+    name_prefix: Optional[str] = Field(None, description="Default 'Cube' -> Cube_1, Cube_2, ...")
+    start_index: Optional[int] = Field(None, description="Default 1")
+    paths: Optional[List[str]] = Field(None, description="Explicit per-body paths; overrides naming (length must match positions)")
+    mass: Optional[float] = Field(None, description="Uniform mass (kg) via MassAPI")
+    material: Optional[str] = Field(None, description="Physics-material name from the db (e.g. 'rubber')")
+    sleep_threshold: Optional[float] = Field(None, description="Default 0.0")
+    asset_ref: Optional[str] = Field(None, description="USD file path; each body references this asset")
+    asset_scale: Optional[List[float]] = Field(None, description="[sx,sy,sz] when asset_ref is given")
+
+
 # ---------------------------------------------------------------------------
 # Tool-name → model-class lookup
 
@@ -4445,4 +4463,5 @@ MODEL_REGISTRY = {
     "execute_contact_sequence_plan": ExecuteContactSequencePlanArgs,
     "rebind_role": RebindRoleArgs,
     "static_eyes": StaticEyesArgs,
+    "create_rigid_body_array": CreateRigidBodyArrayArgs,
 }

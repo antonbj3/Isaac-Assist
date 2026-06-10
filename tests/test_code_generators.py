@@ -67,9 +67,13 @@ _TEST_VECTORS = [
         ["RigidBodyAPI", "Apply"],
     ),
     (
+        # Unknown schema -> the Round-4 schema-discovery fallback (module
+        # lookup + prim.ApplyAPI last resort). The legacy
+        # ApplyAPISchemaCommand path was removed 2026-05-17: rejected by the
+        # patch validator AND unregistered in current Kit builds.
         "apply_api_schema",
         {"prim_path": "/World/Cube", "schema_name": "UnknownSchema"},
-        ["ApplyAPISchemaCommand"],
+        ["pxr.UsdPhysics", "prim.ApplyAPI", "GetAppliedSchemas"],
     ),
     (
         "clone_prim",
@@ -238,11 +242,12 @@ _TEST_VECTORS = [
             "target_position": [0.4, 0.0, 0.3],
             "robot_type": "franka",
         },
-        # Default planner is RMPflow (reactive). Generated code uses
-        # load_supported_motion_gen_config (the modern name; the older
-        # load_supported_motion_policy_config no longer exists).
+        # Default planner is RMPflow (reactive). Verified against the
+        # installed isaacsim.robot_motion.motion_generation-8.0.26 (5.1):
+        # load_supported_motion_policy_config IS the real loader;
+        # load_supported_motion_gen_config does not exist there.
         ["RmpFlow", "set_end_effector_target", "apply_action",
-         "load_supported_motion_gen_config", "SingleArticulation"],
+         "load_supported_motion_policy_config", "SingleArticulation"],
     ),
     (
         "move_to_pose",
@@ -253,8 +258,10 @@ _TEST_VECTORS = [
             "robot_type": "franka",
         },
         # Handler migrated from LulaRRTMotionPolicy to
-        # LulaTaskSpaceTrajectoryGenerator (single-shot global planner)
-        ["LulaTaskSpaceTrajectoryGenerator", "load_supported_lula_rrt_config"],
+        # LulaTaskSpaceTrajectoryGenerator (single-shot global planner);
+        # config now via load_supported_path_planner_config(key, 'RRT')
+        # (Round 3 repair 2026-05-17 — the lula_rrt-specific loader is gone).
+        ["LulaTaskSpaceTrajectoryGenerator", "load_supported_path_planner_config"],
     ),
     (
         "plan_trajectory",
@@ -1075,6 +1082,34 @@ _TEST_VECTORS = [
             "num_steps": 10,
         },
         ["import numpy", "Sparse waypoints"],
+    ),
+    # ----- scene_body codegen tools (P2-02/P2-03) + bimanual (UR10 session) -----
+    (
+        "create_scene_baseline",
+        {},
+        ["DomeLight", "Ground", "PhysicsScene", "BroadphaseTypeAttr"],
+    ),
+    (
+        "create_rigid_body_array",
+        {"positions": [[0.1, 0.2, 0.835], [0.3, 0.2, 0.835]], "material": "rubber"},
+        ["RigidBodyAPI.Apply", "PhysxRigidBodyAPI.Apply",
+         "CreateSleepThresholdAttr", "physics:materialBinding", "/World/Cube_2"],
+    ),
+    (
+        "create_rigid_body_array",
+        {"positions": [[0, 0, 1]], "asset_ref": "/assets/widget.usd"},
+        ["AddReference", "widget.usd", "RigidBodyAPI.Apply"],
+    ),
+    (
+        "setup_bimanual_pick_place_controller",
+        {
+            "robot_path": "/World/G1",
+            "left_arm_sources": ["/World/Cube_L"],
+            "right_arm_sources": ["/World/Cube_R"],
+            "left_destination": "/World/BinL",
+            "right_destination": "/World/BinR",
+        },
+        ["bimanual_left", "bimanual_right"],
     ),
 ]
 

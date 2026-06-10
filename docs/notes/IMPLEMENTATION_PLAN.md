@@ -82,9 +82,9 @@ Convention: `[ ]` todo · `[~]` in progress · `[x]` done · `[!]` blocked (note
 ## PHASE 2 — Toolify the body + close the diagnose loop
 
 - [ ] **P2-01** Semantic-USD-diff verifier (byte-diff fails — baselines differ in API ordering/style; compare resolved prim graph + attrs with float tolerance). *done:* "same scene, different source text" reads equivalent.
-- [ ] **P2-02** ∥ `create_scene_baseline(...)` + `expand=True`.
-- [ ] **P2-02b** **Build the `expand=True` codegen CONTRACT itself** (0 occurrences in code today — it must be designed+built; the training-substrate L2 capture depends on it).
-- [ ] **P2-03** ∥ `create_rigid_body_array(..., asset_ref=None)` + `expand=True` — primitive when asset_ref absent, add_reference when present.
+- [x] **P2-02** ∥ `create_scene_baseline(...)` + `expand=True`. *(895d00ea)*
+- [x] **P2-02b** **Build the `expand=True` codegen CONTRACT itself** — `chat/tools/expand.py`: `expand_tool_call` + `expand_sequence` (L1↔L2 rows). *(314d476e)*
+- [x] **P2-03** ∥ `create_rigid_body_array(..., asset_ref=None)` + `expand=True` — primitive when asset_ref absent, add_reference when present; full verified physics stack (RB/Collision/Mass/PhysxRB + sleepThreshold=0 + material db) identical on both branches.
 - [ ] **P2-04** ∥ `compute_palletizer_grid(..., bbox)` + `expand=True` — takes a real bbox, not nominal size.
 - [ ] **P2-05** ∥ `setup_physics_callback(kind, params)` + `expand=True`.
 - [ ] **P2-06** `diagnose_task_outcome` — productize the (now-versioned, P0-20) `scene_timeseries.py::_report`. **Its real emitted states are ALOFT/FLUNG/TOPPLED/NOT_SEATED/ON_BELT/MISROUTED/...; the 5-name WHY-taxonomy (DELIVERED_CLEAN etc.) is a thin NEW classifier layer to build (only MISROUTED overlaps) — not free repackaging.** CI: handler + l0 tests. *needs:* P0-20.

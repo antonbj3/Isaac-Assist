@@ -10104,5 +10104,30 @@ ISAAC_SIM_TOOLS = [
             },
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "create_rigid_body_array",
+            "description": "Create N rigid-body workpieces in ONE call with the full verified physics stack (RigidBodyAPI + CollisionAPI + MassAPI + PhysxRigidBodyAPI, sleepThreshold=0, optional physics material) — replaces the per-cube init loop ~170 templates hand-roll. asset_ref is the canonical→asset bridge: primitive Cube/Sphere when absent, add_reference to a real USD when present; physics APIs land on the body root either way so controllers and graders see an identical surface.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "positions": {"type": "array", "items": {"type": "array", "items": {"type": "number"}}, "description": "World [x,y,z] per body. REQUIRED"},
+                    "prim_type": {"type": "string", "enum": ["Cube", "Sphere"], "description": "Primitive shape. Default Cube. Ignored with asset_ref"},
+                    "size": {"type": "number", "description": "Cube size attr / Sphere diameter (m). Default 0.05 (the corpus workpiece)"},
+                    "base_path": {"type": "string", "description": "Parent path. Default '/World'"},
+                    "name_prefix": {"type": "string", "description": "Default 'Cube' -> /World/Cube_1, Cube_2, ..."},
+                    "start_index": {"type": "integer", "description": "Default 1"},
+                    "paths": {"type": "array", "items": {"type": "string"}, "description": "Explicit per-body paths; overrides base_path/name_prefix (length must match positions)"},
+                    "mass": {"type": "number", "description": "Uniform mass (kg) via MassAPI. Absent -> PhysX derives from geometry + material density"},
+                    "material": {"type": "string", "description": "Physics-material name from the db (e.g. 'rubber' — the corpus workpiece default). Unknown names fail loudly"},
+                    "sleep_threshold": {"type": "number", "description": "physxRigidBody:sleepThreshold. Default 0 (workpieces must never sleep mid-task)"},
+                    "asset_ref": {"type": "string", "description": "USD file path — each body becomes an Xform referencing this asset; CollisionAPI backfilled on its Gprims only if the asset authors none"},
+                    "asset_scale": {"type": "array", "items": {"type": "number"}, "description": "[sx,sy,sz] applied to each body when asset_ref is given"},
+                },
+                "required": ["positions"],
+            },
+        },
+    },
 
 ]
