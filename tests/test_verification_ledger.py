@@ -89,3 +89,20 @@ def test_refuses_to_touch_broken_json(tmp_path):
     p.write_text('{"task_id": "x",}')  # invalid
     with pytest.raises(Exception):
         vl.write_verification(p, {"function_gate": {}})
+
+
+def test_per_run_extras_in_ledger_row(tmp_path):
+    """1.4 (post-plan delta): per-RUN training-grade context rides the ledger
+    row; extras never overwrite core fields."""
+    p = _mk_template(tmp_path, COMPACT)
+    led = tmp_path / "led.jsonl"
+    vl.record_gate_run(p, True, "sha1", ledger_path=led, when="t1", extras={
+        "verdict_vector": {"/World/Cube_1": "DELIVERED"},
+        "kit_session_age_s": 1234,
+        "snapshot_hash": "snap1",
+        "passed": "EVIL-OVERWRITE",   # must NOT clobber the core field
+    })
+    row = json.loads(led.read_text().splitlines()[0])
+    assert row["verdict_vector"] == {"/World/Cube_1": "DELIVERED"}
+    assert row["kit_session_age_s"] == 1234
+    assert row["passed"] is True  # core field protected

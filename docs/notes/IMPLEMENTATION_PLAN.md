@@ -29,8 +29,8 @@ Convention: `[ ]` todo · `[~]` in progress · `[x]` done · `[!]` blocked (note
 - [ ] **P0-06** N-of-M re-validation harness for the 13-cluster (fresh-Kit per run). *touches:* `scripts/qa/`. *done:* one command → N-of-M verdicts for all 13.
 
 ### 0b. De-scope the fuzzy backends (honesty)
-- [ ] **P0-07** Audit `motion_controllers.untested` tags across templates → report of declared-not-verified controllers.
-- [ ] **P0-08** Mark untested tags `declared-not-verified` so retrieval/UI stop implying 15 working paths. *done:* only cuRobo+direct_joint read as verified.
+- [x] **P0-07** *(97c7f953)* Audit `motion_controllers.untested` tags across templates → report of declared-not-verified controllers.
+- [x] **P0-08** *(97c7f953; 28 invisible templates got honest fields)* Mark untested tags `declared-not-verified` so retrieval/UI stop implying 15 working paths. *done:* only cuRobo+direct_joint read as verified.
 - [ ] **P0-09** Retire templates STILL cortex-calling in the active set to `_retired/` on master. **NOT CP-73** (its Cortex layer is already removed — CP-73 is a P0-02 fix target; CP-72 already retired). *done:* no cortex-calling template in the active gate set.
 
 ### 0c. Branch re-convergence — port master→working. **Gates Phase 3 + 6 ONLY (not Phases 1-2).**
@@ -44,38 +44,38 @@ Convention: `[ ]` todo · `[~]` in progress · `[x]` done · `[!]` blocked (note
 - [ ] **P0-17** Agree merge cadence + catalog-of-record with Kimate. (Schema question is ANSWERED — his bundled catalogs match the resolver schema verbatim; remaining: cadence + ownership.) *done:* written agreement.
 
 ### 0d. Measurement-honesty fixes [Foundation track — unblocks everything downstream]
-- [ ] **P0-18** **Honest delivery gate** — `simulate_traversal_check` has THREE leniency holes making multi-item templates falsely-green: (a) one `target_path` → 2/3-way sorts unscorable (per-bin multi-target gate); (b) "AT LEAST ONE delivered = PASS" (picker-tote 6, dispenser 10, kitting) → completeness mode (N-of-M / all-required); (c) templates EXCLUDE the hard cube from `cube_paths` (inspector excludes the red reject cube) → lint that every declared workpiece is graded. *blast-6+, the #1 measurement gap. The 15 revalidate_falsely_green templates (PRUNE_AUDIT_VERDICT) re-gate on this.*
-- [ ] **P0-19** Structured `verified_status` — `{function_gate:{status,n,m,wilson_lower,last_run_sha}}` + re-validation ledger; "a merge re-gates the affected corpus" = a Phase-0 exit.
-- [ ] **P0-20** Version-control `/home/anton/.isaac_qa/run/scene_timeseries.py` into `scripts/qa/` (untracked today; the diagnose-loop substrate; invisible to a fresh checkout / Kimate).
+- [x] **P0-18** *(6154b88e — ported from Opus worktree after deep QC: wrong base, broken import, dup raycast all caught)* **Honest delivery gate** — `simulate_traversal_check` has THREE leniency holes making multi-item templates falsely-green: (a) one `target_path` → 2/3-way sorts unscorable (per-bin multi-target gate); (b) "AT LEAST ONE delivered = PASS" (picker-tote 6, dispenser 10, kitting) → completeness mode (N-of-M / all-required); (c) templates EXCLUDE the hard cube from `cube_paths` (inspector excludes the red reject cube) → lint that every declared workpiece is graded. *blast-6+, the #1 measurement gap. The 15 revalidate_falsely_green templates (PRUNE_AUDIT_VERDICT) re-gate on this.*
+- [x] **P0-19** *(291cc659 ledger + 8ade3b04 backfill 228; X-10 per-run extras)* Structured `verified_status` — `{function_gate:{status,n,m,wilson_lower,last_run_sha}}` + re-validation ledger; "a merge re-gates the affected corpus" = a Phase-0 exit.
+- [x] **P0-20** *(c43b79e1)* Version-control `/home/anton/.isaac_qa/run/scene_timeseries.py` into `scripts/qa/` (untracked today; the diagnose-loop substrate; invisible to a fresh checkout / Kimate).
 
 ---
 
 ## PHASE 1 — The verification ladder ★ [Foundation track — STARTED]
 
 ### 1a. Foundations
-- [~] **P1-01** `height_m` on `object_palette.ObjectClass` — **field ADDED (2026-06-09)**; per-class values NOT yet populated (interim heights live in `_CLASS_HEIGHTS_M` fallback inside static_eyes — **two sources of truth, debt**: populate PALETTE, then shrink the fallback). *done-when:* every palette class has height_m set; fallback dict only covers true unknowns.
+- [x] **P1-01** *(630ceca2 — all 60 classes populated, fallback emptied)* `height_m` on `object_palette.ObjectClass` — **field ADDED (2026-06-09)**; per-class values NOT yet populated (interim heights live in `_CLASS_HEIGHTS_M` fallback inside static_eyes — **two sources of truth, debt**: populate PALETTE, then shrink the fallback). *done-when:* every palette class has height_m set; fallback dict only covers true unknowns.
 
 ### 1b. static_eyes — **CORE BUILT + TESTED (2026-06-09/10)**
 - [x] **P1-02** `Layout` input + `StaticEyesReport` output — `service/isaac_assist_service/multimodal/static_eyes.py`.
 - [x] **P1-03..07** The checks: tiered reach-shell (gross-fail / comfortable-pass / **uncertain** below-base-z or near-radius), 3D-AABB interpenetration, support (rest/float/buried), fit, drop_in_container, occlusion (advisory), footprint/cell-bounds. Assembled over `ContactReachabilityValidator` + PALETTE, no Kit.
 - [~] **P1-08** Machine-actionable fixes — `{action, path, constraint, suggest_position, human}` DONE + convergence proven by test. **Missing: an explicit per-check `confidence` float** (the `uncertain` status partially covers it; add for dual-verify integration).
 - [x] **(tests)** `tests/test_static_eyes.py` — 6/6 l0 green (clean-PASS, out-of-reach+convergent-fix, clump, drop-miss, below-base→UNCERTAIN, reach_diagnostics shape).
-- [ ] **P1-09** Tier-2 reach: thin wrapper shelling to `reach_validate.py` single-IK probe ONLY for the `uncertain` band (Kit+cuRobo, no settle; N-of-M). *coordinate Kit use with the UR10 track.*
-- [ ] **P1-10** Register `static_eyes` as an LLM-callable data tool. *touches:* `tool_schemas.py`, a handler, `no_handler_tools.json`. **CI: tools-resolve green + l0 — the gate hard-fails on a schema with no handler.**
-- [ ] **P1-11** Wire into `verifier_registry.py` form_gate — `reach_diagnostics()` already produces the `verify:reach` arg shape; fill the L336 stub. *done:* form_gate runs static_eyes.
+- [x] **P1-09** *(c6041973 — live-smoked CP-70 2/2)* Tier-2 reach: thin wrapper shelling to `reach_validate.py` single-IK probe ONLY for the `uncertain` band (Kit+cuRobo, no settle; N-of-M). *coordinate Kit use with the UR10 track.*
+- [x] **P1-10** *(36a8cfa8 — audit 0 ghosts)* Register `static_eyes` as an LLM-callable data tool. *touches:* `tool_schemas.py`, a handler, `no_handler_tools.json`. **CI: tools-resolve green + l0 — the gate hard-fails on a schema with no handler.**
+- [x] **P1-11** *(4cec6f72)* Wire into `verifier_registry.py` form_gate — `reach_diagnostics()` already produces the `verify:reach` arg shape; fill the L336 stub. *done:* form_gate runs static_eyes.
 
 ### 1c. dual-verification
-- [ ] **P1-12** The 4 metric pairs (reach/delivery/support/geometry): static source, physics source, agreement band. *spec:* `docs/research/DUAL_VERIFICATION_SPEC.md` (local-only).
-- [ ] **P1-13** Skip-or-gate policy: PASS+high-conf→SKIP; PASS+low-conf→GATE; FAIL→REJECT. *done:* a `decide(report)→action` fn.
-- [ ] **P1-14** Fidelity-tier tagging (SYNTHETIC/INFERRED/ESTIMATED/MEASURED, weakest wins) on every verdict.
-- [ ] **P1-15** Calibration FIRST: both layers on the UR10-cluster + CP-NEW sample → per-pair confusion matrices → bands at the false-PASS percentile. *done:* `data/calibration/` versioned. **The ~3.5-4× reduction is a HYPOTHESIS this measures (collapses to ~1.9× under the reach-divergence finding) — P1-17 may not claim it before this runs.**
+- [x] **P1-12** *(1f546414)* The 4 metric pairs (reach/delivery/support/geometry): static source, physics source, agreement band. *spec:* `docs/research/DUAL_VERIFICATION_SPEC.md` (local-only).
+- [x] **P1-13** *(1f546414 — SKIP hard-gated behind calibration)* Skip-or-gate policy: PASS+high-conf→SKIP; PASS+low-conf→GATE; FAIL→REJECT. *done:* a `decide(report)→action` fn.
+- [x] **P1-14** *(1f546414)* Fidelity-tier tagging (SYNTHETIC/INFERRED/ESTIMATED/MEASURED, weakest wins) on every verdict.
+- [~] **P1-15** *(runner e5eecba6+1f830087; 20-template sweep RUNNING)* Calibration FIRST: both layers on the UR10-cluster + CP-NEW sample → per-pair confusion matrices → bands at the false-PASS percentile. *done:* `data/calibration/` versioned. **The ~3.5-4× reduction is a HYPOTHESIS this measures (collapses to ~1.9× under the reach-divergence finding) — P1-17 may not claim it before this runs.**
 - [ ] **P1-16** N-of-M on disagreement (tier-dependent run counts).
 - [ ] **P1-17** Measure the throughput win. *needs:* P1-15. *done:* a measured number.
 
 ### 1d. Relation edge — **LOAD-BEARING for the asset tier** (ABOM graph SKIPPED; this is a small typed field, not a graph)
-- [ ] **P1-18** `Relation` model `{type, from_id, to_id, category, reason, severity}` in `types.py`; retype `constraints`; version 1.0→1.1 **with a migration for existing specs**. (~40 LOC)
-- [ ] **P1-19** Validator rule (unknown-id + SEQUENCE cycle check). *touches:* `multimodal/validate.py`.
-- [ ] **P1-20** static_eyes verifies *declared* relations instead of guessing from geometry. *needs:* P1-08, P1-18.
+- [x] **P1-18** *(d1c227cb)* `Relation` model `{type, from_id, to_id, category, reason, severity}` in `types.py`; retype `constraints`; version 1.0→1.1 **with a migration for existing specs**. (~40 LOC)
+- [x] **P1-19** *(d1c227cb)* Validator rule (unknown-id + SEQUENCE cycle check). *touches:* `multimodal/validate.py`.
+- [x] **P1-20** *(d1c227cb — relation fails route to geometry pair)* static_eyes verifies *declared* relations instead of guessing from geometry. *needs:* P1-08, P1-18.
 
 ---
 
@@ -182,8 +182,14 @@ Convention: `[ ]` todo · `[~]` in progress · `[x]` done · `[!]` blocked (note
 - [ ] **X-04** Kimate integration: catalog-of-record, Cosmos/resolver merges, branch cadence.
 - [ ] **X-05** Inert-tool audit — tools that author USD / accept args but have NO runtime behavior (`create_bin` codegen-only, `configure_camera`, `barcode_reader_sensor`, `register_moving_obstacle`, `sim_control`). Inventory → wire runtime OR mark `authoring-only` honestly.
 - [ ] **X-06** Per-template SIM2REAL tag (2nd fidelity axis, distinct from measurement tier): faithful-grip? sensor-vs-oracle? real-mesh? authored maxForce? (maxForce gap is concrete: handler hard-codes stiff/damping, no maxForce → heavy parts don't grip.) Tie to T0-T6 + `measure_sim_real_gap`.
-- [ ] **X-07** Synthetic `scripted_demonstrator`/`teleop_mock` (EC-14, M) + `actions`-schema fix — unblocks GR00T/imitation HARDWARE-FREE; builds the LeRobot-v2 `actions` slot a future mocap intake writes into. **Markerless mocap (MAMMA) = WATCH-ITEM**, deferred to the G1 rung.
-- [ ] **X-08 ROS2** (from `ROS2_STRATEGY.md`): (a) promote ROS2 to a NAMED production backend with its own verification tier, SYNTHETIC-tagged until proven, OFF the critical path; (b) close the `ros2_cmd` loop (compiles but never wires command→motion; 0 ROS2 templates pass a physics gate — graded structurally with `simulate_args:null`) via a mock-node → `simulate_traversal_check` function-gate; (c) real-robot driver/recorder layer + the rclpy ABI fix (humble cp311 vs Kit 3.10). *(REAL today: 4 OmniGraph profiles, clock/QoS/TF/diagnose, Modbus-TCP, `measure_sim_real_gap`.)*
+- [ ] **X-07** Synthetic `scripted_demonstrator`/`teleop_mock` (EC-14, M) + `actions`-schema fix — unblocks GR00T/imitation HARDWARE-FREE; builds the LeRobot-v2 `actions` slot a future mocap intake writes into. **Markerless mocap (MAMMA) = WATCH-ITEM — REINFORCED 2026-06-10: MAMMA's license explicitly forbids commercial use (incl. training on its synthetic dataset), and the leading mocap vendor was acquired (single-cam product ≠ MAMMA replacement). A license-clean commercial stack exists at 25-40mm accuracy (mapped in local research).**, deferred to the G1 rung.
+- [ ] **X-09 Platform track (added 2026-06-10, from the post-plan research delta):**
+  (a) **Isaac Sim 6.0 / Kit 110 port** — verified SMALL (days): production code is already on `isaacsim.*` (~450 refs); true legacy = 2 imports inside Kit code-strings (`diagnostics.py` ~L4249/4274) + `launch_isaac.sh:92` + friction_paradigm scripts; an `exts/isaac_6.0` tree already exists. 5.1 is no longer supported upstream; 6.0 GA (Kit 110) removed the `omni.isaac.*` shims. **Do NOT port mid-run** — the verified UR10 work runs on 5.1; port as its own gated change with a 13-cluster regression.
+  (b) **DECISION (protocolled): do NOT port to cuMotion/Motion Generation API now** — the 6.0 integration is marked Experimental, cuMotion is a proprietary C++ rewrite (Isaac ROS license; raw cuRobo = Apache 2.0), and batch-IK/MPPI/custom-collision-sphere parity is missing. **Re-evaluate at 6.1.** (Full grounds in local research, not shipped.)
+- [ ] **P2-12** WorldBinding-style auto-sync USD→cuRobo collision world — generalizes `_ur10_multicube_obs`: sync scene transforms/obstacles into the planner's collision world automatically (steal the 6.0 WorldBinding *pattern*, not the dependency). **Structurally kills the stale-world bug class** (CP-83's STALE-WORLD sig was exactly this). ⚠️ Touches `pick_place.py` = UR10-track files → coordinate + full 13-cluster N-of-M regression required. *Phase 0/2 boundary.*
+- [ ] **P2-13** Controller-backend CONTRACT SPEC (design-first, NO refactor) — the 10 `target_source` variants are string-dispatched codegen generators (`pick_place.py:293`), not runtime objects, so a MotionPolicy-style ABC is a category shift. Step 1 = a written interface contract (get_active_joints / compute_targets / update_world / set_base_pose equivalents at the codegen level + what each backend guarantees); ONLY then decide whether a thin runtime wrapper earns its keep. This is the stated PREREQ for the GR00T-runtime architectural call + a future Motion-Gen-API adapter (6.1) + per-backend `motion_controllers` honesty.
+- [x] **X-10** Per-run verdict log (delta on P0-19) — `record_gate_run(extras=...)` now carries per-RUN training-grade context (`verdict_vector`, `snapshot_hash`, `gate_score`, `kit_session_age_s` — degradation-poisoned rows become distrustable). Typed verdicts beat raw logs for future verdict→fix dispatch/auto-repair. *Done 2026-06-10, 7/7 l0.*
+- [ ] **X-08 ROS2** (from `ROS2_STRATEGY.md`): (a) promote ROS2 to a NAMED production backend with its own verification tier, SYNTHETIC-tagged until proven, OFF the critical path; (b) close the `ros2_cmd` loop (compiles but never wires command→motion; 0 ROS2 templates pass a physics gate — graded structurally with `simulate_args:null`) via a mock-node → `simulate_traversal_check` function-gate; (c) real-robot driver/recorder layer + the rclpy ABI fix (humble cp311 vs Kit 3.10). *(REAL today: 4 OmniGraph profiles, clock/QoS/TF/diagnose, Modbus-TCP, `measure_sim_real_gap`.)* *2026-06-10: ISO 10218:2025 leaves AI/LLM validation unaddressed → the deterministic template+gate contract is certification-valuable; strengthens this positioning.*
 
 ---
 

@@ -95,10 +95,18 @@ def record_gate_run(
     run_sha: str,
     ledger_path: str | Path = "workspace/qa_runs/verification_ledger.jsonl",
     when: Optional[str] = None,
+    extras: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """Record one function-gate run: update the template's structured record
     (n/m/wilson_lower/status) and append to the run ledger. Returns the new
-    record."""
+    record.
+
+    ``extras`` (optional) enriches the per-RUN ledger row — not the template
+    record — with training-grade context: e.g. ``verdict_vector`` (the per-cube
+    classification), ``snapshot_hash``, ``gate_score``, ``kit_session_age_s``.
+    The session-age tag makes Kit-degradation-poisoned rows distrustable; the
+    typed verdict vector is what future verdict->fix dispatch trains on
+    (typed verdicts beat raw logs for LLM repair)."""
     when = when or datetime.now(timezone.utc).isoformat(timespec="seconds")
     existing = read_verification(template_path) or {}
     fg = existing.get("function_gate") or {}
@@ -118,12 +126,16 @@ def record_gate_run(
 
     lp = Path(ledger_path)
     lp.parent.mkdir(parents=True, exist_ok=True)
+    row: Dict[str, Any] = {
+        "ts": when, "template": str(template_path), "passed": passed,
+        "sha": run_sha, "n": n, "m": m,
+        "wilson_lower": record["function_gate"]["wilson_lower"],
+    }
+    if extras:
+        for k, v in extras.items():
+            row.setdefault(k, v)  # extras never overwrite core fields
     with lp.open("a", encoding="utf-8") as fh:
-        fh.write(json.dumps({
-            "ts": when, "template": str(template_path), "passed": passed,
-            "sha": run_sha, "n": n, "m": m,
-            "wilson_lower": record["function_gate"]["wilson_lower"],
-        }) + "\n")
+        fh.write(json.dumps(row) + "\n")
     return record
 
 
