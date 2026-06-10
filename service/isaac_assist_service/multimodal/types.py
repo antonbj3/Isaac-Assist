@@ -16,7 +16,7 @@ from __future__ import annotations
 import re
 import uuid
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Literal, Optional, Tuple
+from typing import Any, Dict, List, Literal, Optional, Tuple, Union
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -298,10 +298,44 @@ class RoleBinding(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Relation — typed inter-object edge (v1.1)
+# ---------------------------------------------------------------------------
+
+RELATION_TYPES = (
+    "on_top_of", "above", "inside", "contains", "supports",
+    "beside", "feeds", "handoff", "sequence",
+)
+
+
+class Relation(BaseModel):
+    """A typed, declared inter-object relation (LayoutSpec v1.1).
+
+    This is the *declared-intent* edge that (a) static_eyes verifies
+    geometrically instead of guessing from coordinates, and (b) the
+    asset-swap cascade propagates through (a resolved bbox shifts an anchor
+    -> dependents re-derive). It is deliberately NOT a scene graph — just a
+    small typed entry in the existing flat ``constraints`` list. ``hard``
+    relations gate; ``soft`` are advisory.
+    """
+    type: Literal[
+        "on_top_of", "above", "inside", "contains", "supports",
+        "beside", "feeds", "handoff", "sequence",
+    ]
+    from_id: str
+    to_id: str
+    category: Literal["PHYSICS", "SAFETY", "SEQUENCE", "PROXIMITY", "TIMING"] = "PHYSICS"
+    reason: str = ""
+    severity: Literal["hard", "soft"] = "hard"
+    value: Optional[float] = None
+    """Optional scalar parameter (e.g. beside-clearance in metres)."""
+
+
+# ---------------------------------------------------------------------------
 # LayoutSpec — top-level
 # ---------------------------------------------------------------------------
 
 LAYOUT_SPEC_VERSION = "1.0"
+LAYOUT_SPEC_VERSION_RELATIONS = "1.1"
 
 
 class LayoutSpec(BaseModel):
@@ -313,11 +347,14 @@ class LayoutSpec(BaseModel):
     voice modalities produce only `intent`; canvas and sketch/photo modalities
     produce all three.
     """
-    version: Literal["1.0"] = LAYOUT_SPEC_VERSION
+    version: Literal["1.0", "1.1"] = LAYOUT_SPEC_VERSION
 
     intent: Intent
     objects: Optional[List[TypedObject]] = None
-    constraints: Optional[List[Dict[str, Any]]] = None  # full schema in v1.1
+    constraints: Optional[List[Union[Relation, Dict[str, Any]]]] = None
+    """v1.1: typed ``Relation`` edges (declared intent, verified by
+    static_eyes). Legacy free-form dicts remain accepted — entries that don't
+    match the Relation schema stay plain dicts (migration-free reads)."""
     bindings: Optional[Dict[str, RoleBinding]] = None  # role_name -> binding
 
     parameters: Dict[str, Any] = Field(default_factory=dict)

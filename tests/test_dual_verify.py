@@ -109,3 +109,79 @@ def test_tag_measured_upgrades_provenance():
     tag_measured(pairs, gate_success=True)
     assert all(v.fidelity == FidelityTier.MEASURED for v in pairs.values())
     assert any("physics" in n for n in pairs["reach"].notes)
+
+
+# --- P1-18..20: typed Relations -------------------------------------------
+
+def test_relation_model_and_legacy_dicts_coexist():
+    from service.isaac_assist_service.multimodal import LayoutSpec, Relation
+    spec = LayoutSpec.model_validate({
+        "version": "1.1",
+        "intent": {"pattern_hint": "pick_place"},
+        "constraints": [
+            {"type": "on_top_of", "from_id": "a", "to_id": "b"},
+            {"legacy": True},
+        ],
+        "source": {"modality": "drag_drop", "session_id": "s", "confidence": 1.0},
+    })
+    assert isinstance(spec.constraints[0], Relation)
+    assert isinstance(spec.constraints[1], dict)
+
+
+def test_validator_flags_unknown_relation_ids_and_sequence_cycles():
+    from service.isaac_assist_service.multimodal import LayoutSpec
+    from service.isaac_assist_service.multimodal.validate import validate_layout_spec
+    base = {
+        "version": "1.1",
+        "intent": {"pattern_hint": "pick_place"},
+        "objects": [
+            {"id": "a", "class": "cube_medium", "name": "A",
+             "position": {"x": 0, "y": 0}, "size": {"w": 0.05, "h": 0.05}},
+            {"id": "b", "class": "bin", "name": "B",
+             "position": {"x": 1, "y": 0}, "size": {"w": 0.4, "h": 0.3}},
+        ],
+        "source": {"modality": "drag_drop", "session_id": "s", "confidence": 1.0},
+    }
+    # unknown id
+    spec = LayoutSpec.model_validate({**base, "constraints": [
+        {"type": "on_top_of", "from_id": "a", "to_id": "GHOST"}]})
+    res = validate_layout_spec(spec, raise_on_error=False)
+    assert any(i.code == "relation.unknown_object_id" for i in res.issues)
+    # sequence cycle a->b->a
+    spec2 = LayoutSpec.model_validate({**base, "constraints": [
+        {"type": "sequence", "from_id": "a", "to_id": "b"},
+        {"type": "sequence", "from_id": "b", "to_id": "a"}]})
+    res2 = validate_layout_spec(spec2, raise_on_error=False)
+    assert any(i.code == "relation.sequence_cycle" for i in res2.issues)
+
+
+def test_static_eyes_verifies_declared_relations():
+    layout = _layout()
+    # violated on_top_of: cube floats far from the bin top
+    layout["relations"] = [{"type": "on_top_of", "from": "/World/Cube_1", "to": "/World/Bin"}]
+    rep = se.run(layout)
+    rel = [c for c in rep.checks if c.id == "relation:on_top_of"]
+    assert rel and rel[0].status == "fail"
+    assert rel[0].fix and rel[0].fix["suggest_position"]
+    # applying the suggestion satisfies the relation
+    layout2 = _layout()
+    layout2["objects"][0]["position"] = rel[0].fix["suggest_position"]
+    layout2["relations"] = layout["relations"]
+    rep2 = se.run(layout2)
+    rel2 = [c for c in rep2.checks if c.id == "relation:on_top_of"]
+    assert rel2 and rel2[0].status == "pass"
+    # soft severity -> warn, not fail
+    layout3 = _layout()
+    layout3["relations"] = [{"type": "on_top_of", "from": "/World/Cube_1",
+                             "to": "/World/Bin", "severity": "soft"}]
+    rep3 = se.run(layout3)
+    rel3 = [c for c in rep3.checks if c.id == "relation:on_top_of"]
+    assert rel3 and rel3[0].status == "warn"
+
+
+def test_relation_fail_reaches_decide_via_geometry_pair():
+    layout = _layout()
+    layout["relations"] = [{"type": "on_top_of", "from": "/World/Cube_1", "to": "/World/Bin"}]
+    d = decide(se.run(layout))
+    assert d.action == REJECT_FIX
+    assert d.pair_verdicts["geometry"].status == "fail"

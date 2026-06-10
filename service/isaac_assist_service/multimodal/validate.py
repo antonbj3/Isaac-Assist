@@ -273,6 +273,57 @@ def validate_layout_spec(
                     field_path=f"bindings.{role_name}.object_id",
                 ))
 
+    # ----- P1-19: typed Relation validation (LayoutSpec v1.1) ---------------
+    if spec.constraints:
+        from .types import Relation as _Relation
+        _obj_ids = ({o.id for o in (spec.objects or [])}
+                    | {o.name for o in (spec.objects or [])})
+        _seq_edges = []
+        for _i, _rel in enumerate(spec.constraints):
+            if not isinstance(_rel, _Relation):
+                continue  # legacy free-form dict — not validated
+            if spec.objects is not None:
+                for _ep, _val in (("from_id", _rel.from_id), ("to_id", _rel.to_id)):
+                    if _val not in _obj_ids:
+                        issues.append(ValidationIssue(
+                            severity="error",
+                            code="relation.unknown_object_id",
+                            message=(f"relation[{_i}] {_rel.type} references "
+                                     f"{_ep}={_val!r} which is not in spec.objects"),
+                            field_path=f"constraints[{_i}].{_ep}",
+                        ))
+            if _rel.type == "sequence" or _rel.category == "SEQUENCE":
+                _seq_edges.append((_rel.from_id, _rel.to_id))
+        # cycle check over SEQUENCE edges (iterative DFS, white/grey/black)
+        if _seq_edges:
+            _adj = {}
+            for _a, _b in _seq_edges:
+                _adj.setdefault(_a, []).append(_b)
+            _state = {}
+            for _start in list(_adj):
+                if _state.get(_start):
+                    continue
+                _stack = [(_start, iter(_adj.get(_start, ())))]
+                _state[_start] = "grey"
+                while _stack:
+                    _node, _it = _stack[-1]
+                    _nxt = next(_it, None)
+                    if _nxt is None:
+                        _state[_node] = "black"
+                        _stack.pop()
+                    elif _state.get(_nxt) == "grey":
+                        issues.append(ValidationIssue(
+                            severity="error",
+                            code="relation.sequence_cycle",
+                            message=f"SEQUENCE relations form a cycle through {_nxt!r}",
+                            field_path="constraints",
+                        ))
+                        _stack.clear()
+                        break
+                    elif _state.get(_nxt) is None:
+                        _state[_nxt] = "grey"
+                        _stack.append((_nxt, iter(_adj.get(_nxt, ()))))
+
     valid = not any(i.severity == "error" for i in issues)
     result = ValidationResult(valid=valid, issues=issues)
 

@@ -363,6 +363,9 @@ def run(layout: Dict[str, Any]) -> StaticEyesReport:
         else:
             checks.append(Check("support", "pass", pk))
 
+    # ---- declared relations (P1-20): verify INTENT, don't guess from geometry ----
+    _verify_relations(layout.get("relations") or [], aabbs, checks)
+
     # ---- footprint / cell bounds ----
     if cell_bounds:
         xb = cell_bounds.get("x")
@@ -374,6 +377,87 @@ def run(layout: Dict[str, Any]) -> StaticEyesReport:
                                     f"{p} extends outside cell bounds x={xb} y={yb}"))
 
     return _assemble(checks)
+
+
+_REL_TOL_M = 0.03  # contact tolerance for on_top_of/supports
+
+
+def _verify_relations(relations: List[Dict[str, Any]],
+                      aabbs: Dict[str, AABB], checks: List[Check]) -> None:
+    """P1-20 — verify DECLARED inter-object relations geometrically.
+
+    Each relation: {type, from, to (or from_id/to_id), severity?: hard|soft,
+    value?: float}. Geometric types verified statically: on_top_of/supports,
+    above, inside/contains, beside. Semantic types (feeds/handoff/sequence)
+    are noted as skipped — they need runtime/inter-cell context, not geometry.
+    A violated ``hard`` relation fails with an actionable fix; ``soft`` warns.
+    """
+    for i, rel in enumerate(relations):
+        rtype = rel.get("type", "")
+        a_path = rel.get("from") or rel.get("from_id") or ""
+        b_path = rel.get("to") or rel.get("to_id") or ""
+        sev = rel.get("severity", "hard")
+        cid = f"relation:{rtype}"
+        a, b = aabbs.get(a_path), aabbs.get(b_path)
+        if rtype in ("feeds", "handoff", "sequence"):
+            checks.append(Check(cid, "skipped", f"{a_path}->{b_path}",
+                                f"{rtype} is semantic — verified at runtime/inter-cell, not statically"))
+            continue
+        if a is None or b is None:
+            checks.append(Check(cid, "fail" if sev == "hard" else "warn", f"{a_path}->{b_path}",
+                                f"relation[{i}] {rtype}: unknown object "
+                                f"{'(from)' if a is None else '(to)'} — no bbox derivable"))
+            continue
+        if rtype in ("contains",):  # contains(B holds A-args swapped) -> normalize to inside
+            a_path, b_path, a, b = b_path, a_path, b, a
+            rtype = "inside"
+        ok, msg, suggest = True, "", None
+        if rtype in ("on_top_of", "supports"):
+            xy = _aabb_xy_overlap(a, b)
+            gap = a[0][2] - b[1][2]  # A bottom vs B top
+            ok = xy and abs(gap) <= _REL_TOL_M
+            if not ok:
+                msg = (f"{a_path} declared on_top_of {b_path} but "
+                       + ("no XY overlap" if not xy else f"vertical gap {gap:+.3f}m"))
+                bcx = (b[0][0] + b[1][0]) / 2; bcy = (b[0][1] + b[1][1]) / 2
+                suggest = [round(bcx, 3), round(bcy, 3), round(b[1][2] + 0.001, 3)]
+        elif rtype == "above":
+            ok = _aabb_xy_overlap(a, b) and a[0][2] > b[1][2] - 1e-6
+            if not ok:
+                msg = f"{a_path} declared above {b_path} but is not (xy-overlap + higher z required)"
+        elif rtype == "inside":
+            ok = (_xy_inside(((a[0][0] + a[1][0]) / 2, (a[0][1] + a[1][1]) / 2, 0.0), b)
+                  and a[0][2] >= b[0][2] - _REL_TOL_M and a[0][2] <= b[1][2])
+            if not ok:
+                msg = f"{a_path} declared inside {b_path} but its centre/base falls outside the container"
+                bcx = (b[0][0] + b[1][0]) / 2; bcy = (b[0][1] + b[1][1]) / 2
+                suggest = [round(bcx, 3), round(bcy, 3), round(b[0][2] + 0.001, 3)]
+        elif rtype == "beside":
+            clearance = float(rel.get("value") or 0.30)
+            if _aabb_xy_overlap(a, b):
+                ok, msg = False, f"{a_path} declared beside {b_path} but their footprints overlap"
+            else:
+                dx = max(b[0][0] - a[1][0], a[0][0] - b[1][0], 0.0)
+                dy = max(b[0][1] - a[1][1], a[0][1] - b[1][1], 0.0)
+                gap = max(dx, dy)
+                ok = gap <= clearance
+                if not ok:
+                    msg = f"{a_path} declared beside {b_path} but gap {gap:.2f}m > {clearance:.2f}m"
+        else:
+            checks.append(Check(cid, "skipped", f"{a_path}->{b_path}",
+                                f"unknown relation type {rtype!r}"))
+            continue
+        if ok:
+            checks.append(Check(cid, "pass", f"{a_path}->{b_path}"))
+        else:
+            fix = None
+            if suggest is not None:
+                fix = {"action": "move_object", "path": a_path,
+                       "constraint": f"{rtype} {b_path}",
+                       "suggest_position": suggest,
+                       "human": f"move {a_path} to satisfy {rtype} {b_path}, e.g. {suggest}"}
+            checks.append(Check(cid, "fail" if sev == "hard" else "warn",
+                                f"{a_path}->{b_path}", msg, fix=fix))
 
 
 def _project_to_sphere(p: Vec3, base: Vec3, radius: float) -> Vec3:

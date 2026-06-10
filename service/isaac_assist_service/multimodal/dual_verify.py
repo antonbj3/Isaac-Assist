@@ -97,6 +97,8 @@ def static_pair_verdicts(report: StaticEyesReport) -> Dict[str, PairVerdict]:
     buckets: Dict[str, List] = {p: [] for p in PAIRS}
     for c in report.checks:
         pair = _CHECK_TO_PAIR.get(c.id)
+        if pair is None and c.id.startswith("relation:"):
+            pair = "geometry"  # declared spatial relations are geometric intent
         if pair:
             buckets[pair].append(c)
 

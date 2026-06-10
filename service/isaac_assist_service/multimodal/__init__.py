@@ -16,6 +16,7 @@ display-only.
 """
 
 from .types import (
+    Relation,
     LayoutSpec,
     Intent,
     Counts,
@@ -56,6 +57,7 @@ from . import telemetry
 __all__ = [
     # Types
     "LayoutSpec",
+    "Relation",
     "Intent",
     "Counts",
     "StructuralFeatures",
