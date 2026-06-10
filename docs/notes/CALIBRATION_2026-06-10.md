@@ -13,8 +13,11 @@
    ledger-recorded.** They ran LAST (batch positions 14-19) after 13 UR10 builds = the
    documented warm-Kit false-FAIL pattern. Hypotheses in order: (a) Kit-session
    degradation; (b) real regression (UR10-track pick_place changes or the P0-18 port);
-   (c) extractor artifact. **Fresh-Kit CP-01 single-run in flight decides.** Never
-   conclude on a batch verdict.
+   (c) extractor artifact. **DECIDED (same day): fresh-Kit CP-01 alone = GATE
+   success=True, cube dead-center at rest → hypothesis (a) CONFIRMED — warm-Kit
+   degradation artifact, NOT a regression; the P0-18 legacy path is exonerated.
+   The remaining 5 re-run on near-fresh Kit (any fail gets an individual fresh run).**
+   Never conclude on a batch verdict — demonstrated live, again.
 3. **CP-PRECISION-BIN gate=None** — gate output unparsed; investigate separately.
 
 ## Calibration verdicts (what the data says about the pairs)
