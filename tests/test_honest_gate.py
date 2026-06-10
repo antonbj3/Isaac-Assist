@@ -494,3 +494,14 @@ def test_resolution_can_never_flip_delivered():
     c2 = next(c for c in out["per_cube"] if c["cube"] == "/W/C2")
     assert c2["misrouted"] is False and c2["delivered"] is True  # as shipped
     assert c2["misrouted_label"] is True             # the conflict, surfaced
+
+
+def test_resolve_color_routing_maps_classes_to_bins():
+    """P0-18b: the gate finally reads the controller's routing vocabulary."""
+    from service.isaac_assist_service.qa.honest_gate import resolve_color_routing
+    targets = resolve_color_routing(
+        {"GREEN": "/W/PassBin", "red": "/W/RejectBin"},
+        {"/W/C1": "green", "/W/C2": "Red", "/W/C3": None, "/W/C4": "blue"})
+    assert targets == {"/W/C1": "/W/PassBin", "/W/C2": "/W/RejectBin"}
+    assert resolve_color_routing({}, {"/W/C1": "green"}) == {}
+    assert resolve_color_routing({"green": "/W/B"}, {}) == {}

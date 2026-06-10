@@ -80,6 +80,26 @@ def normalize_routing(
     return {cp: resolved.get(cp, global_target) for cp in cube_paths}
 
 
+def resolve_color_routing(
+    color_routing: Mapping[str, str],
+    cube_classes: Mapping[str, Optional[str]],
+) -> Dict[str, str]:
+    """Resolve a CLASS->bin routing map into a cube->bin targets map
+    [P0-18b]. ``color_routing`` is the controller vocabulary
+    ({"green": "/World/PassBin", ...}); ``cube_classes`` is the measured
+    {cube_path: semantic class or None} read from the stage (the SAME
+    Semantics_color/colour/class lookup the controller routes by, lowercase).
+    Unmapped/unlabeled cubes are omitted -> they fall back to the global
+    target in normalize_routing, and the caller surfaces them as unresolved.
+    """
+    cr = {str(k).lower(): str(v) for k, v in (color_routing or {}).items()}
+    out: Dict[str, str] = {}
+    for cube, cls in (cube_classes or {}).items():
+        if cls and str(cls).lower() in cr:
+            out[str(cube)] = cr[str(cls).lower()]
+    return out
+
+
 def all_targets(per_cube_target: Mapping[str, str]) -> List[str]:
     """Distinct destination prim paths referenced by the routing map.
 

@@ -4051,8 +4051,50 @@ async def _handle_simulate_traversal_check(args: Dict) -> Dict:
     targets_map = args.get("targets") or {}
     routing_list = args.get("routing") or []
     completeness = args.get("completeness", "any")
-    # Resolve per-cube destination using the SAME pure logic the tests cover.
     from ....qa import honest_gate as _honest_gate  # noqa: PLC0415
+    # P0-18b: templates whose routing intent lives ONLY in color_routing
+    # (the controller vocabulary) graded legacy any-delivered — the gate
+    # never read that vocabulary (QA-audit fynd 3). When no explicit
+    # targets/routing is given, read each cube's semantic class off the
+    # live stage (the SAME Semantics_color/colour/class lookup the
+    # controller routes by) and resolve class->bin into a targets map.
+    color_routing = args.get("color_routing") or {}
+    color_routing_resolution = None
+    if color_routing and not targets_map and not routing_list and cube_paths:
+        _cls_code = (
+            "import json as _j\n"
+            "import omni.usd\n"
+            "from pxr import Semantics\n"
+            "_st = omni.usd.get_context().get_stage()\n"
+            "_out = {}\n"
+            f"for _cp in {cube_paths!r}:\n"
+            "    _v = None\n"
+            "    _p = _st.GetPrimAtPath(_cp)\n"
+            "    if _p and _p.IsValid():\n"
+            "        for _sn in ('Semantics_color', 'Semantics_colour', 'Semantics_class'):\n"
+            "            try:\n"
+            "                _sem = Semantics.SemanticsAPI.Get(_p, _sn)\n"
+            "                if not _sem: continue\n"
+            "                _da = _sem.GetSemanticDataAttr()\n"
+            "                if _da and _da.IsValid() and _da.Get():\n"
+            "                    _v = str(_da.Get()).lower(); break\n"
+            "            except Exception: continue\n"
+            "    _out[_cp] = _v\n"
+            "print('CUBE_CLASSES=' + _j.dumps(_out))\n")
+        try:
+            _r = await kit_tools.exec_sync(_cls_code, timeout=30)
+            _out_txt = str((_r or {}).get("output") or "")
+            import json as _json_cr
+            import re as _re_cr
+            _m = _re_cr.search(r"CUBE_CLASSES=(\{.*\})", _out_txt)
+            cube_classes = _json_cr.loads(_m.group(1)) if _m else {}
+        except Exception:
+            cube_classes = {}
+        targets_map = _honest_gate.resolve_color_routing(color_routing, cube_classes)
+        color_routing_resolution = {
+            "resolved": targets_map,
+            "unresolved": [c for c in cube_paths if c not in targets_map],
+        }
     per_cube_target = _honest_gate.normalize_routing(
         cube_paths, target_path, targets_map, routing_list
     )
@@ -4764,7 +4806,12 @@ else:
     # Phase 0.7: scale timeout with n_runs × duration_s; default 600s
     # was insufficient for n_runs=5 × duration_s=90 (CP-35 NO_RESULT incident).
     _scaled_timeout = max(900, int(n_runs * (duration_s + 30) * 1.5 + 60))
-    return await kit_tools.queue_exec_patch(code, "simulate_traversal_check", timeout=_scaled_timeout)
+    _gate_res = await kit_tools.queue_exec_patch(code, "simulate_traversal_check", timeout=_scaled_timeout)
+    # P0-18b: surface how color_routing resolved (or which cubes stayed
+    # unresolved) so a degenerate resolution is VISIBLE, never silent.
+    if color_routing_resolution is not None and isinstance(_gate_res, dict):
+        _gate_res["color_routing_resolution"] = color_routing_resolution
+    return _gate_res
 
 
 @with_telemetry
