@@ -40,5 +40,6 @@
     "reason": "draft",
     "details": "Brick-stacking baseplate; reorient pattern partial but baseplate placement logic not yet in role schema; zero QA runs",
     "added_date": "2026-05-15"
-  }
+  },
+  "motion_controllers": {"verified": [], "failed": {}, "untested": ["curobo"]}
 }

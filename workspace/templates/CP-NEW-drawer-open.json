@@ -44,5 +44,12 @@
     "reason": "asset_blocked",
     "details": "Requires kitchen-cabinet drawer USD from Nucleus (NVIDIA Isaac assets); not available locally",
     "added_date": "2026-05-15"
+  },
+  "motion_controllers": {
+    "verified": [],
+    "failed": {},
+    "untested": [
+      "spline"
+    ]
   }
 }

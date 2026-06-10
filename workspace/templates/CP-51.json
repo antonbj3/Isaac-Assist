@@ -146,5 +146,6 @@
     "reason": "draft",
     "details": "Robot-to-robot handoff station; pick_place + handoff composition; handoff role type not yet in schema; zero QA runs",
     "added_date": "2026-05-15"
-  }
+  },
+  "motion_controllers": {"verified": [], "failed": {}, "untested": ["curobo"]}
 }

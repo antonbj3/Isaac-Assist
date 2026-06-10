@@ -68,5 +68,12 @@
     ],
     "target_path": "/World/Bin",
     "duration_s": 30
+  },
+  "motion_controllers": {
+    "verified": [],
+    "failed": {},
+    "untested": [
+      "curobo"
+    ]
   }
 }

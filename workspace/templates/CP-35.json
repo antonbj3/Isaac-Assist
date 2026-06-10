@@ -471,5 +471,12 @@
     "upper": 0.3331,
     "evidence_date": "2026-05-15",
     "evidence_source": "workspace/baselines aggregate"
+  },
+  "motion_controllers": {
+    "verified": [],
+    "failed": {},
+    "untested": [
+      "curobo"
+    ]
   }
 }

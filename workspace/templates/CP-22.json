@@ -127,5 +127,6 @@
     "reason": "draft",
     "details": "High-speed belt variant of CP-01; pick_place pattern fits but unrun — zero QA runs, no verified delivery",
     "added_date": "2026-05-15"
-  }
+  },
+  "motion_controllers": {"verified": [], "failed": {}, "untested": ["curobo"]}
 }

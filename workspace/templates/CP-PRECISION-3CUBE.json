@@ -90,5 +90,12 @@
       }
     ],
     "reward_signal": "Cube_M delivered AND adjacent_cube_displacement < 0.001 AND collision_events_non_middle == 0 AND drop_precision_error_m < 0.005"
+  },
+  "motion_controllers": {
+    "verified": [],
+    "failed": {},
+    "untested": [
+      "curobo"
+    ]
   }
 }

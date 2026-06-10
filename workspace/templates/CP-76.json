@@ -168,5 +168,12 @@
     "reason": "draft",
     "details": "Dual-robot dynamic fixture hold; fixture-hold role not yet defined; zero QA runs",
     "added_date": "2026-05-15"
+  },
+  "motion_controllers": {
+    "verified": [],
+    "failed": {},
+    "untested": [
+      "curobo"
+    ]
   }
 }

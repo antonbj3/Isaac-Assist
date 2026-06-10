@@ -91,5 +91,12 @@
     "reason": "draft",
     "details": "UR10 stacking pick_place (cube-on-cube); reorient pattern partial but stacking placement role not defined; zero QA runs",
     "added_date": "2026-05-15"
+  },
+  "motion_controllers": {
+    "verified": [],
+    "failed": {},
+    "untested": [
+      "curobo"
+    ]
   }
 }

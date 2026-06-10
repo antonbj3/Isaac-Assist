@@ -100,5 +100,12 @@
     "reason": "draft",
     "details": "UR10 single-cube color-routing; sort pattern fits but UR10 articulation-link bug makes delivery unreliable; zero QA runs",
     "added_date": "2026-05-15"
+  },
+  "motion_controllers": {
+    "verified": [],
+    "failed": {},
+    "untested": [
+      "curobo"
+    ]
   }
 }

@@ -21,5 +21,6 @@
     "target_path": "/World/Bin_UR",
     "duration_s": 130
   },
-  "verified_status": "smoke-test-draft-2026-06-04 (mixed UR10+Franka coexistence; UNVERIFIED — run + read raw positions)"
+  "verified_status": "smoke-test-draft-2026-06-04 (mixed UR10+Franka coexistence; UNVERIFIED — run + read raw positions)",
+  "motion_controllers": {"verified": [], "failed": {}, "untested": ["curobo"]}
 }

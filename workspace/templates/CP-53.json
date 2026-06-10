@@ -156,5 +156,12 @@
     "reason": "draft",
     "details": "Producer/consumer bounded buffer with 2 Frankas; pick_place pattern partial but bounded-buffer role not in schema",
     "added_date": "2026-05-15"
+  },
+  "motion_controllers": {
+    "verified": [],
+    "failed": {},
+    "untested": [
+      "curobo"
+    ]
   }
 }
