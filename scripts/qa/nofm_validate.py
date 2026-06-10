@@ -129,9 +129,12 @@ def main() -> int:
         if not skip_ts:
             ts_pass, vec = run_ts(name)
             if ts_pass is not None:
-                record_gate_run(REPO / tpl, ts_pass, sha, extras={
-                    "source": "nofm_scene_timeseries", "verdict_vector": vec,
-                    "batch_position": i, "kit_runs_since_boot": 1})
+                record_gate_run(REPO / tpl, ts_pass, sha, axis="faithfulness",
+                                extras={
+                                    "source": "nofm_scene_timeseries",
+                                    "verdict_vector": vec,
+                                    "batch_position": i,
+                                    "kit_runs_since_boot": 1})
             print(f"  ts={ts_pass} vec={vec if ts_pass is not None else 'UNPARSEABLE'}", flush=True)
     print("DONE", flush=True)
     return 0

@@ -106,3 +106,93 @@ def test_per_run_extras_in_ledger_row(tmp_path):
     assert row["verdict_vector"] == {"/World/Cube_1": "DELIVERED"}
     assert row["kit_session_age_s"] == 1234
     assert row["passed"] is True  # core field protected
+
+
+# --- axis split (P0-19 follow-up after the P0-06 batch munged gate+TS) -----
+
+def test_axes_accumulate_independently(tmp_path):
+    p = _mk_template(tmp_path, COMPACT)
+    led = tmp_path / "led.jsonl"
+    vl.record_gate_run(p, True, "s1", ledger_path=led, when="t1")
+    vl.record_gate_run(p, True, "s1", ledger_path=led, when="t1",
+                       axis="faithfulness")
+    vl.record_gate_run(p, False, "s2", ledger_path=led, when="t2",
+                       axis="faithfulness")
+    rec = vl.read_verification(p)
+    assert rec["function_gate"]["n"] == 1 and rec["function_gate"]["m"] == 1
+    assert rec["function_gate"]["status"] == "pass"      # delivery clean...
+    assert rec["faithfulness"]["n"] == 1 and rec["faithfulness"]["m"] == 2
+    assert rec["faithfulness"]["status"] == "mixed"      # ...faithfulness not
+    rows = [json.loads(l) for l in led.read_text().splitlines()]
+    assert [r["axis"] for r in rows] == ["function_gate", "faithfulness",
+                                         "faithfulness"]
+
+
+def test_legacy_claim_survives_measurement(tmp_path):
+    p = _mk_template(tmp_path, COMPACT)
+    vl.write_verification(p, {"function_gate": {"status": "unmeasured",
+                                                "legacy_claim": "pass"}})
+    vl.record_gate_run(p, True, "s1", ledger_path=tmp_path / "l.jsonl", when="t")
+    fg = vl.read_verification(p)["function_gate"]
+    assert fg["status"] == "pass" and fg["legacy_claim"] == "pass"
+
+
+def test_rebuild_from_ledger_unmunges(tmp_path):
+    # Simulate the pre-split bug: TS rows (source-tagged, no axis field)
+    # munged into function_gate — rebuild derives clean per-axis records.
+    p = _mk_template(tmp_path, COMPACT)
+    led = tmp_path / "led.jsonl"
+    rows = [
+        {"ts": "t1", "template": str(p), "passed": True, "sha": "s",
+         "n": 1, "m": 1, "source": "nofm_gate"},
+        {"ts": "t2", "template": str(p), "passed": False, "sha": "s",
+         "n": 1, "m": 2, "source": "nofm_scene_timeseries"},
+        {"ts": "t3", "template": str(p), "passed": True, "sha": "s",
+         "n": 2, "m": 3, "source": "calib_sweep_2026-06-10"},
+    ]
+    led.write_text("".join(json.dumps(r) + "\n" for r in rows))
+    vl.write_verification(p, {"function_gate": {  # the munged cache
+        "status": "mixed", "n": 2, "m": 3, "wilson_lower": 0.2,
+        "last_run_sha": "s", "last_run_at": "t3"}})
+    out = vl.rebuild_from_ledger(ledger_path=led, templates_dir=tmp_path)
+    rec = vl.read_verification(p)
+    assert rec["function_gate"]["n"] == 2 and rec["function_gate"]["m"] == 2
+    assert rec["function_gate"]["status"] == "pass"
+    assert rec["faithfulness"] == {
+        "status": "fail", "n": 0, "m": 1, "wilson_lower": 0.0,
+        "last_run_sha": "s", "last_run_at": "t2"}
+    assert str(p) in out
+
+
+def test_corpus_summary_reports_both_axes(tmp_path):
+    p = _mk_template(tmp_path, COMPACT)
+    (tmp_path / "CP-00.json").write_text(COMPACT.replace("CP-TEST", "CP-00"))
+    led = tmp_path / "l.jsonl"
+    vl.record_gate_run(p, True, "s", ledger_path=led, when="t")
+    vl.record_gate_run(p, False, "s", ledger_path=led, when="t", axis="faithfulness")
+    s = vl.corpus_summary(tmp_path)
+    assert s["counts"]["pass"] == 1 and s["counts"]["unmeasured"] == 1
+    assert s["faithfulness_counts"]["fail"] == 1
+    assert s["faithfulness_counts"]["unmeasured"] == 1
+
+
+def test_rebuild_merges_absolute_and_relative_paths(tmp_path, monkeypatch):
+    # nofm logs absolute paths, calib logs repo-relative — same template's
+    # runs must land in ONE tally (the dual-bookkeeping bug found live).
+    monkeypatch.chdir(tmp_path)
+    tdir = tmp_path / "workspace" / "templates"
+    tdir.mkdir(parents=True)
+    p = tdir / "CP-TEST.json"
+    p.write_text(COMPACT, encoding="utf-8")
+    led = tmp_path / "led.jsonl"
+    rows = [
+        {"ts": "t1", "template": "workspace/templates/CP-TEST.json",
+         "passed": True, "sha": "s1", "source": "calib_sweep"},
+        {"ts": "t2", "template": str(p.resolve()),
+         "passed": True, "sha": "s2", "source": "nofm_gate"},
+    ]
+    led.write_text("".join(json.dumps(r) + "\n" for r in rows))
+    vl.rebuild_from_ledger(ledger_path=led, templates_dir=tdir)
+    fg = vl.read_verification(p)["function_gate"]
+    assert (fg["n"], fg["m"]) == (2, 2)          # combined, not last-write-wins
+    assert fg["last_run_sha"] == "s2"

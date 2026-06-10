@@ -96,10 +96,18 @@ def record_gate_run(
     ledger_path: str | Path = "workspace/qa_runs/verification_ledger.jsonl",
     when: Optional[str] = None,
     extras: Optional[Dict[str, Any]] = None,
+    axis: str = "function_gate",
 ) -> Dict[str, Any]:
-    """Record one function-gate run: update the template's structured record
-    (n/m/wilson_lower/status) and append to the run ledger. Returns the new
-    record.
+    """Record one verification run under the given AXIS: update the
+    template's structured record (n/m/wilson_lower/status) and append to the
+    run ledger. Returns the new full record.
+
+    ``axis`` separates the two measurement axes (P0-06 batch lesson —
+    munging them made every template with one TS warning read "mixed"):
+      - ``function_gate``: did it deliver? (gate_one verdict)
+      - ``faithfulness``: did the run LOOK right? (scene_timeseries states)
+    Other axes in the record are preserved on write, as is any
+    ``legacy_claim`` carried inside the updated axis.
 
     ``extras`` (optional) enriches the per-RUN ledger row — not the template
     record — with training-grade context: e.g. ``verdict_vector`` (the per-cube
@@ -108,28 +116,29 @@ def record_gate_run(
     typed verdict vector is what future verdict->fix dispatch trains on
     (typed verdicts beat raw logs for LLM repair)."""
     when = when or datetime.now(timezone.utc).isoformat(timespec="seconds")
-    existing = read_verification(template_path) or {}
-    fg = existing.get("function_gate") or {}
-    n = int(fg.get("n", 0)) + (1 if passed else 0)
-    m = int(fg.get("m", 0)) + 1
-    record = {
-        "function_gate": {
-            "status": "pass" if n == m else ("fail" if n == 0 else "mixed"),
-            "n": n,
-            "m": m,
-            "wilson_lower": round(wilson_lower(n, m), 4),
-            "last_run_sha": run_sha,
-            "last_run_at": when,
-        }
+    record = read_verification(template_path) or {}
+    ax = record.get(axis) or {}
+    n = int(ax.get("n", 0)) + (1 if passed else 0)
+    m = int(ax.get("m", 0)) + 1
+    new_ax: Dict[str, Any] = {
+        "status": "pass" if n == m else ("fail" if n == 0 else "mixed"),
+        "n": n,
+        "m": m,
+        "wilson_lower": round(wilson_lower(n, m), 4),
+        "last_run_sha": run_sha,
+        "last_run_at": when,
     }
+    if "legacy_claim" in ax:  # backfill provenance survives measurement
+        new_ax["legacy_claim"] = ax["legacy_claim"]
+    record[axis] = new_ax
     write_verification(template_path, record)
 
     lp = Path(ledger_path)
     lp.parent.mkdir(parents=True, exist_ok=True)
     row: Dict[str, Any] = {
         "ts": when, "template": str(template_path), "passed": passed,
-        "sha": run_sha, "n": n, "m": m,
-        "wilson_lower": record["function_gate"]["wilson_lower"],
+        "sha": run_sha, "n": n, "m": m, "axis": axis,
+        "wilson_lower": new_ax["wilson_lower"],
     }
     if extras:
         for k, v in extras.items():
@@ -140,8 +149,10 @@ def record_gate_run(
 
 
 def corpus_summary(templates_dir: str | Path = "workspace/templates") -> Dict[str, Any]:
-    """The queryable DoD: counts by structured status across the corpus."""
+    """The queryable DoD: counts by structured status across the corpus,
+    per measurement axis (delivery vs faithfulness, never munged)."""
     counts: Dict[str, int] = {"pass": 0, "mixed": 0, "fail": 0, "unmeasured": 0}
+    faith: Dict[str, int] = {"pass": 0, "mixed": 0, "fail": 0, "unmeasured": 0}
     stale: list = []
     for f in sorted(Path(templates_dir).glob("CP*.json")):
         if ".bak" in f.name or ".pre_" in f.name:
@@ -150,9 +161,68 @@ def corpus_summary(templates_dir: str | Path = "workspace/templates") -> Dict[st
             rec = read_verification(f)
         except Exception:
             continue
-        if not rec or "function_gate" not in rec:
-            counts["unmeasured"] += 1
+        rec = rec or {}
+        for axis, bucket in (("function_gate", counts), ("faithfulness", faith)):
+            ax = rec.get(axis)
+            status = (ax or {}).get("status", "unmeasured")
+            bucket[status] = bucket.get(status, 0) + 1
+    return {"counts": counts, "faithfulness_counts": faith, "stale": stale}
+
+
+def rebuild_from_ledger(
+    ledger_path: str | Path = "workspace/qa_runs/verification_ledger.jsonl",
+    templates_dir: str | Path = "workspace/templates",
+) -> Dict[str, Any]:
+    """Recompute every mentioned template's verification record FROM the run
+    ledger (the ledger is the source of truth; template records are a cache).
+
+    Axis per row: explicit ``axis`` field when present; else inferred from
+    ``source`` (``nofm_scene_timeseries`` → faithfulness, everything else →
+    function_gate — matches every writer that existed before the axis split).
+    Used once to un-munge the 2026-06-10 batch records and available for any
+    future re-derivation. Returns {template: record}.
+    """
+    lp = Path(ledger_path)
+    if not lp.exists():
+        return {}
+    tallies: Dict[str, Dict[str, list]] = {}
+    for line in lp.read_text(encoding="utf-8").splitlines():
+        if not line.strip():
             continue
-        fg = rec["function_gate"]
-        counts[fg.get("status", "unmeasured")] = counts.get(fg.get("status", "unmeasured"), 0) + 1
-    return {"counts": counts, "stale": stale}
+        row = json.loads(line)
+        axis = row.get("axis") or (
+            "faithfulness" if row.get("source") == "nofm_scene_timeseries"
+            else "function_gate")
+        # Writers log both absolute and repo-relative paths for the same
+        # template — normalize to the resolved path or their runs land in
+        # separate tallies and the last write wins.
+        tp_key = Path(row["template"])
+        if not tp_key.is_absolute():
+            tp_key = Path(templates_dir).parent.parent / row["template"]
+        t = tallies.setdefault(str(tp_key.resolve()), {})
+        t.setdefault(axis, []).append(row)
+    out: Dict[str, Any] = {}
+    for template, axes in tallies.items():
+        tp = Path(template)
+        if not tp.exists():
+            continue
+        record = read_verification(tp) or {}
+        for axis, rows in axes.items():
+            n = sum(1 for r in rows if r.get("passed"))
+            m = len(rows)
+            last = rows[-1]
+            prev = record.get(axis) or {}
+            new_ax: Dict[str, Any] = {
+                "status": "pass" if n == m else ("fail" if n == 0 else "mixed"),
+                "n": n,
+                "m": m,
+                "wilson_lower": round(wilson_lower(n, m), 4),
+                "last_run_sha": last.get("sha"),
+                "last_run_at": last.get("ts"),
+            }
+            if "legacy_claim" in prev:
+                new_ax["legacy_claim"] = prev["legacy_claim"]
+            record[axis] = new_ax
+        write_verification(tp, record)
+        out[str(tp)] = record
+    return out
