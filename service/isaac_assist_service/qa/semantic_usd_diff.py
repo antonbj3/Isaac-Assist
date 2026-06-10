@@ -22,6 +22,11 @@ from pxr import Usd  # usd-core; no Kit required
 _FLOAT_TOL = 1e-6
 # Generated/session attrs that are authoring noise, not scene content.
 _SKIP_ATTRS = {"xformOpOrder"}  # order list compared via the ops themselves
+# PhysX/controller WRITEBACK — authored by the engine during sim, never by
+# scene authoring (CP-52 self-diff: these varied build-to-build). xformOps
+# are NOT here: positions are load-bearing scene semantics.
+_SKIP_ATTR_PREFIXES = ("state:", "physics:velocity", "physics:angularVelocity",
+                       "ctrl:")
 
 
 def _plain(value: Any) -> Any:
@@ -62,7 +67,7 @@ def stage_signature(path: str) -> Dict[str, Dict[str, Any]]:
         rels: Dict[str, List[str]] = {}
         for prop in prim.GetAuthoredProperties():
             name = prop.GetName()
-            if name in _SKIP_ATTRS:
+            if name in _SKIP_ATTRS or name.startswith(_SKIP_ATTR_PREFIXES):
                 continue
             if isinstance(prop, Usd.Attribute):
                 if prop.HasAuthoredValue():

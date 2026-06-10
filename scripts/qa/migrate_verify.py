@@ -46,8 +46,16 @@ async def _build_and_export(tpl: dict, out_path: str) -> None:
     b = await asyncio.wait_for(execute_template_canonical(tpl), timeout=600)
     if not b.get("instantiated"):
         raise RuntimeError(f"BUILD_FAIL: {str(b.get('errors'))[:400]}")
+    # Deterministic export: STOP (not pause) the timeline first — stop
+    # resets prims to their AUTHORED state, so multi-robot/belt templates
+    # that start simulating during build (CP-52 family: 62 runtime-state
+    # attrs varied build-to-build) export the scene as authored, not a
+    # random mid-motion frame.
     r = await kit_tools.exec_sync(
-        "import omni.usd\n"
+        "import omni.usd, omni.timeline, omni.kit.app\n"
+        "omni.timeline.get_timeline_interface().stop()\n"
+        "for _ in range(5):\n"
+        "    omni.kit.app.get_app().update()\n"
         f"omni.usd.get_context().get_stage().Export({out_path!r})\n"
         f"print('EXPORTED {out_path}')",
         timeout=60)
