@@ -32,9 +32,15 @@ def test_classify_baseline_only_vs_content_drift():
     assert classify({"code": "x=1"}) is None        # no role path -> no drift
 
 
-def test_kit_prep_regression_is_flagged():
+def test_kit_prep_stays_repaired():
+    """2026-06-10 natt: kit-prep's ct was regenerated from code via reverse
+    placeholder substitution (roundtrip-exact). It must STAY in sync — this
+    template is the type specimen of the CONTENT_DRIFT class."""
     import json
     t = json.load(open("workspace/templates/CP-NEW-kit-prep-vision-gate.json"))
-    r = classify(t)
-    assert r["class"] == "CONTENT_DRIFT"
-    assert r["missing_in_ct"].get("set_semantic_label", 0) >= 5
+    assert classify(t)["class"] == "IN_SYNC"
+    # the roundtrip property that PROVES the repair
+    from service.isaac_assist_service.chat.canonical_instantiator import (
+        substitute_role_placeholders)
+    assert substitute_role_placeholders(
+        t["code_template"], t["role_defaults"]) == t["code"]

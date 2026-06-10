@@ -21,6 +21,12 @@ Classification per template:
   PARSE_FAIL      a field does not parse even after placeholder substitution
   IN_SYNC         multisets equal
 
+Known heuristic limit: call-SHAPE differences read as count drift — a code
+loop calling set_attribute per cube vs ct's single bulk prim_paths call is
+the same scene but different multisets (CP-19/61/77/tool-changer-swap class,
+verified by hand 2026-06-10 night). Those stay BASELINE_ONLY; the semantic
+harness is the arbiter when it matters.
+
 Exit 0 always (report-only); pipe to CI later once CONTENT_DRIFT is drained.
 """
 from __future__ import annotations
