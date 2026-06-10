@@ -20,6 +20,7 @@ class ObjectClass:
     category: str = "prop"  # robot | sensor | fixture | prop | environment
     footprint_xy_m: tuple = (0.1, 0.1)
     default_z: float = 0.0
+    height_m: float = 0.0  # z-extent of the asset; 0 = unknown (static_eyes falls back to _CLASS_HEIGHTS_M)
     tags: List[str] = field(default_factory=list)
 
 
