@@ -108,5 +108,5 @@
       "curobo"
     ]
   },
-  "verification": {"function_gate": {"status": "unmeasured", "legacy_claim": "fail", "claim_evidence": "e \u2713; function-gate \u2717 (smaller Bin_red + extra Bin_blue cause", "n": 0, "m": 0, "wilson_lower": 0.0, "last_run_sha": null, "last_run_at": null}}
+  "verification": {"function_gate": {"status": "pass", "n": 1, "m": 1, "wilson_lower": 0.2065, "last_run_sha": "2dd2646c", "last_run_at": "2026-06-10T07:40:09+00:00"}}
 }
