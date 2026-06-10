@@ -314,5 +314,5 @@
     "failed": {}
   },
   "verified_status": "patched-r-a40-fix; semantic_type-material-to-class fixed; form-gate pending",
-  "verification": {"function_gate": {"status": "unmeasured", "legacy_claim": null, "claim_evidence": "gate pending", "n": 0, "m": 0, "wilson_lower": 0.0, "last_run_sha": null, "last_run_at": null}}
+  "verification": {"function_gate": {"status": "fail", "n": 0, "m": 1, "wilson_lower": 0.0, "last_run_sha": "dd2d4862", "last_run_at": "2026-06-10T22:20:34+00:00", "legacy_claim": null}, "faithfulness": {"status": "fail", "n": 0, "m": 1, "wilson_lower": 0.0, "last_run_sha": "dd2d4862", "last_run_at": "2026-06-10T22:21:47+00:00"}}
 }

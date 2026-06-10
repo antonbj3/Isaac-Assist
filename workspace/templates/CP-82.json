@@ -46,6 +46,7 @@
     "cube_path": "/World/Cube_1"
   },
   "simulate_args": {
+    "completeness": "all",
     "cube_path": "/World/Cube_1",
     "target_path": "/World/Bin_red",
     "duration_s": 180,
@@ -225,5 +226,5 @@
       "moveit2"
     ]
   },
-  "verification": {"function_gate": {"status": "pass", "n": 2, "m": 2, "wilson_lower": 0.3424, "last_run_sha": "08f6b357", "last_run_at": "2026-06-10T08:34:13+00:00"}, "faithfulness": {"status": "pass", "n": 1, "m": 1, "wilson_lower": 0.2065, "last_run_sha": "08f6b357", "last_run_at": "2026-06-10T08:35:28+00:00"}}
+  "verification": {"function_gate": {"status": "pass", "n": 4, "m": 4, "wilson_lower": 0.5101, "last_run_sha": "58cfcf37", "last_run_at": "2026-06-10T23:06:48+00:00"}, "faithfulness": {"status": "pass", "n": 2, "m": 2, "wilson_lower": 0.3424, "last_run_sha": "dd2d4862", "last_run_at": "2026-06-10T22:16:57+00:00"}}
 }

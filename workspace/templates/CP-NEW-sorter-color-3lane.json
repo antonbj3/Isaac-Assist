@@ -107,6 +107,7 @@
     }
   },
   "simulate_args": {
+    "completeness": "all",
     "target_path": "/World/RedBin",
     "routed_target_paths": [
       "/World/RedBin",
@@ -428,5 +429,5 @@
     "failed": {}
   },
   "verified_status": "drafted-2026-05-16; form-gate-schema ✓; function-gate ⏳",
-  "verification": {"function_gate": {"status": "pass", "n": 1, "m": 1, "wilson_lower": 0.2065, "last_run_sha": "470543e5", "last_run_at": "2026-06-10T21:34:21+00:00", "legacy_claim": null}}
+  "verification": {"function_gate": {"status": "pass", "n": 2, "m": 2, "wilson_lower": 0.3424, "last_run_sha": "58cfcf37", "last_run_at": "2026-06-10T23:09:44+00:00", "legacy_claim": null}}
 }

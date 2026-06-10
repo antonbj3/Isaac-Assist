@@ -92,6 +92,7 @@
     "cube_path": "/World/Cube_r1"
   },
   "simulate_args": {
+    "completeness": "all",
     "cube_paths": [
       "/World/Cube_r1",
       "/World/Cube_r2",
@@ -479,5 +480,5 @@
       "curobo"
     ]
   },
-  "verification": {"function_gate": {"status": "unmeasured", "legacy_claim": null, "claim_evidence": "gate-pending; demoted 2026-05-15", "n": 0, "m": 0, "wilson_lower": 0.0, "last_run_sha": null, "last_run_at": null}}
+  "verification": {"function_gate": {"status": "mixed", "n": 1, "m": 2, "wilson_lower": 0.0945, "last_run_sha": "58cfcf37", "last_run_at": "2026-06-10T23:02:45+00:00", "legacy_claim": null}, "faithfulness": {"status": "fail", "n": 0, "m": 1, "wilson_lower": 0.0, "last_run_sha": "dd2d4862", "last_run_at": "2026-06-10T22:10:21+00:00"}}
 }
