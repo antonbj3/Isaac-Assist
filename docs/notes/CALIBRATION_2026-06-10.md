@@ -9,8 +9,9 @@
    Phase-0.1 goal shows green in a single-run sweep. Passes ran EARLY in the batch and
    survived any warm-Kit effect ("stable-OK across a batch = robust"). Ledger-recorded
    as measured n=1/m=1; N-of-M re-validation (P0-06) still the bar for "stable".
-2. **Franka legacy set 6/6 gate=False** (CP-01/02/09/13/22/58) — **QUARANTINED, not
-   ledger-recorded.** They ran LAST (batch positions 14-19) after 13 UR10 builds = the
+2. **Franka legacy set 6/6 gate=False — FULLY DISPROVEN (same day): all 6 pass on
+   fresh/near-fresh Kit, incl. CP-58 whose LEGACY claim was function-gate ✗ (now
+   delivers). 19/19 measured passes total today. Original quarantine reasoning:** They ran LAST (batch positions 14-19) after 13 UR10 builds = the
    documented warm-Kit false-FAIL pattern. Hypotheses in order: (a) Kit-session
    degradation; (b) real regression (UR10-track pick_place changes or the P0-18 port);
    (c) extractor artifact. **DECIDED (same day): fresh-Kit CP-01 alone = GATE
@@ -26,9 +27,13 @@
   gate=True (13) AND gate=False (6) — geometric soundness does not predict gate
   outcome; controller behavior dominates. **SKIP stays OFF** (the dual_verify
   invariant holds; the ~3.5-4x throughput hypothesis is NOT supported at n=20).
-- **One true static win:** CP-02 static delivery:fail + gate:False — static_eyes
-  correctly rejected pre-build (drop aimed outside the destination). Every such
-  template skips a doomed ~5-min gate run.
+- **RETRACTED (same day): the claimed "CP-02 static win" was itself an artifact.**
+  CP-02 passes the gate on near-fresh Kit (cube at rest in target) — so the static
+  delivery:fail was the EXTRACTOR mis-parsing the drop/destination (wrong bin or
+  stale drop coordinate), not a true pre-build rejection. Extractor gap #4. The
+  honest score for this sweep: static_eyes produced zero confirmed true-rejections
+  and one false-fail — the value demonstrated today is the DIVERGENCE-localizes-
+  blame property, not pre-build rejection. Calibration is for finding exactly this.
 - **The divergence localizes blame** (spec §1.2): static-PASS + gate-FAIL = a
   CONTROLLER/runtime problem, not layout. This applies to the entire Franka-fail
   set if the fresh run confirms the fails.
