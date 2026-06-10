@@ -45,6 +45,29 @@ def _force_code_path(tpl: dict) -> dict:
     return t
 
 
+_BELT_RE = __import__("re").compile(
+    r'create_conveyor\(\s*prim_path="([^"]+)"[^)]*?surface_velocity=(\[[^\]]*\])',
+    __import__("re").S)
+
+
+def _declared_belt_velocities(tpl: dict) -> dict:
+    """{belt_path: [vx,vy,vz]} as DECLARED by create_conveyor in the
+    template code. Belt pause-logic toggles the authored surfaceVelocity at
+    runtime during the build (CP-51/68/conveyor-pick: rolling in one build,
+    paused in the other — the last 1-attr deltas of the cluster). Re-author
+    the DECLARED value before export so both sides export authored intent,
+    not whichever pause-state the build happened to end in."""
+    import json as _json
+    out = {}
+    for field in ("code", "code_template"):
+        for m in _BELT_RE.finditer(tpl.get(field) or ""):
+            try:
+                out[m.group(1)] = _json.loads(m.group(2))
+            except ValueError:
+                pass
+    return out
+
+
 async def _build_and_export(tpl: dict, out_path: str) -> None:
     from service.isaac_assist_service.chat.canonical_instantiator import (
         execute_template_canonical)
@@ -69,11 +92,24 @@ async def _build_and_export(tpl: dict, out_path: str) -> None:
     # that start simulating during build (CP-52 family: 62 runtime-state
     # attrs varied build-to-build) export the scene as authored, not a
     # random mid-motion frame.
+    belts = _declared_belt_velocities(tpl)
+    belt_block = ""
+    if belts:
+        belt_block = (
+            "from pxr import Gf, PhysxSchema\n"
+            "for _bp, _bv in " + repr(belts) + ".items():\n"
+            "    _prim = omni.usd.get_context().get_stage().GetPrimAtPath(_bp)\n"
+            "    if _prim and _prim.IsValid():\n"
+            "        _api = PhysxSchema.PhysxSurfaceVelocityAPI(_prim)\n"
+            "        _attr = _prim.GetAttribute('physxSurfaceVelocity:surfaceVelocity')\n"
+            "        if _attr and _attr.HasAuthoredValue():\n"
+            "            _attr.Set(Gf.Vec3f(*_bv))\n")
     r = await kit_tools.exec_sync(
         "import omni.usd, omni.timeline, omni.kit.app\n"
         "omni.timeline.get_timeline_interface().stop()\n"
         "for _ in range(5):\n"
         "    omni.kit.app.get_app().update()\n"
+        + belt_block +
         f"omni.usd.get_context().get_stage().Export({out_path!r})\n"
         f"print('EXPORTED {out_path}')",
         timeout=60)
