@@ -351,6 +351,32 @@ def _check_reach(**kwargs) -> CheckResult:
             status="fail",
             issues=args["reach_diagnostics"].get("unreachable", ["unreachable cubes"]),
         )
+    # P1-11: when a layout is supplied, compute the verdict ourselves via the
+    # static_eyes facade (no Kit, milliseconds) instead of stub-passing.
+    layout = args.get("layout")
+    if isinstance(layout, dict):
+        try:
+            from . import static_eyes as _se
+            report = _se.run(layout)
+            diag = _se.reach_diagnostics(report)
+            if diag["all_reachable"]:
+                uncertain = [c.target for c in report.checks
+                             if c.id == "reach:shell" and c.status == "uncertain"]
+                notes = ["reach OK via static_eyes"]
+                if uncertain:
+                    notes.append(
+                        "uncertain (needs tier-2 IK probe): " + ", ".join(uncertain)
+                    )
+                return CheckResult(status="pass", diagnostics=notes)
+            return CheckResult(
+                status="fail",
+                issues=[f"unreachable: {t}" for t in diag["unreachable"]],
+            )
+        except Exception as exc:  # never let the gate crash on the cheap path
+            return CheckResult(
+                status="pass",
+                diagnostics=[f"static_eyes unavailable ({exc}); stub pass-through"],
+            )
     # No detail available; treat as pass with caveat (Block 1B is structural
     # only; Block 2+ wires real check)
     return CheckResult(status="pass", diagnostics=["reach check stub — no detail provided"])

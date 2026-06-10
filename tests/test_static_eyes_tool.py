@@ -64,3 +64,23 @@ def test_schema_entry_exists():
     assert "static_eyes" in names
     entry = next(t for t in ISAAC_SIM_TOOLS if t.get("function", {}).get("name") == "static_eyes")
     assert entry["function"]["parameters"]["required"] == ["layout"]
+
+
+def test_form_gate_reach_check_uses_static_eyes():
+    """P1-11: _check_reach computes a real verdict from a supplied layout."""
+    from service.isaac_assist_service.multimodal.verifier_registry import _check_reach
+
+    good = _check_reach(args={"layout": _good_layout()})
+    assert good.status == "pass"
+    assert any("static_eyes" in d for d in good.diagnostics)
+
+    bad_layout = _good_layout()
+    bad_layout["objects"][0]["position"] = [0.4, -1.6, 1.05]
+    bad = _check_reach(args={"layout": bad_layout})
+    assert bad.status == "fail"
+    assert any("/World/Cube_1" in i for i in bad.issues)
+
+    # legacy stub behavior unchanged when neither diagnostics nor layout given
+    stub = _check_reach(args={})
+    assert stub.status == "pass"
+    assert any("stub" in d for d in stub.diagnostics)
