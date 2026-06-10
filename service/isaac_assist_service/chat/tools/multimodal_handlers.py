@@ -605,6 +605,51 @@ def _apply_mutations(spec: LayoutSpec, mutations: list) -> LayoutSpec:
     return spec.model_copy(update={"objects": list(objects_by_id.values())})
 
 
+async def _handle_static_eyes(args: Dict[str, Any]) -> Dict[str, Any]:
+    """Fast, no-physics geometric verdict on a scene layout (pre-build).
+
+    Runs the static_eyes facade (multimodal/static_eyes.py): tiered
+    reachability shell, interpenetration/clump, support, fit,
+    drop-in-container, occlusion, cell bounds. Every ``fail`` carries a
+    machine-actionable ``fix`` (action/path/constraint/suggest_position) so
+    the caller can adjust the layout and re-call — no Kit, milliseconds.
+
+    Args:
+        layout: required dict —
+            {robots: [{path, family, base:[x,y,z]}],
+             objects: [{path, position:[x,y,z], asset_name? | bbox?}],
+             picks: [paths],
+             places: [{target_path, drop_target:[x,y,z]}],
+             occluders?: [paths],
+             cell_bounds?: {x:[lo,hi], y:[lo,hi]}}
+
+    Returns the StaticEyesReport dict (verdict PASS/FAIL/UNCERTAIN, checks,
+    overall_fix_order, next_gate, caveats) + ``reach_diagnostics`` shaped for
+    the verifier_registry ``verify:reach`` form-gate arg.
+
+    Note: deriving the layout from a stored LayoutSpec session is deferred
+    (the canvas spec is 2D; z-stamping lands with the asset-bbox work) — pass
+    the explicit layout the authoring loop already holds.
+    """
+    layout = args.get("layout")
+    if not isinstance(layout, dict):
+        return {
+            "error": (
+                "layout (dict) required: {robots:[{path,family,base}], "
+                "objects:[{path,position,asset_name|bbox}], picks:[...], "
+                "places:[{target_path,drop_target}], occluders?, cell_bounds?}"
+            )
+        }
+    try:
+        from ...multimodal import static_eyes as _static_eyes
+        report = _static_eyes.run(layout)
+    except Exception as exc:  # surface, never crash the tool loop
+        return {"error": f"static_eyes failed: {exc}"}
+    out = report.to_dict()
+    out["reach_diagnostics"] = _static_eyes.reach_diagnostics(report)
+    return out
+
+
 # ============================================================================
 # Registration entry point
 # ============================================================================
@@ -625,4 +670,5 @@ def register_multimodal_handlers(
     data_handlers["apply_layout_spec_to_scene"] = _handle_apply_layout_spec_to_scene
     data_handlers["query_layout_metric"] = _handle_query_layout_metric
     data_handlers["rebind_role"] = _handle_rebind_role
-    logger.info("registered 6 multimodal handlers into DATA_HANDLERS")
+    data_handlers["static_eyes"] = _handle_static_eyes
+    logger.info("registered 7 multimodal handlers into DATA_HANDLERS")

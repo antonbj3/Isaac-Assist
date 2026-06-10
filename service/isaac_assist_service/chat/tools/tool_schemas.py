@@ -10068,5 +10068,22 @@ ISAAC_SIM_TOOLS = [
             },
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "static_eyes",
+            "description": "Fast no-physics geometric verdict on a scene layout BEFORE building (milliseconds, no Kit): tiered reachability (fail / pass / uncertain->needs live IK probe), interpenetration/clump, support (floating/buried), workpiece-fits-container, drop-target-in-container, occlusion (advisory), cell bounds. Every fail carries a machine-actionable fix with a suggest_position that satisfies the violated constraint — apply fixes and re-call until PASS, then proceed to the build/function gate. Use this to iterate a layout cheaply instead of paying for a physics run on a geometrically broken scene.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "layout": {
+                        "type": "object",
+                        "description": "The layout to verify: {robots:[{path, family (e.g. 'ur10'/'franka_panda'), base:[x,y,z]}], objects:[{path, position:[x,y,z], asset_name (palette class) OR bbox:[[xmin,ymin,zmin],[xmax,ymax,zmax]]}], picks:[object paths to pick], places:[{target_path, drop_target:[x,y,z]}], occluders?:[paths], cell_bounds?:{x:[lo,hi], y:[lo,hi]}}",
+                    },
+                },
+                "required": ["layout"],
+            },
+        },
+    },
 
 ]
