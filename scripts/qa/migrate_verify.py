@@ -28,6 +28,20 @@ from service.isaac_assist_service.qa.semantic_usd_diff import (  # noqa: E402
     diff_signatures, stage_signature)
 
 
+def _force_code_path(tpl: dict) -> dict:
+    """The executor PREFERS code_template+roles when present — which made
+    every wave verdict for role-path templates VOID (proven 2026-06-10
+    evening: a candidate with table_height=9.99 sabotaged into `code`
+    still ZERO_DELTA'd, because both builds ran the untouched
+    code_template). Migration verification MUST exercise the field being
+    migrated: strip the role-path fields so the build runs `code`."""
+    t = dict(tpl)
+    t.pop("code_template", None)
+    t.pop("roles", None)
+    t.pop("role_defaults", None)
+    return t
+
+
 async def _build_and_export(tpl: dict, out_path: str) -> None:
     from service.isaac_assist_service.chat.canonical_instantiator import (
         execute_template_canonical)
@@ -43,7 +57,7 @@ async def _build_and_export(tpl: dict, out_path: str) -> None:
         "UsdGeom.Xform.Define(omni.usd.get_context().get_stage(), '/World')\n"
         "print('STAGE_CLEAR')",
         timeout=30)
-    b = await asyncio.wait_for(execute_template_canonical(tpl), timeout=600)
+    b = await asyncio.wait_for(execute_template_canonical(_force_code_path(tpl)), timeout=600)
     if not b.get("instantiated"):
         raise RuntimeError(f"BUILD_FAIL: {str(b.get('errors'))[:400]}")
     # Deterministic export: STOP (not pause) the timeline first — stop
