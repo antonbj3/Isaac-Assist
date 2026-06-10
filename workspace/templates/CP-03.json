@@ -296,5 +296,5 @@
       "moveit2"
     ]
   },
-  "verification": {"function_gate": {"status": "unmeasured", "legacy_claim": "pass", "claim_evidence": "e \u2713; function-gate \u2713 (180s sim \u2014 orig 90s too short. cube_fi", "n": 0, "m": 0, "wilson_lower": 0.0, "last_run_sha": null, "last_run_at": null}}
+  "verification": {"function_gate": {"status": "pass", "n": 1, "m": 1, "wilson_lower": 0.2065, "last_run_sha": "0ceccdbe", "last_run_at": "2026-06-10T18:49:29+00:00", "legacy_claim": "pass"}, "faithfulness": {"status": "pass", "n": 1, "m": 1, "wilson_lower": 0.2065, "last_run_sha": "0ceccdbe", "last_run_at": "2026-06-10T18:50:48+00:00"}}
 }
