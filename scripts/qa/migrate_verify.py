@@ -5,8 +5,12 @@ Builds a template's ORIGINAL code and a CANDIDATE (migrated) code in the same
 fresh Kit session, exports both authored stages, and compares them with the
 semantic USD diff (P2-01). Zero semantic delta = the migration is safe to
 commit; any delta is printed prim-by-prim so the tool (or the candidate) gets
-fixed BEFORE the corpus moves. Authored-scene comparison only — no settle, no
-physics, so warm-Kit degradation does not apply between the two builds.
+fixed BEFORE the corpus moves. NOTE (QA-audit fynd 11): controllers/belts DO
+run during builds (ctrl:* records prove it) — determinism comes from
+timeline-stop+ticks, the belt freeze and the writeback exclusions, not from
+an absence of physics. Auto-repair (UR10 spawn-triplet rewrite) runs
+symmetrically on both sides and therefore MASKS candidate changes inside the
+rewritten triplet — known limit, see UR10-COORD.
 
 Usage:
     python3 scripts/qa/migrate_verify.py CP-01 path/to/CP-01.candidate.json
@@ -58,9 +62,26 @@ def _declared_belt_velocities(tpl: dict) -> dict:
     the DECLARED value before export so both sides export authored intent,
     not whichever pause-state the build happened to end in."""
     import json as _json
+    import re as _re2
+    # QA-audit fynd 5b: scan ONLY the field being built (the dict order
+    # code->ct let an untouched ct declaration overwrite a changed code one).
+    # The caller passes the ALREADY-STRIPPED build_tpl, so whichever field
+    # survives is the built one.
     out = {}
     for field in ("code", "code_template"):
-        for m in _BELT_RE.finditer(tpl.get(field) or ""):
+        src = tpl.get(field) or ""
+        for m in _BELT_RE.finditer(src):
+            try:
+                out[m.group(1)] = _json.loads(m.group(2))
+            except ValueError:
+                pass
+        # fynd 5a: a LATER set_attribute override on the same attr is part
+        # of the declaration — freezing to create_conveyor's value would
+        # erase a real candidate change.
+        for m in _re2.finditer(
+                r'set_attribute\(\s*prim_path="([^"]+)"\s*,\s*attr_name='
+                r'"physxSurfaceVelocity:surfaceVelocity"\s*,\s*value=(\[[^\]]*\])',
+                src, _re2.S):
             try:
                 out[m.group(1)] = _json.loads(m.group(2))
             except ValueError:
@@ -83,16 +104,29 @@ async def _build_and_export(tpl: dict, out_path: str) -> None:
         "UsdGeom.Xform.Define(omni.usd.get_context().get_stage(), '/World')\n"
         "print('STAGE_CLEAR')",
         timeout=30)
-    b = await asyncio.wait_for(execute_template_canonical(
-        tpl if _USE_ROLE_PATH else _force_code_path(tpl)), timeout=600)
+    build_tpl = tpl if _USE_ROLE_PATH else _force_code_path(tpl)
+    b = await asyncio.wait_for(execute_template_canonical(build_tpl), timeout=600)
     if not b.get("instantiated"):
         raise RuntimeError(f"BUILD_FAIL: {str(b.get('errors'))[:400]}")
+    # BUILD QUALITY GATE (QA-audit fynd 1): instantiated=True is hardcoded in
+    # the executor — symmetric per-call failures on both sides would
+    # ZERO_DELTA two equally-truncated scenes. A verdict requires CLEAN
+    # builds: every captured call executed ok and no capture-dropped
+    # statements.
+    if b.get("errors") or b.get("n_ok") != b.get("n_calls"):
+        raise RuntimeError(
+            f"BUILD_DIRTY: n_ok={b.get('n_ok')}/{b.get('n_calls')} "
+            f"errors={str(b.get('errors'))[:300]}")
+    if b.get("capture_warnings"):
+        raise RuntimeError(
+            f"BUILD_DIRTY: capture dropped statements: "
+            f"{str(b.get('capture_warnings'))[:300]}")
     # Deterministic export: STOP (not pause) the timeline first — stop
     # resets prims to their AUTHORED state, so multi-robot/belt templates
     # that start simulating during build (CP-52 family: 62 runtime-state
     # attrs varied build-to-build) export the scene as authored, not a
     # random mid-motion frame.
-    belts = _declared_belt_velocities(tpl)
+    belts = _declared_belt_velocities(build_tpl)
     belt_block = ""
     if belts:
         belt_block = (

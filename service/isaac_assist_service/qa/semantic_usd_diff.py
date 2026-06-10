@@ -54,14 +54,21 @@ def stage_signature(path: str) -> Dict[str, Dict[str, Any]]:
     if stage is None:
         raise ValueError(f"cannot open USD stage: {path}")
     sig: Dict[str, Dict[str, Any]] = {}
-    for prim in stage.Traverse():
+    # TraverseInstanceProxies: default Traverse skips instanceable subtrees —
+    # 330 of CP-17's 417 prims (robot link geometry, Looks, collision meshes)
+    # were INVISIBLE to the diff (QA-audit agent 1, self-verified). A
+    # candidate could swap a hand-geometry reference unseen without this.
+    for prim in stage.Traverse(Usd.TraverseInstanceProxies()):
         # Kit session state, not authored scene: /Render holds viewport/
         # RTX settings that Kit lazily writes between builds (live CP-01
         # pilot: omni:rtx:* appeared in build B only); /Environment is
         # new_stage() default-light furniture that comes and goes between
         # session stages (wave-1 finding). Never scene-semantic.
         p = str(prim.GetPath())
-        if p.startswith("/Render") or p.startswith("/Environment"):
+        # path-BOUNDARY match: plain prefix would blind the diff to
+        # legitimate prims like /RenderBox or /EnvironmentWall (QA-audit)
+        if (p == "/Render" or p.startswith("/Render/")
+                or p == "/Environment" or p.startswith("/Environment/")):
             continue
         attrs: Dict[str, Any] = {}
         rels: Dict[str, List[str]] = {}
