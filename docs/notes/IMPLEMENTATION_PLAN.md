@@ -26,7 +26,7 @@ Convention: `[ ]` todo · `[~]` in progress · `[x]` done · `[!]` blocked (note
 - [ ] **P0-03** CP-81/82 layout reach (primary cube y≈0.55 unreachable). *touches:* template `role_defaults` (move −y), `reach_validate.py`. *done:* reach_validate REACHABLE 3/3 + gate pass.
 - [ ] **P0-04** CP-83 multi-cube low-z reach. *touches:* template, `_ur10_multicube_obs`. *done:* 3/3 deterministic.
 - [ ] **P0-05** ∥ H7 swing: Anton GUI review of `_ur10_jointspace_transit`; decide default-ON scoped to far-pick (reach>0.85). *done:* decision recorded + flag set.
-- [ ] **P0-06** N-of-M re-validation harness for the 13-cluster (fresh-Kit per run). *touches:* `scripts/qa/`. *done:* one command → N-of-M verdicts for all 13.
+- [x] **P0-06** *(08f6b357 + batch: 18/18 delivery, 16/18 faithfulness — CP-71/CP-09 TS-fynd)* N-of-M re-validation harness for the 13-cluster (fresh-Kit per run). *touches:* `scripts/qa/`. *done:* one command → N-of-M verdicts for all 13.
 
 ### 0b. De-scope the fuzzy backends (honesty)
 - [x] **P0-07** *(97c7f953)* Audit `motion_controllers.untested` tags across templates → report of declared-not-verified controllers.

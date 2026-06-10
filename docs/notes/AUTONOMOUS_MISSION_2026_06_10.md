@@ -55,3 +55,5 @@ on every cron wake.**
 - 09:45 AVGÖRANDE: CP-01 fresh-Kit PASS → Franka-failsen var degraderings-artefakter (P0-18 friad, karantänen validerad). Kör resterande 5 nära-färskt.
 - 09:53 Franka-karantänen STÄNGD: 6/6 pass fresh (CP-58:s legacy-FAIL motbevisad också); CP-02-'static-vinsten' RETRAKTERAD (extraktor-artefakt). 19/19 mätta pass idag. Verktygskarta skriven. Nästa: P0-06-harness m TS-integration.
 - 10:04 P0-06 ✓ (nofm_validate: restart+gate+TS per template, smoke CP-70 3/3 w0.438) · P2-02b ✓ (expand-kontraktet) · FULL N-of-M-BATCH IGÅNG (18 templates, ~2.5h, bd22tw07f). Nästa wake: QC batch-interim + P2-02 create_scene_baseline.
+- 10:41 P2-02 ✓ (create_scene_baseline i ny scene_body-modul; expand-bar; 4 l0; audit 0 ghosts). N-of-M-batch ~halvvägs, alla pass hittills.
+- 11:09 N-of-M-BATCH KLAR: 18/18 leverans, 16/18 trohet (CP-71=P0-18-hål-b live, CP-09 torn). P0-06 DONE. Refinement köad: separera trohets-axeln i ledgern. Nästa: P2-03 asset_ref-toolet.
