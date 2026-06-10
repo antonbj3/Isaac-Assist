@@ -66,3 +66,16 @@ def test_sandbox_has_isinstance():
         "    create_bin(prim_path='/W/B')\n")
     assert calls == ["create_bin"]
     assert errs == []
+
+
+def test_sandbox_has_next_and_exception_names():
+    """Round 2 (2026-06-10 natt): next missing dropped groot/zmq statements;
+    a missing Exception NAME killed every `except Exception:` statement."""
+    calls, errs = capture(
+        "it = iter([1])\n"
+        "x = next(it)\n"
+        "try:\n"
+        "    create_bin(prim_path='/W/B')\n"
+        "except Exception:\n"
+        "    pass\n")
+    assert calls == ["create_bin"] and errs == []
