@@ -3334,6 +3334,7 @@ class ComputeStackPlacementArgs(BaseModel):
     layer_rotation_deg: Optional[float] = Field(None, description="Yaw rotation applied per layer in degrees (default 0; use 90 for brick-pattern alternation)")
     spacing: Optional[float] = Field(None, description="Optional center-to-center spacing override; default = cube_size (flush packing). Use larger for gaps between items.")
     anchor: Optional[str] = Field(None, description="'top' (default — place above target's top face) or 'inside_floor' (place on target's interior floor — for bins/containers)")
+    bbox: Optional[List[List[float]]] = Field(None, description="Explicit target bbox [[xmin,ymin,zmin],[xmax,ymax,zmax]] — computes positions WITHOUT Kit (planning time / asset-swap from catalog metadata). Omit to read the live bbox from the stage.")
 
 
 class ListGraphsArgs(BaseModel):

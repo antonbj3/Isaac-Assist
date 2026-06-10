@@ -7168,6 +7168,7 @@ ISAAC_SIM_TOOLS = [
                         "layer_rotation_deg": {"type": "number", "description": "Yaw rotation applied per layer in degrees (default 0; use 90 for brick-pattern alternation)"},
                         "spacing": {"type": "number", "description": "Optional center-to-center spacing override; default = cube_size (flush packing). Use larger for gaps between items."},
                         "anchor": {"type": "string", "description": "'top' (default — place above target's top face) or 'inside_floor' (place on target's interior floor — for bins/containers)"},
+                        "bbox": {"type": "array", "items": {"type": "array", "items": {"type": "number"}}, "description": "Explicit target bbox [[xmin,ymin,zmin],[xmax,ymax,zmax]] — computes positions WITHOUT Kit (planning time / asset-swap sizing from catalog metadata). Omit to read the live bbox from the stage."},
                     },
                     "required": ["target_path", "n_items"],
                 },

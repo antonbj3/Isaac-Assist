@@ -5450,6 +5450,78 @@ print(json.dumps({"stages": stages, "active_context": active_ctx}))
 # Phase 7 wave 15 — scene-authoring final stragglers (compute/find/graphs/snapshots)
 
 
+def _stack_positions_from_bbox(
+    bmin,
+    bmax,
+    *,
+    rows: int,
+    cols: int,
+    skip_center: bool,
+    n_items: int,
+    cube_size: float,
+    cube_sizes,
+    spacing: float,
+    layer_rotation_deg: float,
+    anchor: str,
+) -> Dict:
+    """The compute_stack_placement math over an EXPLICIT bbox — pure Python,
+    no Kit [P2-04]. Mirrors the Kit-exec block in
+    ``_handle_compute_stack_placement`` exactly (same formulas, same rounding,
+    same result keys) so a supplied-bbox verdict equals a live-bbox verdict
+    for the same box. Used at planning time (scene not built yet) and for
+    asset swaps (bbox from catalog metadata instead of nominal size).
+    """
+    cx = 0.5 * (bmin[0] + bmax[0])
+    cy = 0.5 * (bmin[1] + bmax[1])
+    target_top_z = float(bmax[2])
+    target_bot_z = float(bmin[2])
+    first_cube_size = cube_sizes[0] if cube_sizes else cube_size
+    if anchor == "inside_floor":
+        base_z = target_bot_z + first_cube_size * 0.5
+    else:
+        base_z = target_top_z + first_cube_size * 0.5
+
+    layer_slots = []
+    for r in range(rows):
+        for c in range(cols):
+            if skip_center and r == rows // 2 and c == cols // 2:
+                continue
+            layer_slots.append((r, c))
+    per_layer = len(layer_slots)
+
+    positions = []
+    is_column = (rows == 1 and cols == 1)
+    floor_z = target_bot_z if anchor == "inside_floor" else target_top_z
+    for i in range(n_items):
+        layer = i // per_layer
+        slot = i % per_layer
+        row, col = layer_slots[slot]
+        x = cx + (col - (cols - 1) * 0.5) * spacing
+        y = cy + (row - (rows - 1) * 0.5) * spacing
+        this_size = cube_sizes[i] if cube_sizes else cube_size
+        if cube_sizes:
+            if is_column:
+                z = floor_z + sum(cube_sizes[:i]) + this_size * 0.5
+            else:
+                z = floor_z + this_size * 0.5 + layer * this_size
+        else:
+            z = base_z + layer * cube_size
+        yaw = (layer * layer_rotation_deg) % 360.0
+        positions.append({
+            "position": [round(x, 6), round(y, 6), round(z, 6)],
+            "rotation_deg": yaw,
+            "size": this_size,
+        })
+
+    return {
+        "positions": positions,
+        "target_bbox_min": [round(float(bmin[i]), 6) for i in range(3)],
+        "target_bbox_max": [round(float(bmax[i]), 6) for i in range(3)],
+        "anchor": anchor,
+        "base_z": round(base_z, 6),
+    }
+
+
 @with_telemetry
 async def _handle_compute_stack_placement(args: Dict) -> Dict:
     """Compute placement positions for stacking N items on top of a target prim.
@@ -5469,6 +5541,10 @@ async def _handle_compute_stack_placement(args: Dict) -> Dict:
       anchor:             'top' (place on top of target, default) |
                           'inside_floor' (place on target's interior floor —
                           for bins/containers; uses target_top_z - target_height)
+      bbox:               optional explicit [[xmin,ymin,zmin],[xmax,ymax,zmax]]
+                          — P2-04: computes positions WITHOUT Kit (planning
+                          time / asset-swap sizing from catalog metadata).
+                          Same math, same result keys, plus bbox_source.
 
     Returns:
       {
@@ -5526,6 +5602,31 @@ async def _handle_compute_stack_placement(args: Dict) -> Dict:
 
     if n_items < 1:
         return {"type": "error", "error": f"n_items must be >=1, got {n_items}"}
+
+    # P2-04: explicit bbox -> pure service-side math, NO Kit. The planning-
+    # time / asset-swap path (bbox from catalog metadata or a layout spec,
+    # scene not built yet). Absent -> legacy live-bbox path, unchanged.
+    bbox = args.get("bbox")
+    if bbox is not None:
+        if (not isinstance(bbox, (list, tuple)) or len(bbox) != 2
+                or any(not isinstance(c, (list, tuple)) or len(c) != 3 for c in bbox)):
+            return {"type": "error",
+                    "error": f"bbox must be [[xmin,ymin,zmin],[xmax,ymax,zmax]], got {bbox!r}"}
+        try:
+            bmin = [float(v) for v in bbox[0]]
+            bmax = [float(v) for v in bbox[1]]
+        except (ValueError, TypeError):
+            return {"type": "error", "error": f"bbox entries must be numbers: {bbox!r}"}
+        if any(bmax[i] < bmin[i] for i in range(3)):
+            return {"type": "error",
+                    "error": f"bbox max must be >= min per axis: {bbox!r}"}
+        result = _stack_positions_from_bbox(
+            bmin, bmax, rows=rows, cols=cols, skip_center=skip_center,
+            n_items=n_items, cube_size=cube_size, cube_sizes=cube_sizes,
+            spacing=spacing, layer_rotation_deg=layer_rotation_deg, anchor=anchor)
+        return {"type": "data", "target_path": target_path, "pattern": pattern,
+                "n_items": n_items, "spacing": spacing,
+                "bbox_source": "supplied", **result}
 
     code = f"""\
 import json
