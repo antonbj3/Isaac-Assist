@@ -64,8 +64,6 @@ if not cell or not cell.IsValid():
 table_prim = stage.GetPrimAtPath('{root}/Table')
 if not table_prim or not table_prim.IsValid():
     table_prim = UsdGeom.Cube.Define(stage, '{root}/Table').GetPrim()
-_t = UsdGeom.Cube(table_prim)
-_t.GetSizeAttr().Set(2.0)
 _txf = UsdGeom.Xformable(table_prim)
 _txf.ClearXformOpOrder()
 _txf.AddTranslateOp().Set(Gf.Vec3d(0.0, 0.0, {th}))
@@ -81,12 +79,10 @@ if not table_prim.HasAPI(UsdPhysics.CollisionAPI):
 ground_prim = stage.GetPrimAtPath('{root}/Ground')
 if not ground_prim or not ground_prim.IsValid():
     ground_prim = UsdGeom.Cube.Define(stage, '{root}/Ground').GetPrim()
-_g = UsdGeom.Cube(ground_prim)
-_g.GetSizeAttr().Set(2.0)
 _gxf = UsdGeom.Xformable(ground_prim)
 _gxf.ClearXformOpOrder()
 _gxf.AddTranslateOp().Set(Gf.Vec3d(0.0, 0.0, -0.5))
-_gxf.AddScaleOp().Set(Gf.Vec3f({ground_scale}, {ground_scale}, 0.5))
+_gxf.AddScaleOp().Set(Gf.Vec3f({ground_scale}, {ground_scale}, 1.0))
 if not ground_prim.HasAPI(UsdPhysics.CollisionAPI):
     UsdPhysics.CollisionAPI.Apply(ground_prim)
 """
@@ -96,6 +92,11 @@ import omni.usd
 from pxr import Usd, UsdGeom, UsdLux, UsdPhysics, PhysxSchema, Gf
 
 stage = omni.usd.get_context().get_stage()
+
+# Root Xform FIRST: Define()-ing children would leave '{root}' as an
+# untyped over, while the hand-rolled originals type it Xform via
+# create_prim's ancestor-ensure (semantic-diff finding, CP-08 wave-1b).
+UsdGeom.Xform.Define(stage, '{root}')
 
 # Dome light
 light_prim = stage.GetPrimAtPath('{root}/DomeLight')

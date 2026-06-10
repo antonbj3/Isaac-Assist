@@ -124,3 +124,21 @@ def Scope "Render"
     sig = stage_signature(str(p))
     assert "/World/Box" in sig
     assert not any(k.startswith("/Render") for k in sig)
+
+
+def test_quats_decompose_for_tolerance():
+    # 1e-7 orientation noise must fall under the float tolerance — quats
+    # stringified before this fix (wave-1 finding on settled cubes)
+    from service.isaac_assist_service.qa.semantic_usd_diff import _plain, _values_equal
+
+    class FakeQuat:
+        def GetReal(self): return 0.9999982
+        def GetImaginary(self): return (1.6e-7, 7.5e-9, 0.0018971176)
+
+    class FakeQuat2:
+        def GetReal(self): return 0.9999983
+        def GetImaginary(self): return (1.6e-7, 7.5e-9, 0.0018971175)
+
+    a, b = _plain(FakeQuat()), _plain(FakeQuat2())
+    assert isinstance(a, list) and len(a) == 4
+    assert _values_equal(a, b, 1e-6)

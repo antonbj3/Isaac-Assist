@@ -28,7 +28,13 @@ def _plain(value: Any) -> Any:
     """Normalize pxr value types to plain python for comparison."""
     if value is None or isinstance(value, (bool, int, float, str)):
         return value
-    # Gf vectors/matrices/quats + Vt arrays are iterable
+    # Quats are NOT iterable — decompose to floats or they stringify and
+    # the float tolerance never applies (live wave-1 finding: settled-cube
+    # orientations diffed on 1e-7 noise as strings).
+    if hasattr(value, "GetReal") and hasattr(value, "GetImaginary"):
+        imag = value.GetImaginary()
+        return [float(value.GetReal())] + [float(v) for v in imag]
+    # Gf vectors/matrices + Vt arrays are iterable
     try:
         return [_plain(v) for v in value]
     except TypeError:
@@ -46,8 +52,11 @@ def stage_signature(path: str) -> Dict[str, Dict[str, Any]]:
     for prim in stage.Traverse():
         # Kit session state, not authored scene: /Render holds viewport/
         # RTX settings that Kit lazily writes between builds (live CP-01
-        # pilot: omni:rtx:* appeared in build B only). Never scene-semantic.
-        if str(prim.GetPath()).startswith("/Render"):
+        # pilot: omni:rtx:* appeared in build B only); /Environment is
+        # new_stage() default-light furniture that comes and goes between
+        # session stages (wave-1 finding). Never scene-semantic.
+        p = str(prim.GetPath())
+        if p.startswith("/Render") or p.startswith("/Environment"):
             continue
         attrs: Dict[str, Any] = {}
         rels: Dict[str, List[str]] = {}

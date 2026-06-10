@@ -33,8 +33,15 @@ async def _build_and_export(tpl: dict, out_path: str) -> None:
         execute_template_canonical)
     from service.isaac_assist_service.chat.tools import kit_tools
 
+    # Deterministic start: /World's TYPE flip-flops with Kit's new_stage
+    # internals (wave-1c: typed in A untyped in B on one template, the
+    # REVERSE on another) — session noise, not template semantics. Typing
+    # it here makes both builds start from the identical stage state.
     await kit_tools.exec_sync(
-        "import omni.usd\nomni.usd.get_context().new_stage()\nprint('STAGE_CLEAR')",
+        "import omni.usd\nfrom pxr import UsdGeom\n"
+        "omni.usd.get_context().new_stage()\n"
+        "UsdGeom.Xform.Define(omni.usd.get_context().get_stage(), '/World')\n"
+        "print('STAGE_CLEAR')",
         timeout=30)
     b = await asyncio.wait_for(execute_template_canonical(tpl), timeout=600)
     if not b.get("instantiated"):
@@ -49,13 +56,32 @@ async def _build_and_export(tpl: dict, out_path: str) -> None:
 
 
 async def main() -> int:
-    args = [a for a in sys.argv[1:] if not a.startswith("--")]
-    no_restart = "--no-restart" in sys.argv
+    argv = sys.argv[1:]
+    # strip flag-with-value pairs BEFORE positional parse
+    positional, skip = [], False
+    for i, a in enumerate(argv):
+        if skip:
+            skip = False
+            continue
+        if a == "--orig":
+            skip = True
+            continue
+        if not a.startswith("--"):
+            positional.append(a)
+    args = positional
+    no_restart = "--no-restart" in argv
     if len(args) != 2:
         print(__doc__)
         return 2
     name, cand_path = args
-    orig = json.load(open(REPO / f"workspace/templates/{name}.json"))
+    orig_override = None
+    for i, a in enumerate(sys.argv):
+        if a == "--orig" and i + 1 < len(sys.argv):
+            orig_override = sys.argv[i + 1]
+    if orig_override:
+        orig = json.load(open(orig_override))
+    else:
+        orig = json.load(open(REPO / f"workspace/templates/{name}.json"))
     cand = json.load(open(cand_path))
 
     if not no_restart:
