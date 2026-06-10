@@ -44,6 +44,11 @@ def stage_signature(path: str) -> Dict[str, Dict[str, Any]]:
         raise ValueError(f"cannot open USD stage: {path}")
     sig: Dict[str, Dict[str, Any]] = {}
     for prim in stage.Traverse():
+        # Kit session state, not authored scene: /Render holds viewport/
+        # RTX settings that Kit lazily writes between builds (live CP-01
+        # pilot: omni:rtx:* appeared in build B only). Never scene-semantic.
+        if str(prim.GetPath()).startswith("/Render"):
+            continue
         attrs: Dict[str, Any] = {}
         rels: Dict[str, List[str]] = {}
         for prop in prim.GetAuthoredProperties():
@@ -64,11 +69,14 @@ def stage_signature(path: str) -> Dict[str, Dict[str, Any]]:
 
 
 def _values_equal(a: Any, b: Any, tol: float) -> bool:
+    # equality FIRST: inf - inf is nan (never <= tol), so identical
+    # infinities read as a diff without this (live CP-01 pilot finding —
+    # Franka link maxLinearVelocity=inf flagged on both sides)
     if isinstance(a, float) and isinstance(b, float):
-        return abs(a - b) <= tol
+        return a == b or abs(a - b) <= tol
     if isinstance(a, (int, float)) and isinstance(b, (int, float)) \
             and not isinstance(a, bool) and not isinstance(b, bool):
-        return abs(float(a) - float(b)) <= tol
+        return a == b or abs(float(a) - float(b)) <= tol
     if isinstance(a, list) and isinstance(b, list):
         return len(a) == len(b) and all(_values_equal(x, y, tol) for x, y in zip(a, b))
     return a == b

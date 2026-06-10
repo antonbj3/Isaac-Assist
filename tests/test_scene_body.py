@@ -105,3 +105,12 @@ def test_rba_registered_and_expandable():
                             {"positions": [[0.2, 0.3, 0.835]]})
     ast.parse(code)
     assert "/World/Cube_1" in code
+
+
+def test_baseline_groundless_variant():
+    # CP-01 family: no ground slab — the table is the world floor
+    code = _gen_create_scene_baseline({"include_ground": False,
+                                       "table_size": [2.0, 1.0]})
+    ast.parse(code)
+    assert "Ground" not in code
+    assert "Gf.Vec3f(1.0, 0.5, 0.375)" in code   # CP-01 table half-extents

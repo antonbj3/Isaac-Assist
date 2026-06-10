@@ -32,6 +32,8 @@ def _gen_create_scene_baseline(args: Dict) -> str:
         root (str): parent path, default "/World".
         intensity (float): dome light intensity, default 1000.0.
         ground_scale (float): ground half-extent metres, default 20.0.
+        include_ground (bool): default True. Several corpus bases (CP-01
+            family) author no ground slab — the table is the world floor.
         include_table (bool): default True.
         table_size (list[2]): table top [x, y] metres, default [1.5, 0.5].
         table_height (float): table TOP height metres, default 0.75.
@@ -41,6 +43,7 @@ def _gen_create_scene_baseline(args: Dict) -> str:
     root = args.get("root", "/World")
     intensity = float(args.get("intensity", 1000.0))
     ground_scale = float(args.get("ground_scale", 20.0))
+    include_ground = bool(args.get("include_ground", True))
     include_table = bool(args.get("include_table", True))
     table_size = args.get("table_size", [1.5, 0.5])
     table_height = float(args.get("table_height", 0.75))
@@ -71,18 +74,9 @@ if not table_prim.HasAPI(UsdPhysics.CollisionAPI):
     UsdPhysics.CollisionAPI.Apply(table_prim)
 """
 
-    return f"""\
-import omni.usd
-from pxr import Usd, UsdGeom, UsdLux, UsdPhysics, PhysxSchema, Gf
-
-stage = omni.usd.get_context().get_stage()
-
-# Dome light
-light_prim = stage.GetPrimAtPath('{root}/DomeLight')
-if not light_prim or not light_prim.IsValid():
-    light_prim = UsdLux.DomeLight.Define(stage, '{root}/DomeLight').GetPrim()
-UsdLux.DomeLight(light_prim).GetIntensityAttr().Set({intensity})
-
+    ground_block = ""
+    if include_ground:
+        ground_block = f"""
 # Ground slab (collision)
 ground_prim = stage.GetPrimAtPath('{root}/Ground')
 if not ground_prim or not ground_prim.IsValid():
@@ -95,7 +89,20 @@ _gxf.AddTranslateOp().Set(Gf.Vec3d(0.0, 0.0, -0.5))
 _gxf.AddScaleOp().Set(Gf.Vec3f({ground_scale}, {ground_scale}, 0.5))
 if not ground_prim.HasAPI(UsdPhysics.CollisionAPI):
     UsdPhysics.CollisionAPI.Apply(ground_prim)
-{table_block}
+"""
+
+    return f"""\
+import omni.usd
+from pxr import Usd, UsdGeom, UsdLux, UsdPhysics, PhysxSchema, Gf
+
+stage = omni.usd.get_context().get_stage()
+
+# Dome light
+light_prim = stage.GetPrimAtPath('{root}/DomeLight')
+if not light_prim or not light_prim.IsValid():
+    light_prim = UsdLux.DomeLight.Define(stage, '{root}/DomeLight').GetPrim()
+UsdLux.DomeLight(light_prim).GetIntensityAttr().Set({intensity})
+{ground_block}{table_block}
 # Physics scene — the verified-corpus settings unless overridden.
 phys_prim = stage.GetPrimAtPath('/PhysicsScene')
 if not phys_prim or not phys_prim.IsValid():
@@ -104,7 +111,7 @@ px_api = PhysxSchema.PhysxSceneAPI.Apply(phys_prim)
 px_api.CreateEnableGPUDynamicsAttr().Set({gpu_dyn})
 px_api.CreateBroadphaseTypeAttr().Set('{broadphase}')
 
-print('scene_baseline: light+ground{"+cell+table" if include_table else ""} + PhysicsScene(gpu={gpu_dyn}, {broadphase})')
+print('scene_baseline: light{"+ground" if include_ground else ""}{"+cell+table" if include_table else ""} + PhysicsScene(gpu={gpu_dyn}, {broadphase})')
 """
 
 

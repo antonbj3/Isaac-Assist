@@ -10131,6 +10131,7 @@ ISAAC_SIM_TOOLS = [
                     "root": {"type": "string", "description": "Parent path. Default '/World'"},
                     "intensity": {"type": "number", "description": "Dome light intensity. Default 1000"},
                     "ground_scale": {"type": "number", "description": "Ground half-extent (m). Default 20"},
+                    "include_ground": {"type": "boolean", "description": "Author the Ground slab. Default true (CP-01 family authors none — table is the floor)"},
                     "include_table": {"type": "boolean", "description": "Author Cell+Table. Default true"},
                     "table_size": {"type": "array", "items": {"type": "number"}, "description": "Table top [x,y] m. Default [1.5, 0.5]"},
                     "table_height": {"type": "number", "description": "Table TOP height (m). Default 0.75"},

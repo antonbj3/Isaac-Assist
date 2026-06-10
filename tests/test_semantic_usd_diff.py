@@ -93,3 +93,34 @@ def test_signature_shape(tmp_path):
     assert "/World/Cube_1" in sig
     assert sig["/World/Cube_1"]["type"] == "Cube"
     assert "size" in sig["/World/Cube_1"]["attrs"]
+
+
+def test_identical_infinities_are_equal():
+    from service.isaac_assist_service.qa.semantic_usd_diff import _values_equal
+    inf = float("inf")
+    assert _values_equal(inf, inf, 1e-6)
+    assert _values_equal(-inf, -inf, 1e-6)
+    assert not _values_equal(inf, -inf, 1e-6)
+    assert not _values_equal(inf, 1.0, 1e-6)
+    assert _values_equal([inf, 0.5], [inf, 0.5], 1e-6)
+
+
+def test_render_prims_excluded_from_signature(tmp_path):
+    from service.isaac_assist_service.qa.semantic_usd_diff import stage_signature
+    p = tmp_path / "s.usda"
+    p.write_text('''#usda 1.0
+def Xform "World"
+{
+    def Cube "Box"
+    {
+        double size = 2
+    }
+}
+def Scope "Render"
+{
+    custom bool omni_rtx_thing = true
+}
+''')
+    sig = stage_signature(str(p))
+    assert "/World/Box" in sig
+    assert not any(k.startswith("/Render") for k in sig)
