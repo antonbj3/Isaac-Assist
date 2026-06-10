@@ -20,6 +20,9 @@ import sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
+# --role-path: build via code_template+roles (for CT migrations); default
+# strips the role fields so `code` is what gets verified.
+_USE_ROLE_PATH = "--role-path" in __import__("sys").argv
 sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(REPO / "scripts/qa"))
 
@@ -57,7 +60,8 @@ async def _build_and_export(tpl: dict, out_path: str) -> None:
         "UsdGeom.Xform.Define(omni.usd.get_context().get_stage(), '/World')\n"
         "print('STAGE_CLEAR')",
         timeout=30)
-    b = await asyncio.wait_for(execute_template_canonical(_force_code_path(tpl)), timeout=600)
+    b = await asyncio.wait_for(execute_template_canonical(
+        tpl if _USE_ROLE_PATH else _force_code_path(tpl)), timeout=600)
     if not b.get("instantiated"):
         raise RuntimeError(f"BUILD_FAIL: {str(b.get('errors'))[:400]}")
     # Deterministic export: STOP (not pause) the timeline first — stop

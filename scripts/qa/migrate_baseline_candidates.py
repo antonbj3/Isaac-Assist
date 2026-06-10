@@ -75,19 +75,23 @@ def main() -> int:
     if not names:
         print(__doc__)
         return 2
+    ct_mode = "--ct" in args          # migrate code_template, verify via role path
+    no_restart = "--no-restart" in args
+    field = "code_template" if ct_mode else "code"
     results = {}
     for n in names:
         tpl = json.load(open(REPO / f"workspace/templates/{n}.json"))
-        new_code = candidate_code(tpl["code"])
+        new_code = candidate_code(tpl.get(field) or "")
         if new_code is None:
             results[n] = "NO_MATCH"
             print(f"{n}: NO_MATCH (variant — later wave)", flush=True)
             continue
-        tpl["code"] = new_code
-        cand = f"/tmp/cand_{n}.json"
+        tpl[field] = new_code
+        cand = f"/tmp/cand_{'ct_' if ct_mode else ''}{n}.json"
         json.dump(tpl, open(cand, "w"), ensure_ascii=False)
+        extra = (["--role-path"] if ct_mode else []) + (["--no-restart"] if no_restart else [])
         p = subprocess.run([sys.executable, str(REPO / "scripts/qa/migrate_verify.py"),
-                            n, cand], capture_output=True, text=True, timeout=1200)
+                            n, cand] + extra, capture_output=True, text=True, timeout=1200)
         out = p.stdout + p.stderr
         if "MIGRATION_VERDICT=ZERO_DELTA" in out:
             verdict = "ZERO_DELTA"
