@@ -117,7 +117,7 @@ _SAFE_BUILTINS = {
     # 2026-06-10 natt round 2: next (groot/zmq capture-drops) + iter/any/all
     # + the exception NAMES — `except Exception:` resolves the name at
     # runtime, so a missing Exception killed every try-statement in capture.
-    "next": next, "iter": iter, "any": any, "all": all,
+    "next": next, "iter": iter, "any": any, "all": all, "type": type,
     "Exception": Exception, "ValueError": ValueError, "TypeError": TypeError,
     "KeyError": KeyError, "RuntimeError": RuntimeError,
     "AssertionError": AssertionError, "AttributeError": AttributeError,
