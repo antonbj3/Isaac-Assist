@@ -68,3 +68,20 @@ first-carry jerk — real, delivers anyway) + STACK_DRIFT/MISALIGNED on stacks.
 nofm_scene_timeseries) so the axes are separable, but the per-template n/m now
 mixes them — split `verification.function_gate` vs `verification.faithfulness`
 records (small P0-19 follow-up) so "mixed" isn't ambiguous.
+
+## Honest re-gate — first 4 of the falsely-green 15 (eftermiddag)
+
+Args configured per template (completeness/targets), fresh-Kit per run, both axes ledgered:
+
+| Template | Honest gate | Faithfulness (TS) | Verdict |
+|---|---|---|---|
+| CP-NEW-barcode-scanner-divert | **PASS** (6/6 per-item lane oracle) | OK (drift warns) | **Earns green** |
+| CP-NEW-inspect-reject | **FAIL** | OK-ish (stochastic run) | Red cube ends in a 5-cube TOWER in PassBin (transitive raycast) — routing never happens |
+| CP-NEW-y-merge-singulation | **FAIL** | FAIL (5/6 FLUNG/TOPPLED) | Falsely-green confirmed |
+| CP-NEW-kit-prep-vision-gate | **FAIL** | FAIL (5/5 ALOFT/ON_FLOOR) | Falsely-green confirmed |
+
+Measurement holes closed en route: gate_one dropped the whole P0-18 arg surface
+(completeness/targets/routing — EVERY prior gate_one run was legacy any-delivered);
+gate_one cube_path fallback; nofm unparseable-gate logging; honest_gate transitive-support
+misroute labeling (tower-in-bin). CP-71 same afternoon: honest FAIL 2/2 with
+completeness=all (was an 18/18 batch "pass").
