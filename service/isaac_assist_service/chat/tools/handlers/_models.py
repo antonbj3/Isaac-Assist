@@ -4012,6 +4012,21 @@ class DiagnoseTaskOutcomeArgs(BaseModel):
     outdir: Optional[str] = Field(None, description="Override artifact dir (default TS_OUTDIR env or ~/.isaac_qa/run)")
 
 
+class CreatePhysicsJointArgs(BaseModel):
+    """Author a revolute/prismatic joint with body0/body1 as REAL relationships."""
+    model_config = ConfigDict(populate_by_name=True, extra='allow')
+
+    joint_path: str = Field(..., description="Prim path for the joint")
+    joint_type: Optional[str] = Field(None, description="prismatic (default) or revolute")
+    body0: str = Field(..., description="Parent body prim path")
+    body1: str = Field(..., description="Moving body prim path")
+    axis: Optional[str] = Field(None, description="X (default) / Y / Z")
+    lower_limit: Optional[float] = Field(None)
+    upper_limit: Optional[float] = Field(None)
+    local_pos0: Optional[List[float]] = Field(None)
+    local_pos1: Optional[List[float]] = Field(None)
+
+
 class VerifyArticulationArgs(BaseModel):
     """Pre-flight articulation check (no sim): root, joints, drives, limits."""
     model_config = ConfigDict(populate_by_name=True, extra='allow')
@@ -4495,6 +4510,7 @@ MODEL_REGISTRY = {
     "static_eyes": StaticEyesArgs,
     "create_rigid_body_array": CreateRigidBodyArrayArgs,
     "verify_articulation": VerifyArticulationArgs,
+    "create_physics_joint": CreatePhysicsJointArgs,
     "simulate_articulation_check": SimulateArticulationCheckArgs,
     "diagnose_task_outcome": DiagnoseTaskOutcomeArgs,
 }

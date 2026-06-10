@@ -10143,6 +10143,28 @@ ISAAC_SIM_TOOLS = [
     {
         "type": "function",
         "function": {
+            "name": "create_physics_joint",
+            "description": "Author a revolute/prismatic joint CORRECTLY: body0/body1 as USD RELATIONSHIPS (the set_attribute string pattern creates dual-spec broken properties — pcp throws and the joint never binds; live drawer-open finding). Axis, limits, local anchors.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "joint_path": {"type": "string", "description": "Prim path for the joint"},
+                    "joint_type": {"type": "string", "enum": ["prismatic", "revolute"], "description": "Default prismatic"},
+                    "body0": {"type": "string", "description": "Parent body prim path"},
+                    "body1": {"type": "string", "description": "Moving body prim path"},
+                    "axis": {"type": "string", "enum": ["X", "Y", "Z"], "description": "Default X"},
+                    "lower_limit": {"type": "number", "description": "m (prismatic) / deg (revolute)"},
+                    "upper_limit": {"type": "number"},
+                    "local_pos0": {"type": "array", "items": {"type": "number"}},
+                    "local_pos1": {"type": "array", "items": {"type": "number"}},
+                },
+                "required": ["joint_path", "body0", "body1"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "verify_articulation",
             "description": "Pre-flight articulation check (NO simulation) [P5-22]: articulation root present, revolute/prismatic joints enumerated with drive+limit sanity, optional named-joint check. The form-gate leg for door/valve/machine-tender/tool-swap verbs. Honest-eyes: reads the live stage.",
             "parameters": {

@@ -200,3 +200,56 @@ def register(data: Dict[str, Callable[..., Any]],
              codegen: Dict[str, Callable[..., Any]]) -> None:
     data["verify_articulation"] = _handle_verify_articulation
     data["simulate_articulation_check"] = _handle_simulate_articulation_check
+    codegen["create_physics_joint"] = _gen_create_physics_joint
+
+
+def _gen_create_physics_joint(args: Dict) -> str:
+    """Author a revolute/prismatic joint CORRECTLY [P5-22 root-cause fix].
+
+    The corpus authored ``physics:body0/body1`` as STRING ATTRIBUTES via
+    set_attribute — USD requires RELATIONSHIPS, and the resulting dual-spec
+    property makes pcp throw on composition AND leaves the joint
+    NON-BINDING (live drawer-open finding: the drawer was yanked loose,
+    z 0.95->0.59, instead of sliding -0.3..0). This codegen authors the
+    joint the only correct way.
+
+    Args:
+        joint_path (str, required)
+        joint_type (str): "prismatic" (default) or "revolute".
+        body0 (str, required): parent body prim path.
+        body1 (str, required): moving body prim path.
+        axis (str): "X" (default) / "Y" / "Z".
+        lower_limit / upper_limit (float, optional): limits (m or deg).
+        local_pos0 / local_pos1 (list[3], optional): anchor offsets.
+    """
+    joint_path = args["joint_path"]
+    jt = str(args.get("joint_type", "prismatic")).lower()
+    if jt not in ("prismatic", "revolute"):
+        _msg = f"create_physics_joint: joint_type must be prismatic/revolute, got {jt!r}"
+        return f"raise ValueError({_msg!r})\n"
+    cls = "PrismaticJoint" if jt == "prismatic" else "RevoluteJoint"
+    body0, body1 = args["body0"], args["body1"]
+    axis = str(args.get("axis", "X")).upper()
+    if axis not in ("X", "Y", "Z"):
+        _msg = f"create_physics_joint: axis must be X/Y/Z, got {axis!r}"
+        return f"raise ValueError({_msg!r})\n"
+    lo, hi = args.get("lower_limit"), args.get("upper_limit")
+    lp0 = args.get("local_pos0") or [0, 0, 0]
+    lp1 = args.get("local_pos1") or [0, 0, 0]
+    lines = [
+        "import omni.usd",
+        "from pxr import UsdPhysics, Gf, Sdf",
+        "stage = omni.usd.get_context().get_stage()",
+        f"_j = UsdPhysics.{cls}.Define(stage, {joint_path!r})",
+        f"_j.GetBody0Rel().SetTargets([Sdf.Path({body0!r})])",
+        f"_j.GetBody1Rel().SetTargets([Sdf.Path({body1!r})])",
+        f"_j.GetAxisAttr().Set({axis!r})",
+        f"_j.GetLocalPos0Attr().Set(Gf.Vec3f({float(lp0[0])}, {float(lp0[1])}, {float(lp0[2])}))",
+        f"_j.GetLocalPos1Attr().Set(Gf.Vec3f({float(lp1[0])}, {float(lp1[1])}, {float(lp1[2])}))",
+    ]
+    if lo is not None:
+        lines.append(f"_j.GetLowerLimitAttr().Set({float(lo)})")
+    if hi is not None:
+        lines.append(f"_j.GetUpperLimitAttr().Set({float(hi)})")
+    lines.append(f"print('physics_joint {jt}', {joint_path!r}, 'body0={body0}', 'body1={body1}')")
+    return "\n".join(lines) + "\n"

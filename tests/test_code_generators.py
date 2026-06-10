@@ -1101,6 +1101,13 @@ _TEST_VECTORS = [
         ["AddReference", "widget.usd", "RigidBodyAPI.Apply"],
     ),
     (
+        "create_physics_joint",
+        {"joint_path": "/W/J", "body0": "/W/Cab", "body1": "/W/Drawer",
+         "lower_limit": -0.3, "upper_limit": 0.0},
+        ["PrismaticJoint.Define", "GetBody0Rel().SetTargets",
+         "GetBody1Rel().SetTargets", "GetLowerLimitAttr"],
+    ),
+    (
         "setup_bimanual_pick_place_controller",
         {
             "robot_path": "/World/G1",
