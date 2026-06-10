@@ -93,7 +93,12 @@ async def gate(tpl_name):
     args = {"cube_path": va.get("cube_path") or sa.get("cube_path"),
             "target_path": sa.get("target_path"),
             "duration_s": int(sa.get("duration_s", 90))}
-    for k in ("cube_paths", "color_routing", "target_path"):
+    # Forward the FULL honest-gate surface (P0-18): targets/routing/
+    # completeness were silently dropped by the old 3-key whitelist, so a
+    # template's completeness="all" never reached the handler and the gate
+    # quietly graded legacy any-delivered (caught live on CP-71 2026-06-10).
+    for k in ("cube_paths", "color_routing", "target_path",
+              "targets", "routing", "completeness"):
         if k in sa and sa[k] is not None:
             args[k] = sa[k]
     res = await asyncio.wait_for(execute_tool_call("simulate_traversal_check", args),
@@ -106,6 +111,10 @@ async def gate(tpl_name):
         except Exception: verdict = jl[-1][:200]
     succ = verdict.get("success") if isinstance(verdict, dict) else "?"
     print(f"{tpl_name}: GATE success={succ} dur={args['duration_s']} cube={args['cube_path']} -> {json.dumps(verdict)[:260] if isinstance(verdict,dict) else verdict}")
+    if isinstance(verdict, dict):
+        # full verdict on its own line — the 260-char teaser above hid the
+        # honest-gate fields (per_cube/completeness) exactly when they mattered
+        print("GATE_FULL=" + json.dumps(verdict))
 
 
 async def main():

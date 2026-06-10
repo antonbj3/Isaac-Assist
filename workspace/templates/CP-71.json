@@ -49,6 +49,7 @@
     "cube_path": "/World/Dispenser/Item_1",
     "target_path": "/World/OutBin",
     "duration_s": 180,
+    "completeness": "all",
     "cube_paths": [
       "/World/Dispenser/Item_1",
       "/World/Dispenser/Item_2",
@@ -277,5 +278,5 @@
       "moveit2"
     ]
   },
-  "verification": {"function_gate": {"status": "mixed", "n": 2, "m": 3, "wilson_lower": 0.2077, "last_run_sha": "08f6b357", "last_run_at": "2026-06-10T08:12:50+00:00"}}
+  "verification": {"function_gate": {"status": "mixed", "n": 2, "m": 3, "wilson_lower": 0.2077, "last_run_sha": "f755f51d", "last_run_at": "2026-06-10T14:16:25+00:00"}, "faithfulness": {"status": "fail", "n": 0, "m": 2, "wilson_lower": 0.0, "last_run_sha": "f755f51d", "last_run_at": "2026-06-10T14:16:25+00:00"}}
 }
