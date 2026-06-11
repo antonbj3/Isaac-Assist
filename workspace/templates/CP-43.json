@@ -59,6 +59,7 @@
     "cube_path": "/World/Sphere_1"
   },
   "simulate_args": {
+    "completeness": "all",
     "target_path": "/World/Bin",
     "duration_s": 180,
     "xy_tolerance": 0.15,

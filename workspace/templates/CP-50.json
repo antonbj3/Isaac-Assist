@@ -62,6 +62,7 @@
     "cube_path": "/World/Cube_1"
   },
   "simulate_args": {
+    "completeness": "all",
     "cube_path": "/World/Cube_1",
     "target_path": "/World/RedTray",
     "duration_s": 240,

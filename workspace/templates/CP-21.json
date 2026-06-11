@@ -59,6 +59,7 @@
     "cube_path": "/World/Cube_1"
   },
   "simulate_args": {
+    "completeness": "all",
     "cube_path": "/World/Cube_1",
     "target_path": "/World/Bin",
     "duration_s": 180,
@@ -263,5 +264,5 @@
     "target_path": "{{primary_destination.path}}",
     "duration_s": 180
   },
-  "verification": {"function_gate": {"status": "unmeasured", "legacy_claim": "pass", "claim_evidence": "e \u2713; function-gate \u2713 (180s sim \u2014 orig 90s. cube_final=(0.00,", "n": 0, "m": 0, "wilson_lower": 0.0, "last_run_sha": null, "last_run_at": null}}
+  "verification": {"function_gate": {"status": "pass", "n": 1, "m": 1, "wilson_lower": 0.2065, "last_run_sha": "e7a03f57", "last_run_at": "2026-06-11T05:35:27+00:00", "legacy_claim": "pass"}, "faithfulness": {"status": "pass", "n": 1, "m": 1, "wilson_lower": 0.2065, "last_run_sha": "e7a03f57", "last_run_at": "2026-06-11T05:36:58+00:00"}}
 }

@@ -81,6 +81,7 @@
     "cube_path": "/World/Cube_1"
   },
   "simulate_args": {
+    "completeness": "all",
     "cube_path": "/World/Cube_1",
     "target_path": "/World/Bin",
     "duration_s": 180,
@@ -133,5 +134,5 @@
     "added_date": "2026-05-15"
   },
   "motion_controllers": {"verified": [], "failed": {}, "untested": ["curobo"]},
-  "verification": {"function_gate": {"status": "unmeasured", "legacy_claim": null, "claim_evidence": "gate-pending; demoted 2026-05-15", "n": 0, "m": 0, "wilson_lower": 0.0, "last_run_sha": null, "last_run_at": null}}
+  "verification": {"function_gate": {"status": "pass", "n": 1, "m": 1, "wilson_lower": 0.2065, "last_run_sha": "e7a03f57", "last_run_at": "2026-06-11T05:57:54+00:00", "legacy_claim": null}, "faithfulness": {"status": "pass", "n": 1, "m": 1, "wilson_lower": 0.2065, "last_run_sha": "e7a03f57", "last_run_at": "2026-06-11T05:59:30+00:00"}}
 }

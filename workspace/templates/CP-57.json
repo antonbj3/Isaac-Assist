@@ -65,6 +65,7 @@
     "cube_path": "/World/CubeHeap/Item_1"
   },
   "simulate_args": {
+    "completeness": "all",
     "cube_paths": [
       "/World/Item_1",
       "/World/Item_2",
