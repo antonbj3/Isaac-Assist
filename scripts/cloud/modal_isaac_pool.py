@@ -115,6 +115,8 @@ image = (
                    f"{REPO}/workspace/knowledge")
     .add_local_dir(str(REPO_LOCAL / "config" / "curobo"),
                    f"{REPO}/config/curobo")
+    .add_local_dir(str(REPO_LOCAL / "scripts" / "cloud"),
+                   f"{REPO}/scripts/cloud")
 )
 
 BOOT_PY = f'''
@@ -357,7 +359,7 @@ _ITEM_RE = re.compile(r"^\s{2}(\w[\w/]*): bin=.*\|\s*([A-Z_,]+|OK)\s*\|\s*final=
 
 
 @app.function(image=image, gpu=GPU, cpu=6.0, memory=12288, timeout=3600,
-              volumes=_VOLUMES, max_containers=3)
+              volumes=_VOLUMES, max_containers=6)
 def run_template(template_id: str, skip_ts: bool = False,
                  env_flags: dict | None = None) -> dict:
     """Fresh-Kit single-template measurement: gate_one + scene_timeseries.
@@ -367,7 +369,12 @@ def run_template(template_id: str, skip_ts: bool = False,
     """
     import subprocess
 
-    res: dict = {"template": template_id, "gpu": GPU}
+    res: dict = {"template": template_id}
+    try:
+        import torch as _t
+        res["gpu"] = _t.cuda.get_device_name(0) if _t.cuda.is_available() else "none"
+    except Exception:  # noqa: BLE001
+        res["gpu"] = "unknown"
     for d in ("/home/anton/.isaac_qa/run", "/root/.isaac_qa/run"):
         Path(d).mkdir(parents=True, exist_ok=True)
     try:
@@ -479,6 +486,99 @@ def run_template(template_id: str, skip_ts: bool = False,
         _kill_kit(proc)
         cache_vol.commit()
     return res
+
+
+@app.function(image=image, gpu=GPU, cpu=6.0, memory=12288, timeout=1500,
+              volumes=_VOLUMES)
+def curobo_fingerprint() -> str:
+    """UR10-divergence RCA: fingerprint the STAGED ur10_scene model so it
+    can be md5-compared against the local machine's (sphere set + urdf)."""
+    import hashlib
+    import subprocess
+
+    import yaml
+
+    proc, boot_s = _boot_kit()
+    staged = _stage_custom_curobo()
+    out = [f"boot={boot_s}s staged={staged}"]
+    cfg = ("/usr/local/lib/python3.11/site-packages/curobo/content/"
+           "configs/robot/ur10_scene.yml")
+    try:
+        d = yaml.safe_load(open(cfg))
+        kin = d["robot_cfg"]["kinematics"]
+        sph = kin.get("collision_spheres") or {}
+        vals = sph.values() if isinstance(sph, dict) else [sph]
+        n = sum(len(v) for v in vals)
+        blob = str(sorted(str(x) for v in (sph.values() if isinstance(sph, dict)
+                                           else [sph]) for x in v))
+        out.append(f"n_spheres={n} sphere_md5={hashlib.md5(blob.encode()).hexdigest()[:12]}")
+        import os as _o
+        for key in ("urdf_path", "asset_root_path"):
+            pth = str(kin.get(key))
+            out.append(f"{key}={pth} exists={_o.path.exists(pth)}")
+        urdf = str(kin.get("urdf_path"))
+        if _o.path.exists(urdf):
+            u = open(urdf).read()
+            out.append(f"urdf_md5={hashlib.md5(u.encode()).hexdigest()[:12]} len={len(u)}")
+    except Exception as e:  # noqa: BLE001
+        out.append(f"ERROR: {e}")
+    _kill_kit(proc)
+    cache_vol.commit()
+    return "\n".join(out)
+
+
+@app.function(image=image, gpu=GPU, cpu=6.0, memory=12288, timeout=2000,
+              volumes=_VOLUMES)
+def scene_export(template_id: str) -> str:
+    """UR10-divergence RCA final probe: build the template in-cloud and
+    export the stage to the cache volume for a local semantic USD diff."""
+    import subprocess
+    from pathlib import Path
+
+    proc, boot_s = _boot_kit()
+    _stage_custom_curobo()
+    probe_py = f'''
+import asyncio, json, sys
+sys.path.insert(0, "{REPO}")
+from service.isaac_assist_service.chat.tools import kit_tools
+from service.isaac_assist_service.chat.canonical_instantiator import (
+    execute_template_canonical, settle_after_canonical)
+async def m():
+    await kit_tools.exec_sync("import omni.usd\\nomni.usd.get_context().new_stage()\\n", timeout=20)
+    tpl = json.load(open("{REPO}/workspace/templates/{template_id}.json"))
+    b = await execute_template_canonical(tpl)
+    try:
+        await asyncio.wait_for(settle_after_canonical(tpl), timeout=30)
+    except Exception:
+        pass
+    r = await kit_tools.exec_sync(
+        "import omni.usd, os\\n"
+        "os.makedirs('/root/.cache/qa_export', exist_ok=True)\\n"
+        "st = omni.usd.get_context().get_stage()\\n"
+        "st.Export('/root/.cache/qa_export/{template_id}_cloud.usda')\\n"
+        "print('EXPORTED')\\n", timeout=120)
+    print("EXPORT_RESULT=" + json.dumps(r)[:300])
+    print("BUILD n_ok=%s/%s errors=%s" % (b.get("n_ok"), b.get("n_calls"), str(b.get("errors"))[:200]))
+asyncio.run(m())
+'''
+    Path("/tmp/scene_export.py").write_text(probe_py)
+    pr = subprocess.run([sys_exe(), "/tmp/scene_export.py"],
+                        capture_output=True, text=True, timeout=1200)
+    _kill_kit(proc)
+    cache_vol.commit()
+    return (pr.stdout + pr.stderr)[-1500:]
+
+
+@app.local_entrypoint()
+def export_scene(template: str = "CP-70"):
+    print("SCENE_EXPORT:")
+    print(scene_export.remote(template))
+
+
+@app.local_entrypoint()
+def fingerprint_ur10():
+    print("CLOUD_FINGERPRINT:")
+    print(curobo_fingerprint.remote())
 
 
 @app.local_entrypoint()

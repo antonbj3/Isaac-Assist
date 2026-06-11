@@ -6323,7 +6323,22 @@ if sg_prim and sg_prim.IsValid():
     if _USE_ASSET_GRIPPER:
         try:
             from pxr import UsdPhysics as _UPa, UsdGeom as _UGa, Sdf as _Sa, Gf as _Ga
+            # Portable asset resolution (UR10-cloud RCA 2026-06-11: this
+            # was a hardcoded /mnt path -> empty gripper shell on ANY other
+            # machine; the dead FlangeMount presented as cuRobo place-plan
+            # res_None). Local pack first (fast), else Isaac asset root.
             _SHORT = "/mnt/shared_data/isaac-sim-assets-complete-5.0.0/Assets/Isaac/5.0/Isaac/Robots/UniversalRobots/ur10/grippers/short_gripper.usd"
+            import os as _os_sg
+            if not _os_sg.path.exists(_SHORT):
+                try:
+                    import carb.settings as _cs_sg
+                    _root = _cs_sg.get_settings().get(
+                        "/persistent/isaac/asset_root/default") or ""
+                except Exception:
+                    _root = ""
+                if _root:
+                    _SHORT = (_root.rstrip("/")
+                              + "/Isaac/Robots/UniversalRobots/ur10/grippers/short_gripper.usd")
             # Mount as a SEPARATE TOP-LEVEL rigid body FixedJoint-bolted to the flange (NOT baked into ee_link).
             # WHY: the asset's IsaacSurfaceGripper grips a cube by filling body1 of the COMPLIANT Suction_Joint
             # (D6 drives, body0=/Root). For close_gripper() to engage, /Root MUST stay a valid rigid body. Baking
