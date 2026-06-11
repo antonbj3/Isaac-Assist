@@ -171,5 +171,5 @@
     "failed": {}
   },
   "verified_status": "form-gate-schema \u2713 (R-A30-fix); function-gate \u23f3",
-  "verification": {"function_gate": {"status": "unmeasured", "legacy_claim": null, "claim_evidence": "ix); function-gate \u23f3", "n": 0, "m": 0, "wilson_lower": 0.0, "last_run_sha": null, "last_run_at": null}}
+  "verification": {"function_gate": {"status": "fail", "n": 0, "m": 1, "wilson_lower": 0.0, "last_run_sha": "c46f15eb", "last_run_at": "2026-06-11T12:02:19+00:00", "legacy_claim": null}, "faithfulness": {"status": "pass", "n": 1, "m": 1, "wilson_lower": 0.2065, "last_run_sha": "c46f15eb", "last_run_at": "2026-06-11T12:02:48+00:00"}}
 }

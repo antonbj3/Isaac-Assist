@@ -185,5 +185,5 @@
       "date": "2026-05-19"
     }
   ],
-  "verification": {"function_gate": {"status": "unmeasured", "legacy_claim": null, "claim_evidence": "a \u2713; function-gate \u23f3 (requires Franka USD + cuRobo + PhysX l", "n": 0, "m": 0, "wilson_lower": 0.0, "last_run_sha": null, "last_run_at": null}}
+  "verification": {"function_gate": {"status": "pass", "n": 1, "m": 1, "wilson_lower": 0.2065, "last_run_sha": "c46f15eb", "last_run_at": "2026-06-11T11:55:32+00:00", "legacy_claim": null}, "faithfulness": {"status": "pass", "n": 1, "m": 1, "wilson_lower": 0.2065, "last_run_sha": "c46f15eb", "last_run_at": "2026-06-11T11:55:58+00:00"}}
 }

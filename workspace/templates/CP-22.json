@@ -129,5 +129,5 @@
     "added_date": "2026-05-15"
   },
   "motion_controllers": {"verified": [], "failed": {}, "untested": ["curobo"]},
-  "verification": {"function_gate": {"status": "pass", "n": 4, "m": 4, "wilson_lower": 0.5101, "last_run_sha": "8108e660", "last_run_at": "2026-06-11T02:47:52+00:00"}, "faithfulness": {"status": "pass", "n": 3, "m": 3, "wilson_lower": 0.4385, "last_run_sha": "8108e660", "last_run_at": "2026-06-11T02:49:12+00:00"}}
+  "verification": {"function_gate": {"status": "pass", "n": 5, "m": 5, "wilson_lower": 0.5655, "last_run_sha": "7107653e", "last_run_at": "2026-06-11T11:46:03+00:00"}, "faithfulness": {"status": "pass", "n": 3, "m": 3, "wilson_lower": 0.4385, "last_run_sha": "8108e660", "last_run_at": "2026-06-11T02:49:12+00:00"}}
 }

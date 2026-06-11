@@ -209,5 +209,5 @@
     "failed": {}
   },
   "verified_status": "drafted-2026-05-16; first-triple-arm-canonical (F.0-ext-2 industrial-triple-arm-cell-handoff-001); form-gate-schema ⏳ (awaiting lint); function-gate ⏳ (single-tenant Kit RPC means 3 arms execute sequentially, not in parallel; strict A→B→C ordering implicit in install order — handoff signal markers advisory)",
-  "verification": {"function_gate": {"status": "unmeasured", "legacy_claim": null, "claim_evidence": "nt); function-gate \u23f3 (single-tenant Kit RPC means 3 arms exe", "n": 0, "m": 0, "wilson_lower": 0.0, "last_run_sha": null, "last_run_at": null}}
+  "verification": {"function_gate": {"status": "fail", "n": 0, "m": 1, "wilson_lower": 0.0, "last_run_sha": "0ad6aa14", "last_run_at": "2026-06-11T13:09:02+00:00", "legacy_claim": null}, "faithfulness": {"status": "pass", "n": 1, "m": 1, "wilson_lower": 0.2065, "last_run_sha": "0ad6aa14", "last_run_at": "2026-06-11T13:11:16+00:00"}}
 }

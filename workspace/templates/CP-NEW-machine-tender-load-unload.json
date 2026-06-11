@@ -329,5 +329,5 @@
       "rationale": "cuRobo plan_pose fails with non-identity UR10 base rotation (all 7 working UR10 templates use identity)"
     }
   ],
-  "verification": {"function_gate": {"status": "unmeasured", "legacy_claim": null, "claim_evidence": "test pending; patched-r-a20-fix", "n": 0, "m": 0, "wilson_lower": 0.0, "last_run_sha": null, "last_run_at": null}}
+  "verification": {"function_gate": {"status": "fail", "n": 0, "m": 1, "wilson_lower": 0.0, "last_run_sha": "c46f15eb", "last_run_at": "2026-06-11T11:07:13+00:00", "legacy_claim": null}, "faithfulness": {"status": "fail", "n": 0, "m": 1, "wilson_lower": 0.0, "last_run_sha": "c46f15eb", "last_run_at": "2026-06-11T11:15:30+00:00"}}
 }

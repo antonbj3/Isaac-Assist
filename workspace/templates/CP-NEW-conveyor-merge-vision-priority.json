@@ -233,5 +233,5 @@
     "failed": {}
   },
   "verified_status": "drafted-2026-05-16-A73; form-gate ⏳; function-gate ⏳ (needs live Kit + release-protocol harness for arrival-order assertion)",
-  "verification": {"function_gate": {"status": "unmeasured", "legacy_claim": null, "claim_evidence": "e \u23f3; function-gate \u23f3 (needs live Kit + release-protocol harn", "n": 0, "m": 0, "wilson_lower": 0.0, "last_run_sha": null, "last_run_at": null}}
+  "verification": {"function_gate": {"status": "fail", "n": 0, "m": 1, "wilson_lower": 0.0, "last_run_sha": "c46f15eb", "last_run_at": "2026-06-11T10:35:30+00:00", "legacy_claim": null}, "faithfulness": {"status": "fail", "n": 0, "m": 1, "wilson_lower": 0.0, "last_run_sha": "c46f15eb", "last_run_at": "2026-06-11T10:36:35+00:00"}}
 }

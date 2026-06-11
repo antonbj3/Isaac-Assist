@@ -426,5 +426,5 @@
       "note": "SOC code confirmed correct: 53-7064 (Packers and Packagers, Hand). Sonnet QC report 2026-05-28-cpnew-canonical-overview.md fabricated code 51-9111 (Packaging and Filling Machine Operators and Tenders) \u2014 51-9111 is the adjacent machine-tending code, not the hand-pack code. onet_soc field unchanged; this entry documents the confirmation."
     }
   ],
-  "verification": {"function_gate": {"status": "unmeasured", "legacy_claim": null, "claim_evidence": "hema pending; function-gate pending", "n": 0, "m": 0, "wilson_lower": 0.0, "last_run_sha": null, "last_run_at": null}}
+  "verification": {"function_gate": {"status": "fail", "n": 0, "m": 1, "wilson_lower": 0.0, "last_run_sha": "0ad6aa14", "last_run_at": "2026-06-11T12:45:37+00:00", "legacy_claim": null}, "faithfulness": {"status": "fail", "n": 0, "m": 1, "wilson_lower": 0.0, "last_run_sha": "0ad6aa14", "last_run_at": "2026-06-11T12:48:08+00:00"}}
 }

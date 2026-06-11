@@ -185,5 +185,5 @@
     "failed": {}
   },
   "verified_status": "drafted-2026-05-16-patched-r-a-fix-2; form-gate ⏳ (schema-OK after 2 patch rounds; handoff_signal/claim_mutex/activation_signal removed from controller calls — advisory-only via setup_robot_claim_mutex/setup_robot_handoff_signal); function-gate ⏳",
-  "verification": {"function_gate": {"status": "unmeasured", "legacy_claim": null, "claim_evidence": "al); function-gate \u23f3", "n": 0, "m": 0, "wilson_lower": 0.0, "last_run_sha": null, "last_run_at": null}}
+  "verification": {"function_gate": {"status": "fail", "n": 0, "m": 1, "wilson_lower": 0.0, "last_run_sha": "c46f15eb", "last_run_at": "2026-06-11T10:30:07+00:00", "legacy_claim": null}, "faithfulness": {"status": "fail", "n": 0, "m": 1, "wilson_lower": 0.0, "last_run_sha": "c46f15eb", "last_run_at": "2026-06-11T10:33:15+00:00"}}
 }

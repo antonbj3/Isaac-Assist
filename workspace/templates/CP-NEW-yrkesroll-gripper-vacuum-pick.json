@@ -224,5 +224,5 @@
     "failed": {}
   },
   "verified_status": "drafted-2026-05-16; form-gate-schema ⏳; function-gate ⏳ Kit RPC",
-  "verification": {"function_gate": {"status": "unmeasured", "legacy_claim": null, "claim_evidence": "a \u23f3; function-gate \u23f3 Kit RPC", "n": 0, "m": 0, "wilson_lower": 0.0, "last_run_sha": null, "last_run_at": null}}
+  "verification": {"function_gate": {"status": "fail", "n": 0, "m": 1, "wilson_lower": 0.0, "last_run_sha": "0ad6aa14", "last_run_at": "2026-06-11T12:36:51+00:00", "legacy_claim": null}, "faithfulness": {"status": "fail", "n": 0, "m": 1, "wilson_lower": 0.0, "last_run_sha": "0ad6aa14", "last_run_at": "2026-06-11T12:38:08+00:00"}}
 }
