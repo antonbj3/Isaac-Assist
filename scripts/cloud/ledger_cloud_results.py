@@ -37,13 +37,25 @@ def ingest(path: Path, sha: str) -> int:
         if not tpl.exists():
             print(f"  SKIP unknown template {r.get('template')}")
             continue
+        # UR10 cloud rows are NON-PARITY by policy (cuRobo numerics are
+        # 5070-tuned; 2026-06-11) — never ledger them, regardless of verdict.
+        tpl_doc = json.loads(tpl.read_text())
+        code_blob = (tpl_doc.get("code") or "") + json.dumps(
+            tpl_doc.get("simulate_args") or {}) + json.dumps(
+            tpl_doc.get("verify_args") or {})
+        if "/World/UR10" in code_blob or '"ur10' in code_blob.lower():
+            print(f"  SKIP UR10 template {r.get('template')} (cloud non-parity policy)")
+            continue
         extras = {"source": "cloud_gate", "gpu": r.get("gpu"),
                   "boot_s": r.get("boot_s"), "cloud_file": path.name,
                   "fresh_kit": True}
         if r.get("gate") is not None:
             record_gate_run(tpl, bool(r["gate"]), sha, extras=extras)
             n += 1
-        if r.get("ts") is not None:
+        # faithfulness axis stays LOCAL-only by policy (cloud TS is noisy
+        # on soft-state thresholds; 2026-06-11 parity round). Opt in with
+        # --with-ts for experiments.
+        if "--with-ts" in sys.argv and r.get("ts") is not None:
             record_gate_run(tpl, bool(r["ts"]), sha, axis="faithfulness",
                             extras={**extras, "source": "cloud_scene_timeseries",
                                     "verdict_vector": r.get("vec") or {}})

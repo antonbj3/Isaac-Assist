@@ -4979,6 +4979,7 @@ async def _handle_create_heap_zone(args: Dict) -> Dict:
     # Spawn items in a quasi-random spread (deterministic via index)
     import math as _m
     item_paths = []
+    placed = []  # (x, y, z) of already-spawned items
     for i in range(n_items):
         # deterministic spread: golden angle radial
         theta = i * 2.39996  # golden angle in radians
@@ -4986,6 +4987,19 @@ async def _handle_create_heap_zone(args: Dict) -> Dict:
         x = center[0] + r * _m.cos(theta)
         y = center[1] + r * _m.sin(theta)
         z = center[2] + item_size * 0.5  # spawn slightly above
+        # DEEP-INTERPENETRATION lift: when item_size/radius exceeds the
+        # defaults, golden-angle ring spacing drops below item_size and
+        # neighbours spawn deeply overlapping -> PhysX ejects the pile
+        # (heap-zone-unstack, 2026-06-11). Lift such an item one layer: it
+        # drops INTO the pile instead of exploding out of it. Threshold is
+        # PENETRATION DEPTH > 2 cm: the defaults' shallow 1.3 cm diagonal
+        # overlaps resolve gently (CP-57 scenes measured stable) and stay
+        # byte-identical below it.
+        for px, py, pz in placed:
+            while min(item_size - abs(x - px), item_size - abs(y - py),
+                      item_size - abs(z - pz)) > 0.02:
+                z += item_size * 1.1
+        placed.append((x, y, z))
         path = f"{heap_path}/Item_{i+1}"
         await execute_tool_call("create_prim", {
             "prim_path": path, "prim_type": "Cube",

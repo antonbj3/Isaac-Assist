@@ -251,6 +251,25 @@ for p in picks:
     c = center(bb); pre = _pre_pos[p]
     disp = math.sqrt(sum((c[i]-pre[i])**2 for i in range(3)))
     if disp > 1.0:
+        # BELT-RIDE guard (recirculation-loop FP 2026-06-11): an item that
+        # STARTED on a moving conveyor legitimately travels metres during a
+        # passive settle — flat in z, direction = the belt's velocity. A real
+        # spawn-overlap ejection is ballistic (z pops) or off-axis.
+        def _belt_ride():
+            if abs(c[2] - pre[2]) > 0.05 or disp < 1e-9: return False
+            dx, dy = (c[0]-pre[0])/disp, (c[1]-pre[1])/disp
+            for bb2, bv in belts:
+                if not (bb2[0][0]-0.15 <= pre[0] <= bb2[1][0]+0.15
+                        and bb2[0][1]-0.15 <= pre[1] <= bb2[1][1]+0.15):
+                    continue
+                bn = (bv[0]**2 + bv[1]**2) ** 0.5
+                if bn < 1e-6: continue
+                if dx*bv[0]/bn + dy*bv[1]/bn > 0.7:  # within ~45 deg of belt flow
+                    return True
+            return False
+        if _belt_ride():
+            print("  belt-ride %s: travelled %.2fm flat along its conveyor during settle (not instability)" % (p.split("/")[-1], disp))
+            continue
         exploded.add(p)
         V.append("PHYSICS_INSTABILITY: %s was EJECTED %.2fm during settle (spawn-overlap explosion: %s -> %s) — physics-unstable scene, not a reach issue" % (p.split("/")[-1], disp, "[%.2f,%.2f,%.2f]"%tuple(pre), "[%.2f,%.2f,%.2f]"%tuple(c)))
 picks = [p for p in picks if p not in exploded]  # exclude ejected picks from reach/support (their geom is garbage)
