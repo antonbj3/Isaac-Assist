@@ -480,5 +480,5 @@
       "curobo"
     ]
   },
-  "verification": {"function_gate": {"status": "mixed", "n": 1, "m": 2, "wilson_lower": 0.0945, "last_run_sha": "58cfcf37", "last_run_at": "2026-06-10T23:02:45+00:00", "legacy_claim": null}, "faithfulness": {"status": "fail", "n": 0, "m": 1, "wilson_lower": 0.0, "last_run_sha": "dd2d4862", "last_run_at": "2026-06-10T22:10:21+00:00"}}
+  "verification": {"function_gate": {"status": "mixed", "n": 1, "m": 3, "wilson_lower": 0.0615, "last_run_sha": "8108e660", "last_run_at": "2026-06-11T03:13:40+00:00", "legacy_claim": null}, "faithfulness": {"status": "fail", "n": 0, "m": 2, "wilson_lower": 0.0, "last_run_sha": "8108e660", "last_run_at": "2026-06-11T03:17:26+00:00"}}
 }

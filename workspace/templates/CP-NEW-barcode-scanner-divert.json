@@ -356,5 +356,5 @@
     ]
   },
   "verified_status": "drafted-2026-05-16; form-gate \u23f3; function-gate \u23f3",
-  "verification": {"function_gate": {"status": "pass", "n": 2, "m": 2, "wilson_lower": 0.3424, "last_run_sha": "04acb760", "last_run_at": "2026-06-10T19:47:39+00:00", "legacy_claim": null}, "faithfulness": {"status": "mixed", "n": 1, "m": 2, "wilson_lower": 0.0945, "last_run_sha": "04acb760", "last_run_at": "2026-06-10T19:50:17+00:00"}}
+  "verification": {"function_gate": {"status": "pass", "n": 4, "m": 4, "wilson_lower": 0.5101, "last_run_sha": "8108e660", "last_run_at": "2026-06-11T04:24:29+00:00", "legacy_claim": null}, "faithfulness": {"status": "mixed", "n": 1, "m": 4, "wilson_lower": 0.0456, "last_run_sha": "8108e660", "last_run_at": "2026-06-11T04:26:46+00:00"}}
 }

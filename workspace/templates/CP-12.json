@@ -53,6 +53,7 @@
     "cube_path": "/World/Cube_1"
   },
   "simulate_args": {
+    "completeness": "all",
     "target_path": "/World/Pallet",
     "duration_s": 180,
     "xy_tolerance": 0.15,
@@ -273,5 +274,5 @@
       "moveit2"
     ]
   },
-  "verification": {"function_gate": {"status": "unmeasured", "legacy_claim": "pass", "claim_evidence": "e \u2713; function-gate \u2713 [pre-fix; re-verify pending \u2014 rest_spee", "n": 0, "m": 0, "wilson_lower": 0.0, "last_run_sha": null, "last_run_at": null}}
+  "verification": {"function_gate": {"status": "pass", "n": 1, "m": 1, "wilson_lower": 0.2065, "last_run_sha": "8108e660", "last_run_at": "2026-06-11T04:56:59+00:00", "legacy_claim": "pass"}, "faithfulness": {"status": "pass", "n": 1, "m": 1, "wilson_lower": 0.2065, "last_run_sha": "8108e660", "last_run_at": "2026-06-11T04:58:13+00:00"}}
 }

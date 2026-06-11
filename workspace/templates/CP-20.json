@@ -129,6 +129,7 @@
     "cube_path": "/World/Cube_1"
   },
   "simulate_args": {
+    "completeness": "all",
     "cube_path": "/World/Cube_1",
     "target_path": "/World/Pallet",
     "duration_s": 360,
@@ -587,5 +588,5 @@
       "moveit2"
     ]
   },
-  "verification": {"function_gate": {"status": "unmeasured", "legacy_claim": "pass", "claim_evidence": "e \u2713; function-gate \u2713 (multi-cube cube_paths \u2014 12/18 cubes de", "n": 0, "m": 0, "wilson_lower": 0.0, "last_run_sha": null, "last_run_at": null}}
+  "verification": {"function_gate": {"status": "fail", "n": 0, "m": 1, "wilson_lower": 0.0, "last_run_sha": "8108e660", "last_run_at": "2026-06-11T05:04:23+00:00", "legacy_claim": "pass"}, "faithfulness": {"status": "fail", "n": 0, "m": 1, "wilson_lower": 0.0, "last_run_sha": "8108e660", "last_run_at": "2026-06-11T05:08:11+00:00"}}
 }
