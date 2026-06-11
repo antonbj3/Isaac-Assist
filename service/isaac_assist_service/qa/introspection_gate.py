@@ -29,8 +29,17 @@ BLOCKED_KINDS = {"ros2_topic", "ros2_action", "plc_register", "mqtt_topic",
 
 
 def _calls_for(trace: List[Dict], tool: str) -> List[Dict]:
-    return [c for c in trace
-            if (c.get("tool") or c.get("name")) == tool]
+    exact = [c for c in trace if (c.get("tool") or c.get("name")) == tool]
+    if exact:
+        return exact
+    # expected_* names may shorten the real tool (interpolate ->
+    # interpolate_trajectory); accept a UNIQUE prefix match only
+    pref = {(c.get("tool") or c.get("name") or "") for c in trace
+            if (c.get("tool") or c.get("name") or "").startswith(tool)}
+    if len(pref) == 1:
+        t2 = pref.pop()
+        return [c for c in trace if (c.get("tool") or c.get("name")) == t2]
+    return []
 
 
 def _call_output(call: Dict) -> Any:
@@ -61,7 +70,11 @@ def evaluate_checks(checks: List[Dict], build: Dict) -> Dict:
     "call_results") with per-call tool/args/output, and build["artifacts"]
     (dict of produced lists) when present.
     """
-    trace = build.get("calls") or build.get("call_results") or []
+    # the canonical instantiator returns the trace under "executed" —
+    # accept the design-doc aliases too (l0 fixture bug 2026-06-11: tests
+    # passed against "calls" while the real build said "executed")
+    trace = (build.get("executed") or build.get("calls")
+             or build.get("call_results") or [])
     artifacts = build.get("artifacts") or {}
     results = []
     n_pass = n_fail = n_blocked = 0
@@ -90,8 +103,12 @@ def evaluate_checks(checks: List[Dict], build: Dict) -> Dict:
         elif kind == "output_min":
             calls = _calls_for(trace, ck["tool"])
             which = int(ck.get("which", 0))
-            got = (_field_from_output(_call_output(calls[which]), ck["field"])
-                   if which < len(calls) else None)
+            got = None
+            if which < len(calls):
+                got = _field_from_output(_call_output(calls[which]),
+                                         ck["field"])
+                if got is None:  # handlers often return verdict fields
+                    got = (calls[which].get("result_meta") or {}).get(ck["field"])
             ok = got is not None and float(got) >= float(ck["min"])
             r.update(tool=ck["tool"], field=ck["field"], min=ck["min"],
                      got=got)
@@ -146,8 +163,11 @@ def checks_from_expected_args(va: Dict) -> List[Dict]:
                            "which": int(m.group(1)) - 1})
             continue
         if k == "expected_n_samples":
-            checks.append({"kind": "artifact_len", "artifact": "grasp_poses",
-                           "min": int(v)})
+            # sampler count lives in the sampler call's OUTPUT, not in a
+            # build-level artifacts dict
+            checks.append({"kind": "output_min",
+                           "tool": "setup_grasp_pose_sampler",
+                           "field": "n_samples", "min": int(v)})
             continue
         if k == "expected_sampling_mode":
             checks.append({"kind": "call_arg", "tool": "setup_grasp_pose_sampler",

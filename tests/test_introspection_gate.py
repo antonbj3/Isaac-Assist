@@ -6,9 +6,10 @@ from service.isaac_assist_service.qa.introspection_gate import (
     checks_from_expected_args, evaluate_checks)
 
 BUILD = {
-    "calls": [
+    "executed": [
         {"tool": "setup_grasp_pose_sampler",
-         "args": {"sampling_mode": "antipodal"}, "output": "{}"},
+         "args": {"sampling_mode": "antipodal"},
+         "output": '{"n_samples": 24}'},
         {"tool": "check_singularity", "args": {},
          "output": '{"condition_number": 142.0}'},
         {"tool": "check_singularity", "args": {},
@@ -53,11 +54,12 @@ def test_output_min_json_and_printed_text():
 
 
 def test_artifact_len():
+    b = dict(BUILD); b["artifacts"] = {"grasp_poses": list(range(24))}
     ok = evaluate_checks([{"kind": "artifact_len", "artifact": "grasp_poses",
-                           "min": 24}], BUILD)
+                           "min": 24}], b)
     assert ok["success"]
     bad = evaluate_checks([{"kind": "artifact_len", "artifact": "grasp_poses",
-                            "min": 25}], BUILD)
+                            "min": 25}], b)
     assert bad["status"] == "FAIL"
 
 
@@ -101,9 +103,17 @@ def test_expected_args_mapping_sampler_and_topics():
           "expected_nav_topic": "/cmd_vel"}
     checks = checks_from_expected_args(va)
     kinds = {c["kind"] for c in checks}
-    assert {"artifact_len", "call_arg", "ros2_topic"} <= kinds
+    assert {"output_min", "call_arg", "ros2_topic"} <= kinds
     r = evaluate_checks(checks, BUILD)
     assert r["status"] == "BLOCKED"  # topic check blocks, others pass
+
+
+def test_unique_prefix_tool_match():
+    b = {"executed": [{"tool": "interpolate_trajectory",
+                       "args": {"method": "rmpflow"}, "output": "{}"}]}
+    r = evaluate_checks([{"kind": "call_arg", "tool": "interpolate",
+                          "arg": "method", "expect": "rmpflow"}], b)
+    assert r["success"]
 
 
 def test_unmapped_keys_surface():

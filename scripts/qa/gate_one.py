@@ -91,6 +91,18 @@ async def gate(tpl_name):
         pass
     va = tpl.get("verify_args", {}) or {}
     sa = tpl.get("simulate_args", {}) or {}
+    # P5-22 introspection dispatch: session-assertion templates (sampler/
+    # trajectory/nav families) grade the BUILD TRACE, not physics. BLOCKED
+    # (bridge-gated checks) is a distinct verdict, never False.
+    if sa.get("gate_class") == "introspection":
+        from service.isaac_assist_service.qa.introspection_gate import (
+            checks_from_expected_args, evaluate_checks)
+        checks = sa.get("checks") or checks_from_expected_args(va)
+        verdict = evaluate_checks(checks, b)
+        print(f"{tpl_name}: GATE success={verdict['success']} "
+              f"class=introspection status={verdict['status']} "
+              f"-> {json.dumps(verdict)[:2000]}")
+        return
     # P5-22 gate-class dispatch: templates whose verb is an ARTICULATION
     # (door/valve/tool-swap) declare gate_class="articulation" + joint args
     # in simulate_args and get the joint-angle verdict instead of the

@@ -11,7 +11,7 @@
     "bulk_set_attribute",
     "setup_grasp_pose_sampler"
   ],
-  "thoughts": "Six SDG-grasping specifics for CP-63:\n1) Single target object \u2014 a 5cm cube at [0.4, 0, 0.835].\n2) Franka at standard mount.\n3) setup_grasp_pose_sampler generates 100 antipodal grasps for the target.\n4) NO conveyor or pick-place flow \u2014 pure SDG dataset generation scenario.\n5) Real SDG would replicate the scene N times with randomized target poses + render annotations.\n6) Realizes #32 infrastructure. Runtime SDG via Replicator pipeline is Sprint 4+.",
+  "thoughts": "Six SDG-grasping specifics for CP-63:\n1) Single target object — a 5cm cube at [0.4, 0, 0.835].\n2) Franka at standard mount.\n3) setup_grasp_pose_sampler generates 100 antipodal grasps for the target.\n4) NO conveyor or pick-place flow — pure SDG dataset generation scenario.\n5) Real SDG would replicate the scene N times with randomized target poses + render annotations.\n6) Realizes #32 infrastructure. Runtime SDG via Replicator pipeline is Sprint 4+.",
   "code": "# Toolified opening [P2-07]: light+ground+cell+table+physics in ONE call\ncreate_scene_baseline(table_size=[2.0, 1.0])\n\nrobot_wizard(\n    robot_name=\"franka_panda\",\n    dest_path=\"/World/Franka\",\n    position=[0, 0, 0.75],\n    orientation=[0.7071068, 0, 0, 0.7071068],\n)\n\n# Single target object\ncreate_prim(prim_path=\"/World/TargetCube\", prim_type=\"Cube\", position=[0.4, 0, 0.835], size=0.05)\nfor api in (\"PhysicsRigidBodyAPI\", \"PhysicsCollisionAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n    apply_api_schema(prim_path=\"/World/TargetCube\", schema_name=api)\nbulk_set_attribute(prim_paths=[\"/World/TargetCube\"], attr=\"physxRigidBody:sleepThreshold\", value=0.0)\napply_physics_material(prim_path=\"/World/TargetCube\", material_name=\"rubber\")\n\n# Grasp-pose sampler\nsetup_grasp_pose_sampler(\n    sampler_path=\"/World/GraspSampler\",\n    target_path=\"/World/TargetCube\",\n    n_samples=100,\n    sampling_mode=\"antipodal\",\n)",
   "settle_state": {
     "cubes": {
@@ -31,14 +31,16 @@
     "expected_n_samples": 100,
     "expected_sampling_mode": "antipodal"
   },
-  "simulate_args": null,
+  "simulate_args": {
+    "gate_class": "introspection"
+  },
   "extends": "CP-01",
   "extension_notes": "CP-63 demonstrates setup_grasp_pose_sampler for SDG (#32). Sampler config attrs set on /World/GraspSampler. Runtime grasp generation + Replicator dataset writeout is Sprint 4+.",
   "failure_modes": [
-    "No conveyor / no pick-place \u2014 verify_args/form-gate likely fails (build-only canonical).",
-    "Grasp sampler attrs are metadata only \u2014 actual grasp synthesis requires runtime tooling."
+    "No conveyor / no pick-place — verify_args/form-gate likely fails (build-only canonical).",
+    "Grasp sampler attrs are metadata only — actual grasp synthesis requires runtime tooling."
   ],
-  "verified_status": "build-spec-2026-04-XX; form-gate \u2713; function-gate diagnostic \u2014 success measured via /World/GraspSampler prim attrs (sampler_path exists, n_samples=100, sampling_mode='antipodal'). No cube-in-bin delivery; runtime grasp synthesis is Sprint 4+. Wave-2 self-ref redesign 2026-05-18.",
+  "verified_status": "build-spec-2026-04-XX; form-gate ✓; function-gate diagnostic — success measured via /World/GraspSampler prim attrs (sampler_path exists, n_samples=100, sampling_mode='antipodal'). No cube-in-bin delivery; runtime grasp synthesis is Sprint 4+. Wave-2 self-ref redesign 2026-05-18.",
   "intent": {
     "pattern_hint": "other",
     "structural_features": {
@@ -58,12 +60,18 @@
   },
   "roles": {
     "primary_robot": {
-      "constraints": ["franka_panda", "ur5e", "kinova_gen3"],
+      "constraints": [
+        "franka_panda",
+        "ur5e",
+        "kinova_gen3"
+      ],
       "expected_count": 1,
       "required": true
     },
     "workpieces": {
-      "constraints": ["cube"],
+      "constraints": [
+        "cube"
+      ],
       "min": 1,
       "max": 1,
       "unordered": false
@@ -73,13 +81,26 @@
     "primary_robot": {
       "path": "/World/Franka",
       "class": "franka_panda",
-      "position": [0, 0, 0.75],
-      "orientation": [0.7071068, 0, 0, 0.7071068]
+      "position": [
+        0,
+        0,
+        0.75
+      ],
+      "orientation": [
+        0.7071068,
+        0,
+        0,
+        0.7071068
+      ]
     },
     "workpieces": [
       {
         "path": "/World/TargetCube",
-        "position": [0.4, 0, 0.835]
+        "position": [
+          0.4,
+          0,
+          0.835
+        ]
       }
     ]
   },
@@ -102,5 +123,25 @@
       0.75
     ]
   },
-  "verification": {"function_gate": {"status": "unmeasured", "legacy_claim": null, "claim_evidence": "build-spec-2026-04-XX; form-gate \u2713; function-gate diagnostic", "n": 0, "m": 0, "wilson_lower": 0.0, "last_run_sha": null, "last_run_at": null}, "faithfulness": {"status": "pass", "n": 1, "m": 1, "wilson_lower": 0.2065, "last_run_sha": "30ef1415", "last_run_at": "2026-06-11T08:17:38+00:00"}}
+  "verification": {
+    "function_gate": {
+      "status": "unmeasured",
+      "legacy_claim": null,
+      "claim_evidence": "build-spec-2026-04-XX; form-gate ✓; function-gate diagnostic",
+      "n": 0,
+      "m": 0,
+      "wilson_lower": 0.0,
+      "last_run_sha": null,
+      "last_run_at": null
+    },
+    "faithfulness": {
+      "status": "pass",
+      "n": 1,
+      "m": 1,
+      "wilson_lower": 0.2065,
+      "last_run_sha": "30ef1415",
+      "last_run_at": "2026-06-11T08:17:38+00:00"
+    }
+  },
+  "verification": {"function_gate": {"status": "pass", "n": 1, "m": 1, "wilson_lower": 0.2065, "last_run_sha": "c318ad32", "last_run_at": "2026-06-11T14:13:40+00:00", "legacy_claim": null}, "faithfulness": {"status": "pass", "n": 1, "m": 1, "wilson_lower": 0.2065, "last_run_sha": "30ef1415", "last_run_at": "2026-06-11T08:17:38+00:00"}}
 }

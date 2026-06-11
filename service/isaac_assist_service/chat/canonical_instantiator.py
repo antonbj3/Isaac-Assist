@@ -1079,7 +1079,17 @@ async def execute_template_canonical(
             rtype = result.get("type")
             ok = (rtype != "error") and (result.get("success") is not False)
             args_preview = ", ".join(f"{k}={v!r}" for k, v in list(args.items())[:2])[:80]
-            executed.append({"tool": tool_name, "ok": ok, "args_preview": args_preview})
+            # full args + bounded output retained for the introspection gate
+            # (P5-22 breadth): call_arg/output_min checks grade the session
+            # trace, which args_preview alone cannot carry. Additive keys.
+            executed.append({"tool": tool_name, "ok": ok,
+                             "args_preview": args_preview, "args": args,
+                             "output": str(result.get("output") or "")[:2000],
+                             # small top-level result fields (handlers often
+                             # return verdict data beside the output text)
+                             "result_meta": {k: v for k, v in result.items()
+                                             if k != "output"
+                                             and len(str(v)) < 200}})
             if not ok:
                 err_text = result.get("error") or (result.get("output") or "").strip()
                 errors.append(f"{tool_name}: {str(err_text)[:200]}")
