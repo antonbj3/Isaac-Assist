@@ -505,3 +505,26 @@ def test_resolve_color_routing_maps_classes_to_bins():
     assert targets == {"/W/C1": "/W/PassBin", "/W/C2": "/W/RejectBin"}
     assert resolve_color_routing({}, {"/W/C1": "green"}) == {}
     assert resolve_color_routing({"green": "/W/B"}, {}) == {}
+
+
+def test_must_not_deliver_inverts_grading():
+    """Hole-(c) closure: the inspect-and-reject grammar — the unmarked cube
+    FAILS the gate if it lands in any listed bin; staying out is success."""
+    from service.isaac_assist_service.qa.honest_gate import grade
+    measured = {
+        "/W/Good": {"in_xy": True, "above_floor": True, "at_rest": True,
+                    "support": "/W/Bin/Floor", "final": [0.5, 0, 0.8]},
+        "/W/Unmarked": {"in_xy": False, "above_floor": True, "at_rest": True,
+                        "support": "/W/Belt", "final": [-0.5, 0.4, 0.84]},
+    }
+    out = grade(["/W/Good"], measured, global_target="/W/Bin",
+                completeness="all", must_not_deliver=["/W/Unmarked"])
+    assert out["success"] is True and out["must_not_deliver_violations"] == []
+    # nu hamnar den omärkta i bin -> fail
+    measured["/W/Unmarked"] = {"in_xy": True, "above_floor": True,
+                               "at_rest": True, "support": "/W/Bin/Floor",
+                               "final": [0.5, 0.1, 0.8]}
+    out2 = grade(["/W/Good"], measured, global_target="/W/Bin",
+                 completeness="all", must_not_deliver=["/W/Unmarked"])
+    assert out2["success"] is False
+    assert out2["must_not_deliver_violations"][0]["cube"] == "/W/Unmarked"

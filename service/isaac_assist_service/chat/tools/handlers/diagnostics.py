@@ -4051,6 +4051,9 @@ async def _handle_simulate_traversal_check(args: Dict) -> Dict:
     targets_map = args.get("targets") or {}
     routing_list = args.get("routing") or []
     completeness = args.get("completeness", "any")
+    # must_not_deliver (hole-(c) grammar, inspect-and-reject): listed prims
+    # FAIL the gate if they land in any listed target.
+    must_not_deliver = [str(x) for x in (args.get("must_not_deliver") or [])]
     from ....qa import honest_gate as _honest_gate  # noqa: PLC0415
     # P0-18b: templates whose routing intent lives ONLY in color_routing
     # (the controller vocabulary) graded legacy any-delivered — the gate
@@ -4568,7 +4571,8 @@ def _do_one_run(run_idx, target_bbox):
     # policy is requested. Otherwise `success` == legacy_success exactly.
     honest_per_cube = []
     honest_agg = None
-    honest_active = bool(routing_active) or (completeness not in (None, "", "any"))
+    honest_active = (bool(routing_active) or (completeness not in (None, "", "any"))
+                     or bool({must_not_deliver!r}))
     if honest_active:
         # Per-target bbox cache (each distinct destination once).
         _tbbox = {{}}
@@ -4632,6 +4636,30 @@ def _do_one_run(run_idx, target_bbox):
             'success': bool(_h_total > 0 and _h_delivered >= _h_min),
         }}
         success = honest_agg['success']
+        # must_not_deliver: inverterad gradering — träff i NÅGON listad bin
+        # (xy ELLER raycast-support) = violation = gate-FAIL.
+        _mnd = {must_not_deliver!r}
+        _mnd_viol = []
+        for _xp in _mnd:
+            _xf = _world_pos(_xp)
+            if _xf is None: continue
+            _in_any = False
+            for _t_path, _tb2 in _tbbox.items():
+                if not _tb2: continue
+                if (_tb2['min'][0] - xy_tol <= _xf[0] <= _tb2['max'][0] + xy_tol
+                        and _tb2['min'][1] - xy_tol <= _xf[1] <= _tb2['max'][1] + xy_tol):
+                    _in_any = True; break
+            _xs = _cube_support(_xp, target_path)[0]
+            if not _in_any:
+                for _t_path in _tbbox:
+                    if _gate_under(_xs, _t_path):
+                        _in_any = True; break
+            if _in_any:
+                _mnd_viol.append({{'cube': _xp, 'support': _xs, 'final': _xf}})
+        honest_agg['must_not_deliver_violations'] = _mnd_viol
+        if _mnd_viol:
+            honest_agg['success'] = False
+            success = False
     else:
         success = legacy_success
         # Always report aggregate counts (even in legacy mode) for visibility.

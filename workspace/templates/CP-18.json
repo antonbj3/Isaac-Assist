@@ -67,6 +67,7 @@
     "cube_path": "/World/Cube_g1"
   },
   "simulate_args": {
+    "completeness": "all",
     "cube_path": "/World/Cube_g1",
     "target_path": "/World/GoodBin",
     "duration_s": 180,
@@ -75,8 +76,10 @@
       "/World/Cube_g1",
       "/World/Cube_g2",
       "/World/Cube_g3",
-      "/World/Cube_g4"
-    ]
+      "/World/Cube_g4",
+      "/World/Cube_bad"
+    ],
+    "targets": {"/World/Cube_bad": "/World/RejectBin"}
   },
   "extends": "CP-17",
   "extension_notes": "CP-18 demonstrates the fall-through behavior of color_routing: when a cube's semantic class isn't in the routing dict (or has no semantic class at all), the controller routes to destination_path. Useful for binary inspection (good/reject) or any 'default + exceptions' pattern. Future: use add_vision_classifier_gate (when render-flush is fixed) to dynamically tag cubes upstream of the pick station instead of pre-tagging.",

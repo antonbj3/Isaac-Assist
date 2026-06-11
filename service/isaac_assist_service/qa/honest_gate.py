@@ -314,6 +314,7 @@ def grade(
     targets: Optional[Mapping[str, str]] = None,
     routing: Optional[Sequence[Mapping[str, str]]] = None,
     completeness: Any = "any",
+    must_not_deliver: Optional[Sequence[str]] = None,
 ) -> Dict[str, Any]:
     """End-to-end pure grade for the multi-cube path.
 
@@ -350,4 +351,23 @@ def grade(
     agg = aggregate_completeness(per_cube, completeness)
     agg["per_cube"] = per_cube
     agg["routing_active"] = len(targets_list) > 1
+
+    # must_not_deliver (P0-18 hole-(c) closure, the inspect-and-reject
+    # grammar): listed items FAIL the gate if they end up in ANY listed
+    # target. They are graded with the same measured bundle but inverted —
+    # absence from every bin is their success.
+    violations = []
+    for cp in (must_not_deliver or []):
+        m = measured_by_cube.get(cp)
+        if m is None:
+            continue
+        sup = m.get("support")
+        in_any = bool(m.get("in_xy")) or any(
+            _under(sup, t) for t in targets_list if t)
+        if in_any and m.get("at_rest", True):
+            violations.append({"cube": cp, "support": sup,
+                               "final": m.get("final")})
+    agg["must_not_deliver_violations"] = violations
+    if violations:
+        agg["success"] = False
     return agg
