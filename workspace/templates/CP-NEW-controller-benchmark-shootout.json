@@ -30,15 +30,31 @@
   "code": "\n# ── Constants ─────────────────────────────────────────────────────────────────\nROBOT_PATH = \"/World/Franka\"\nINFEED_PATH = \"/World/InfeedBin\"\nOUTFEED_PATH = \"/World/OutfeedBin\"\nCUBE_PATH = \"/World/Cube\"\nRESULT_FILE = \"/tmp/controller_shootout_result.json\"\nCANDIDATE_CONTROLLERS = [\"native\", \"curobo\", \"diffik\"]  # all members of setup_pick_place_controller dispatch enum; three distinct planning paradigms\nEXEC_STEPS = 600  # 10s sim-time at 60Hz for the cycle\nRECORD_DURATION_S = 10.0\nXY_TOLERANCE = 0.12\nZ_TOLERANCE = 0.05\n\n# ── Step 1: Build the scene (shared across all three controller trials) ──────\ncreate_prim(prim_path=\"/World/DomeLight\", prim_type=\"DomeLight\")\nset_attribute(prim_path=\"/World/DomeLight\", attr_name=\"inputs:intensity\", value=1000.0)\ncreate_prim(prim_path=\"/World/Ground\", prim_type=\"Cube\", position=[0, 0, -0.5], scale=[20, 20, 1])\napply_api_schema(prim_path=\"/World/Ground\", schema_name=\"PhysicsCollisionAPI\")\ncreate_prim(prim_path=\"/World/Table\", prim_type=\"Cube\", position=[0, 0, 0.375], scale=[0.7, 1.5, 0.375])\napply_api_schema(prim_path=\"/World/Table\", schema_name=\"PhysicsCollisionAPI\")\n\n# Deterministic CPU PhysX so trials share the same simulator state\nset_physics_scene_config(config={\"enable_gpu_dynamics\": False, \"broadphase_type\": \"MBP\"})\n\nrobot_wizard(\n    robot_name=\"franka\",\n    dest_path=ROBOT_PATH,\n    position=[0, 0, 0.75],\n    orientation=[1, 0, 0, 0],\n)\n\ncreate_bin(prim_path=INFEED_PATH, position=[0.40, 0.30, 0.80], size=[0.25, 0.25, 0.04])\ncreate_bin(prim_path=OUTFEED_PATH, position=[0.40, -0.30, 0.80], size=[0.25, 0.25, 0.04])\n\ncreate_prim(prim_path=CUBE_PATH, prim_type=\"Cube\", position=[0.40, 0.30, 0.835], size=0.05)\nfor api in (\"PhysicsRigidBodyAPI\", \"PhysicsCollisionAPI\", \"PhysicsMassAPI\"):\n    apply_api_schema(prim_path=CUBE_PATH, schema_name=api)\nset_attribute(prim_path=CUBE_PATH, attr_name=\"physics:mass\", value=0.2)\napply_physics_material(prim_path=CUBE_PATH, material_name=\"rubber\")\n\nCUBE_START = [0.40, 0.30, 0.835]\n\n# ── Step 2: Probe runtime for plumbed controllers ────────────────────────────\n# Required: (no args)\navailable = list_available_controllers()\nprint(\"[AVAILABLE]\", available)\n\n# Extract the set of controller names the runtime says are runnable. The handler\n# returns a dict with at least a 'controllers' or 'available' key — be liberal in\n# what we accept since handler payload shape varies across Kit versions.\navail_set = set()\nif isinstance(available, dict):\n    for key in (\"controllers\", \"available\", \"modes\", \"target_sources\"):\n        v = available.get(key)\n        if isinstance(v, list):\n            avail_set.update(str(x).lower() for x in v)\n        elif isinstance(v, dict):\n            avail_set.update(str(x).lower() for x in v.keys())\n# Fallback: if probe returned nothing useful, optimistically assume the canonical\n# set is present (failure_modes #3 documents the fall-through).\nif not avail_set:\n    avail_set = set(CANDIDATE_CONTROLLERS)\n\n# ── Step 3: Run the pick-place shootout, one trial per controller ────────────\nper_controller = {}\nleaderboard_rows = []\nfor controller in CANDIDATE_CONTROLLERS:\n    entry = {\n        \"controller\": controller,\n        \"available\": controller in avail_set,\n        \"planning_ms\": None,\n        \"exec_ms\": None,\n        \"success\": False,\n        \"final_xy_error_m\": None,\n        \"mean_joint_effort\": None,\n        \"trajectory_path\": None,\n        \"note\": None,\n    }\n\n    if not entry[\"available\"]:\n        entry[\"note\"] = \"runtime did not list this controller mode\"\n        per_controller[controller] = entry\n        continue\n\n    # Reset cube to start pose before each trial. teleport_prim would be cleaner,\n    # but set_attribute on xformOp:translate is sufficient since the cube has a\n    # standard transform op stack (created via create_prim).\n    set_attribute(prim_path=CUBE_PATH, attr_name=\"xformOp:translate\", value=CUBE_START)\n    # Let physics settle the reset pose before timing the planner\n    sim_control(action=\"step\", step_count=10)\n\n    # ── Planning phase ──\n    plan_start = time.perf_counter()\n    # Required: robot_path, target_source\n    # Optional: source_paths, destination_path, robot_family, planning_obstacles\n    setup_pick_place_controller(\n        robot_path=ROBOT_PATH,\n        target_source=controller,\n        robot_family=\"franka\",\n        source_paths=[CUBE_PATH],\n        destination_path=OUTFEED_PATH,\n        planning_obstacles=[\"/World/Table\", INFEED_PATH, OUTFEED_PATH],\n    )\n    plan_end = time.perf_counter()\n    entry[\"planning_ms\"] = round((plan_end - plan_start) * 1000.0, 2)\n\n    # ── Recording + execution phase ──\n    # record_trajectory subscribes for the duration of EXEC_STEPS at 60Hz.\n    # Required: articulation (USD path), duration (seconds)\n    traj_out = f\"workspace/trajectories/shootout_{controller}.npz\"\n    record_result = record_trajectory(\n        articulation=ROBOT_PATH,\n        duration=RECORD_DURATION_S,\n        output_path=traj_out,\n        rate_hz=60.0,\n    )\n    exec_start = time.perf_counter()\n    sim_control(action=\"step\", step_count=EXEC_STEPS)\n    exec_end = time.perf_counter()\n    entry[\"exec_ms\"] = round((exec_end - exec_start) * 1000.0, 2)\n    entry[\"trajectory_path\"] = traj_out\n\n    if isinstance(record_result, dict):\n        # record_trajectory handler returns per-joint effort summary statistics\n        entry[\"mean_joint_effort\"] = record_result.get(\"mean_effort\")\n\n    # ── Success check ──\n    # Required: prim_path\n    tf = get_world_transform(prim_path=CUBE_PATH)\n    cube_xyz = None\n    if isinstance(tf, dict):\n        cube_xyz = None or None\n    if isinstance(cube_xyz, (list, tuple)) and len(cube_xyz) >= 3:\n        bin_xy = [0.40, -0.30]\n        bin_top_z = 0.84  # 0.80 (bin centre) + half-thickness 0.02 + cube half 0.025\n        dxy = ((cube_xyz[0] - bin_xy[0]) ** 2 + (cube_xyz[1] - bin_xy[1]) ** 2) ** 0.5\n        entry[\"final_xy_error_m\"] = round(dxy, 4)\n        entry[\"success\"] = (dxy <= XY_TOLERANCE) and (abs(cube_xyz[2] - bin_top_z) <= Z_TOLERANCE)\n\n    per_controller[controller] = entry\n    leaderboard_rows.append({\n        \"env_id\": \"FrankaPickPlace_Shootout\",\n        \"robot\": f\"Franka_{controller}\",\n        \"metrics\": {\n            \"success_rate\": 1.0 if entry[\"success\"] else 0.0,\n            \"planning_ms\": entry[\"planning_ms\"],\n            \"exec_ms\": entry[\"exec_ms\"],\n            \"final_xy_error_m\": entry[\"final_xy_error_m\"],\n        },\n    })\n    print(f\"[TRIAL {controller}]\", entry)\n\n# ── Step 4: Emit leaderboard table ───────────────────────────────────────────\n# Required: results (list of {env_id, robot, metrics} dicts)\nleaderboard = arena_leaderboard(results=leaderboard_rows) if leaderboard_rows else {}\nprint(\"[LEADERBOARD]\", leaderboard)\n\n# ── Step 5: Persist final shootout result ────────────────────────────────────\nresult_payload = {\n    \"task\": \"FrankaPickPlace_ControllerShootout\",\n    \"candidate_controllers\": CANDIDATE_CONTROLLERS,\n    \"runtime_available\": sorted(avail_set),\n    \"per_controller\": per_controller,\n    \"leaderboard\": leaderboard,\n    \"run_seed\": None,\n}\npass  # removed sandbox-illegal call\npass  # removed sandbox-illegal `with open(...)` block\nprint(\"[RESULT]\", result_payload)\n\nassert len(per_controller) == len(CANDIDATE_CONTROLLERS), \"All three controllers must have an entry\"\nany_success = any(entry.get(\"success\") for entry in per_controller.values())\nprint(f\"[OK] Controller shootout complete. Any success: {any_success}\")\n",
   "settle_state": {
     "workpiece": {
-      "/World/Cube": [0.40, 0.30, 0.835]
+      "/World/Cube": [
+        0.4,
+        0.3,
+        0.835
+      ]
     },
     "infeed_bin": {
-      "/World/InfeedBin": [0.40, 0.30, 0.80]
+      "/World/InfeedBin": [
+        0.4,
+        0.3,
+        0.8
+      ]
     },
     "outfeed_bin": {
-      "/World/OutfeedBin": [0.40, -0.30, 0.80]
+      "/World/OutfeedBin": [
+        0.4,
+        -0.3,
+        0.8
+      ]
     },
-    "controllers_tried": ["native", "curobo", "diffik"]
+    "controllers_tried": [
+      "native",
+      "curobo",
+      "diffik"
+    ]
   },
   "verify_args": {
     "stages": [
@@ -51,7 +67,11 @@
     ],
     "cube_path": "/World/Cube",
     "destination_path": "/World/OutfeedBin",
-    "candidate_controllers": ["native", "curobo", "diffik"],
+    "candidate_controllers": [
+      "native",
+      "curobo",
+      "diffik"
+    ],
     "result_file": "/tmp/controller_shootout_result.json"
   },
   "simulate_args": {
@@ -59,18 +79,65 @@
     "cube_path": "/World/Cube",
     "duration_s": 120,
     "xy_tolerance": 0.12,
-    "z_tolerance": 0.05
+    "z_tolerance": 0.05,
+    "gate_class": "introspection",
+    "checks": [
+      {
+        "kind": "call_count",
+        "tool": "setup_pick_place_controller",
+        "expect": 3
+      },
+      {
+        "kind": "call_arg",
+        "tool": "setup_pick_place_controller",
+        "arg": "target_source",
+        "expect": "native",
+        "which": 0
+      },
+      {
+        "kind": "call_arg",
+        "tool": "setup_pick_place_controller",
+        "arg": "target_source",
+        "expect": "curobo",
+        "which": 1
+      },
+      {
+        "kind": "call_arg",
+        "tool": "setup_pick_place_controller",
+        "arg": "target_source",
+        "expect": "diffik",
+        "which": 2
+      },
+      {
+        "kind": "call_count",
+        "tool": "record_trajectory",
+        "expect": 3
+      },
+      {
+        "kind": "call_count",
+        "tool": "arena_leaderboard",
+        "expect": 1
+      }
+    ]
   },
   "diagnose_args": {
     "robot_path": "/World/Franka",
-    "robot_base": [0.0, 0.0, 0.75],
+    "robot_base": [
+      0.0,
+      0.0,
+      0.75
+    ],
     "obstacles": [
       "/World/Table",
       "/World/InfeedBin",
       "/World/OutfeedBin"
     ],
     "result_file": "/tmp/controller_shootout_result.json",
-    "expected_keys": ["per_controller", "leaderboard", "runtime_available"]
+    "expected_keys": [
+      "per_controller",
+      "leaderboard",
+      "runtime_available"
+    ]
   },
   "verified_status": "build-spec-2026-05-16; form-gate-schema pending; function-gate UNTESTED (requires Kit RPC + plumbed cuRobo/RMPflow on the runtime — sequential per kit-concurrency rule)",
   "failure_modes": [
@@ -109,31 +176,47 @@
   "motion_controllers": {
     "verified": [],
     "failed": {},
-    "untested": ["native", "curobo", "diffik"]
+    "untested": [
+      "native",
+      "curobo",
+      "diffik"
+    ]
   },
   "roles": {
     "primary_robot": {
-      "constraints": ["franka_panda"],
+      "constraints": [
+        "franka_panda"
+      ],
       "expected_count": 1,
       "required": true
     },
     "infeed_bin": {
-      "constraints": ["bin"],
+      "constraints": [
+        "bin"
+      ],
       "expected_count": 1,
       "required": true
     },
     "outfeed_bin": {
-      "constraints": ["bin"],
+      "constraints": [
+        "bin"
+      ],
       "expected_count": 1,
       "required": true
     },
     "workpiece": {
-      "constraints": ["cube"],
+      "constraints": [
+        "cube"
+      ],
       "expected_count": 1,
       "required": true
     },
     "controller_set": {
-      "constraints": ["native", "curobo", "diffik"],
+      "constraints": [
+        "native",
+        "curobo",
+        "diffik"
+      ],
       "expected_count": 3,
       "required": true
     }
@@ -142,28 +225,61 @@
     "primary_robot": {
       "path": "/World/Franka",
       "class": "franka_panda",
-      "position": [0, 0, 0.75],
-      "orientation": [1, 0, 0, 0]
+      "position": [
+        0,
+        0,
+        0.75
+      ],
+      "orientation": [
+        1,
+        0,
+        0,
+        0
+      ]
     },
     "infeed_bin": {
       "path": "/World/InfeedBin",
-      "position": [0.40, 0.30, 0.80],
-      "size": [0.25, 0.25, 0.04]
+      "position": [
+        0.4,
+        0.3,
+        0.8
+      ],
+      "size": [
+        0.25,
+        0.25,
+        0.04
+      ]
     },
     "outfeed_bin": {
       "path": "/World/OutfeedBin",
-      "position": [0.40, -0.30, 0.80],
-      "size": [0.25, 0.25, 0.04]
+      "position": [
+        0.4,
+        -0.3,
+        0.8
+      ],
+      "size": [
+        0.25,
+        0.25,
+        0.04
+      ]
     },
     "workpiece": {
       "path": "/World/Cube",
-      "position": [0.40, 0.30, 0.835],
+      "position": [
+        0.4,
+        0.3,
+        0.835
+      ],
       "size": 0.05,
       "mass": 0.2,
       "material": "rubber"
     },
     "controller_set": {
-      "candidates": ["native", "curobo", "diffik"],
+      "candidates": [
+        "native",
+        "curobo",
+        "diffik"
+      ],
       "exec_steps_per_trial": 600,
       "record_duration_s": 10.0,
       "result_file": "/tmp/controller_shootout_result.json"
@@ -194,5 +310,16 @@
     "xy_tolerance": 0.12
   },
   "qa_status": "yrkesroll_canonical; structurally complete; not exercised in QA; classified 2026-05-16",
-  "verification": {"function_gate": {"status": "unmeasured", "legacy_claim": null, "claim_evidence": "hema pending; function-gate UNTESTED (requires Kit RPC + plu", "n": 0, "m": 0, "wilson_lower": 0.0, "last_run_sha": null, "last_run_at": null}}
+  "verification": {
+    "function_gate": {
+      "status": "unmeasured",
+      "legacy_claim": null,
+      "claim_evidence": "hema pending; function-gate UNTESTED (requires Kit RPC + plu",
+      "n": 0,
+      "m": 0,
+      "wilson_lower": 0.0,
+      "last_run_sha": null,
+      "last_run_at": null
+    }
+  }
 }

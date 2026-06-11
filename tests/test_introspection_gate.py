@@ -119,3 +119,22 @@ def test_unique_prefix_tool_match():
 def test_unmapped_keys_surface():
     checks = checks_from_expected_args({"expected_weirdness": object()})
     assert any(c["kind"] in ("unmapped", "call_arg") for c in checks)
+
+
+def test_attr_equals_with_and_without_tol():
+    b = {"executed": [], "attrs": {"/World/Robot.stiffness_kp": 0.0,
+                                   "/World/Robot.mode": "estopped"}}
+    ok = evaluate_checks([
+        {"kind": "attr_equals", "prim": "/World/Robot", "attr": "stiffness_kp",
+         "expect": 0.0, "tol": 1e-6},
+        {"kind": "attr_equals", "prim": "/World/Robot", "attr": "mode",
+         "expect": "estopped"},
+    ], b)
+    assert ok["success"]
+    bad = evaluate_checks([{"kind": "attr_equals", "prim": "/World/Robot",
+                            "attr": "stiffness_kp", "expect": 400.0,
+                            "tol": 1.0}], b)
+    assert bad["status"] == "FAIL" and bad["checks"][0]["got"] == 0.0
+    missing = evaluate_checks([{"kind": "attr_equals", "prim": "/World/X",
+                                "attr": "nope", "expect": 1}], b)
+    assert missing["status"] == "FAIL" and missing["checks"][0]["got"] is None

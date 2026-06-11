@@ -152,13 +152,21 @@ def _stage_custom_curobo() -> str:
     if not src_dir.is_dir() or not dst_dir.is_dir():
         return "no-src-or-dst"
     hits: list[str] = []
+    # registry roots FIRST (Kit's runtime-downloaded ext beats the pip
+    # extscache copy when both exist — audit MED-8a), newest version wins
     for root in (
-        "/usr/local/lib/python3.11/site-packages/isaacsim/extscache",
-        "/root/.local/share/ov/data/exts/v2",
         "/root/.local/share/ov/data/exts/v3",
+        "/root/.local/share/ov/data/exts/v2",
+        "/usr/local/lib/python3.11/site-packages/isaacsim/extscache",
     ):
-        hits += _glob.glob(f"{root}/isaacsim.robot_motion.motion_generation-*/"
-                           "motion_policy_configs/universal_robots/ur10")
+        hits += sorted(
+            _glob.glob(f"{root}/isaacsim.robot_motion.motion_generation-*/"
+                       "motion_policy_configs/universal_robots/ur10"),
+            reverse=True)
+    if not hits:
+        # audit MED-8b: copying ymls with the local machine's absolute
+        # paths intact installs guaranteed-broken configs — skip instead
+        return "NO-MOTION-GEN-DATA-FOUND (configs NOT staged)"
     for yml in src_dir.glob("*.yml"):
         text = yml.read_text()
         if hits:
@@ -174,6 +182,26 @@ def _stage_custom_curobo() -> str:
 def _boot_kit(timeout_s: int = 600):
     """Start Kit, wait for RPC health + a real exec. Returns (proc, boot_s)."""
     import subprocess
+
+    # STALE-KIT GUARD (cloud CP-28, 2026-06-11): if a reused container's
+    # previous Kit survived terminate(), the health probe answers within
+    # seconds and the gate runs against the OLD session. Kill leftover Kit
+    # processes and wait until :8001 is actually silent before booting.
+    out = subprocess.run(["pgrep", "-f", "boot_kit[.]py"],
+                         capture_output=True, text=True).stdout
+    for pid in out.split():
+        subprocess.run(["kill", "-9", pid], check=False)
+    for _ in range(10):
+        probe = subprocess.run(["curl", "-s", "-m", "2",
+                                "http://127.0.0.1:8001/health"],
+                               capture_output=True, text=True).stdout
+        if not probe:
+            break
+        time.sleep(2)
+    else:
+        # audit HIGH-1: falling through here would let the OLD session
+        # answer the new gate's RPC — a silently-wrong verdict
+        raise RuntimeError("port 8001 still answering after stale-kill")
 
     Path("/tmp/boot_kit.py").write_text(BOOT_PY)
     log = open("/tmp/kit.log", "w")
@@ -200,6 +228,26 @@ def _boot_kit(timeout_s: int = 600):
     raise RuntimeError(f"Kit not healthy within {timeout_s}s:\n" + _kit_log_tail())
 
 
+def _kill_kit(proc) -> None:
+    """Reap the WHOLE Kit tree: start_new_session=True makes pgid==pid, so
+    killpg catches shader workers etc. that plain kill() orphans (audit
+    HIGH-3 — orphans fed the stale-Kit class on container reuse)."""
+    import os as _os
+    import signal as _sig
+
+    try:
+        _os.killpg(proc.pid, _sig.SIGKILL)
+    except (ProcessLookupError, PermissionError):
+        try:
+            proc.kill()
+        except Exception:  # noqa: BLE001
+            pass
+    try:
+        proc.wait(timeout=10)
+    except Exception:  # noqa: BLE001
+        pass
+
+
 def sys_exe() -> str:
     import sys
     return sys.executable
@@ -212,7 +260,7 @@ def _kit_log_tail(n: int = 4000) -> str:
         return "<no kit.log>"
 
 
-@app.function(image=image, gpu=GPU, cpu=6.0, memory=12288, timeout=2000,
+@app.function(image=image, gpu=GPU, cpu=6.0, memory=12288, timeout=2700,
               volumes=_VOLUMES)
 def build_probe(template_id: str) -> dict:
     """Build the canonical and report per-call honesty: n_ok/n_calls, errors,
@@ -250,13 +298,17 @@ async def m():
 asyncio.run(m())
 '''
     Path("/tmp/build_probe.py").write_text(probe_py)
-    p = subprocess.run([sys_exe(), "/tmp/build_probe.py"],
-                       capture_output=True, text=True, timeout=900)
-    out = p.stdout + p.stderr
-    m = re.search(r"BUILD_JSON=(.*)", out)
-    res["build"] = m.group(1)[:8000] if m else out[-3000:]
-    proc.terminate()
-    cache_vol.commit()
+    try:
+        p = subprocess.run([sys_exe(), "/tmp/build_probe.py"],
+                           capture_output=True, text=True, timeout=1200)
+        out = p.stdout + p.stderr
+        m = re.search(r"BUILD_JSON=(.*)", out)
+        res["build"] = m.group(1)[:8000] if m else out[-3000:]
+    except Exception as e:  # noqa: BLE001
+        res["build"] = f"probe-error: {e}"
+    finally:
+        _kill_kit(proc)
+        cache_vol.commit()
     return res
 
 
@@ -272,8 +324,12 @@ def boot_test() -> dict:
     """Milestone 1: does Kit boot + answer RPC in this runtime at all?"""
     import subprocess
 
-    vk = subprocess.run(["vulkaninfo", "--summary"], capture_output=True,
-                        text=True)
+    try:
+        vk = subprocess.run(["vulkaninfo", "--summary"], capture_output=True,
+                            text=True, timeout=60)
+    except Exception:  # noqa: BLE001
+        import subprocess as _sp
+        vk = _sp.CompletedProcess([], 1, stdout="", stderr="vulkaninfo hung/failed")
     vk_out = (vk.stdout + vk.stderr)[-1500:]
     drv = subprocess.run(
         ["bash", "-c",
@@ -283,7 +339,7 @@ def boot_test() -> dict:
     drv_out = (drv.stdout + drv.stderr)[-1200:]
     try:
         proc, boot_s = _boot_kit()
-        proc.terminate()
+        _kill_kit(proc)
         ok = True
         err = ""
     except Exception as e:  # noqa: BLE001
@@ -300,7 +356,7 @@ _ITEM_RE = re.compile(r"^\s{2}(\w[\w/]*): bin=.*\|\s*([A-Z_,]+|OK)\s*\|\s*final=
                       re.M)
 
 
-@app.function(image=image, gpu=GPU, cpu=6.0, memory=12288, timeout=2700,
+@app.function(image=image, gpu=GPU, cpu=6.0, memory=12288, timeout=3600,
               volumes=_VOLUMES, max_containers=3)
 def run_template(template_id: str, skip_ts: bool = False,
                  env_flags: dict | None = None) -> dict:
@@ -420,7 +476,7 @@ def run_template(template_id: str, skip_ts: bool = False,
     except Exception as e:  # noqa: BLE001
         res["error"] = str(e)[-3000:]
     finally:
-        proc.terminate()
+        _kill_kit(proc)
         cache_vol.commit()
     return res
 
@@ -445,10 +501,22 @@ def main(templates: str = "", skip_ts: bool = False, env: str = ""):
     n_done = 0
     with open(outfile, "a") as fh:
         flags = dict(kv.split("=", 1) for kv in env.split(",") if "=" in kv)
+        import subprocess as _sp
+        sha = _sp.run(["git", "rev-parse", "--short", "HEAD"],
+                      cwd=str(REPO_LOCAL), capture_output=True,
+                      text=True).stdout.strip()
         for res in run_template.map(names,
                                     kwargs={"skip_ts": skip_ts,
                                             "env_flags": flags or None},
-                                    order_outputs=False):
+                                    order_outputs=False,
+                                    return_exceptions=True):
+            if isinstance(res, BaseException):
+                # audit HIGH-4: an aborting iterator silently truncated the
+                # wave's JSONL; record the loss instead (identity unknown
+                # with unordered map — the missing template = set diff)
+                res = {"template": None, "gate": None,
+                       "error": f"map-exception: {res!r}"[:600]}
+            res["sha"] = sha  # measurement-time HEAD (audit LOW-9)
             n_done += 1
             fh.write(json.dumps(res) + "\n")
             fh.flush()

@@ -16,6 +16,9 @@ Check kinds (design: docs/notes/INTROSPECTION_GATE_DESIGN.md):
   call_arg     {"tool", "arg", "expect", [which]} arg value on the call
   output_min   {"tool", "field", "min", [which]}  numeric floor on output
   artifact_len {"artifact", "min"}                produced-list length
+  attr_equals  {"prim", "attr", "expect", [tol]}   live USD attr after the
+               gate's stimulus sequence ran (values prefetched by gate_one
+               into build["attrs"] as "<prim>.<attr>" -> value)
   ros2_topic   {...}                              BLOCKED (bridge-gated)
 """
 from __future__ import annotations
@@ -111,6 +114,19 @@ def evaluate_checks(checks: List[Dict], build: Dict) -> Dict:
                     got = (calls[which].get("result_meta") or {}).get(ck["field"])
             ok = got is not None and float(got) >= float(ck["min"])
             r.update(tool=ck["tool"], field=ck["field"], min=ck["min"],
+                     got=got)
+        elif kind == "attr_equals":
+            key = f"{ck['prim']}.{ck['attr']}"
+            got = (build.get("attrs") or {}).get(key)
+            tol = ck.get("tol")
+            if tol is not None and got is not None:
+                try:
+                    ok = abs(float(got) - float(ck["expect"])) <= float(tol)
+                except (TypeError, ValueError):
+                    ok = False
+            else:
+                ok = got == ck["expect"]
+            r.update(prim=ck["prim"], attr=ck["attr"], expect=ck["expect"],
                      got=got)
         elif kind == "artifact_len":
             art = artifacts.get(ck["artifact"])

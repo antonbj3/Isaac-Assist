@@ -13,6 +13,7 @@ Usage:
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -25,7 +26,7 @@ from service.isaac_assist_service.qa.verification_ledger import record_gate_run 
 RESULTS_DIR = REPO / "workspace" / "qa_runs" / "cloud_results"
 
 
-def ingest(path: Path, sha: str) -> int:
+def ingest(path: Path, sha: str) -> int:  # noqa: C901
     n = 0
     for line in path.read_text().splitlines():
         try:
@@ -39,18 +40,22 @@ def ingest(path: Path, sha: str) -> int:
             continue
         # UR10 cloud rows are NON-PARITY by policy (cuRobo numerics are
         # 5070-tuned; 2026-06-11) — never ledger them, regardless of verdict.
-        tpl_doc = json.loads(tpl.read_text())
-        code_blob = (tpl_doc.get("code") or "") + json.dumps(
-            tpl_doc.get("simulate_args") or {}) + json.dumps(
-            tpl_doc.get("verify_args") or {})
-        if "/World/UR10" in code_blob or '"ur10' in code_blob.lower():
+        try:
+            tpl_doc = json.loads(tpl.read_text())
+        except (json.JSONDecodeError, OSError) as e:
+            print(f"  SKIP unreadable template {r.get('template')}: {e}")
+            continue
+        # whole-doc scan; over-blocking is the safe direction (audit MED-5:
+        # quoted-shape heuristics missed single-quoted/constraint-list refs)
+        if re.search(r"ur10", json.dumps(tpl_doc), re.I):
             print(f"  SKIP UR10 template {r.get('template')} (cloud non-parity policy)")
             continue
         extras = {"source": "cloud_gate", "gpu": r.get("gpu"),
                   "boot_s": r.get("boot_s"), "cloud_file": path.name,
                   "fresh_kit": True}
         if r.get("gate") is not None:
-            record_gate_run(tpl, bool(r["gate"]), sha, extras=extras)
+            record_gate_run(tpl, bool(r["gate"]), r.get("sha") or sha,
+                            extras=extras)
             n += 1
         # faithfulness axis stays LOCAL-only by policy (cloud TS is noisy
         # on soft-state thresholds; 2026-06-11 parity round). Opt in with
@@ -64,7 +69,8 @@ def ingest(path: Path, sha: str) -> int:
 
 
 def main() -> int:
-    files = ([Path(a) for a in sys.argv[1:]] if sys.argv[1:]
+    args = [a for a in sys.argv[1:] if not a.startswith("--")]
+    files = ([Path(a) for a in args] if args
              else sorted(RESULTS_DIR.glob("modal_*.jsonl")))
     sha = subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=REPO,
                          capture_output=True, text=True).stdout.strip()

@@ -21,15 +21,61 @@
   "simulate_args": {
     "cube_path": "/World/Cube_1",
     "target_path": "/World/Bin",
-    "duration_s": 180
+    "duration_s": 180,
+    "gate_class": "introspection",
+    "checks": [
+      {
+        "kind": "call_count",
+        "tool": "setup_pick_place_controller",
+        "expect": 1
+      },
+      {
+        "kind": "call_arg",
+        "tool": "setup_pick_place_controller",
+        "arg": "drop_target",
+        "expect": [
+          0.4,
+          -0.4,
+          0.95
+        ]
+      },
+      {
+        "kind": "call_arg",
+        "tool": "setup_pick_place_controller",
+        "arg": "planning_obstacles",
+        "expect": [
+          "/World/Table",
+          "/World/ConveyorBelt",
+          "/World/Fixture"
+        ]
+      },
+      {
+        "kind": "call_arg",
+        "tool": "create_prim",
+        "arg": "prim_path",
+        "expect": "/World/Fixture",
+        "which": 4
+      },
+      {
+        "kind": "call_arg",
+        "tool": "create_prim",
+        "arg": "scale",
+        "expect": [
+          0.2,
+          0.2,
+          0.05
+        ],
+        "which": 4
+      }
+    ]
   },
   "diagnose_args": null,
   "extends": "phase10-yrkesroll-#17",
   "extension_notes": "CAD-engineer canonical. Variant set on /World/Fixture allows toggling between rev_a/rev_b. Direct-eval runs against both; gap reveals controller robustness. For canonical-build, rev_a is default.",
   "failure_modes": [
     "create_arena_variant may not exist as expected handler",
-    "Variant geometry too similar \u2014 controller can't distinguish; gate passes both rev_a and rev_b",
-    "Bin position 0.85 above fixture is too close \u2014 bin floats"
+    "Variant geometry too similar — controller can't distinguish; gate passes both rev_a and rev_b",
+    "Bin position 0.85 above fixture is too close — bin floats"
   ],
   "intent": {
     "pattern_hint": "pick_place",
@@ -129,8 +175,8 @@
         0.75
       ],
       "size": [
-        0.30,
-        0.30,
+        0.3,
+        0.3,
         0.15
       ]
     },
@@ -164,7 +210,7 @@
     "target_path": "{{primary_destination.path}}",
     "duration_s": 180
   },
-  "verified_status": "build-spec-2026-05-10; smoke-test \u2713 1/1 (33s); fixture variant scaffold; env_blocked: isaaclab_tasks \u2014 module 'isaaclab_tasks.envs' missing in current IsaacLab build",
+  "verified_status": "build-spec-2026-05-10; smoke-test ✓ 1/1 (33s); fixture variant scaffold; env_blocked: isaaclab_tasks — module 'isaaclab_tasks.envs' missing in current IsaacLab build",
   "motion_controllers": {
     "verified": [],
     "untested": [
@@ -173,5 +219,16 @@
       "moveit2"
     ]
   },
-  "verification": {"function_gate": {"status": "unmeasured", "legacy_claim": "fail", "claim_evidence": "old; env_blocked: isaaclab_tasks \u2014 module 'isaaclab_tasks.en", "n": 0, "m": 0, "wilson_lower": 0.0, "last_run_sha": null, "last_run_at": null}}
+  "verification": {
+    "function_gate": {
+      "status": "unmeasured",
+      "legacy_claim": "fail",
+      "claim_evidence": "old; env_blocked: isaaclab_tasks — module 'isaaclab_tasks.en",
+      "n": 0,
+      "m": 0,
+      "wilson_lower": 0.0,
+      "last_run_sha": null,
+      "last_run_at": null
+    }
+  }
 }

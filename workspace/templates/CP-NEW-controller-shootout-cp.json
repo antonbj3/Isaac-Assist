@@ -30,7 +30,54 @@
       "/World/Cube_4"
     ],
     "target_path": "/World/Bin",
-    "duration_s": 180
+    "duration_s": 180,
+    "gate_class": "introspection",
+    "checks": [
+      {
+        "kind": "call_count",
+        "tool": "setup_pick_place_controller",
+        "expect": 1
+      },
+      {
+        "kind": "call_arg",
+        "tool": "setup_pick_place_controller",
+        "arg": "target_source",
+        "expect": "curobo"
+      },
+      {
+        "kind": "call_arg",
+        "tool": "setup_pick_place_controller",
+        "arg": "source_paths",
+        "expect": [
+          "/World/Cube_1",
+          "/World/Cube_2",
+          "/World/Cube_3",
+          "/World/Cube_4"
+        ]
+      },
+      {
+        "kind": "call_arg",
+        "tool": "setup_pick_place_controller",
+        "arg": "belt_path",
+        "expect": "/World/ConveyorBelt"
+      },
+      {
+        "kind": "call_arg",
+        "tool": "setup_pick_place_controller",
+        "arg": "sensor_path",
+        "expect": "/World/PickSensor"
+      },
+      {
+        "kind": "call_arg",
+        "tool": "create_conveyor",
+        "arg": "surface_velocity",
+        "expect": [
+          0.2,
+          0,
+          0
+        ]
+      }
+    ]
   },
   "diagnose_args": null,
   "extends": "phase9-yrkesroll-#12",
@@ -202,7 +249,7 @@
     "target_path": "{{primary_destination.path}}",
     "duration_s": 180
   },
-  "verified_status": "build-spec-2026-05-10; smoke-test \u2713 1/1 (47s); ready for N=5; 2026-05-20 misc-rewrite: moved Table+CollisionAPI creation before set_physics_scene_config (was after, causing Franka to fall through table at spawn); added Cell Xform; added missing tools to tools_used",
+  "verified_status": "build-spec-2026-05-10; smoke-test ✓ 1/1 (47s); ready for N=5; 2026-05-20 misc-rewrite: moved Table+CollisionAPI creation before set_physics_scene_config (was after, causing Franka to fall through table at spawn); added Cell Xform; added missing tools to tools_used",
   "motion_controllers": {
     "verified": [],
     "untested": [
@@ -211,5 +258,16 @@
       "moveit2"
     ]
   },
-  "verification": {"function_gate": {"status": "unmeasured", "legacy_claim": null, "claim_evidence": "-10; smoke-test \u2713 1/1 (47s); ready for N=5; 2026-05-20 misc-", "n": 0, "m": 0, "wilson_lower": 0.0, "last_run_sha": null, "last_run_at": null}}
+  "verification": {
+    "function_gate": {
+      "status": "unmeasured",
+      "legacy_claim": null,
+      "claim_evidence": "-10; smoke-test ✓ 1/1 (47s); ready for N=5; 2026-05-20 misc-",
+      "n": 0,
+      "m": 0,
+      "wilson_lower": 0.0,
+      "last_run_sha": null,
+      "last_run_at": null
+    }
+  }
 }
