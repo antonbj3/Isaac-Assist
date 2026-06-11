@@ -31,7 +31,10 @@
   ],
   "code": "# ── Scene skeleton ──────────────────────────────────────────────────────────\ncreate_prim(prim_path=\"/World/DomeLight\", prim_type=\"DomeLight\")\nset_attribute(prim_path=\"/World/DomeLight\", attr_name=\"inputs:intensity\", value=1200.0)\ncreate_prim(prim_path=\"/World/Ground\", prim_type=\"Cube\", position=[0, 0, -0.5], scale=[20, 20, 1])\napply_api_schema(prim_path=\"/World/Ground\", schema_name=\"PhysicsCollisionAPI\")\n\nset_physics_scene_config(config={\"enable_gpu_dynamics\": False, \"broadphase_type\": \"MBP\"})\n\n# Weld table\ncreate_prim(prim_path=\"/World/WeldTable\", prim_type=\"Cube\",\n            position=[0.6, 0, 0.4], scale=[1.2, 0.8, 0.4])\napply_api_schema(prim_path=\"/World/WeldTable\", schema_name=\"PhysicsCollisionAPI\")\n\n# ── Workpiece: steel plate, seam runs along X at Y=0.0, Z=0.815 ──────────────\ncreate_prim(prim_path=\"/World/Workpiece\", prim_type=\"Cube\",\n            position=[0.6, 0, 0.815], scale=[0.5, 0.3, 0.015])\napply_api_schema(prim_path=\"/World/Workpiece\", schema_name=\"PhysicsCollisionAPI\")\nset_attribute(prim_path=\"/World/Workpiece\", attr_name=\"primvars:semanticLabel\",\n              value=\"steel_plate\")\n\n# Seam marker prim (thin strip, semantic 'seam_target', used by vision_plan_trajectory)\ncreate_prim(prim_path=\"/World/SeamMarker\", prim_type=\"Cube\",\n            position=[0.6, 0, 0.832], scale=[0.48, 0.005, 0.002])\nset_attribute(prim_path=\"/World/SeamMarker\", attr_name=\"primvars:semanticLabel\",\n              value=\"seam_target\")\n\n# ── Robot: UR10, base at origin ───────────────────────────────────────────────\nrobot_wizard(\n    robot_name=\"ur10\",\n    dest_path=\"/World/UR10\",\n    position=[0, 0, 0],\n    orientation=[1, 0, 0, 0],\n)\n\nbulk_set_attribute(\n    prim_paths=[\"/World/UR10\"],\n    attr=\"physxArticulation:solverPositionIterationCount\",\n    value=16,\n)\n\n# ── Phase 1: check singularity at seam-start approach pose ───────────────────\ncheck_singularity(\n    articulation_path=\"/World/UR10\",\n    target_position=[0.35, 0.0, 0.90],\n    target_orientation=[0.0, 0.7071068, 0.0, 0.7071068],\n)\n\n# ── Phase 2: plan rigid transit to seam-start approach ───────────────────────\nplan_trajectory(\n    articulation_path=\"/World/UR10\",\n    waypoints=[\n        {\"position\": [0.35, 0.0, 0.90], \"orientation\": [0.0, 0.7071068, 0.0, 0.7071068]},\n        {\"position\": [0.35, 0.0, 0.845], \"orientation\": [0.0, 0.7071068, 0.0, 0.7071068]}\n    ],\n    planner=\"rmpflow\",\n    robot_type=\"ur10\",\n)\n\n# ── Phase 3: install impedance controller — soft Z for torch contact ──────────\nsetup_impedance_controller(\n    robot_path=\"/World/UR10\",\n    target_frame=\"tool0\",\n    Kx=[600.0, 600.0, 200.0],\n    Kr=[60.0, 60.0, 20.0],\n    Dx=[60.0, 60.0, 20.0],\n    Dr=[6.0, 6.0, 2.0],\n    null_space_stiffness=0.3,\n    null_space_damping=0.3,\n    torque_mode=True,\n    dry_run=True,\n)\n\n# ── Phase 4: vision plan seam trajectory (3 segments) — adaptive correction ──\nfor seg_idx in range(3):\n    vision_plan_trajectory(\n        instruction=\"follow the weld seam from left to right on the steel plate\",\n        num_points=10,\n    )\n\n# ── Phase 5: update compliance params for final segment (lighter contact) ─────\nset_compliance_params(\n    robot_path=\"/World/UR10\",\n    stiffness_xyz=[400.0, 400.0, 150.0],\n    damping_xyz=[40.0, 40.0, 15.0],\n    dry_run=True,\n)\n\n# ── Phase 6: follow seam with compliant controller ────────────────────────────\nfollow_trajectory_with_compliance(\n    trajectory=[\n        {\"pose\": {\"position\": [0.35, 0.0, 0.837], \"orientation\": [0.0, 0.7071068, 0.0, 0.7071068]}},\n        {\"pose\": {\"position\": [0.55, 0.0, 0.837], \"orientation\": [0.0, 0.7071068, 0.0, 0.7071068]}},\n        {\"pose\": {\"position\": [0.75, 0.0, 0.837], \"orientation\": [0.0, 0.7071068, 0.0, 0.7071068]}},\n        {\"pose\": {\"position\": [0.85, 0.0, 0.837], \"orientation\": [0.0, 0.7071068, 0.0, 0.7071068]}}\n    ],\n    robot_path=\"/World/UR10\",\n    compliance_handoff_at=0.05,\n    compliance_controller=\"cartesian_impedance\",\n    timeout_s=60.0,\n    velocity_scaling=0.3,\n    dry_run=True,\n)\n\n# ── Phase 7: read end-effector state and release compliance ───────────────────\nget_kinematic_state(\n    prim_path=\"/World/UR10/tool0\",\n)\n\nrelease_compliance(\n    robot_path=\"/World/UR10\",\n    dry_run=True,\n)",
   "settle_state": {
-    "static_prims": ["/World/Workpiece", "/World/SeamMarker"]
+    "static_prims": [
+      "/World/Workpiece",
+      "/World/SeamMarker"
+    ]
   },
   "verify_args": {
     "stages": [],
@@ -44,11 +47,64 @@
     "expected_compliance_controller": "cartesian_impedance",
     "expected_vision_plan_segments": 3
   },
-  "simulate_args": null,
+  "simulate_args": {
+    "gate_class": "introspection",
+    "checks": [
+      {
+        "kind": "call_count",
+        "tool": "vision_plan_trajectory",
+        "expect": 3
+      },
+      {
+        "kind": "call_arg",
+        "tool": "follow_trajectory_with_compliance",
+        "arg": "compliance_controller",
+        "expect": "cartesian_impedance"
+      },
+      {
+        "kind": "call_arg",
+        "tool": "setup_impedance_controller",
+        "arg": "Kx",
+        "expect": [
+          600.0,
+          600.0,
+          200.0
+        ]
+      },
+      {
+        "kind": "call_count",
+        "tool": "check_singularity",
+        "expect": 1
+      },
+      {
+        "kind": "call_count",
+        "tool": "release_compliance",
+        "expect": 1
+      },
+      {
+        "kind": "attr_equals",
+        "prim": "/World/SeamMarker",
+        "attr": "primvars:semanticLabel",
+        "expect": "seam_target"
+      },
+      {
+        "kind": "ros2_topic",
+        "key": "max_deviation_mm",
+        "expect": "live compliant follow needs ros2_control torque bridge"
+      }
+    ]
+  },
   "diagnose_args": {
     "robot_path": "/World/UR10",
-    "obstacles": ["/World/Workpiece", "/World/WeldTable"],
-    "robot_base": [0.0, 0.0, 0.0]
+    "obstacles": [
+      "/World/Workpiece",
+      "/World/WeldTable"
+    ],
+    "robot_base": [
+      0.0,
+      0.0,
+      0.0
+    ]
   },
   "extends": "yrkesroll-welder-seam-track-002",
   "extension_notes": "Implements ONET SOC 51-4121 seam-tracking welder persona. Key: two-phase motion (rigid transit + compliant follow); vision_plan_trajectory provides adaptive waypoint correction per segment; impedance Z-softness (200 N/m) maintains ~5 N torch contact; check_singularity guards UR10 wrist-3 singularity at flat-seam poses. All compliance calls are dry_run=True pending ROS2 torque-bridge provisioning.",
@@ -63,7 +119,11 @@
   "motion_controllers": {
     "verified": [],
     "failed": {},
-    "untested": ["curobo", "impedance", "rmpflow"]
+    "untested": [
+      "curobo",
+      "impedance",
+      "rmpflow"
+    ]
   },
   "intent": {
     "pattern_hint": "other",
@@ -86,17 +146,26 @@
   },
   "roles": {
     "primary_robot": {
-      "constraints": ["ur10", "ur5e", "franka_panda"],
+      "constraints": [
+        "ur10",
+        "ur5e",
+        "franka_panda"
+      ],
       "expected_count": 1,
       "required": true
     },
     "workpiece": {
-      "constraints": ["box", "cube"],
+      "constraints": [
+        "box",
+        "cube"
+      ],
       "expected_count": 1,
       "required": true
     },
     "seam_marker": {
-      "constraints": ["thin_strip"],
+      "constraints": [
+        "thin_strip"
+      ],
       "expected_count": 1,
       "required": true
     }
@@ -105,18 +174,47 @@
     "primary_robot": {
       "path": "/World/UR10",
       "class": "ur10",
-      "position": [0, 0, 0],
-      "orientation": [1, 0, 0, 0]
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "orientation": [
+        1,
+        0,
+        0,
+        0
+      ]
     },
     "workpiece": {
       "path": "/World/Workpiece",
-      "position": [0.6, 0, 0.815]
+      "position": [
+        0.6,
+        0,
+        0.815
+      ]
     },
     "seam_marker": {
       "path": "/World/SeamMarker",
-      "position": [0.6, 0, 0.832]
+      "position": [
+        0.6,
+        0,
+        0.832
+      ]
     }
   },
   "code_template": "# ── Scene skeleton ──────────────────────────────────────────────────────────\ncreate_prim(prim_path=\"/World/DomeLight\", prim_type=\"DomeLight\")\nset_attribute(prim_path=\"/World/DomeLight\", attr_name=\"inputs:intensity\", value=1200.0)\ncreate_prim(prim_path=\"/World/Ground\", prim_type=\"Cube\", position=[0, 0, -0.5], scale=[20, 20, 1])\napply_api_schema(prim_path=\"/World/Ground\", schema_name=\"PhysicsCollisionAPI\")\n\nset_physics_scene_config(config={\"enable_gpu_dynamics\": False, \"broadphase_type\": \"MBP\"})\n\n# Weld table\ncreate_prim(prim_path=\"/World/WeldTable\", prim_type=\"Cube\",\n            position=[0.6, 0, 0.4], scale=[1.2, 0.8, 0.4])\napply_api_schema(prim_path=\"/World/WeldTable\", schema_name=\"PhysicsCollisionAPI\")\n\n# ── Workpiece: steel plate, seam runs along X at Y=0.0, Z=0.815 ──────────────\ncreate_prim(prim_path=\"/World/Workpiece\", prim_type=\"Cube\",\n            position={{workpiece.position}}, scale=[0.5, 0.3, 0.015])\napply_api_schema(prim_path=\"/World/Workpiece\", schema_name=\"PhysicsCollisionAPI\")\nset_attribute(prim_path=\"/World/Workpiece\", attr_name=\"primvars:semanticLabel\",\n              value=\"steel_plate\")\n\n# Seam marker prim (thin strip, semantic 'seam_target', used by vision_plan_trajectory)\ncreate_prim(prim_path=\"/World/SeamMarker\", prim_type=\"Cube\",\n            position={{seam_marker.position}}, scale=[0.48, 0.005, 0.002])\nset_attribute(prim_path=\"/World/SeamMarker\", attr_name=\"primvars:semanticLabel\",\n              value=\"seam_target\")\n\n# ── Robot: UR10, base at origin ───────────────────────────────────────────────\nrobot_wizard(\n    robot_name=\"ur10\",\n    dest_path=\"/World/UR10\",\n    position={{primary_robot.position}},\n    orientation={{primary_robot.orientation}},\n)\n\nbulk_set_attribute(\n    prim_paths=[\"/World/UR10\"],\n    attr=\"physxArticulation:solverPositionIterationCount\",\n    value=16,\n)\n\n# ── Phase 1: check singularity at seam-start approach pose ───────────────────\ncheck_singularity(\n    articulation_path=\"/World/UR10\",\n    target_position=[0.35, 0.0, 0.90],\n    target_orientation=[0.0, 0.7071068, 0.0, 0.7071068],\n)\n\n# ── Phase 2: plan rigid transit to seam-start approach ───────────────────────\nplan_trajectory(\n    articulation_path=\"/World/UR10\",\n    waypoints=[\n        {\"position\": [0.35, 0.0, 0.90], \"orientation\": [0.0, 0.7071068, 0.0, 0.7071068]},\n        {\"position\": [0.35, 0.0, 0.845], \"orientation\": [0.0, 0.7071068, 0.0, 0.7071068]}\n    ],\n    planner=\"rmpflow\",\n    robot_type=\"ur10\",\n)\n\n# ── Phase 3: install impedance controller — soft Z for torch contact ──────────\nsetup_impedance_controller(\n    robot_path=\"/World/UR10\",\n    target_frame=\"tool0\",\n    Kx=[600.0, 600.0, 200.0],\n    Kr=[60.0, 60.0, 20.0],\n    Dx=[60.0, 60.0, 20.0],\n    Dr=[6.0, 6.0, 2.0],\n    null_space_stiffness=0.3,\n    null_space_damping=0.3,\n    torque_mode=True,\n    dry_run=True,\n)\n\n# ── Phase 4: vision plan seam trajectory (3 segments) — adaptive correction ──\nfor seg_idx in range(3):\n    vision_plan_trajectory(\n        instruction=\"follow the weld seam from left to right on the steel plate\",\n        num_points=10,\n    )\n\n# ── Phase 5: update compliance params for final segment (lighter contact) ─────\nset_compliance_params(\n    robot_path=\"/World/UR10\",\n    stiffness_xyz=[400.0, 400.0, 150.0],\n    damping_xyz=[40.0, 40.0, 15.0],\n    dry_run=True,\n)\n\n# ── Phase 6: follow seam with compliant controller ────────────────────────────\nfollow_trajectory_with_compliance(\n    trajectory=[\n        {\"pose\": {\"position\": [0.35, 0.0, 0.837], \"orientation\": [0.0, 0.7071068, 0.0, 0.7071068]}},\n        {\"pose\": {\"position\": [0.55, 0.0, 0.837], \"orientation\": [0.0, 0.7071068, 0.0, 0.7071068]}},\n        {\"pose\": {\"position\": [0.75, 0.0, 0.837], \"orientation\": [0.0, 0.7071068, 0.0, 0.7071068]}},\n        {\"pose\": {\"position\": [0.85, 0.0, 0.837], \"orientation\": [0.0, 0.7071068, 0.0, 0.7071068]}}\n    ],\n    robot_path=\"/World/UR10\",\n    compliance_handoff_at=0.05,\n    compliance_controller=\"cartesian_impedance\",\n    timeout_s=60.0,\n    velocity_scaling=0.3,\n    dry_run=True,\n)\n\n# ── Phase 7: read end-effector state and release compliance ───────────────────\nget_kinematic_state(\n    prim_path=\"/World/UR10/tool0\",\n)\n\nrelease_compliance(\n    robot_path=\"/World/UR10\",\n    dry_run=True,\n)",
-  "verification": {"function_gate": {"status": "unmeasured", "legacy_claim": null, "claim_evidence": "a \u2713; function-gate \u23f3 diagnostic \u2014 success measured via torch", "n": 0, "m": 0, "wilson_lower": 0.0, "last_run_sha": null, "last_run_at": null, "claim_downgraded": "2026-06-10 prune-audit: all compliance calls dry_run=True (config only); seam-deviation<2mm diagnostic never exercised live"}}
+  "verification": {
+    "function_gate": {
+      "status": "unmeasured",
+      "legacy_claim": null,
+      "claim_evidence": "a ✓; function-gate ⏳ diagnostic — success measured via torch",
+      "n": 0,
+      "m": 0,
+      "wilson_lower": 0.0,
+      "last_run_sha": null,
+      "last_run_at": null,
+      "claim_downgraded": "2026-06-10 prune-audit: all compliance calls dry_run=True (config only); seam-deviation<2mm diagnostic never exercised live"
+    }
+  }
 }

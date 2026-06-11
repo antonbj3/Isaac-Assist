@@ -1116,6 +1116,8 @@ else:
     if not mesh:
         result["issues"].append({{"type": "not_a_mesh", "severity": "error"}})
         result["recommendation"] = "Prim is not a UsdGeom.Mesh — collision analysis only supports meshes."
+        result["n_error_issues"] = 1
+        print("n_error_issues=1")
         print(json.dumps(result))
     else:
         points = mesh.GetPointsAttr().Get() or []
@@ -1235,6 +1237,9 @@ else:
         # flat count for the introspection gate's output_max (a list of
         # severity dicts is not reachable by numeric checks)
         result["n_error_issues"] = sum(1 for i in result["issues"] if i["severity"] == "error")
+        # printed FIRST: the big result JSON overflows the 2000-char trace
+        # cap, and a trailing count line would be cut with it
+        print("n_error_issues=%d" % result["n_error_issues"])
 
         print(json.dumps(result))
 """

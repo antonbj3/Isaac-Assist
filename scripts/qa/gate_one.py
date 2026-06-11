@@ -102,9 +102,11 @@ async def gate(tpl_name):
         # prefetch every attr_equals target into build["attrs"]
         for step in sa.get("stimulus") or []:
             try:
-                await asyncio.wait_for(
+                _sr = await asyncio.wait_for(
                     execute_tool_call(step["tool"], step.get("args") or {}),
                     timeout=120)
+                print(f"STIMULUS {step.get('tool')}: "
+                      f"{str((_sr or {}).get('output') or '')[:150].strip()}")
             except Exception as _se:
                 print(f"STIMULUS_FAIL {step.get('tool')}: {_se}")
         _attr_targets = [(c["prim"], c["attr"]) for c in checks
