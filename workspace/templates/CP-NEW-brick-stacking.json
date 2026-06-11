@@ -42,5 +42,5 @@
     "added_date": "2026-05-15"
   },
   "motion_controllers": {"verified": [], "failed": {}, "untested": ["curobo"]},
-  "verification": {"function_gate": {"status": "unmeasured", "legacy_claim": "fail", "claim_evidence": " but stable_fail \u2014 persistent PhysX numerical explosion when", "n": 0, "m": 0, "wilson_lower": 0.0, "last_run_sha": null, "last_run_at": null}}
+  "verification": {"function_gate": {"status": "pass", "n": 1, "m": 1, "wilson_lower": 0.2065, "last_run_sha": "30ef1415", "last_run_at": "2026-06-11T08:20:34+00:00", "legacy_claim": "fail"}, "faithfulness": {"status": "pass", "n": 1, "m": 1, "wilson_lower": 0.2065, "last_run_sha": "30ef1415", "last_run_at": "2026-06-11T08:21:50+00:00"}}
 }

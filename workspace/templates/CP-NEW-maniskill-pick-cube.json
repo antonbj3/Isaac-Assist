@@ -146,5 +146,5 @@
       "direct_joint"
     ]
   },
-  "verification": {"function_gate": {"status": "unmeasured", "legacy_claim": null, "claim_evidence": "build-spec-2026-05-16; lint 0 ERROR; tool-call-validate 0 ER", "n": 0, "m": 0, "wilson_lower": 0.0, "last_run_sha": null, "last_run_at": null}}
+  "verification": {"function_gate": {"status": "fail", "n": 0, "m": 1, "wilson_lower": 0.0, "last_run_sha": "30ef1415", "last_run_at": "2026-06-11T09:37:53+00:00", "legacy_claim": null}, "faithfulness": {"status": "fail", "n": 0, "m": 1, "wilson_lower": 0.0, "last_run_sha": "30ef1415", "last_run_at": "2026-06-11T09:38:03+00:00"}}
 }

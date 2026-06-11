@@ -235,5 +235,5 @@
     "failed": {}
   },
   "verified_status": "drafted-2026-05-16-A24; form-gate pending",
-  "verification": {"function_gate": {"status": "unmeasured", "legacy_claim": null, "claim_evidence": "gate pending", "n": 0, "m": 0, "wilson_lower": 0.0, "last_run_sha": null, "last_run_at": null}}
+  "verification": {"function_gate": {"status": "fail", "n": 0, "m": 1, "wilson_lower": 0.0, "last_run_sha": "30ef1415", "last_run_at": "2026-06-11T09:06:26+00:00", "legacy_claim": null}, "faithfulness": {"status": "fail", "n": 0, "m": 1, "wilson_lower": 0.0, "last_run_sha": "30ef1415", "last_run_at": "2026-06-11T09:07:31+00:00"}}
 }

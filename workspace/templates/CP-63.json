@@ -102,5 +102,5 @@
       0.75
     ]
   },
-  "verification": {"function_gate": {"status": "unmeasured", "legacy_claim": null, "claim_evidence": "build-spec-2026-04-XX; form-gate \u2713; function-gate diagnostic", "n": 0, "m": 0, "wilson_lower": 0.0, "last_run_sha": null, "last_run_at": null}}
+  "verification": {"function_gate": {"status": "unmeasured", "legacy_claim": null, "claim_evidence": "build-spec-2026-04-XX; form-gate \u2713; function-gate diagnostic", "n": 0, "m": 0, "wilson_lower": 0.0, "last_run_sha": null, "last_run_at": null}, "faithfulness": {"status": "pass", "n": 1, "m": 1, "wilson_lower": 0.2065, "last_run_sha": "30ef1415", "last_run_at": "2026-06-11T08:17:38+00:00"}}
 }

@@ -10,8 +10,8 @@
     "create_articulated_joint",
     "add_proximity_sensor"
   ],
-  "thoughts": "Six drawer-open specifics for CP-55:\n1) Cabinet (static) at [0.6, -0.4, 0.85], scale=[0.10, 0.05, 0.10]. Solid block with PhysicsCollisionAPI.\n2) Drawer (rigid) at [0.6, -0.3, 0.85], scale=[0.075, 0.05, 0.05]. RigidBody + Collision; can slide.\n3) Prismatic joint /World/DrawerJoint between cabinet and drawer. Axis Y (drawer slides forward in world Y). Limits 0..0.15m (15cm extension).\n4) Drive optional \u2014 for canonical demo, joint is passive (no force applied). Robot pulls via external force from gripper-grip.\n5) Drawer handle (small cube on drawer front) \u2014 robot grips handle, pulls.\n6) NOT a pick-place canonical \u2014 just demo that create_articulated_joint produces a working prismatic mechanism. Form-gate verifier expects pick_path/place_path so verify_args may skip.",
-  "code": "# Toolified opening [P2-07]: light+ground+cell+table+physics in ONE call\ncreate_scene_baseline(table_size=[2.0, 1.0])\n\nrobot_wizard(\n    robot_name=\"franka_panda\",\n    dest_path=\"/World/Franka\",\n    position=[0, 0, 0.75],\n    orientation=[0.7071068, 0, 0, 0.7071068],\n)\n\n# Cabinet (static body)\ncreate_prim(prim_path=\"/World/Cabinet\", prim_type=\"Cube\", position=[0.5, -0.4, 0.85], scale=[0.10, 0.05, 0.10])\napply_api_schema(prim_path=\"/World/Cabinet\", schema_name=\"PhysicsCollisionAPI\")\n\n# Drawer (rigid, sliding)\ncreate_prim(prim_path=\"/World/Drawer\", prim_type=\"Cube\", position=[0.5, -0.3, 0.85], scale=[0.075, 0.05, 0.05])\nfor api in (\"PhysicsRigidBodyAPI\", \"PhysicsCollisionAPI\", \"PhysicsMassAPI\"):\n    apply_api_schema(prim_path=\"/World/Drawer\", schema_name=api)\n\n# Prismatic joint \u2014 drawer slides along world Y\ncreate_articulated_joint(\n    joint_path=\"/World/DrawerJoint\",\n    body0_path=\"/World/Cabinet\",\n    body1_path=\"/World/Drawer\",\n    joint_type=\"prismatic\",\n    axis=[0, 1, 0],\n    limit_lower=0.0,\n    limit_upper=0.15,\n)\n\nadd_proximity_sensor(sensor_path=\"/World/PickSensor\", position=[0.5, -0.25, 0.85], size=[0.08, 0.08, 0.08])",
+  "thoughts": "Six drawer-open specifics for CP-55:\n1) Cabinet (static) at [0.6, -0.4, 0.85], scale=[0.10, 0.05, 0.10]. Solid block with PhysicsCollisionAPI.\n2) Drawer (rigid) at [0.6, -0.3, 0.85], scale=[0.075, 0.05, 0.05]. RigidBody + Collision; can slide.\n3) Prismatic joint /World/DrawerJoint between cabinet and drawer. Axis Y (drawer slides forward in world Y). Limits 0..0.15m (15cm extension).\n4) Drive optional — for canonical demo, joint is passive (no force applied). Robot pulls via external force from gripper-grip.\n5) Drawer handle (small cube on drawer front) — robot grips handle, pulls.\n6) NOT a pick-place canonical — just demo that create_articulated_joint produces a working prismatic mechanism. Form-gate verifier expects pick_path/place_path so verify_args may skip.",
+  "code": "# Toolified opening [P2-07]: light+ground+cell+table+physics in ONE call\ncreate_scene_baseline(table_size=[2.0, 1.0])\n\nrobot_wizard(\n    robot_name=\"franka_panda\",\n    dest_path=\"/World/Franka\",\n    position=[0, 0, 0.75],\n    orientation=[0.7071068, 0, 0, 0.7071068],\n)\n\n# Cabinet (static body)\ncreate_prim(prim_path=\"/World/Cabinet\", prim_type=\"Cube\", position=[0.5, -0.4, 0.85], scale=[0.10, 0.05, 0.10])\napply_api_schema(prim_path=\"/World/Cabinet\", schema_name=\"PhysicsCollisionAPI\")\n\n# Drawer (rigid, sliding)\ncreate_prim(prim_path=\"/World/Drawer\", prim_type=\"Cube\", position=[0.5, -0.3, 0.85], scale=[0.075, 0.05, 0.05])\nfor api in (\"PhysicsRigidBodyAPI\", \"PhysicsCollisionAPI\", \"PhysicsMassAPI\"):\n    apply_api_schema(prim_path=\"/World/Drawer\", schema_name=api)\n\n# Prismatic joint — drawer slides along world Y\ncreate_articulated_joint(\n    joint_path=\"/World/DrawerJoint\",\n    body0_path=\"/World/Cabinet\",\n    body1_path=\"/World/Drawer\",\n    joint_type=\"prismatic\",\n    axis=[0, 1, 0],\n    limit_lower=0.0,\n    limit_upper=0.15,\n)\n\nadd_proximity_sensor(sensor_path=\"/World/PickSensor\", position=[0.5, -0.25, 0.85], size=[0.08, 0.08, 0.08])",
   "settle_state": {
     "cubes": {},
     "conveyors": {}
@@ -23,18 +23,24 @@
     "drawer_path": "/World/Drawer",
     "joint_path": "/World/DrawerJoint",
     "joint_upper_limit_m": 0.15,
-    "min_extension_m": 0.10
+    "min_extension_m": 0.1
   },
-  "simulate_args": null,
+  "simulate_args": {
+    "gate_class": "articulation",
+    "joint_path": "/World/DrawerJoint",
+    "body_path": "/World/Drawer",
+    "min_delta_deg": 0.1,
+    "duration_s": 60
+  },
   "extends": "CP-01",
-  "extension_notes": "CP-55 demonstrates create_articulated_joint with prismatic drawer. Scene has cabinet + drawer + joint + Franka + sensor. Pick-place semantics don't directly apply (drawer doesn't 'travel' to bin), so verify_args/simulate_args are loose \u2014 pick=place=Drawer. Robot teleop or RL-trained policy (research #30) would actuate the drawer. Realizes CP-N drawer-open infrastructure.",
+  "extension_notes": "CP-55 demonstrates create_articulated_joint with prismatic drawer. Scene has cabinet + drawer + joint + Franka + sensor. Pick-place semantics don't directly apply (drawer doesn't 'travel' to bin), so verify_args/simulate_args are loose — pick=place=Drawer. Robot teleop or RL-trained policy (research #30) would actuate the drawer. Realizes CP-N drawer-open infrastructure.",
   "failure_modes": [
-    "Joint config wrong \u2192 drawer moves freely or doesn't move. limit_lower=0, limit_upper=0.15 constrains 15cm slide.",
-    "Body0/body1 paths must exist \u2014 cabinet (static) + drawer (rigid).",
+    "Joint config wrong → drawer moves freely or doesn't move. limit_lower=0, limit_upper=0.15 constrains 15cm slide.",
+    "Body0/body1 paths must exist — cabinet (static) + drawer (rigid).",
     "create_articulated_joint sets axis as 'Y' string from [0,1,0] vector via max-mag selection.",
-    "verify_args is approximate \u2014 drawer-open isn't a pick-place flow."
+    "verify_args is approximate — drawer-open isn't a pick-place flow."
   ],
-  "verified_status": "build-spec-2026-04-XX; form-gate \u2713; function-gate diagnostic \u2014 success measured via DrawerJoint position attribute (>= 0.10 m of 0.15 m upper limit) rather than cube-in-bin delivery. Wave-2 self-ref redesign 2026-05-18.",
+  "verified_status": "build-spec-2026-04-XX; form-gate ✓; function-gate diagnostic — success measured via DrawerJoint position attribute (>= 0.10 m of 0.15 m upper limit) rather than cube-in-bin delivery. Wave-2 self-ref redesign 2026-05-18.",
   "intent": {
     "pattern_hint": "pick_place",
     "structural_features": {
@@ -53,17 +59,25 @@
   },
   "roles": {
     "primary_robot": {
-      "constraints": ["franka_panda", "ur5e", "kinova_gen3"],
+      "constraints": [
+        "franka_panda",
+        "ur5e",
+        "kinova_gen3"
+      ],
       "expected_count": 1,
       "required": true
     },
     "cabinet": {
-      "constraints": ["static_body"],
+      "constraints": [
+        "static_body"
+      ],
       "expected_count": 1,
       "required": true
     },
     "drawer": {
-      "constraints": ["rigid_body"],
+      "constraints": [
+        "rigid_body"
+      ],
       "expected_count": 1,
       "required": true
     }
@@ -72,21 +86,46 @@
     "primary_robot": {
       "path": "/World/Franka",
       "class": "franka_panda",
-      "position": [0, 0, 0.75],
-      "orientation": [0.7071068, 0, 0, 0.7071068]
+      "position": [
+        0,
+        0,
+        0.75
+      ],
+      "orientation": [
+        0.7071068,
+        0,
+        0,
+        0.7071068
+      ]
     },
     "cabinet": {
       "path": "/World/Cabinet",
-      "position": [0.5, -0.4, 0.85],
-      "scale": [0.10, 0.05, 0.10]
+      "position": [
+        0.5,
+        -0.4,
+        0.85
+      ],
+      "scale": [
+        0.1,
+        0.05,
+        0.1
+      ]
     },
     "drawer": {
       "path": "/World/Drawer",
-      "position": [0.5, -0.3, 0.85],
-      "scale": [0.075, 0.05, 0.05]
+      "position": [
+        0.5,
+        -0.3,
+        0.85
+      ],
+      "scale": [
+        0.075,
+        0.05,
+        0.05
+      ]
     }
   },
-  "code_template": "# Toolified opening [P2-07]: light+ground+cell+table+physics in ONE call\ncreate_scene_baseline(table_size=[2.0, 1.0])\n\nrobot_wizard(\n    robot_name={{primary_robot.class}},\n    dest_path={{primary_robot.path}},\n    position={{primary_robot.position}},\n    orientation={{primary_robot.orientation}},\n)\n\n# Cabinet (static body)\ncreate_prim(prim_path={{cabinet.path}}, prim_type=\"Cube\", position={{cabinet.position}}, scale={{cabinet.scale}})\napply_api_schema(prim_path={{cabinet.path}}, schema_name=\"PhysicsCollisionAPI\")\n\n# Drawer (rigid, sliding)\ncreate_prim(prim_path={{drawer.path}}, prim_type=\"Cube\", position={{drawer.position}}, scale={{drawer.scale}})\nfor api in (\"PhysicsRigidBodyAPI\", \"PhysicsCollisionAPI\", \"PhysicsMassAPI\"):\n    apply_api_schema(prim_path={{drawer.path}}, schema_name=api)\n\n# Prismatic joint \u2014 drawer slides along world Y\ncreate_articulated_joint(\n    joint_path=\"/World/DrawerJoint\",\n    body0_path={{cabinet.path}},\n    body1_path={{drawer.path}},\n    joint_type=\"prismatic\",\n    axis=[0, 1, 0],\n    limit_lower=0.0,\n    limit_upper=0.15,\n)\n\nadd_proximity_sensor(sensor_path=\"/World/PickSensor\", position=[0.5, -0.25, 0.85], size=[0.08, 0.08, 0.08])",
+  "code_template": "# Toolified opening [P2-07]: light+ground+cell+table+physics in ONE call\ncreate_scene_baseline(table_size=[2.0, 1.0])\n\nrobot_wizard(\n    robot_name={{primary_robot.class}},\n    dest_path={{primary_robot.path}},\n    position={{primary_robot.position}},\n    orientation={{primary_robot.orientation}},\n)\n\n# Cabinet (static body)\ncreate_prim(prim_path={{cabinet.path}}, prim_type=\"Cube\", position={{cabinet.position}}, scale={{cabinet.scale}})\napply_api_schema(prim_path={{cabinet.path}}, schema_name=\"PhysicsCollisionAPI\")\n\n# Drawer (rigid, sliding)\ncreate_prim(prim_path={{drawer.path}}, prim_type=\"Cube\", position={{drawer.position}}, scale={{drawer.scale}})\nfor api in (\"PhysicsRigidBodyAPI\", \"PhysicsCollisionAPI\", \"PhysicsMassAPI\"):\n    apply_api_schema(prim_path={{drawer.path}}, schema_name=api)\n\n# Prismatic joint — drawer slides along world Y\ncreate_articulated_joint(\n    joint_path=\"/World/DrawerJoint\",\n    body0_path={{cabinet.path}},\n    body1_path={{drawer.path}},\n    joint_type=\"prismatic\",\n    axis=[0, 1, 0],\n    limit_lower=0.0,\n    limit_upper=0.15,\n)\n\nadd_proximity_sensor(sensor_path=\"/World/PickSensor\", position=[0.5, -0.25, 0.85], size=[0.08, 0.08, 0.08])",
   "verify_args_template": {
     "stages": [],
     "note": "Articulated-mechanism diagnostic canonical — no cube delivery. Success criterion is drawer prismatic-joint position approaching upper limit.",
@@ -94,7 +133,7 @@
     "drawer_path": "{{drawer.path}}",
     "joint_path": "/World/DrawerJoint",
     "joint_upper_limit_m": 0.15,
-    "min_extension_m": 0.10
+    "min_extension_m": 0.1
   },
   "simulate_args_template": null,
   "diagnose_args": {
@@ -108,5 +147,17 @@
       0.75
     ]
   },
-  "verification": {"function_gate": {"status": "unmeasured", "legacy_claim": null, "claim_evidence": "build-spec-2026-04-XX; form-gate \u2713; function-gate diagnostic", "n": 0, "m": 0, "wilson_lower": 0.0, "last_run_sha": null, "last_run_at": null}}
+  "verification": {
+    "function_gate": {
+      "status": "unmeasured",
+      "legacy_claim": null,
+      "claim_evidence": "build-spec-2026-04-XX; form-gate ✓; function-gate diagnostic",
+      "n": 0,
+      "m": 0,
+      "wilson_lower": 0.0,
+      "last_run_sha": null,
+      "last_run_at": null
+    }
+  },
+  "verification": {"function_gate": {"status": "fail", "n": 0, "m": 1, "wilson_lower": 0.0, "last_run_sha": "30ef1415", "last_run_at": "2026-06-11T09:21:56+00:00", "legacy_claim": null}}
 }
