@@ -1,0 +1,416 @@
+#!/usr/bin/env python3
+"""Modal cloud pool — serverless Kit workers for template gate measurement.
+
+Each container = ONE Kit (single-tenant RPC on :8001, same as local).
+Physics runs on CPU (templates set enable_gpu_dynamics=False), the GPU only
+serves Kit's RTX renderer -> smallest RT-core GPU (T4; switch POOL_GPU=L4 if
+Kit refuses T4). Serverless: containers scale to zero when idle, billed per
+second — nothing to switch off manually.
+
+Layout mirrors the local machine: the repo is baked at the SAME absolute path
+so gate_one.py's hardcoded REPO and template paths work unchanged.
+
+Usage:
+    modal run scripts/cloud/modal_isaac_pool.py::boot_test          # smoke: Kit boots?
+    modal run scripts/cloud/modal_isaac_pool.py --templates CP-45,CP-49
+Results land in workspace/qa_runs/cloud_results/ as JSONL (ledger them
+locally with the existing record_gate_run — the ledger stays local-only).
+"""
+import json
+import os
+import re
+import time
+from pathlib import Path
+
+import modal
+
+try:
+    REPO_LOCAL = Path(__file__).resolve().parents[2]
+except IndexError:  # in-container: __file__ sits near /, only the local
+    REPO_LOCAL = Path("/root")  # entrypoint + image build use this path
+
+REPO = "/home/anton/projects/Omniverse_Nemotron_Ext"  # same path in-container
+GPU = os.environ.get("POOL_GPU", "T4")
+CUROBO_COMMIT = "ca941586c33b8482ed9c0e74d60f23efd64b516a"  # == local install
+
+app = modal.App("isaac-pool")
+
+cache_vol = modal.Volume.from_name("isaac-kit-cache", create_if_missing=True)
+
+image = (
+    modal.Image.from_registry("nvidia/cuda:12.8.1-devel-ubuntu22.04",
+                              add_python="3.11")
+    .apt_install(
+        "git", "curl", "ninja-build",
+        # Kit headless runtime libs (RTX renderer needs EGL/Vulkan + X client libs)
+        "libatomic1", "libegl1", "libgl1", "libglu1-mesa", "libgomp1",
+        "libsm6", "libice6", "libxi6", "libxrandr2", "libxt6", "libxext6",
+        "libxcursor1", "libxinerama1", "libxxf86vm1", "libx11-6",
+        "libfreetype6", "libfontconfig1", "libglib2.0-0", "libxkbcommon0",
+        "libvulkan1", "vulkan-tools",
+    )
+    .env({
+        "OMNI_KIT_ACCEPT_EULA": "YES",
+        "OMNI_KIT_ALLOW_ROOT": "1",
+        "ACCEPT_EULA": "Y",
+        "PRIVACY_CONSENT": "Y",
+        "NVIDIA_DRIVER_CAPABILITIES": "all",   # vulkan/EGL injection, not just compute
+        "TORCH_CUDA_ARCH_LIST": "7.5;8.9+PTX",  # T4 + L4
+    })
+    .pip_install("torch==2.7.0", index_url="https://download.pytorch.org/whl/cu128")
+    .pip_install(
+        "isaacsim==5.1.0.0",
+        "isaacsim-extscache-kit==5.1.0.0",
+        "isaacsim-extscache-kit-sdk==5.1.0.0",
+        "isaacsim-extscache-physics==5.1.0.0",
+    )
+    .pip_install("warp-lang==1.11.0", "aiohttp", "pandas", "requests",
+                 "pyyaml", "ninja", "packaging", "wheel")
+    # cuRobo: same commit as local; compiles CUDA kernels (nvcc from devel base)
+    .run_commands(
+        "pip install --no-build-isolation "
+        f"git+https://github.com/NVlabs/curobo.git@{CUROBO_COMMIT}",
+        # curobo deps bump numpy/websockets/scipy past isaacsim-kernel's pins;
+        # restore the locally-proven versions or Kit breaks on numpy 2.x ABI.
+        # pandas reinstalled HERE: the earlier layer built it against numpy
+        # 2.x, and downgrading numpy under it breaks the C ABI at import.
+        "pip install --force-reinstall numpy==1.26.0 websockets==12.0 "
+        "scipy==1.15.3 pandas==2.3.3",
+        # the pip wheel drops curobo/content (robot configs, collision yml) —
+        # without franka.yml setup_pick_place_controller dies and no
+        # controller ever runs (cloud-RCA 2026-06-11)
+        "mkdir /tmp/curobo_src && cd /tmp/curobo_src && git init -q && "
+        "git remote add origin https://github.com/NVlabs/curobo.git && "
+        f"git fetch -q --depth 1 origin {CUROBO_COMMIT} && "
+        "git checkout -q FETCH_HEAD && "
+        "cp -r curobo/content "
+        "/usr/local/lib/python3.11/site-packages/curobo/ && "
+        "cd / && rm -rf /tmp/curobo_src && "
+        "ls /usr/local/lib/python3.11/site-packages/curobo/content/configs/robot/franka.yml",
+    )
+    # Warp symlink chain (local-proven): Kit's bundled omni.warp.core 1.8.2
+    # must resolve to site-packages warp 1.11.0 or cuRobo collision kernels
+    # fail (CuboidDataWarp undefined). Hardcoded path: importing isaacsim in
+    # a $() prints banner text that corrupts the variable.
+    .run_commands(
+        "SP=/usr/local/lib/python3.11/site-packages/isaacsim && "
+        "ln -sfn /usr/local/lib/python3.11/site-packages/warp $SP/warp && "
+        "found=0; for d in $SP/extscache/omni.warp.core-*/; do "
+        '[ -d "$d" ] || continue; found=1; '
+        "rm -rf ${d}warp && ln -s ../../warp ${d}warp; done; "
+        "ls -la $SP/warp && echo extscache_warp_found=$found"
+    )
+    # warp 1.11's cuda.core backend imports `cuda` — cuRobo's MotionPlanner
+    # dies without it ("No module named 'cuda'", cloud-RCA 2026-06-11).
+    # Locally-proven versions; own layer to keep the curobo layer cached.
+    .run_commands("pip install cuda-bindings==12.9.6 cuda-core==0.7.0 "
+                  "cuda-pathfinder==1.5.3")
+    # Repo subsets, baked last (cheap re-upload on change)
+    .add_local_dir(str(REPO_LOCAL / "exts"), f"{REPO}/exts")
+    .add_local_dir(str(REPO_LOCAL / "service"), f"{REPO}/service")
+    .add_local_dir(str(REPO_LOCAL / "scripts" / "qa"), f"{REPO}/scripts/qa")
+    .add_local_dir(str(REPO_LOCAL / "workspace" / "templates"),
+                   f"{REPO}/workspace/templates")
+    .add_local_dir(str(REPO_LOCAL / "workspace" / "knowledge"),
+                   f"{REPO}/workspace/knowledge")
+)
+
+BOOT_PY = f'''
+import os, sys
+import isaacsim as _isaacsim
+base = os.path.dirname(_isaacsim.__file__)
+sys.path.append(os.path.join(base, "kit"))
+from kit_app import KitApp
+app = KitApp()
+app.startup([
+    os.path.join(base, "apps", "isaacsim.exp.base.kit"),
+    "--ext-folder", "{REPO}/exts/isaac_5.1",
+    "--enable", "omni.isaac.assist",
+    "--headless", "--no-window",
+])
+while app.is_running():
+    app.update()
+app.shutdown()
+'''
+
+_VOLUMES = {"/root/.cache": cache_vol}
+
+
+def _boot_kit(timeout_s: int = 600):
+    """Start Kit, wait for RPC health + a real exec. Returns (proc, boot_s)."""
+    import subprocess
+
+    Path("/tmp/boot_kit.py").write_text(BOOT_PY)
+    log = open("/tmp/kit.log", "w")
+    proc = subprocess.Popen([sys_exe(), "/tmp/boot_kit.py"],
+                            stdout=log, stderr=subprocess.STDOUT,
+                            start_new_session=True)
+    t0 = time.time()
+    while time.time() - t0 < timeout_s:
+        time.sleep(6)
+        if proc.poll() is not None:
+            raise RuntimeError("Kit died during boot:\n" + _kit_log_tail())
+        try:
+            r = subprocess.run(
+                ["curl", "-s", "-m", "30", "-X", "POST",
+                 "http://127.0.0.1:8001/exec_sync",
+                 "-H", "Content-Type: application/json",
+                 "-d", '{"code": "import omni.usd\\nprint(omni.usd.get_context()'
+                       '.get_stage() is not None)"}'],
+                capture_output=True, text=True, timeout=40).stdout
+            if '"success": true' in r:
+                return proc, round(time.time() - t0, 1)
+        except Exception:
+            pass
+    raise RuntimeError(f"Kit not healthy within {timeout_s}s:\n" + _kit_log_tail())
+
+
+def sys_exe() -> str:
+    import sys
+    return sys.executable
+
+
+def _kit_log_tail(n: int = 4000) -> str:
+    try:
+        return Path("/tmp/kit.log").read_text()[-n:]
+    except Exception:
+        return "<no kit.log>"
+
+
+@app.function(image=image, gpu=GPU, cpu=6.0, memory=12288, timeout=2000,
+              volumes=_VOLUMES)
+def build_probe(template_id: str) -> dict:
+    """Build the canonical and report per-call honesty: n_ok/n_calls, errors,
+    capture_warnings — catches a silently-failing controller-setup call."""
+    import subprocess
+
+    for d in ("/home/anton/.isaac_qa/run", "/root/.isaac_qa/run"):
+        Path(d).mkdir(parents=True, exist_ok=True)
+    res: dict = {"template": template_id}
+    try:
+        proc, res["boot_s"] = _boot_kit()
+    except Exception as e:  # noqa: BLE001
+        res["error"] = "boot: " + str(e)[-4000:]
+        return res
+    probe_py = f'''
+import asyncio, json, sys
+sys.path.insert(0, "{REPO}")
+from service.isaac_assist_service.chat.tools import kit_tools
+from service.isaac_assist_service.chat.canonical_instantiator import (
+    execute_template_canonical)
+async def m():
+    await kit_tools.exec_sync("import omni.usd\\nomni.usd.get_context().new_stage()\\n", timeout=20)
+    tpl = json.load(open("{REPO}/workspace/templates/{template_id}.json"))
+    b = await execute_template_canonical(tpl)
+    keep = {{k: b.get(k) for k in ("n_ok", "n_calls", "errors",
+                                   "capture_warnings", "instantiated")}}
+    calls = b.get("calls") or b.get("call_results") or []
+    keep["per_call"] = [
+        {{"tool": c.get("tool") or c.get("name"),
+          "ok": c.get("success", c.get("ok")),
+          "err": str(c.get("error") or "")[:300]}}
+        for c in calls if isinstance(c, dict)]
+    print("BUILD_JSON=" + json.dumps(keep, default=str))
+asyncio.run(m())
+'''
+    Path("/tmp/build_probe.py").write_text(probe_py)
+    p = subprocess.run([sys_exe(), "/tmp/build_probe.py"],
+                       capture_output=True, text=True, timeout=900)
+    out = p.stdout + p.stderr
+    m = re.search(r"BUILD_JSON=(.*)", out)
+    res["build"] = m.group(1)[:8000] if m else out[-3000:]
+    proc.terminate()
+    cache_vol.commit()
+    return res
+
+
+@app.local_entrypoint()
+def buildprobe(template: str = "CP-45"):
+    print("BUILD_PROBE_RESULT:")
+    print(json.dumps(build_probe.remote(template), indent=1)[:9000])
+
+
+@app.function(image=image, gpu=GPU, cpu=6.0, memory=12288, timeout=1500,
+              volumes=_VOLUMES)
+def boot_test() -> dict:
+    """Milestone 1: does Kit boot + answer RPC in this runtime at all?"""
+    import subprocess
+
+    vk = subprocess.run(["vulkaninfo", "--summary"], capture_output=True,
+                        text=True)
+    vk_out = (vk.stdout + vk.stderr)[-1500:]
+    drv = subprocess.run(
+        ["bash", "-c",
+         "nvidia-smi -L; echo ---; ls /usr/share/vulkan/icd.d/ 2>&1; "
+         "ls /usr/lib/x86_64-linux-gnu/ | grep -i nvidia | head -20"],
+        capture_output=True, text=True)
+    drv_out = (drv.stdout + drv.stderr)[-1200:]
+    try:
+        proc, boot_s = _boot_kit()
+        proc.terminate()
+        ok = True
+        err = ""
+    except Exception as e:  # noqa: BLE001
+        ok, boot_s, err = False, -1.0, str(e)[-6000:]
+    cache_vol.commit()
+    return {"kit_ok": ok, "boot_s": boot_s, "vulkan": vk_out,
+            "driver": drv_out, "error": err}
+
+
+_BAD_STATES = {"FLUNG", "ON_FLOOR", "TOPPLED", "MISROUTED", "ALOFT",
+               "NOT_SEATED", "UNROUTABLE_NO_BIN", "OFF_TARGET", "IN_FLIGHT",
+               "UNSETTLED"}
+_ITEM_RE = re.compile(r"^\s{2}(\w[\w/]*): bin=.*\|\s*([A-Z_,]+|OK)\s*\|\s*final=",
+                      re.M)
+
+
+@app.function(image=image, gpu=GPU, cpu=6.0, memory=12288, timeout=2700,
+              volumes=_VOLUMES, max_containers=3)
+def run_template(template_id: str, skip_ts: bool = False) -> dict:
+    """Fresh-Kit single-template measurement: gate_one + scene_timeseries.
+
+    Fresh-Kit-per-template is free here: every call gets a new container,
+    so the local session-degradation class is structurally impossible.
+    """
+    import subprocess
+
+    res: dict = {"template": template_id, "gpu": GPU}
+    for d in ("/home/anton/.isaac_qa/run", "/root/.isaac_qa/run"):
+        Path(d).mkdir(parents=True, exist_ok=True)
+    try:
+        import torch
+        res["cuda"] = (f"avail={torch.cuda.is_available()} "
+                       f"dev={torch.cuda.get_device_name(0) if torch.cuda.is_available() else '-'} "
+                       f"cap={torch.cuda.get_device_capability(0) if torch.cuda.is_available() else '-'}")
+    except Exception as e:  # noqa: BLE001
+        res["cuda"] = f"probe-failed: {e}"
+    try:
+        proc, boot_s = _boot_kit()
+        res["boot_s"] = boot_s
+    except Exception as e:  # noqa: BLE001
+        res.update(gate=None, error="boot: " + str(e)[-6000:])
+        return res
+
+    try:
+        kp = subprocess.run(
+            ["curl", "-s", "-m", "120", "-X", "POST",
+             "http://127.0.0.1:8001/exec_sync",
+             "-H", "Content-Type: application/json",
+             "-d", json.dumps({"code":
+                 "import torch\n"
+                 "print('KITCUDA avail=%s n=%s' % (torch.cuda.is_available(),"
+                 " torch.cuda.device_count()))\n"})],
+            capture_output=True, text=True, timeout=130)
+        res["kit_cuda"] = kp.stdout[-400:]
+
+        p = subprocess.run([sys_exe(), f"{REPO}/scripts/qa/gate_one.py",
+                            template_id], capture_output=True, text=True,
+                           timeout=900)
+        out = p.stdout + p.stderr
+        res["gate_out_head"] = out[:3000]
+        m = re.search(r"GATE success=(\w+)", out)
+        res["gate"] = (m.group(1) == "True") if m else None
+        mf = re.search(r"GATE_FULL=(.*)", out)
+        if mf:
+            res["gate_full"] = mf.group(1)[:4000]
+        if res["gate"] is not True:
+            # cloud-vs-local delta debugging: surface the controller story
+            res["gate_out_tail"] = out[-3000:]
+            res["kit_log_tail"] = _kit_log_tail(5000)
+            kit_log = _kit_log_tail(400_000)
+            marks = [ln for ln in kit_log.splitlines()
+                     if re.search(r"curobo|plan_fail|cp_planfail|Traceback|"
+                                  r"CUDA error|warp", ln, re.I)]
+            res["kit_log_marks"] = marks[-40:]
+            # post-run pick localizer: reads the always-on ctrl:* timeline
+            # off the robot prim while the gate run's stage is still live
+            tpl = json.load(open(f"{REPO}/workspace/templates/{template_id}.json"))
+            rp = ((tpl.get("verify_args") or {}).get("robot_path")
+                  or (tpl.get("simulate_args") or {}).get("robot_path"))
+            if not rp:
+                mrp = re.search(r'robot_path="([^"]+)"', tpl.get("code", "") or "")
+                rp = mrp.group(1) if mrp else None
+            census = subprocess.run(
+                ["curl", "-s", "-m", "60", "-X", "POST",
+                 "http://127.0.0.1:8001/exec_sync",
+                 "-H", "Content-Type: application/json",
+                 "-d", json.dumps({"code":
+                     "import omni.usd\n"
+                     "st = omni.usd.get_context().get_stage()\n"
+                     "kids = [p.GetName() for p in st.GetPrimAtPath('/World')"
+                     ".GetChildren()]\n"
+                     "rb = st.GetPrimAtPath('" + (rp or "/World/Franka") + "')\n"
+                     "n_desc = sum(1 for _ in iter(st.Traverse())) \n"
+                     "print('CENSUS kids=%s robot_valid=%s n_prims=%s'"
+                     " % (kids, bool(rb and rb.IsValid()), n_desc))\n"})],
+                capture_output=True, text=True, timeout=70)
+            res["scene_census"] = census.stdout[-1500:]
+            if rp:
+                diag_py = (
+                    f'import asyncio, json, sys\n'
+                    f'sys.path.insert(0, "{REPO}")\n'
+                    f'from service.isaac_assist_service.chat.tools.tool_executor '
+                    f'import execute_tool_call\n'
+                    f'r = asyncio.run(execute_tool_call('
+                    f'"diagnose_pick_execution", {{"robot_path": "{rp}"}}))\n'
+                    f'print("DIAG_JSON=" + json.dumps(r, default=str))\n'
+                )
+                Path("/tmp/diag.py").write_text(diag_py)
+                pd = subprocess.run([sys_exe(), "/tmp/diag.py"],
+                                    capture_output=True, text=True, timeout=300)
+                md = re.search(r"DIAG_JSON=(.*)", pd.stdout + pd.stderr)
+                res["diagnose"] = (md.group(1)[:5000] if md
+                                   else (pd.stdout + pd.stderr)[-1200:])
+
+        if not skip_ts:
+            p2 = subprocess.run([sys_exe(),
+                                 f"{REPO}/scripts/qa/scene_timeseries.py",
+                                 template_id], capture_output=True, text=True,
+                                timeout=900)
+            out2 = p2.stdout + p2.stderr
+            vec = {mm.group(1): mm.group(2) for mm in _ITEM_RE.finditer(out2)}
+            if vec:
+                res["ts"] = not any(s in _BAD_STATES for st in vec.values()
+                                    for s in st.split(","))
+                res["vec"] = vec
+            else:
+                res["ts"] = None
+                res["ts_tail"] = out2[-3000:]
+    except Exception as e:  # noqa: BLE001
+        res["error"] = str(e)[-3000:]
+    finally:
+        proc.terminate()
+        cache_vol.commit()
+    return res
+
+
+@app.local_entrypoint()
+def boot():
+    res = boot_test.remote()
+    print("BOOT_TEST_RESULT:")
+    print(json.dumps(res, indent=2)[:8000])
+
+
+@app.local_entrypoint()
+def main(templates: str = "", skip_ts: bool = False):
+    if not templates:
+        print(__doc__)
+        return
+    names = [t.strip() for t in templates.split(",") if t.strip()]
+    outdir = REPO_LOCAL / "workspace" / "qa_runs" / "cloud_results"
+    outdir.mkdir(parents=True, exist_ok=True)
+    stamp = time.strftime("%Y%m%d_%H%M%S")
+    outfile = outdir / f"modal_{stamp}.jsonl"
+    n_done = 0
+    with open(outfile, "a") as fh:
+        for res in run_template.map(names, kwargs={"skip_ts": skip_ts},
+                                    order_outputs=False):
+            n_done += 1
+            fh.write(json.dumps(res) + "\n")
+            fh.flush()
+            print(f"[{n_done}/{len(names)}] {res.get('template')} "
+                  f"gate={res.get('gate')} ts={res.get('ts', '-')} "
+                  f"boot={res.get('boot_s', '?')}s "
+                  f"{('ERR ' + res['error'][:200]) if res.get('error') else ''}",
+                  flush=True)
+    print(f"results -> {outfile}")
