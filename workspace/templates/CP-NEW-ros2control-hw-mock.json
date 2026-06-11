@@ -47,7 +47,11 @@
   },
   "roles": {
     "primary_robot": {
-      "constraints": ["ur10e", "ur5e", "franka_panda"],
+      "constraints": [
+        "ur10e",
+        "ur5e",
+        "franka_panda"
+      ],
       "expected_count": 1,
       "required": true
     }
@@ -56,8 +60,17 @@
     "primary_robot": {
       "path": "/World/UR10e",
       "class": "ur10e",
-      "position": [0, 0, 0.8],
-      "orientation": [0.7071068, 0, 0, 0.7071068]
+      "position": [
+        0,
+        0,
+        0.8
+      ],
+      "orientation": [
+        0.7071068,
+        0,
+        0,
+        0.7071068
+      ]
     }
   },
   "code_template": "precheck_ros2_environment(rosbridge_port=9090)\ncreate_prim(prim_path=\"/World/DomeLight\", prim_type=\"DomeLight\")\nset_attribute(prim_path=\"/World/DomeLight\", attr_name=\"inputs:intensity\", value=1000.0)\ncreate_prim(prim_path=\"/World/Ground\", prim_type=\"Cube\", position=[0, 0, -0.5], scale=[20, 20, 1])\napply_api_schema(prim_path=\"/World/Ground\", schema_name=\"PhysicsCollisionAPI\")\ncreate_prim(prim_path=\"/World/Table\", prim_type=\"Cube\", position=[0, 0, 0.2], scale=[0.8, 0.6, 0.4])\napply_api_schema(prim_path=\"/World/Table\", schema_name=\"PhysicsCollisionAPI\")\nset_physics_scene_config(config={\"enable_gpu_dynamics\": False, \"broadphase_type\": \"MBP\"})\nrobot_wizard(\n    robot_name={{primary_robot.class}},\n    dest_path={{primary_robot.path}},\n    position={{primary_robot.position}},\n    orientation={{primary_robot.orientation}},\n)\nsetup_ros2_control_compat(\n    robot_path={{primary_robot.path}},\n    joint_states_topic=\"/isaac_joint_states\",\n    joint_commands_topic=\"/isaac_joint_commands\",\n    controller_type=\"velocity_controllers\",\n)\nemit_ros2_control_yaml(\n    robot_path={{primary_robot.path}},\n    controller_type=\"velocity_controllers\",\n    output_path=\"/tmp/ur10e_ros2_control_velocity.yaml\",\n    joint_states_topic=\"/isaac_joint_states\",\n    joint_commands_topic=\"/isaac_joint_commands\",\n    update_rate_hz=500,\n)\nconfigure_ros2_time(mode=\"sim_time\")\nsetup_ros2_bridge(profile=\"ur10e_moveit2\", robot_path={{primary_robot.path}}, graph_path=\"/World/ROS2_Velocity_Bridge\")\nros2_list_topics()\ndiagnose_ros2()",
@@ -65,19 +78,53 @@
   "verify_args": {
     "stages": [],
     "note": "ros2_control velocity_controllers hardware-interface mock diagnostic — no cube delivery. Success measured via topic presence + emitted hardware-interface YAML + diagnose_ros2 QoS health. No motion planner (cumotion is the moveit2 sibling canonical).",
-    "expected_topics": ["/isaac_joint_states", "/isaac_joint_commands", "/clock"],
-    "expected_yaml_files": ["/tmp/ur10e_ros2_control_velocity.yaml"],
+    "expected_topics": [
+      "/isaac_joint_states",
+      "/isaac_joint_commands",
+      "/clock"
+    ],
+    "expected_yaml_files": [
+      "/tmp/ur10e_ros2_control_velocity.yaml"
+    ],
     "robot_path": "/World/UR10e"
   },
-  "simulate_args": null,
+  "simulate_args": {
+    "gate_class": "introspection",
+    "checks": [
+      {
+        "kind": "ros2_topic",
+        "key": "stages",
+        "expect": "[]"
+      },
+      {
+        "kind": "ros2_topic",
+        "key": "expected_topics",
+        "expect": "['/isaac_joint_states', '/isaac_joint_commands', '/clock']"
+      }
+    ]
+  },
   "diagnose_args": {
     "robot_path": "/World/UR10e"
   },
   "motion_controllers": {
     "verified": [],
     "failed": {},
-    "untested": ["ros2_control", "velocity_controllers"]
+    "untested": [
+      "ros2_control",
+      "velocity_controllers"
+    ]
   },
   "verified_status": "drafted-2026-05-16; form-gate pending; function-gate diagnostic — success measured via expected ROS2 topic presence + YAML file emission, not cube delivery. Wave-2 self-ref redesign 2026-05-18.",
-  "verification": {"function_gate": {"status": "unmeasured", "legacy_claim": null, "claim_evidence": "gate pending; function-gate diagnostic \u2014 success measured vi", "n": 0, "m": 0, "wilson_lower": 0.0, "last_run_sha": null, "last_run_at": null}}
+  "verification": {
+    "function_gate": {
+      "status": "unmeasured",
+      "legacy_claim": null,
+      "claim_evidence": "gate pending; function-gate diagnostic — success measured vi",
+      "n": 0,
+      "m": 0,
+      "wilson_lower": 0.0,
+      "last_run_sha": null,
+      "last_run_at": null
+    }
+  }
 }

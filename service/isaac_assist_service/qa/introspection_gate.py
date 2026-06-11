@@ -115,6 +115,18 @@ def evaluate_checks(checks: List[Dict], build: Dict) -> Dict:
             ok = got is not None and float(got) >= float(ck["min"])
             r.update(tool=ck["tool"], field=ck["field"], min=ck["min"],
                      got=got)
+        elif kind == "output_max":
+            calls = _calls_for(trace, ck["tool"])
+            which = int(ck.get("which", 0))
+            got = None
+            if which < len(calls):
+                got = _field_from_output(_call_output(calls[which]),
+                                         ck["field"])
+                if got is None:
+                    got = (calls[which].get("result_meta") or {}).get(ck["field"])
+            ok = got is not None and float(got) <= float(ck["max"])
+            r.update(tool=ck["tool"], field=ck["field"], max=ck["max"],
+                     got=got)
         elif kind == "attr_equals":
             key = f"{ck['prim']}.{ck['attr']}"
             got = (build.get("attrs") or {}).get(key)

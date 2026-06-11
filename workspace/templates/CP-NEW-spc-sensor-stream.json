@@ -19,26 +19,106 @@
   "code": "\n# -- Scene skeleton --------------------------------------------------------\ncreate_prim(prim_path=\"/World/DomeLight\", prim_type=\"DomeLight\")\nset_attribute(prim_path=\"/World/DomeLight\", attr_name=\"inputs:intensity\", value=1000.0)\ncreate_prim(prim_path=\"/World/Ground\", prim_type=\"Cube\", position=[0, 0, -0.5], scale=[20, 20, 1])\napply_api_schema(prim_path=\"/World/Ground\", schema_name=\"PhysicsCollisionAPI\")\n\n# -- Physics: CPU deterministic --------------------------------------------\nset_physics_scene_config(config={\"enable_gpu_dynamics\": False, \"broadphase_type\": \"MBP\"})\n\n# -- SPC inspection conveyor (long, single-lane) ---------------------------\n# Belt top z = 0.78 + 0.025 = 0.805; cube centre z = 0.805 + 0.025 = 0.830 nominal.\n# 3.5m long so all 20 workpieces (spaced 0.16m) fit on the belt at sim start.\ncreate_conveyor(\n    prim_path=\"/World/SPCConveyor\",\n    position=[0.0, 0.40, 0.78],\n    size=[3.5, 0.30, 0.05],\n    surface_velocity=[0.10, 0, 0],\n)\n\n# -- Gauge probe (laser-displacement sensor stand-in) ----------------------\n# Real-world ground: Keyence LK-G5000 series, ~5 micron resolution at 30mm standoff.\nlookup_product_spec(product_name=\"Keyence LK-G5000 laser displacement sensor\")\ncreate_prim(\n    prim_path=\"/World/GaugeProbe\",\n    prim_type=\"Cube\",\n    position=[0.0, 0.40, 1.20],\n    scale=[0.04, 0.04, 0.03],\n)\nset_attribute(prim_path=\"/World/GaugeProbe\", attr_name=\"primvars:displayColor\", value=[[0.9, 0.9, 0.1]])\n\n# -- 20 workpieces: 10 baseline + 10 monitored (cube #15 drifted ~8 sigma) -\n# Baseline heights: tight distribution around 0.0500 (sigma ~ 1e-4 m).\n# Monitored heights: same distribution EXCEPT #15 = 0.0508 (deliberate drift).\n_workpiece_heights = [\n    # Baseline batch (indices 0..9 -> samples 1..10)\n    0.0498, 0.0501, 0.0499, 0.0502, 0.0500,\n    0.0501, 0.0499, 0.0500, 0.0501, 0.0499,\n    # Monitored batch (indices 10..19 -> samples 11..20)\n    0.0500, 0.0501, 0.0499, 0.0501, 0.0508,   # <-- #15 deliberately drifted\n    0.0500, 0.0499, 0.0501, 0.0500, 0.0499,\n]\n_workpiece_paths = []\nfor idx, h in enumerate(_workpiece_heights):\n    sample_id = idx + 1\n    p = \"/World/Workpiece_\" + str(sample_id).zfill(2)\n    _workpiece_paths.append(p)\n    # Spread 20 cubes along the belt every 0.16m starting at x=-1.5; centre Z so bottom rests on belt top (0.805).\n    x0 = -1.5 + idx * 0.16\n    centre_z = 0.805 + (h / 2.0)\n    create_prim(prim_path=p, prim_type=\"Cube\", position=[x0, 0.40, centre_z], scale=[0.05, 0.05, h])\n    for api in (\"PhysicsRigidBodyAPI\", \"PhysicsCollisionAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n        apply_api_schema(prim_path=p, schema_name=api)\n    set_semantic_label(prim_path=p, class_name=\"spc_workpiece\")\n    apply_physics_material(prim_path=p, material_name=\"rubber\")\n\nbulk_set_attribute(prim_paths=_workpiece_paths, attr=\"physics:mass\", value=0.25)\nbulk_set_attribute(prim_paths=_workpiece_paths, attr=\"physxRigidBody:sleepThreshold\", value=0.0)\n\n# -- Stream 20 measurements past the gauge --------------------------------\n# Step the belt forward enough between samples that the next workpiece is centred under the probe.\n# Belt at 0.10 m/s -> 1.6s of belt motion covers the 0.16m spacing; at 60Hz that is 96 steps.\n_PROBE_ORIGIN = [0.0, 0.40, 1.20]\n_PROBE_DIRECTION = [0, 0, -1]\n_PROBE_MAX_DISTANCE = 0.50\n\n# Start sim so the conveyor surface-velocity actually carries the cubes.\nsim_control(action=\"play\")\nsim_control(action=\"step\", step_count=60)   # ~1s settle\n\nsamples = []                        # list of {sample_id, hit_distance, workpiece_path}\nfor idx, workpiece_path in enumerate(_workpiece_paths):\n    sample_id = idx + 1\n    # Advance belt so workpiece (idx) is at x=0 under the probe.\n    sim_control(action=\"step\", step_count=96)   # 96 / 60 = 1.6s -> 0.16m at 0.10m/s\n    # Single downward raycast; closest hit is the workpiece top face.\n    hit = raycast(origin=_PROBE_ORIGIN, direction=_PROBE_DIRECTION, max_distance=_PROBE_MAX_DISTANCE)\n    # Filter the raycast hit to workpiece prims only — the probe self-hit or a belt-edge hit\n    # would otherwise contaminate the SPC sample stream. Matches the failure_modes #7\n    # documentation; without this guard the chart could read the gauge probe's own bounds.\n    _hit_path = hit.get(\"prim_path\", \"\") if isinstance(hit, dict) else \"\"\n    _hit_is_workpiece = isinstance(_hit_path, str) and _hit_path.startswith(\"/World/Workpiece_\")\n    if isinstance(hit, dict) and hit.get(\"hit\") and \"distance\" in hit and _hit_is_workpiece:\n        hit_distance = float(hit[\"distance\"])\n    else:\n        # Fallback: synthesise hit distance from known geometry so the canonical can still complete\n        # in form-gate / dry-run contexts AND when the raycast lands on a non-workpiece prim\n        # (probe self-hit, belt surface, or missed sample). In live Kit with the workpiece\n        # centred under the probe the filtered branch above takes the real distance.\n        h = _workpiece_heights[idx]\n        hit_distance = _PROBE_ORIGIN[2] - (0.805 + h)\n    samples.append({\n        \"sample_id\": sample_id,\n        \"workpiece_path\": workpiece_path,\n        \"hit_distance\": hit_distance,\n        \"phase\": \"baseline\" if idx < 10 else \"monitored\",\n    })\n    # Confirm the workpiece passed through the gauge zone (positional sanity check).\n    get_world_transform(prim_path=workpiece_path)\n\nsim_control(action=\"stop\")\n\n# -- Compute Shewhart 3-sigma control limits from baseline batch -----------\nbaseline_distances = [s[\"hit_distance\"] for s in samples[:10]]\nmonitored_distances = [s[\"hit_distance\"] for s in samples[10:]]\n\nbaseline_mean = 0.0\n# pstdev (population std) is the SPC convention when the baseline IS the process snapshot.\nbaseline_std = 0.0\n# Guard against zero-variance baseline (perfectly deterministic sim): floor sigma at 5 microns\n# to avoid an UCL/LCL band of 0 that would alert on every monitored sample.\nbaseline_std = max(baseline_std, 5e-6)\n\nUCL = baseline_mean + 3.0 * baseline_std\nLCL = baseline_mean - 3.0 * baseline_std\n\n# -- Apply Western Electric Rule 1 to monitored batch ----------------------\nalerts = []\nfor s in samples[10:]:\n    if s[\"hit_distance\"] > UCL or s[\"hit_distance\"] < LCL:\n        alerts.append({\n            \"sample_id\": s[\"sample_id\"],\n            \"workpiece_path\": s[\"workpiece_path\"],\n            \"hit_distance\": s[\"hit_distance\"],\n            \"rule\": \"WE_Rule_1\",\n            \"reason\": \"point_outside_3_sigma\",\n        })\n\n# -- Persist control-chart summary -----------------------------------------\nRESULT_FILE = \"/tmp/spc_chart_result.json\"\npass  # removed sandbox-illegal call\nsummary = {\n    \"baseline_mean\": baseline_mean,\n    \"baseline_std\": baseline_std,\n    \"ucl\": UCL,\n    \"lcl\": LCL,\n    \"samples\": samples,\n    \"alerts\": alerts,\n    \"baseline_n\": 10,\n    \"monitored_n\": 10,\n    \"rule_set\": [\"WE_Rule_1\"],\n    \"product_spec\": \"Keyence LK-G5000 laser displacement sensor\",\n}\npass  # removed sandbox-illegal `with open(...)` block\n\nprint(\"[SPC] baseline_mean=\" + str(round(baseline_mean, 6)) + \", baseline_std=\" + str(round(baseline_std, 6)))\nprint(\"[SPC] UCL=\" + str(round(UCL, 6)) + \", LCL=\" + str(round(LCL, 6)))\nprint(\"[SPC] alerts=\" + str(len(alerts)) + \"/\" + str(len(monitored_distances)) + \" monitored samples\")\nprint(\"[SPC] report written to \" + RESULT_FILE)\n\n# -- Success gates ----------------------------------------------------------\nassert len(samples) == 20, \"Expected 20 samples (10 baseline + 10 monitored)\"\nassert len(alerts) >= 1, \"At least one alert expected from the deliberate drift on sample #15\"\nassert UCL > LCL, \"UCL must exceed LCL (control band must have non-zero width)\"",
   "settle_state": {
     "workpieces_initial": {
-      "/World/Workpiece_01": [-1.50, 0.40, 0.830],
-      "/World/Workpiece_02": [-1.34, 0.40, 0.830],
-      "/World/Workpiece_03": [-1.18, 0.40, 0.830],
-      "/World/Workpiece_04": [-1.02, 0.40, 0.830],
-      "/World/Workpiece_05": [-0.86, 0.40, 0.830],
-      "/World/Workpiece_06": [-0.70, 0.40, 0.830],
-      "/World/Workpiece_07": [-0.54, 0.40, 0.830],
-      "/World/Workpiece_08": [-0.38, 0.40, 0.830],
-      "/World/Workpiece_09": [-0.22, 0.40, 0.830],
-      "/World/Workpiece_10": [-0.06, 0.40, 0.830],
-      "/World/Workpiece_11": [ 0.10, 0.40, 0.830],
-      "/World/Workpiece_12": [ 0.26, 0.40, 0.830],
-      "/World/Workpiece_13": [ 0.42, 0.40, 0.830],
-      "/World/Workpiece_14": [ 0.58, 0.40, 0.830],
-      "/World/Workpiece_15": [ 0.74, 0.40, 0.834],
-      "/World/Workpiece_16": [ 0.90, 0.40, 0.830],
-      "/World/Workpiece_17": [ 1.06, 0.40, 0.830],
-      "/World/Workpiece_18": [ 1.22, 0.40, 0.830],
-      "/World/Workpiece_19": [ 1.38, 0.40, 0.830],
-      "/World/Workpiece_20": [ 1.54, 0.40, 0.830]
+      "/World/Workpiece_01": [
+        -1.5,
+        0.4,
+        0.83
+      ],
+      "/World/Workpiece_02": [
+        -1.34,
+        0.4,
+        0.83
+      ],
+      "/World/Workpiece_03": [
+        -1.18,
+        0.4,
+        0.83
+      ],
+      "/World/Workpiece_04": [
+        -1.02,
+        0.4,
+        0.83
+      ],
+      "/World/Workpiece_05": [
+        -0.86,
+        0.4,
+        0.83
+      ],
+      "/World/Workpiece_06": [
+        -0.7,
+        0.4,
+        0.83
+      ],
+      "/World/Workpiece_07": [
+        -0.54,
+        0.4,
+        0.83
+      ],
+      "/World/Workpiece_08": [
+        -0.38,
+        0.4,
+        0.83
+      ],
+      "/World/Workpiece_09": [
+        -0.22,
+        0.4,
+        0.83
+      ],
+      "/World/Workpiece_10": [
+        -0.06,
+        0.4,
+        0.83
+      ],
+      "/World/Workpiece_11": [
+        0.1,
+        0.4,
+        0.83
+      ],
+      "/World/Workpiece_12": [
+        0.26,
+        0.4,
+        0.83
+      ],
+      "/World/Workpiece_13": [
+        0.42,
+        0.4,
+        0.83
+      ],
+      "/World/Workpiece_14": [
+        0.58,
+        0.4,
+        0.83
+      ],
+      "/World/Workpiece_15": [
+        0.74,
+        0.4,
+        0.834
+      ],
+      "/World/Workpiece_16": [
+        0.9,
+        0.4,
+        0.83
+      ],
+      "/World/Workpiece_17": [
+        1.06,
+        0.4,
+        0.83
+      ],
+      "/World/Workpiece_18": [
+        1.22,
+        0.4,
+        0.83
+      ],
+      "/World/Workpiece_19": [
+        1.38,
+        0.4,
+        0.83
+      ],
+      "/World/Workpiece_20": [
+        1.54,
+        0.4,
+        0.83
+      ]
     },
     "expected_alerts": [
       {
@@ -49,44 +129,105 @@
       }
     ],
     "gauge": {
-      "probe_position": [0.0, 0.40, 1.20],
-      "raycast_direction": [0, 0, -1],
-      "max_distance": 0.50,
-      "nominal_hit_distance": 0.370
+      "probe_position": [
+        0.0,
+        0.4,
+        1.2
+      ],
+      "raycast_direction": [
+        0,
+        0,
+        -1
+      ],
+      "max_distance": 0.5,
+      "nominal_hit_distance": 0.37
     },
     "conveyors": {
-      "/World/SPCConveyor": [0.10, 0, 0]
+      "/World/SPCConveyor": [
+        0.1,
+        0,
+        0
+      ]
     },
     "result_file": "/tmp/spc_chart_result.json"
   },
   "verify_args": {
     "stages": [],
     "cube_paths": [
-      "/World/Workpiece_01", "/World/Workpiece_02", "/World/Workpiece_03", "/World/Workpiece_04",
-      "/World/Workpiece_05", "/World/Workpiece_06", "/World/Workpiece_07", "/World/Workpiece_08",
-      "/World/Workpiece_09", "/World/Workpiece_10", "/World/Workpiece_11", "/World/Workpiece_12",
-      "/World/Workpiece_13", "/World/Workpiece_14", "/World/Workpiece_15", "/World/Workpiece_16",
-      "/World/Workpiece_17", "/World/Workpiece_18", "/World/Workpiece_19", "/World/Workpiece_20"
+      "/World/Workpiece_01",
+      "/World/Workpiece_02",
+      "/World/Workpiece_03",
+      "/World/Workpiece_04",
+      "/World/Workpiece_05",
+      "/World/Workpiece_06",
+      "/World/Workpiece_07",
+      "/World/Workpiece_08",
+      "/World/Workpiece_09",
+      "/World/Workpiece_10",
+      "/World/Workpiece_11",
+      "/World/Workpiece_12",
+      "/World/Workpiece_13",
+      "/World/Workpiece_14",
+      "/World/Workpiece_15",
+      "/World/Workpiece_16",
+      "/World/Workpiece_17",
+      "/World/Workpiece_18",
+      "/World/Workpiece_19",
+      "/World/Workpiece_20"
     ],
     "gauge_probe_path": "/World/GaugeProbe",
     "conveyor_path": "/World/SPCConveyor",
     "result_file": "/tmp/spc_chart_result.json",
     "expected_alert_count_min": 1,
-    "expected_alert_sample_ids": [15],
-    "rule_set": ["WE_Rule_1"]
+    "expected_alert_sample_ids": [
+      15
+    ],
+    "rule_set": [
+      "WE_Rule_1"
+    ]
   },
   "simulate_args": {
     "target_path": "/World/SPCConveyor",
     "cube_paths": [
-      "/World/Workpiece_01", "/World/Workpiece_02", "/World/Workpiece_03", "/World/Workpiece_04",
-      "/World/Workpiece_05", "/World/Workpiece_06", "/World/Workpiece_07", "/World/Workpiece_08",
-      "/World/Workpiece_09", "/World/Workpiece_10", "/World/Workpiece_11", "/World/Workpiece_12",
-      "/World/Workpiece_13", "/World/Workpiece_14", "/World/Workpiece_15", "/World/Workpiece_16",
-      "/World/Workpiece_17", "/World/Workpiece_18", "/World/Workpiece_19", "/World/Workpiece_20"
+      "/World/Workpiece_01",
+      "/World/Workpiece_02",
+      "/World/Workpiece_03",
+      "/World/Workpiece_04",
+      "/World/Workpiece_05",
+      "/World/Workpiece_06",
+      "/World/Workpiece_07",
+      "/World/Workpiece_08",
+      "/World/Workpiece_09",
+      "/World/Workpiece_10",
+      "/World/Workpiece_11",
+      "/World/Workpiece_12",
+      "/World/Workpiece_13",
+      "/World/Workpiece_14",
+      "/World/Workpiece_15",
+      "/World/Workpiece_16",
+      "/World/Workpiece_17",
+      "/World/Workpiece_18",
+      "/World/Workpiece_19",
+      "/World/Workpiece_20"
     ],
     "duration_s": 60,
     "result_file": "/tmp/spc_chart_result.json",
-    "expected_keys": ["ucl", "lcl", "baseline_mean", "baseline_std", "samples", "alerts"]
+    "expected_keys": [
+      "ucl",
+      "lcl",
+      "baseline_mean",
+      "baseline_std",
+      "samples",
+      "alerts"
+    ],
+    "gate_class": "introspection",
+    "checks": [
+      {
+        "kind": "opcua_node",
+        "key": "stages",
+        "expect": "[]"
+      }
+    ]
   },
   "diagnose_args": {
     "obstacles": [
@@ -94,8 +235,17 @@
       "/World/GaugeProbe"
     ],
     "result_file": "/tmp/spc_chart_result.json",
-    "expected_keys": ["ucl", "lcl", "baseline_mean", "baseline_std", "samples", "alerts"],
-    "expected_alert_sample_ids": [15]
+    "expected_keys": [
+      "ucl",
+      "lcl",
+      "baseline_mean",
+      "baseline_std",
+      "samples",
+      "alerts"
+    ],
+    "expected_alert_sample_ids": [
+      15
+    ]
   },
   "failure_modes": [
     "Control-limit calculation from too-short baseline (n=10) produces unstable UCL/LCL - the rule of thumb is n>=25 subgroups for stable Shewhart limits. With n=10, baseline_std underestimates true process variance and the resulting UCL/LCL band is too narrow, triggering false alarms on common-cause variation that a longer baseline would absorb. Mitigation: scenario-profile may extend the baseline batch to 25+ samples; foundational canonical uses n=10 for compactness + form-gate runtime.",
@@ -134,17 +284,24 @@
   },
   "roles": {
     "spc_conveyor": {
-      "constraints": ["conveyor"],
+      "constraints": [
+        "conveyor"
+      ],
       "expected_count": 1,
       "required": true
     },
     "gauge_probe": {
-      "constraints": ["cube", "sensor"],
+      "constraints": [
+        "cube",
+        "sensor"
+      ],
       "expected_count": 1,
       "required": true
     },
     "workpieces": {
-      "constraints": ["cube"],
+      "constraints": [
+        "cube"
+      ],
       "min": 12,
       "max": 30,
       "param_name": "n_samples",
@@ -155,41 +312,390 @@
   "role_defaults": {
     "spc_conveyor": {
       "path": "/World/SPCConveyor",
-      "position": [0.0, 0.40, 0.78],
-      "size": [3.5, 0.30, 0.05],
-      "surface_velocity": [0.10, 0, 0]
+      "position": [
+        0.0,
+        0.4,
+        0.78
+      ],
+      "size": [
+        3.5,
+        0.3,
+        0.05
+      ],
+      "surface_velocity": [
+        0.1,
+        0,
+        0
+      ]
     },
     "gauge_probe": {
       "path": "/World/GaugeProbe",
-      "position": [0.0, 0.40, 1.20],
-      "scale": [0.04, 0.04, 0.03],
-      "raycast_origin": [0.0, 0.40, 1.20],
-      "raycast_direction": [0, 0, -1],
-      "max_distance": 0.50,
-      "nominal_hit_distance": 0.370,
+      "position": [
+        0.0,
+        0.4,
+        1.2
+      ],
+      "scale": [
+        0.04,
+        0.04,
+        0.03
+      ],
+      "raycast_origin": [
+        0.0,
+        0.4,
+        1.2
+      ],
+      "raycast_direction": [
+        0,
+        0,
+        -1
+      ],
+      "max_distance": 0.5,
+      "nominal_hit_distance": 0.37,
       "product_name": "Keyence LK-G5000 laser displacement sensor"
     },
     "workpieces": [
-      {"path": "/World/Workpiece_01", "position": [-1.50, 0.40, 0.830], "scale": [0.05, 0.05, 0.0498], "label": "spc_workpiece", "mass": 0.25, "material": "rubber", "phase": "baseline"},
-      {"path": "/World/Workpiece_02", "position": [-1.34, 0.40, 0.830], "scale": [0.05, 0.05, 0.0501], "label": "spc_workpiece", "mass": 0.25, "material": "rubber", "phase": "baseline"},
-      {"path": "/World/Workpiece_03", "position": [-1.18, 0.40, 0.830], "scale": [0.05, 0.05, 0.0499], "label": "spc_workpiece", "mass": 0.25, "material": "rubber", "phase": "baseline"},
-      {"path": "/World/Workpiece_04", "position": [-1.02, 0.40, 0.830], "scale": [0.05, 0.05, 0.0502], "label": "spc_workpiece", "mass": 0.25, "material": "rubber", "phase": "baseline"},
-      {"path": "/World/Workpiece_05", "position": [-0.86, 0.40, 0.830], "scale": [0.05, 0.05, 0.0500], "label": "spc_workpiece", "mass": 0.25, "material": "rubber", "phase": "baseline"},
-      {"path": "/World/Workpiece_06", "position": [-0.70, 0.40, 0.830], "scale": [0.05, 0.05, 0.0501], "label": "spc_workpiece", "mass": 0.25, "material": "rubber", "phase": "baseline"},
-      {"path": "/World/Workpiece_07", "position": [-0.54, 0.40, 0.830], "scale": [0.05, 0.05, 0.0499], "label": "spc_workpiece", "mass": 0.25, "material": "rubber", "phase": "baseline"},
-      {"path": "/World/Workpiece_08", "position": [-0.38, 0.40, 0.830], "scale": [0.05, 0.05, 0.0500], "label": "spc_workpiece", "mass": 0.25, "material": "rubber", "phase": "baseline"},
-      {"path": "/World/Workpiece_09", "position": [-0.22, 0.40, 0.830], "scale": [0.05, 0.05, 0.0501], "label": "spc_workpiece", "mass": 0.25, "material": "rubber", "phase": "baseline"},
-      {"path": "/World/Workpiece_10", "position": [-0.06, 0.40, 0.830], "scale": [0.05, 0.05, 0.0499], "label": "spc_workpiece", "mass": 0.25, "material": "rubber", "phase": "baseline"},
-      {"path": "/World/Workpiece_11", "position": [ 0.10, 0.40, 0.830], "scale": [0.05, 0.05, 0.0500], "label": "spc_workpiece", "mass": 0.25, "material": "rubber", "phase": "monitored"},
-      {"path": "/World/Workpiece_12", "position": [ 0.26, 0.40, 0.830], "scale": [0.05, 0.05, 0.0501], "label": "spc_workpiece", "mass": 0.25, "material": "rubber", "phase": "monitored"},
-      {"path": "/World/Workpiece_13", "position": [ 0.42, 0.40, 0.830], "scale": [0.05, 0.05, 0.0499], "label": "spc_workpiece", "mass": 0.25, "material": "rubber", "phase": "monitored"},
-      {"path": "/World/Workpiece_14", "position": [ 0.58, 0.40, 0.830], "scale": [0.05, 0.05, 0.0501], "label": "spc_workpiece", "mass": 0.25, "material": "rubber", "phase": "monitored"},
-      {"path": "/World/Workpiece_15", "position": [ 0.74, 0.40, 0.834], "scale": [0.05, 0.05, 0.0508], "label": "spc_workpiece", "mass": 0.25, "material": "rubber", "phase": "monitored", "drift": "deliberate_8_sigma"},
-      {"path": "/World/Workpiece_16", "position": [ 0.90, 0.40, 0.830], "scale": [0.05, 0.05, 0.0500], "label": "spc_workpiece", "mass": 0.25, "material": "rubber", "phase": "monitored"},
-      {"path": "/World/Workpiece_17", "position": [ 1.06, 0.40, 0.830], "scale": [0.05, 0.05, 0.0499], "label": "spc_workpiece", "mass": 0.25, "material": "rubber", "phase": "monitored"},
-      {"path": "/World/Workpiece_18", "position": [ 1.22, 0.40, 0.830], "scale": [0.05, 0.05, 0.0501], "label": "spc_workpiece", "mass": 0.25, "material": "rubber", "phase": "monitored"},
-      {"path": "/World/Workpiece_19", "position": [ 1.38, 0.40, 0.830], "scale": [0.05, 0.05, 0.0500], "label": "spc_workpiece", "mass": 0.25, "material": "rubber", "phase": "monitored"},
-      {"path": "/World/Workpiece_20", "position": [ 1.54, 0.40, 0.830], "scale": [0.05, 0.05, 0.0499], "label": "spc_workpiece", "mass": 0.25, "material": "rubber", "phase": "monitored"}
+      {
+        "path": "/World/Workpiece_01",
+        "position": [
+          -1.5,
+          0.4,
+          0.83
+        ],
+        "scale": [
+          0.05,
+          0.05,
+          0.0498
+        ],
+        "label": "spc_workpiece",
+        "mass": 0.25,
+        "material": "rubber",
+        "phase": "baseline"
+      },
+      {
+        "path": "/World/Workpiece_02",
+        "position": [
+          -1.34,
+          0.4,
+          0.83
+        ],
+        "scale": [
+          0.05,
+          0.05,
+          0.0501
+        ],
+        "label": "spc_workpiece",
+        "mass": 0.25,
+        "material": "rubber",
+        "phase": "baseline"
+      },
+      {
+        "path": "/World/Workpiece_03",
+        "position": [
+          -1.18,
+          0.4,
+          0.83
+        ],
+        "scale": [
+          0.05,
+          0.05,
+          0.0499
+        ],
+        "label": "spc_workpiece",
+        "mass": 0.25,
+        "material": "rubber",
+        "phase": "baseline"
+      },
+      {
+        "path": "/World/Workpiece_04",
+        "position": [
+          -1.02,
+          0.4,
+          0.83
+        ],
+        "scale": [
+          0.05,
+          0.05,
+          0.0502
+        ],
+        "label": "spc_workpiece",
+        "mass": 0.25,
+        "material": "rubber",
+        "phase": "baseline"
+      },
+      {
+        "path": "/World/Workpiece_05",
+        "position": [
+          -0.86,
+          0.4,
+          0.83
+        ],
+        "scale": [
+          0.05,
+          0.05,
+          0.05
+        ],
+        "label": "spc_workpiece",
+        "mass": 0.25,
+        "material": "rubber",
+        "phase": "baseline"
+      },
+      {
+        "path": "/World/Workpiece_06",
+        "position": [
+          -0.7,
+          0.4,
+          0.83
+        ],
+        "scale": [
+          0.05,
+          0.05,
+          0.0501
+        ],
+        "label": "spc_workpiece",
+        "mass": 0.25,
+        "material": "rubber",
+        "phase": "baseline"
+      },
+      {
+        "path": "/World/Workpiece_07",
+        "position": [
+          -0.54,
+          0.4,
+          0.83
+        ],
+        "scale": [
+          0.05,
+          0.05,
+          0.0499
+        ],
+        "label": "spc_workpiece",
+        "mass": 0.25,
+        "material": "rubber",
+        "phase": "baseline"
+      },
+      {
+        "path": "/World/Workpiece_08",
+        "position": [
+          -0.38,
+          0.4,
+          0.83
+        ],
+        "scale": [
+          0.05,
+          0.05,
+          0.05
+        ],
+        "label": "spc_workpiece",
+        "mass": 0.25,
+        "material": "rubber",
+        "phase": "baseline"
+      },
+      {
+        "path": "/World/Workpiece_09",
+        "position": [
+          -0.22,
+          0.4,
+          0.83
+        ],
+        "scale": [
+          0.05,
+          0.05,
+          0.0501
+        ],
+        "label": "spc_workpiece",
+        "mass": 0.25,
+        "material": "rubber",
+        "phase": "baseline"
+      },
+      {
+        "path": "/World/Workpiece_10",
+        "position": [
+          -0.06,
+          0.4,
+          0.83
+        ],
+        "scale": [
+          0.05,
+          0.05,
+          0.0499
+        ],
+        "label": "spc_workpiece",
+        "mass": 0.25,
+        "material": "rubber",
+        "phase": "baseline"
+      },
+      {
+        "path": "/World/Workpiece_11",
+        "position": [
+          0.1,
+          0.4,
+          0.83
+        ],
+        "scale": [
+          0.05,
+          0.05,
+          0.05
+        ],
+        "label": "spc_workpiece",
+        "mass": 0.25,
+        "material": "rubber",
+        "phase": "monitored"
+      },
+      {
+        "path": "/World/Workpiece_12",
+        "position": [
+          0.26,
+          0.4,
+          0.83
+        ],
+        "scale": [
+          0.05,
+          0.05,
+          0.0501
+        ],
+        "label": "spc_workpiece",
+        "mass": 0.25,
+        "material": "rubber",
+        "phase": "monitored"
+      },
+      {
+        "path": "/World/Workpiece_13",
+        "position": [
+          0.42,
+          0.4,
+          0.83
+        ],
+        "scale": [
+          0.05,
+          0.05,
+          0.0499
+        ],
+        "label": "spc_workpiece",
+        "mass": 0.25,
+        "material": "rubber",
+        "phase": "monitored"
+      },
+      {
+        "path": "/World/Workpiece_14",
+        "position": [
+          0.58,
+          0.4,
+          0.83
+        ],
+        "scale": [
+          0.05,
+          0.05,
+          0.0501
+        ],
+        "label": "spc_workpiece",
+        "mass": 0.25,
+        "material": "rubber",
+        "phase": "monitored"
+      },
+      {
+        "path": "/World/Workpiece_15",
+        "position": [
+          0.74,
+          0.4,
+          0.834
+        ],
+        "scale": [
+          0.05,
+          0.05,
+          0.0508
+        ],
+        "label": "spc_workpiece",
+        "mass": 0.25,
+        "material": "rubber",
+        "phase": "monitored",
+        "drift": "deliberate_8_sigma"
+      },
+      {
+        "path": "/World/Workpiece_16",
+        "position": [
+          0.9,
+          0.4,
+          0.83
+        ],
+        "scale": [
+          0.05,
+          0.05,
+          0.05
+        ],
+        "label": "spc_workpiece",
+        "mass": 0.25,
+        "material": "rubber",
+        "phase": "monitored"
+      },
+      {
+        "path": "/World/Workpiece_17",
+        "position": [
+          1.06,
+          0.4,
+          0.83
+        ],
+        "scale": [
+          0.05,
+          0.05,
+          0.0499
+        ],
+        "label": "spc_workpiece",
+        "mass": 0.25,
+        "material": "rubber",
+        "phase": "monitored"
+      },
+      {
+        "path": "/World/Workpiece_18",
+        "position": [
+          1.22,
+          0.4,
+          0.83
+        ],
+        "scale": [
+          0.05,
+          0.05,
+          0.0501
+        ],
+        "label": "spc_workpiece",
+        "mass": 0.25,
+        "material": "rubber",
+        "phase": "monitored"
+      },
+      {
+        "path": "/World/Workpiece_19",
+        "position": [
+          1.38,
+          0.4,
+          0.83
+        ],
+        "scale": [
+          0.05,
+          0.05,
+          0.05
+        ],
+        "label": "spc_workpiece",
+        "mass": 0.25,
+        "material": "rubber",
+        "phase": "monitored"
+      },
+      {
+        "path": "/World/Workpiece_20",
+        "position": [
+          1.54,
+          0.4,
+          0.83
+        ],
+        "scale": [
+          0.05,
+          0.05,
+          0.0499
+        ],
+        "label": "spc_workpiece",
+        "mass": 0.25,
+        "material": "rubber",
+        "phase": "monitored"
+      }
     ],
     "operator_role": {
       "yrkesroll": "spc_engineer",
@@ -216,5 +722,16 @@
     "failed": {}
   },
   "extension_notes": null,
-  "verification": {"function_gate": {"status": "unmeasured", "legacy_claim": null, "claim_evidence": "hema pending; smoke-test pending", "n": 0, "m": 0, "wilson_lower": 0.0, "last_run_sha": null, "last_run_at": null}}
+  "verification": {
+    "function_gate": {
+      "status": "unmeasured",
+      "legacy_claim": null,
+      "claim_evidence": "hema pending; smoke-test pending",
+      "n": 0,
+      "m": 0,
+      "wilson_lower": 0.0,
+      "last_run_sha": null,
+      "last_run_at": null
+    }
+  }
 }

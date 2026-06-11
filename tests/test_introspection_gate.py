@@ -138,3 +138,16 @@ def test_attr_equals_with_and_without_tol():
     missing = evaluate_checks([{"kind": "attr_equals", "prim": "/World/X",
                                 "attr": "nope", "expect": 1}], b)
     assert missing["status"] == "FAIL" and missing["checks"][0]["got"] is None
+
+
+def test_output_max():
+    b = {"executed": [{"tool": "check_collision_mesh", "args": {},
+                       "output": "{}",
+                       "result_meta": {"n_error_issues": 0}}]}
+    ok = evaluate_checks([{"kind": "output_max", "tool": "check_collision_mesh",
+                           "field": "n_error_issues", "max": 0}], b)
+    assert ok["success"]
+    b["executed"][0]["result_meta"]["n_error_issues"] = 2
+    bad = evaluate_checks([{"kind": "output_max", "tool": "check_collision_mesh",
+                            "field": "n_error_issues", "max": 0}], b)
+    assert bad["status"] == "FAIL" and bad["checks"][0]["got"] == 2

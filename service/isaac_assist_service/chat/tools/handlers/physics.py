@@ -1232,6 +1232,9 @@ else:
         if not rec_parts:
             rec_parts.append("Mesh looks healthy — no action needed.")
         result["recommendation"] = " ".join(rec_parts)
+        # flat count for the introspection gate's output_max (a list of
+        # severity dicts is not reachable by numeric checks)
+        result["n_error_issues"] = sum(1 for i in result["issues"] if i["severity"] == "error")
 
         print(json.dumps(result))
 """
