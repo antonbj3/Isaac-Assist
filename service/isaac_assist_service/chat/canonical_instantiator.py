@@ -926,7 +926,11 @@ async def execute_template_canonical(
     # `NameError: name 'run_usd_script' is not defined` during build-phase
     # exec — caught by repair-wave-2 (2026-05-17).
     tool_names = set(DATA_HANDLERS.keys()) | set(CODE_GEN_HANDLERS.keys()) | {"run_usd_script"}
-    sandbox: Dict[str, Any] = {"__builtins__": dict(_SAFE_BUILTINS)}
+    sandbox: Dict[str, Any] = {"__builtins__": dict(_SAFE_BUILTINS),
+               # stdlib modules templates legitimately use at
+               # capture time (benchmark-shootout trial loop
+               # died on time.perf_counter, 2026-06-11)
+               "time": __import__("time"), "math": __import__("math")}
     for name in tool_names:
         sandbox[name] = _make_capturer(name)
 

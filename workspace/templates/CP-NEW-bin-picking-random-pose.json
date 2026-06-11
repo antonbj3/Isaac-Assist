@@ -296,5 +296,5 @@
     "failed": {}
   },
   "verified_status": "drafted-2026-05-16; rebuilt-2026-05-28 (fixed broken Jinja `{{this.spawn_offset}}[N]` syntax that rendered to invalid Python `0+[a,b,c][0]`; workpieces.position now precomputed absolute world coords; overlap_sphere centre + drop_targets now use {{source_bin.position[N]}} / {{destination_bin.position[N]}} indexed substitution); form-gate-schema \u2713; function-gate \u23f3",
-  "verification": {"function_gate": {"status": "pass", "n": 2, "m": 2, "wilson_lower": 0.3424, "last_run_sha": "7107653e", "last_run_at": "2026-06-11T11:46:03+00:00", "legacy_claim": null}, "faithfulness": {"status": "pass", "n": 1, "m": 1, "wilson_lower": 0.2065, "last_run_sha": "30ef1415", "last_run_at": "2026-06-11T09:30:20+00:00"}}
+  "verification": {"function_gate": {"status": "pass", "n": 3, "m": 3, "wilson_lower": 0.4385, "last_run_sha": "26a0abd1", "last_run_at": "2026-06-11T13:35:50+00:00", "legacy_claim": null}, "faithfulness": {"status": "mixed", "n": 1, "m": 2, "wilson_lower": 0.0945, "last_run_sha": "26a0abd1", "last_run_at": "2026-06-11T13:37:48+00:00"}}
 }

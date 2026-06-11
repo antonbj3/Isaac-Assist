@@ -308,5 +308,5 @@
       "rationale": "R6 showed bricks landed 8-15cm beyond baseplate edge \u2014 bigger target absorbs cuRobo xy-drift"
     }
   ],
-  "verification": {"function_gate": {"status": "pass", "n": 1, "m": 1, "wilson_lower": 0.2065, "last_run_sha": "c46f15eb", "last_run_at": "2026-06-11T10:44:31+00:00", "legacy_claim": null}, "faithfulness": {"status": "fail", "n": 0, "m": 1, "wilson_lower": 0.0, "last_run_sha": "c46f15eb", "last_run_at": "2026-06-11T10:46:45+00:00"}}
+  "verification": {"function_gate": {"status": "pass", "n": 2, "m": 2, "wilson_lower": 0.3424, "last_run_sha": "91270651", "last_run_at": "2026-06-11T14:30:47+00:00", "legacy_claim": null}, "faithfulness": {"status": "fail", "n": 0, "m": 2, "wilson_lower": 0.0, "last_run_sha": "91270651", "last_run_at": "2026-06-11T14:33:02+00:00"}}
 }

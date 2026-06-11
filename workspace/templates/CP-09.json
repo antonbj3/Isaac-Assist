@@ -305,5 +305,5 @@
       "moveit2"
     ]
   },
-  "verification": {"function_gate": {"status": "pass", "n": 5, "m": 5, "wilson_lower": 0.5655, "last_run_sha": "7107653e", "last_run_at": "2026-06-11T11:46:03+00:00"}, "faithfulness": {"status": "fail", "n": 0, "m": 3, "wilson_lower": 0.0, "last_run_sha": "8108e660", "last_run_at": "2026-06-11T02:57:48+00:00"}}
+  "verification": {"function_gate": {"status": "pass", "n": 6, "m": 6, "wilson_lower": 0.6097, "last_run_sha": "d13431a1", "last_run_at": "2026-06-11T14:49:36+00:00"}, "faithfulness": {"status": "fail", "n": 0, "m": 3, "wilson_lower": 0.0, "last_run_sha": "8108e660", "last_run_at": "2026-06-11T02:57:48+00:00"}}
 }

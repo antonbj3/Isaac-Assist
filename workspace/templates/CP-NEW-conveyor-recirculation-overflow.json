@@ -292,5 +292,5 @@
     "failed": {}
   },
   "verified_status": "drafted-2026-05-16; rebuilt-2026-05-28 (added `workpieces` and `pick_sensor` roles + role_defaults; {{#each workpieces}} loop replaces `for i in range(5)` literal so n_cubes varies 2..8 via role_defaults; primary_robot.class added; pick_sensor parametrised); form-gate-schema ✓ (R-A30-fix); function-gate ⏳",
-  "verification": {"function_gate": {"status": "pass", "n": 1, "m": 1, "wilson_lower": 0.2065, "last_run_sha": "c46f15eb", "last_run_at": "2026-06-11T10:38:40+00:00", "legacy_claim": null}, "faithfulness": {"status": "pass", "n": 1, "m": 1, "wilson_lower": 0.2065, "last_run_sha": "c46f15eb", "last_run_at": "2026-06-11T10:40:31+00:00"}}
+  "verification": {"function_gate": {"status": "pass", "n": 2, "m": 2, "wilson_lower": 0.3424, "last_run_sha": "91270651", "last_run_at": "2026-06-11T14:17:49+00:00", "legacy_claim": null}, "faithfulness": {"status": "pass", "n": 2, "m": 2, "wilson_lower": 0.3424, "last_run_sha": "91270651", "last_run_at": "2026-06-11T14:19:46+00:00"}}
 }

@@ -42,5 +42,5 @@
     "added_date": "2026-05-15"
   },
   "motion_controllers": {"verified": [], "failed": {}, "untested": ["curobo"]},
-  "verification": {"function_gate": {"status": "pass", "n": 3, "m": 3, "wilson_lower": 0.4385, "last_run_sha": "7107653e", "last_run_at": "2026-06-11T11:46:03+00:00", "legacy_claim": "fail"}, "faithfulness": {"status": "pass", "n": 1, "m": 1, "wilson_lower": 0.2065, "last_run_sha": "30ef1415", "last_run_at": "2026-06-11T08:21:50+00:00"}}
+  "verification": {"function_gate": {"status": "pass", "n": 4, "m": 4, "wilson_lower": 0.5101, "last_run_sha": "26a0abd1", "last_run_at": "2026-06-11T14:00:57+00:00", "legacy_claim": "fail"}, "faithfulness": {"status": "pass", "n": 2, "m": 2, "wilson_lower": 0.3424, "last_run_sha": "26a0abd1", "last_run_at": "2026-06-11T14:02:11+00:00"}}
 }

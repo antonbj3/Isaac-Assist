@@ -37,18 +37,59 @@
     "expected_run_id": "non-null string from generate_reward",
     "expected_iter_count": 3,
     "result_file": "/tmp/eureka_loco_result.json",
-    "success_threshold_score": 0.50,
+    "success_threshold_score": 0.5,
     "success_threshold_iter_count": 3
   },
   "verify_args": {
     "stages": []
   },
-  "simulate_args": null,
+  "simulate_args": {
+    "gate_class": "introspection",
+    "checks": [
+      {
+        "kind": "call_count",
+        "tool": "generate_reward",
+        "expect": 1
+      },
+      {
+        "kind": "call_count",
+        "tool": "evaluate_reward",
+        "expect": 3
+      },
+      {
+        "kind": "call_count",
+        "tool": "iterate_reward",
+        "expect": 2
+      },
+      {
+        "kind": "call_arg",
+        "tool": "create_wheeled_robot",
+        "arg": "drive_type",
+        "expect": "differential"
+      },
+      {
+        "kind": "call_arg",
+        "tool": "create_isaaclab_env",
+        "arg": "task_type",
+        "expect": "locomotion"
+      },
+      {
+        "kind": "call_arg",
+        "tool": "review_reward",
+        "arg": "has_fall_termination",
+        "expect": false
+      }
+    ]
+  },
   "diagnose_args": {
     "run_id": "from_generate_reward_return",
     "env_id": "JetbotVelocityTracking-EurekaTarget-v0",
-    "expected_keys": ["score", "fitness", "task_success_rate"],
-    "success_threshold_score": 0.50,
+    "expected_keys": [
+      "score",
+      "fitness",
+      "task_success_rate"
+    ],
+    "success_threshold_score": 0.5,
     "success_threshold_iter_count": 3,
     "result_file": "/tmp/eureka_loco_result.json"
   },
@@ -87,21 +128,31 @@
   "motion_controllers": {
     "verified": [],
     "failed": {},
-    "untested": ["direct_joint"]
+    "untested": [
+      "direct_joint"
+    ]
   },
   "roles": {
     "primary_robot": {
-      "constraints": ["jetbot", "carter", "wheeled_differential"],
+      "constraints": [
+        "jetbot",
+        "carter",
+        "wheeled_differential"
+      ],
       "expected_count": 1,
       "required": true
     },
     "training_environment": {
-      "constraints": ["JetbotVelocityTracking-EurekaTarget-v0"],
+      "constraints": [
+        "JetbotVelocityTracking-EurekaTarget-v0"
+      ],
       "expected_count": 1,
       "required": true
     },
     "success_metric": {
-      "constraints": ["evaluate_reward_score_gte_0.50_and_iter_count_gte_3"],
+      "constraints": [
+        "evaluate_reward_score_gte_0.50_and_iter_count_gte_3"
+      ],
       "expected_count": 1,
       "required": true
     }
@@ -110,20 +161,34 @@
     "primary_robot": {
       "path": "/World/Jetbot",
       "class": "jetbot_primitive",
-      "position": [0, 0, 0.05],
+      "position": [
+        0,
+        0,
+        0.05
+      ],
       "drive_type": "differential",
       "wheel_radius": 0.04,
-      "wheel_base": 0.20
+      "wheel_base": 0.2
     },
     "training_environment": {
       "env_name": "JetbotVelocityTracking-EurekaTarget-v0",
       "task_type": "locomotion",
       "n_envs": 1,
-      "obs_keys": ["base_lin_vel", "base_ang_vel", "projected_gravity", "velocity_command", "joint_vel"],
-      "reward_terms": ["track_lin_vel", "track_ang_vel", "action_smoothness"]
+      "obs_keys": [
+        "base_lin_vel",
+        "base_ang_vel",
+        "projected_gravity",
+        "velocity_command",
+        "joint_vel"
+      ],
+      "reward_terms": [
+        "track_lin_vel",
+        "track_ang_vel",
+        "action_smoothness"
+      ]
     },
     "success_metric": {
-      "threshold_score": 0.50,
+      "threshold_score": 0.5,
       "threshold_iter_count": 3,
       "metric_key_score": "best_score",
       "metric_key_iter": "iter_count",
@@ -131,5 +196,17 @@
     }
   },
   "code_template": "\n# ── Scene skeleton (locomotion: ground + chassis, no table/bin) ───────────────\ncreate_prim(prim_path=\"/World/DomeLight\", prim_type=\"DomeLight\")\nset_attribute(prim_path=\"/World/DomeLight\", attr_name=\"inputs:intensity\", value=1000.0)\ncreate_prim(prim_path=\"/World/Ground\", prim_type=\"Cube\", position=[0, 0, -0.5], scale=[20, 20, 1])\napply_api_schema(prim_path=\"/World/Ground\", schema_name=\"PhysicsCollisionAPI\")\n\n# Physics: GPU dynamics for Eureka subprocess rollouts\nset_physics_scene_config(config={\"enable_gpu_dynamics\": True, \"broadphase_type\": \"GPU\"})\n\n# ── Jetbot-primitive wheeled chassis (no Nucleus assets) ──────────────────────────\ncreate_prim(prim_path=\"/World/Jetbot\", prim_type=\"Xform\", position={{primary_robot.position}})\ncreate_prim(prim_path=\"/World/Jetbot/Chassis\", prim_type=\"Cube\", position={{primary_robot.position}}, scale=[0.12, 0.08, 0.04])\nfor api in (\"PhysicsRigidBodyAPI\", \"PhysicsCollisionAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n    apply_api_schema(prim_path=\"/World/Jetbot/Chassis\", schema_name=api)\nset_attribute(prim_path=\"/World/Jetbot/Chassis\", attr_name=\"physics:mass\", value=0.6)\n\n# Two wheels (cylinders) flanking the chassis\nfor side, y in ((\"WheelL\", 0.10), (\"WheelR\", -0.10)):\n    wheel_path = f\"/World/Jetbot/{side}\"\n    create_prim(prim_path=wheel_path, prim_type=\"Cylinder\", position=[0.0, y, 0.05], scale=[0.04, 0.04, 0.02])\n    for api in (\"PhysicsRigidBodyAPI\", \"PhysicsCollisionAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n        apply_api_schema(prim_path=wheel_path, schema_name=api)\n    set_attribute(prim_path=wheel_path, attr_name=\"physics:mass\", value=0.05)\n\n# Differential-drive controller binding\ncreate_wheeled_robot(\n    robot_path=\"/World/Jetbot\",\n    drive_type=\"differential\",\n    wheel_radius=0.04,\n    wheel_base=0.20,\n    wheel_dof_names=[\"WheelL\", \"WheelR\"],\n    max_linear_speed=1.0,\n    max_angular_speed=3.14,\n)\n\n# ── IsaacLab gym environment for Eureka rollouts ──────────────────────────────\ncreate_isaaclab_env(\n    task_name=\"JetbotVelocityTracking-EurekaTarget-v0\",\n    robot_path=\"/World/Jetbot\",\n    task_type=\"locomotion\",\n    num_envs=1,\n    reward_terms=[\"track_lin_vel\", \"track_ang_vel\", \"action_smoothness\"],\n)\n\n# ── Minimal DirectRLEnv stub for generate_reward to introspect ──────────────────────\nENV_SOURCE_PATH = \"/tmp/jetbot_locomotion_env.py\"\npass  # removed sandbox-illegal call\npass  # removed sandbox-illegal `with open(...)` block\n\n# ── Step 1: generate_reward (Eureka seeds candidate-0) ──────────────────────────\ntask_description = (\n    \"Jetbot differential-drive forward-velocity tracking: drive a two-wheel mobile platform \"\n    \"at a commanded linear velocity (range 0.3-0.8 m/s along +X). Reward should track the \"\n    \"velocity command precisely, penalise lateral drift, penalise large yaw rate when no \"\n    \"angular command is given, and penalise wheel-velocity jitter for smooth motion. \"\n    \"No fall termination (wheeled chassis cannot tip over in differential mode).\"\n)\ngen0_result = generate_reward(\n    task_description=task_description,\n    env_source_path=ENV_SOURCE_PATH,\n    num_candidates=3,\n    num_iterations=3,\n)\ngen0_code = gen0_result.get(\"reward_code\", \"\") if isinstance(gen0_result, dict) else str(gen0_result)\nrun_id = gen0_result.get(\"run_id\", \"\") if isinstance(gen0_result, dict) else \"\"\n\n# ── Step 2: Score each Eureka candidate via short evaluate_reward subprocess ─────────────\nENV_ID = \"JetbotVelocityTracking-EurekaTarget-v0\"\ncandidate_scores = []\ncurrent_code = gen0_code\n\nfor iteration in range(3):\n    eval_result = evaluate_reward(\n        reward_code=current_code,\n        env_id=ENV_ID,\n        num_steps=500,\n    )\n    score = eval_result.get(\"score\", 0.0) if isinstance(eval_result, dict) else 0.0\n    candidate_scores.append({\"iteration\": iteration, \"score\": score, \"code\": current_code})\n\n    # Step 3: iterate_reward (threaded run_id so eureka_status iter_count increments)\n    if iteration < 2:  # don't iterate after the final eval\n        iter_metrics = {\n            \"fitness\": score,\n            \"components\": {},\n            \"task_success_rate\": score,\n        }\n        iter_result = iterate_reward(\n            prev_reward_code=current_code,\n            metrics=iter_metrics,\n            user_feedback=\"Increase reward density on velocity-tracking error; penalise yaw drift more aggressively.\",\n            run_id=run_id,\n        )\n        current_code = iter_result.get(\"reward_code\", current_code) if isinstance(iter_result, dict) else current_code\n\n# ── Step 4: Pick the highest-scoring candidate ─────────────────────────────────\nbest = max(candidate_scores, key=lambda c: c[\"score\"]) if candidate_scores else {\"score\": 0.0, \"code\": \"\", \"iteration\": -1}\nbest_score = best[\"score\"]\nbest_code = best[\"code\"]\n\n# ── Step 5: Static review of the winning reward function ───────────────────────────\nreview_reward(\n    reward_code=best_code,\n    has_fall_termination=False,\n    max_possible_reward=1.0,\n)\n\n# ── Step 6: Query Eureka run state ───────────────────────────────────────────\nstatus = eureka_status(run_id=run_id) if run_id else {}\niter_count = status.get(\"iter_count\", status.get(\"current_iteration\", 0)) if isinstance(status, dict) else 0\nhistory = eureka_history(run_id=run_id) if run_id else {}\n\n# ── Step 7: Optional checkpoint (no launch_training subprocess running → may no-op) ───────────\ntry:\n    checkpoint_training(run_id=run_id, tag=\"eureka_loco_final\")\nexcept Exception as e:\n    # No active training subprocess for Eureka-only reward search; expected.\n    print(f\"[INFO] checkpoint_training skipped (no active launch_training subprocess): {e!r}\")\n\n# ── Step 8: Persist results to disk ──────────────────────────────────────────\nresult_payload = {\n    \"env_id\": ENV_ID,\n    \"run_id\": run_id,\n    \"iter_count\": iter_count,\n    \"best_score\": best_score,\n    \"best_iteration\": best.get(\"iteration\"),\n    \"candidate_scores\": [{\"iteration\": c[\"iteration\"], \"score\": c[\"score\"]} for c in candidate_scores],\n    \"history\": history if isinstance(history, (dict, list)) else None,\n    \"success_iter_count_gte_3\": iter_count >= 3,\n    \"success_score_gte_0_50\": best_score >= 0.50,\n}\npass  # removed sandbox-illegal `with open(...)` block\n\n# ── Step 9: Validation gates ────────────────────────────────────────────────\nif iter_count < 3:\n    print(f\"[WARN] Eureka iter_count={iter_count} < 3 (backlog requires iter_count >= 3). Pipeline ran but iteration did not register in eureka_status.\")\nif best_score < 0.50:\n    print(f\"[WARN] Best Eureka reward score {best_score:.3f} < 0.50 threshold. Pipeline ran correctly but reward did not converge to pass bar.\")\nelse:\n    print(f\"[OK] Eureka locomotion reward PASSED: best_score={best_score:.3f}, iter_count={iter_count}. Result: /tmp/eureka_loco_result.json\")\n\n",
-  "verification": {"function_gate": {"status": "unmeasured", "legacy_claim": null, "claim_evidence": "nt); function-gate \u23f3 (Eureka backend + IsaacLab locomotion s", "n": 0, "m": 0, "wilson_lower": 0.0, "last_run_sha": null, "last_run_at": null}}
+  "verification": {
+    "function_gate": {
+      "status": "unmeasured",
+      "legacy_claim": null,
+      "claim_evidence": "nt); function-gate ⏳ (Eureka backend + IsaacLab locomotion s",
+      "n": 0,
+      "m": 0,
+      "wilson_lower": 0.0,
+      "last_run_sha": null,
+      "last_run_at": null
+    }
+  },
+  "verification": {"function_gate": {"status": "pass", "n": 1, "m": 1, "wilson_lower": 0.2065, "last_run_sha": "d13431a1", "last_run_at": "2026-06-11T15:19:39+00:00", "legacy_claim": null}}
 }

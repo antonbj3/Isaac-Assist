@@ -138,5 +138,6 @@
       "last_run_sha": null,
       "last_run_at": null
     }
-  }
+  },
+  "verification": {"function_gate": {"status": "pass", "n": 1, "m": 1, "wilson_lower": 0.2065, "last_run_sha": "d13431a1", "last_run_at": "2026-06-11T15:19:39+00:00", "legacy_claim": null}}
 }

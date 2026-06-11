@@ -165,5 +165,5 @@
       "curobo"
     ]
   },
-  "verification": {"function_gate": {"status": "pass", "n": 1, "m": 1, "wilson_lower": 0.2065, "last_run_sha": "bb4b65c4", "last_run_at": "2026-06-11T06:41:13+00:00", "legacy_claim": null}, "faithfulness": {"status": "fail", "n": 0, "m": 1, "wilson_lower": 0.0, "last_run_sha": "bb4b65c4", "last_run_at": "2026-06-11T06:43:11+00:00"}}
+  "verification": {"function_gate": {"status": "pass", "n": 2, "m": 2, "wilson_lower": 0.3424, "last_run_sha": "d13431a1", "last_run_at": "2026-06-11T14:49:36+00:00", "legacy_claim": null}, "faithfulness": {"status": "fail", "n": 0, "m": 1, "wilson_lower": 0.0, "last_run_sha": "bb4b65c4", "last_run_at": "2026-06-11T06:43:11+00:00"}}
 }

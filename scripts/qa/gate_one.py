@@ -98,6 +98,34 @@ async def gate(tpl_name):
         from service.isaac_assist_service.qa.introspection_gate import (
             checks_from_expected_args, evaluate_checks)
         checks = sa.get("checks") or checks_from_expected_args(va)
+        # stimulus sequence (e-stop class): fire declared tool calls, then
+        # prefetch every attr_equals target into build["attrs"]
+        for step in sa.get("stimulus") or []:
+            try:
+                await asyncio.wait_for(
+                    execute_tool_call(step["tool"], step.get("args") or {}),
+                    timeout=120)
+            except Exception as _se:
+                print(f"STIMULUS_FAIL {step.get('tool')}: {_se}")
+        _attr_targets = [(c["prim"], c["attr"]) for c in checks
+                         if c.get("kind") == "attr_equals"]
+        if _attr_targets:
+            _code = ("import omni.usd, json\n"
+                     "st = omni.usd.get_context().get_stage()\n"
+                     "out = {}\n")
+            for _prim, _attr in _attr_targets:
+                _code += (f"a = st.GetPrimAtPath('{_prim}')"
+                          f".GetAttribute('{_attr}')\n"
+                          f"out['{_prim}.{_attr}'] = "
+                          "(list(a.Get()) if hasattr(a.Get(), '__len__')"
+                          " and not isinstance(a.Get(), str) else a.Get())"
+                          " if a and a.IsValid() else None\n")
+            _code += "print('ATTRS=' + json.dumps(out, default=str))\n"
+            _res = await kit_tools.exec_sync(_code, timeout=60)
+            _m = _re_gate.search(r"ATTRS=(\{.*\})",
+                                 (_res.get("output") or ""))
+            if _m:
+                b["attrs"] = json.loads(_m.group(1))
         verdict = evaluate_checks(checks, b)
         print(f"{tpl_name}: GATE success={verdict['success']} "
               f"class=introspection status={verdict['status']} "

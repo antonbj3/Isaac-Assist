@@ -185,5 +185,5 @@
       "date": "2026-05-19"
     }
   ],
-  "verification": {"function_gate": {"status": "pass", "n": 1, "m": 1, "wilson_lower": 0.2065, "last_run_sha": "c46f15eb", "last_run_at": "2026-06-11T11:55:32+00:00", "legacy_claim": null}, "faithfulness": {"status": "pass", "n": 1, "m": 1, "wilson_lower": 0.2065, "last_run_sha": "c46f15eb", "last_run_at": "2026-06-11T11:55:58+00:00"}}
+  "verification": {"function_gate": {"status": "pass", "n": 2, "m": 2, "wilson_lower": 0.3424, "last_run_sha": "26a0abd1", "last_run_at": "2026-06-11T13:51:15+00:00", "legacy_claim": null}, "faithfulness": {"status": "pass", "n": 2, "m": 2, "wilson_lower": 0.3424, "last_run_sha": "26a0abd1", "last_run_at": "2026-06-11T13:51:41+00:00"}}
 }
