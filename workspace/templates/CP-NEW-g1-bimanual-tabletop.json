@@ -47,5 +47,5 @@
     "controller_skip_date": "2026-05-28",
     "controller_unblocked_date": "2026-05-28"
   },
-  "verification": {"function_gate": {"status": "fail", "n": 0, "m": 1, "wilson_lower": 0.0, "last_run_sha": "0ad6aa14", "last_run_at": "2026-06-11T13:04:41+00:00", "legacy_claim": null}, "faithfulness": {"status": "fail", "n": 0, "m": 1, "wilson_lower": 0.0, "last_run_sha": "0ad6aa14", "last_run_at": "2026-06-11T13:05:34+00:00"}}
+  "verification": {"function_gate": {"status": "fail", "n": 0, "m": 2, "wilson_lower": 0.0, "last_run_sha": "ffaac959", "last_run_at": "2026-06-11T21:59:05+00:00", "legacy_claim": null}, "faithfulness": {"status": "fail", "n": 0, "m": 1, "wilson_lower": 0.0, "last_run_sha": "0ad6aa14", "last_run_at": "2026-06-11T13:05:34+00:00"}}
 }

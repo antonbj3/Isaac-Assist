@@ -284,5 +284,5 @@
     "target_path": "{{primary_destination.path}}",
     "duration_s": 180
   },
-  "verification": {"function_gate": {"status": "pass", "n": 2, "m": 2, "wilson_lower": 0.3424, "last_run_sha": "0ad6aa14", "last_run_at": "2026-06-11T12:34:20+00:00", "legacy_claim": "pass"}, "faithfulness": {"status": "pass", "n": 1, "m": 1, "wilson_lower": 0.2065, "last_run_sha": "e7a03f57", "last_run_at": "2026-06-11T05:40:18+00:00"}}
+  "verification": {"function_gate": {"status": "pass", "n": 4, "m": 4, "wilson_lower": 0.5101, "last_run_sha": "ffaac959", "last_run_at": "2026-06-11T22:58:31+00:00", "legacy_claim": "pass"}, "faithfulness": {"status": "pass", "n": 2, "m": 2, "wilson_lower": 0.3424, "last_run_sha": "ffaac959", "last_run_at": "2026-06-11T22:55:22+00:00"}}
 }

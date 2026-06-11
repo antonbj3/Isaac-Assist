@@ -281,5 +281,5 @@
       "{{workpieces[3].path}}"
     ]
   },
-  "verification": {"function_gate": {"status": "fail", "n": 0, "m": 1, "wilson_lower": 0.0, "last_run_sha": "bb4b65c4", "last_run_at": "2026-06-11T06:20:12+00:00", "legacy_claim": "pass"}, "faithfulness": {"status": "fail", "n": 0, "m": 1, "wilson_lower": 0.0, "last_run_sha": "bb4b65c4", "last_run_at": "2026-06-11T06:21:49+00:00"}}
+  "verification": {"function_gate": {"status": "fail", "n": 0, "m": 2, "wilson_lower": 0.0, "last_run_sha": "ffaac959", "last_run_at": "2026-06-11T20:45:56+00:00", "legacy_claim": "pass"}, "faithfulness": {"status": "fail", "n": 0, "m": 2, "wilson_lower": 0.0, "last_run_sha": "ffaac959", "last_run_at": "2026-06-11T20:47:22+00:00"}}
 }

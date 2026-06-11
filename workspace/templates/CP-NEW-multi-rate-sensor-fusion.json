@@ -120,5 +120,5 @@
     "failed": {}
   },
   "verified_status": "drafted-2026-05-16; form-gate pending; function-gate pending (requires live Kit + ROS2 domain)",
-  "verification": {"function_gate": {"status": "fail", "n": 0, "m": 2, "wilson_lower": 0.0, "last_run_sha": "1d670f35", "last_run_at": "2026-06-11T15:48:18+00:00", "legacy_claim": null}}
+  "verification": {"function_gate": {"status": "fail", "n": 0, "m": 3, "wilson_lower": 0.0, "last_run_sha": "ffaac959", "last_run_at": "2026-06-11T20:34:19+00:00", "legacy_claim": null}}
 }

@@ -332,5 +332,5 @@
     "failed": {}
   },
   "verified_status": "drafted-2026-05-16; rebuilt-2026-05-28 ({{#each source_bins}} and {{#each workpieces}} loops replace 5\u00d7 unrolled bin/part spawns; drop_targets dict built per-workpiece; planning_obstacles uses bin_paths list rather than 5 indexed paths); form-gate \u23f3; function-gate \u23f3",
-  "verification": {"function_gate": {"status": "pass", "n": 2, "m": 2, "wilson_lower": 0.3424, "last_run_sha": "26a0abd1", "last_run_at": "2026-06-11T13:48:45+00:00", "legacy_claim": null}, "faithfulness": {"status": "pass", "n": 2, "m": 2, "wilson_lower": 0.3424, "last_run_sha": "26a0abd1", "last_run_at": "2026-06-11T13:50:19+00:00"}}
+  "verification": {"function_gate": {"status": "pass", "n": 3, "m": 3, "wilson_lower": 0.4385, "last_run_sha": "bdc3f698", "last_run_at": "2026-06-11T16:57:01+00:00", "legacy_claim": null}, "faithfulness": {"status": "pass", "n": 3, "m": 3, "wilson_lower": 0.4385, "last_run_sha": "bdc3f698", "last_run_at": "2026-06-11T16:58:38+00:00"}}
 }
