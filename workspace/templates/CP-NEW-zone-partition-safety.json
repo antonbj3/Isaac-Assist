@@ -143,5 +143,5 @@
     "failed": {}
   },
   "verified_status": "drafted-2026-05-16; form-gate-schema \u2713 (R-A30-fix); function-gate \u23f3",
-  "verification": {"function_gate": {"status": "unmeasured", "legacy_claim": null, "claim_evidence": "ix); function-gate \u23f3", "n": 0, "m": 0, "wilson_lower": 0.0, "last_run_sha": null, "last_run_at": null, "claim_downgraded": "2026-06-10 prune-audit: velocity-cap-on-entry asserted via config flags; check_robot_velocity_zero_after_entry never run live"}}
+  "verification": {"function_gate": {"status": "fail", "n": 0, "m": 1, "wilson_lower": 0.0, "last_run_sha": "1d670f35", "last_run_at": "2026-06-11T15:40:55+00:00", "legacy_claim": null}, "faithfulness": {"status": "fail", "n": 0, "m": 1, "wilson_lower": 0.0, "last_run_sha": "1d670f35", "last_run_at": "2026-06-11T15:40:59+00:00"}}
 }

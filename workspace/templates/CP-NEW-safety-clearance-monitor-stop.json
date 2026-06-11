@@ -139,5 +139,5 @@
     "failed": {}
   },
   "verified_status": "drafted-2026-05-16; first safety-clearance-monitor canonical (ISO-15066 SSM); pause-on-breach explicitly wired via run_usd_script (subscribe_contact_report_events → omni.timeline.pause); form-gate ✓; function-gate ⏳ (requires Kit RPC to confirm pause callback fires within 1 sim-second of envelope breach)",
-  "verification": {"function_gate": {"status": "unmeasured", "legacy_claim": null, "claim_evidence": "e \u2713; function-gate \u23f3 (requires Kit RPC to confirm pause call", "n": 0, "m": 0, "wilson_lower": 0.0, "last_run_sha": null, "last_run_at": null, "claim_downgraded": "2026-06-10 prune-audit: load-bearing signal (pause-on-breach <1s) never confirmed live; safety stop asserted, not measured"}}
+  "verification": {"function_gate": {"status": "fail", "n": 0, "m": 1, "wilson_lower": 0.0, "last_run_sha": "1d670f35", "last_run_at": "2026-06-11T15:40:39+00:00", "legacy_claim": null}, "faithfulness": {"status": "fail", "n": 0, "m": 1, "wilson_lower": 0.0, "last_run_sha": "1d670f35", "last_run_at": "2026-06-11T15:40:43+00:00"}}
 }
