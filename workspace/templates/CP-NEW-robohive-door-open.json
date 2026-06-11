@@ -63,7 +63,12 @@
     "articulation_root": "/World/Wall",
     "joint_target_deg": 70.0,
     "joint_success_deg": 60.0,
-    "joint_tolerance_deg": 10.0
+    "joint_tolerance_deg": 10.0,
+    "gate_class": "articulation",
+    "body_path": "/World/Wall",
+    "target_angle_deg": 70.0,
+    "min_delta_deg": 60.0,
+    "angle_tolerance_deg": 10.0
   },
   "diagnose_args": {
     "robot_path": "/World/Franka",
@@ -71,31 +76,66 @@
       "/World/Table",
       "/World/Wall"
     ],
-    "robot_base": [-0.45, 0.0, 0.75],
+    "robot_base": [
+      -0.45,
+      0.0,
+      0.75
+    ],
     "hinge_joint_path": "/World/HingeJoint",
     "articulation_root": "/World/Wall",
     "door_path": "/World/Door",
     "handle_path": "/World/Door/Handle",
-    "hinge_axis": [0, 0, 1],
-    "hinge_world_xy": [0.0, 0.30, 0.85],
-    "handle_closed_world": [-0.10, 0.03, 0.85],
+    "hinge_axis": [
+      0,
+      0,
+      1
+    ],
+    "hinge_world_xy": [
+      0.0,
+      0.3,
+      0.85
+    ],
+    "handle_closed_world": [
+      -0.1,
+      0.03,
+      0.85
+    ],
     "arc_radius_m": 0.283,
-    "swing_arc_waypoint_angles_deg": [35.0, 70.0]
+    "swing_arc_waypoint_angles_deg": [
+      35.0,
+      70.0
+    ]
   },
   "verified_status": "drafted-2026-05-16-A100; form-gate-schema ⏳ (lint pending); function-gate ⏳ (requires Franka import from Isaac Sim 5.1 library — no Nucleus dep, no IsaacLab dep; primitive-built door + hinge revolute is novel articulated-pull pattern not yet function-gate-verified)",
   "settle_state": {
     "wall": {
       "/World/Wall": {
-        "position": [0.0, 0.0, 0.85],
-        "scale": [0.025, 0.40, 0.40],
+        "position": [
+          0.0,
+          0.0,
+          0.85
+        ],
+        "scale": [
+          0.025,
+          0.4,
+          0.4
+        ],
         "articulation_root": true,
         "fixed_base": true
       }
     },
     "door_initial": {
       "/World/Door": {
-        "position": [-0.025, 0.15, 0.85],
-        "scale": [0.02, 0.15, 0.40],
+        "position": [
+          -0.025,
+          0.15,
+          0.85
+        ],
+        "scale": [
+          0.02,
+          0.15,
+          0.4
+        ],
         "mass_kg": 4.0,
         "hinge_angle_deg": 0.0,
         "hinge_joint_path": "/World/HingeJoint"
@@ -110,8 +150,16 @@
     },
     "handle": {
       "/World/Door/Handle": {
-        "position_closed_world": [-0.10, 0.03, 0.85],
-        "scale": [0.02, 0.02, 0.05],
+        "position_closed_world": [
+          -0.1,
+          0.03,
+          0.85
+        ],
+        "scale": [
+          0.02,
+          0.02,
+          0.05
+        ],
         "rigidly_attached_to_door": true
       }
     },
@@ -215,32 +263,73 @@
     "primary_robot": {
       "path": "/World/Franka",
       "class": "franka_panda",
-      "position": [-0.45, 0.0, 0.75],
-      "orientation": [1.0, 0.0, 0.0, 0.0]
+      "position": [
+        -0.45,
+        0.0,
+        0.75
+      ],
+      "orientation": [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ]
     },
     "wall": {
       "path": "/World/Wall",
-      "position": [0.0, 0.0, 0.85],
-      "scale": [0.025, 0.40, 0.40],
+      "position": [
+        0.0,
+        0.0,
+        0.85
+      ],
+      "scale": [
+        0.025,
+        0.4,
+        0.4
+      ],
       "fixed_base": true
     },
     "door": {
       "path": "/World/Door",
-      "closed_position": [-0.025, 0.15, 0.85],
-      "scale": [0.02, 0.15, 0.40],
+      "closed_position": [
+        -0.025,
+        0.15,
+        0.85
+      ],
+      "scale": [
+        0.02,
+        0.15,
+        0.4
+      ],
       "mass_kg": 4.0,
       "material": "rubber"
     },
     "handle": {
       "path": "/World/Door/Handle",
-      "closed_position": [-0.10, 0.03, 0.85],
-      "scale": [0.02, 0.02, 0.05]
+      "closed_position": [
+        -0.1,
+        0.03,
+        0.85
+      ],
+      "scale": [
+        0.02,
+        0.02,
+        0.05
+      ]
     },
     "hinge_joint": {
       "path": "/World/HingeJoint",
       "joint_type": "revolute",
-      "axis": [0, 0, 1],
-      "hinge_world_xy": [0.0, 0.30, 0.85],
+      "axis": [
+        0,
+        0,
+        1
+      ],
+      "hinge_world_xy": [
+        0.0,
+        0.3,
+        0.85
+      ],
       "lower_deg": 0.0,
       "upper_deg": 120.0,
       "target_deg": 70.0,
@@ -248,10 +337,21 @@
     },
     "table": {
       "path": "/World/Table",
-      "position": [0, 0, 0.375],
-      "scale": [0.45, 0.40, 0.375]
+      "position": [
+        0,
+        0,
+        0.375
+      ],
+      "scale": [
+        0.45,
+        0.4,
+        0.375
+      ]
     },
-    "arc_waypoint_angles_deg": [35.0, 70.0]
+    "arc_waypoint_angles_deg": [
+      35.0,
+      70.0
+    ]
   },
   "code_template": "\n# Toolified opening [P2-07 v2]\ncreate_scene_baseline(table_size=[0.9, 0.8])\n\nrobot_wizard(\n    robot_name={{primary_robot.class}},\n    dest_path={{primary_robot.path}},\n    position={{primary_robot.position}},\n    orientation={{primary_robot.orientation}},\n)\n\ncreate_prim(prim_path={{wall.path}}, prim_type=\"Cube\", position={{wall.position}}, scale={{wall.scale}})\napply_api_schema(prim_path={{wall.path}}, schema_name=\"PhysicsCollisionAPI\")\napply_api_schema(prim_path={{wall.path}}, schema_name=\"PhysicsArticulationRootAPI\")\nset_attribute(prim_path={{wall.path}}, attr_name=\"physxArticulation:fixedBase\", value=True)\n\ncreate_prim(prim_path={{door.path}}, prim_type=\"Cube\", position={{door.closed_position}}, scale={{door.scale}})\nfor api in (\"PhysicsRigidBodyAPI\", \"PhysicsCollisionAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n    apply_api_schema(prim_path={{door.path}}, schema_name=api)\nset_attribute(prim_path={{door.path}}, attr_name=\"physics:mass\", value={{door.mass_kg}})\nset_attribute(prim_path={{door.path}}, attr_name=\"physxRigidBody:enableCCD\", value=True)\napply_physics_material(prim_path={{door.path}}, material_name={{door.material}})\n\ncreate_prim(prim_path={{handle.path}}, prim_type=\"Cube\", position={{handle.closed_position}}, scale={{handle.scale}})\napply_api_schema(prim_path={{handle.path}}, schema_name=\"PhysicsCollisionAPI\")\n\ncreate_articulated_joint(\n    joint_path={{hinge_joint.path}},\n    joint_type={{hinge_joint.joint_type}},\n    body0_path={{wall.path}},\n    body1_path={{door.path}},\n    axis={{hinge_joint.axis}},\n)\nset_joint_limits(joint_path={{hinge_joint.path}}, lower={{hinge_joint.lower_deg}}, upper={{hinge_joint.upper_deg}})\n\nsim_control(action=\"play\")\n\ndefine_grasp_pose(\n    robot_path={{primary_robot.path}},\n    object_path={{handle.path}},\n    approach_direction=[0, 1, 0],\n    gripper_offset=[0, 0.04, 0],\n)\n\nmove_to_pose(\n    articulation_path={{primary_robot.path}},\n    target_position=[-0.10, -0.02, 0.85],\n    target_orientation=[0.7071, -0.7071, 0.0, 0.0],\n    planner=\"rmpflow\",\n    robot_type=\"franka\",\n)\n\nmove_to_pose(\n    articulation_path={{primary_robot.path}},\n    target_position=[-0.10, 0.02, 0.85],\n    target_orientation=[0.7071, -0.7071, 0.0, 0.0],\n    planner=\"rmpflow\",\n    robot_type=\"franka\",\n)\n\n_hinge_xy = {{hinge_joint.hinge_world_xy}}\n_handle_closed = {{handle.closed_position}}\nfor _angle_deg in {{arc_waypoint_angles_deg}}:\n    _a = ((_angle_deg) * 0.017453292519943295)\n    _hx = 1.0 * (_handle_closed[0] - _hinge_xy[0]) - 0.0 * (_handle_closed[1] - _hinge_xy[1]) + _hinge_xy[0]\n    _hy = 0.0 * (_handle_closed[0] - _hinge_xy[0]) + 1.0 * (_handle_closed[1] - _hinge_xy[1]) + _hinge_xy[1]\n    _half = ((_angle_deg / 2.0) * 0.017453292519943295)\n    _qw = 0.7071 * 1.0\n    _qx = -0.7071 * 1.0\n    _qy = -0.7071 * 0.0\n    _qz = 0.7071 * 0.0\n    move_to_pose(\n        articulation_path={{primary_robot.path}},\n        target_position=[_hx, _hy, 0.85],\n        target_orientation=[_qw, _qx, _qy, _qz],\n        planner=\"rmpflow\",\n        robot_type=\"franka\",\n    )\n\nfinal_joint_positions = get_joint_positions(articulation={{wall.path}})\ndoor_angle_rad = final_joint_positions[0] if isinstance(final_joint_positions, list) and len(final_joint_positions) > 0 else 0.0\ndoor_angle_deg = ((door_angle_rad) * 57.29577951308232)\nfinal_door_pose = get_world_transform(prim_path={{door.path}})\nif door_angle_deg >= {{hinge_joint.success_deg}}:\n    print(f\"[CP-NEW-robohive-door-open] SUCCESS: door angle {door_angle_deg:.1f} deg >= {{hinge_joint.success_deg}} deg\")\n",
   "motion_controllers": {
@@ -263,5 +363,16 @@
     ],
     "failed": {}
   },
-  "verification": {"function_gate": {"status": "unmeasured", "legacy_claim": null, "claim_evidence": "ng); function-gate \u23f3 (requires Franka import from Isaac Sim ", "n": 0, "m": 0, "wilson_lower": 0.0, "last_run_sha": null, "last_run_at": null}}
+  "verification": {
+    "function_gate": {
+      "status": "unmeasured",
+      "legacy_claim": null,
+      "claim_evidence": "ng); function-gate ⏳ (requires Franka import from Isaac Sim ",
+      "n": 0,
+      "m": 0,
+      "wilson_lower": 0.0,
+      "last_run_sha": null,
+      "last_run_at": null
+    }
+  }
 }

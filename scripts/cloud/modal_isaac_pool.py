@@ -113,6 +113,8 @@ image = (
                    f"{REPO}/workspace/templates")
     .add_local_dir(str(REPO_LOCAL / "workspace" / "knowledge"),
                    f"{REPO}/workspace/knowledge")
+    .add_local_dir(str(REPO_LOCAL / "config" / "curobo"),
+                   f"{REPO}/config/curobo")
 )
 
 BOOT_PY = f'''
@@ -134,6 +136,39 @@ app.shutdown()
 '''
 
 _VOLUMES = {"/root/.cache": cache_vol}
+
+
+def _stage_custom_curobo() -> str:
+    """Install repo-versioned custom cuRobo robot configs (ur10_scene.yml)
+    into the container's curobo content, rewriting the local-machine
+    asset_root_path to wherever the motion_generation ext data lives here.
+    Call AFTER Kit boot: the ext is registry-downloaded at runtime, not
+    part of the pip extscache. Returns the resolved path for telemetry."""
+    import glob as _glob
+
+    src_dir = Path(f"{REPO}/config/curobo")
+    dst_dir = Path("/usr/local/lib/python3.11/site-packages/curobo/content/"
+                   "configs/robot")
+    if not src_dir.is_dir() or not dst_dir.is_dir():
+        return "no-src-or-dst"
+    hits: list[str] = []
+    for root in (
+        "/usr/local/lib/python3.11/site-packages/isaacsim/extscache",
+        "/root/.local/share/ov/data/exts/v2",
+        "/root/.local/share/ov/data/exts/v3",
+    ):
+        hits += _glob.glob(f"{root}/isaacsim.robot_motion.motion_generation-*/"
+                           "motion_policy_configs/universal_robots/ur10")
+    for yml in src_dir.glob("*.yml"):
+        text = yml.read_text()
+        if hits:
+            # rewrite EVERY absolute reference to the ext data root
+            # (asset_root_path AND urdf_path — missing urdf_path was the
+            # second CP-70 cloud iteration)
+            text = re.sub(r"/\S*?motion_policy_configs/universal_robots/ur10",
+                          hits[0], text)
+        (dst_dir / yml.name).write_text(text)
+    return hits[0] if hits else "NO-MOTION-GEN-DATA-FOUND"
 
 
 def _boot_kit(timeout_s: int = 600):
@@ -192,6 +227,7 @@ def build_probe(template_id: str) -> dict:
     except Exception as e:  # noqa: BLE001
         res["error"] = "boot: " + str(e)[-4000:]
         return res
+    res["curobo_stage"] = _stage_custom_curobo()
     probe_py = f'''
 import asyncio, json, sys
 sys.path.insert(0, "{REPO}")
@@ -266,7 +302,8 @@ _ITEM_RE = re.compile(r"^\s{2}(\w[\w/]*): bin=.*\|\s*([A-Z_,]+|OK)\s*\|\s*final=
 
 @app.function(image=image, gpu=GPU, cpu=6.0, memory=12288, timeout=2700,
               volumes=_VOLUMES, max_containers=3)
-def run_template(template_id: str, skip_ts: bool = False) -> dict:
+def run_template(template_id: str, skip_ts: bool = False,
+                 env_flags: dict | None = None) -> dict:
     """Fresh-Kit single-template measurement: gate_one + scene_timeseries.
 
     Fresh-Kit-per-template is free here: every call gets a new container,
@@ -290,6 +327,7 @@ def run_template(template_id: str, skip_ts: bool = False) -> dict:
     except Exception as e:  # noqa: BLE001
         res.update(gate=None, error="boot: " + str(e)[-6000:])
         return res
+    res["curobo_stage"] = _stage_custom_curobo()
 
     try:
         kp = subprocess.run(
@@ -303,11 +341,14 @@ def run_template(template_id: str, skip_ts: bool = False) -> dict:
             capture_output=True, text=True, timeout=130)
         res["kit_cuda"] = kp.stdout[-400:]
 
+        genv = {**os.environ, **(env_flags or {})}
         p = subprocess.run([sys_exe(), f"{REPO}/scripts/qa/gate_one.py",
                             template_id], capture_output=True, text=True,
-                           timeout=900)
+                           timeout=900, env=genv)
         out = p.stdout + p.stderr
         res["gate_out_head"] = out[:3000]
+        if env_flags:
+            res["env_flags"] = env_flags
         m = re.search(r"GATE success=(\w+)", out)
         res["gate"] = (m.group(1) == "True") if m else None
         mf = re.search(r"GATE_FULL=(.*)", out)
@@ -392,7 +433,7 @@ def boot():
 
 
 @app.local_entrypoint()
-def main(templates: str = "", skip_ts: bool = False):
+def main(templates: str = "", skip_ts: bool = False, env: str = ""):
     if not templates:
         print(__doc__)
         return
@@ -403,7 +444,10 @@ def main(templates: str = "", skip_ts: bool = False):
     outfile = outdir / f"modal_{stamp}.jsonl"
     n_done = 0
     with open(outfile, "a") as fh:
-        for res in run_template.map(names, kwargs={"skip_ts": skip_ts},
+        flags = dict(kv.split("=", 1) for kv in env.split(",") if "=" in kv)
+        for res in run_template.map(names,
+                                    kwargs={"skip_ts": skip_ts,
+                                            "env_flags": flags or None},
                                     order_outputs=False):
             n_done += 1
             fh.write(json.dumps(res) + "\n")
