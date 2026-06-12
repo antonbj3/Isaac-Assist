@@ -96,8 +96,8 @@
       {
         "tool": "run_usd_script",
         "args": {
-          "description": "probe timeline pause state",
-          "code": "import omni.timeline, omni.usd\nfrom pxr import Sdf\n_tl = omni.timeline.get_timeline_interface()\n_st = omni.usd.get_context().get_stage()\n_p = _st.GetPrimAtPath('/World/HumanProxy')\n_a = _p.CreateAttribute('qa:timeline_playing', Sdf.ValueTypeNames.Bool)\n_a.Set(bool(_tl.is_playing()))\nprint('qa:timeline_playing =', bool(_tl.is_playing()))"
+          "description": "probe the breach latch (direct e-stop evidence) + pause state",
+          "code": "import omni.timeline, omni.usd, builtins\nfrom pxr import Sdf\n_tl = omni.timeline.get_timeline_interface()\n_st = omni.usd.get_context().get_stage()\n_cp = getattr(builtins, '_clearance_pause', None)\n_flag = (_cp or {}).get('flag') or {}\n_p = _st.GetPrimAtPath('/World/HumanProxy')\n_a = _p.CreateAttribute('qa:breach_latched', Sdf.ValueTypeNames.Bool)\n_a.Set(bool(_flag.get('breached')))\n_b = _p.CreateAttribute('qa:breach_sim_t', Sdf.ValueTypeNames.Float)\n_b.Set(float(_flag.get('first_breach_sim_t') or -1.0))\n_c = _p.CreateAttribute('qa:timeline_playing', Sdf.ValueTypeNames.Bool)\n_c.Set(bool(_tl.is_playing()))\nprint('qa:breach_latched =', bool(_flag.get('breached')), '| sim_t =', _flag.get('first_breach_sim_t'), '| playing =', bool(_tl.is_playing()))"
         }
       }
     ],
@@ -126,8 +126,8 @@
       {
         "kind": "attr_equals",
         "prim": "/World/HumanProxy",
-        "attr": "qa:timeline_playing",
-        "expect": false
+        "attr": "qa:breach_latched",
+        "expect": true
       }
     ]
   },
