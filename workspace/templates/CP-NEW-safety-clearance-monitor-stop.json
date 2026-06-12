@@ -76,13 +76,13 @@
         }
       },
       {
-        "tool": "teleport_prim",
+        "tool": "set_linear_velocity",
         "args": {
           "prim_path": "/World/HumanProxy",
-          "position": [
-            0.35,
+          "vel": [
+            -0.5,
             0.0,
-            1.05
+            0.0
           ]
         }
       },
@@ -90,7 +90,7 @@
         "tool": "sim_control",
         "args": {
           "action": "step",
-          "step_count": 10
+          "step_count": 240
         }
       },
       {
