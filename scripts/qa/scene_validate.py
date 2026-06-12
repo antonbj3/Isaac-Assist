@@ -93,6 +93,19 @@ for _pp in PICKS:
             _t0 = UsdGeom.Xformable(_pr).ComputeLocalToWorldTransform(0).ExtractTranslation()
             _pre_pos[_pp] = [float(_t0[0]), float(_t0[1]), float(_t0[2])]
         except Exception: pass
+# ALL dynamic rigid bodies' authored positions (GEOMETRIC_OVERLAP check 00
+# evaluates the pre-settle state — post-settle, physics has already resolved
+# or exploded the overlap)
+_pre_pos_all = {}
+for _pr in stage.Traverse():
+    if _pr.HasAPI(UsdPhysics.RigidBodyAPI):
+        _kin = _pr.GetAttribute("physics:kinematicEnabled")
+        if _kin and _kin.Get():
+            continue
+        try:
+            _t0 = UsdGeom.Xformable(_pr).ComputeLocalToWorldTransform(0).ExtractTranslation()
+            _pre_pos_all[_pr.GetPath().pathString] = [float(_t0[0]), float(_t0[1]), float(_t0[2])]
+        except Exception: pass
 # Settle PASSIVE dynamics (items fall onto their support + clumps form) with the arm parked. ~2.5 s.
 try:
     omni.timeline.get_timeline_interface().play()
@@ -241,6 +254,58 @@ if not picks and not TARGETS:
 
 V = []  # violations
 bbs = {p: aabb(p) for p in picks}
+
+# 00) GEOMETRIC OVERLAP (authored state): pairwise AABB on dynamic rigid
+# bodies (pre-settle centers + current extents) + robot-base footprints vs
+# static colliders. Catches overlaps too shallow to explode — the CP-67
+# base-in-belt class that the instability check only sees via consequences.
+_OVL_TOL = 0.02  # penetration depth below this resolves gently (heap doctrine)
+_dyn = {}
+for _p0, _pre0 in _pre_pos_all.items():
+    _bb0 = aabb(_p0)
+    if not _bb0: continue
+    _ext = [(_bb0[1][i] - _bb0[0][i]) / 2.0 for i in range(3)]
+    _dyn[_p0] = ([_pre0[i] - _ext[i] for i in range(3)],
+                 [_pre0[i] + _ext[i] for i in range(3)])
+# exclusions: robot subtrees (articulated links overlap by design — PhysX
+# self-collision filtering owns that) and pairs inside the SAME top-level
+# asset (cabinet+drawer, gripper rigs, dispensers: assemblies touch by design)
+def _top2(path):
+    _parts = path.split("/")
+    return "/".join(_parts[:3]) if len(_parts) > 2 else path
+_robot_roots = [rb["path"] for rb in ROBOTS if rb["path"]]
+_dyn = {k: v for k, v in _dyn.items()
+        if not any(k == rr or k.startswith(rr + "/") for rr in _robot_roots)}
+_dyn_items = sorted(_dyn.items())
+for _i in range(len(_dyn_items)):
+    for _j in range(_i + 1, len(_dyn_items)):
+        (_pa, _ba), (_pb, _bb2) = _dyn_items[_i], _dyn_items[_j]
+        if _pa.split("/")[-1] == _pb.split("/")[-1]: continue
+        if _top2(_pa) == _top2(_pb): continue
+        _pen = min(min(_ba[1][k], _bb2[1][k]) - max(_ba[0][k], _bb2[0][k]) for k in range(3))
+        if _pen > _OVL_TOL:
+            V.append("GEOMETRIC_OVERLAP: %s and %s spawn interpenetrating (min-axis depth %.3f m > %.2f tol) — authored-state collision" % (_pa.split("/")[-1], _pb.split("/")[-1], _pen, _OVL_TOL))
+# robot bases vs static colliders (belts/tables/fixtures): base footprint
+# approximated as a 0.30 m square, 0.10 m tall from base z
+for _rb in ROBOTS:
+    if not _rb["path"]: continue
+    _bx, _by, _bz = _rb["base"]
+    _base_bb = ([_bx - 0.15, _by - 0.15, _bz + 0.01], [_bx + 0.15, _by + 0.15, _bz + 0.10])
+    for _sp in stage.Traverse():
+        if not _sp.HasAPI(UsdPhysics.CollisionAPI): continue
+        if _sp.HasAPI(UsdPhysics.RigidBodyAPI):
+            _k = _sp.GetAttribute("physics:kinematicEnabled")
+            if not (_k and _k.Get()):
+                continue  # dynamic bodies handled by the pairwise check;
+                          # KINEMATIC ones (surface-velocity conveyors!) are
+                          # scenery — the CP-67 belt is exactly this class
+        _spp = _sp.GetPath().pathString
+        if _rb["path"] and _spp.startswith(_rb["path"]): continue
+        _sbb = aabb(_spp)
+        if not _sbb: continue
+        _pen = min(min(_base_bb[1][k], _sbb[1][k]) - max(_base_bb[0][k], _sbb[0][k]) for k in range(3))
+        if _pen > _OVL_TOL:
+            V.append("GEOMETRIC_OVERLAP: robot base %s footprint intersects static %s (min-axis depth %.3f m) — base spawned inside scenery (CP-67 class)" % (_rb["path"].split("/")[-1], _spp.split("/")[-1], _pen))
 
 # 0) PHYSICS INSTABILITY — a pick that travelled >1 m during the passive settle was EJECTED (spawn-overlap
 # explosion). Its post-settle pos is garbage, so flag the instability (the true root) and SKIP its reach/support.
