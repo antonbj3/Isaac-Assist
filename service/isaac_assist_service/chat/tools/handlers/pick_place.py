@@ -6594,8 +6594,13 @@ def _build_segments(cube_pos, drop_pos, current_q):
         _gx, _gy = cube_pos[0] + _nv_goff[0], cube_pos[1] + _nv_goff[1]
         _gz = pz + _nv_goff[2] - 0.01  # grip the handle bar, not its top edge
         goals = goals[:3]
-        goals[0] = (goals[0][0], None, _p_yaw)        # re-yaw approach to form closure
-        goals[1] = (goals[1][0], None, _p_yaw)
+        # tight low descent instead of the h1 transit: the proven high approach
+        # (EE_INITIAL_HEIGHT) plans the wrist into the furniture-face margin
+        # zone (drawer-open: res_None at z=1.13, 4 cm from the cabinet front —
+        # margin-probe-proven 2026-06-12). Handles sit on furniture; approach
+        # from just above the bar.
+        goals[0] = (np.array([_gx, _gy, _gz + 0.10]), None, _p_yaw)
+        goals[1] = (np.array([_gx, _gy, _gz + 0.05]), None, _p_yaw)
         goals[2] = (np.array([_gx, _gy, _gz]), "close", _p_yaw)
         _p_n = 4
         for _pk in range(1, _p_n + 1):
