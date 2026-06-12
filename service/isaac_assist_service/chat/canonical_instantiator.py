@@ -1137,6 +1137,24 @@ async def execute_template_canonical(
     except Exception as _fge:
         logger.debug(f"[CanonicalInst] {task_id} form-gate advisory soft-fail: {type(_fge).__name__}: {_fge}")
 
+    # 2026-06-12 GENERATION WIRING (Anton-approved): GEOMETRIC_OVERLAP advisory on
+    # every build. Reads AUTHORED state only (no play, no unsubscribe -> non-
+    # destructive); flags spawn-interpenetration + robot-base-in-scenery (the
+    # CP-67 belt class) the moment a scene is generated. Advisory — never blocks.
+    try:
+        from ..qa.overlap_check import OVERLAP_CHECK_CODE, parse_overlap_output
+        from .tools import kit_tools as _ovl_kit
+        _ovl_res = await _ovl_kit.exec_sync(OVERLAP_CHECK_CODE, timeout=30)
+        _ovl = parse_overlap_output((_ovl_res or {}).get("output"))
+        if _ovl is not None:
+            if form_gate is None:
+                form_gate = {}
+            form_gate["overlap"] = _ovl
+            if _ovl.get("violations"):
+                logger.warning(f"[CanonicalInst] {task_id} GEOMETRIC_OVERLAP advisory: {_ovl['violations'][:4]}")
+    except Exception as _ove:
+        logger.debug(f"[CanonicalInst] {task_id} overlap advisory soft-fail: {type(_ove).__name__}: {_ove}")
+
     return {
         "task_id": task_id,
         "n_calls": len(executed),
