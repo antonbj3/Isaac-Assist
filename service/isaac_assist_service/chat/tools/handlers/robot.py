@@ -4626,6 +4626,39 @@ if body0_path:
     joint.CreateBody0Rel().SetTargets([Sdf.Path(body0_path)])
 joint.CreateBody1Rel().SetTargets([Sdf.Path(body1_path)])
 
+# Joint anchors (2026-06-12 fix): unauthored localPos0/1 = identity frames at
+# each body's ORIGIN -> PhysX snaps body1 so the frames align (turn-faucet
+# handle fell 0.075m) and any along-axis origin offset becomes a phantom
+# initial joint displacement (CP-55: pos started at +0.10 of limits 0..0.15,
+# capping drawer travel to 0.05m). Default: anchor the joint at body1's
+# CURRENT pose -> nothing moves at sim start, joint position starts at 0.
+# Explicit local_pos0/local_pos1 args override (mirrors create_physics_joint).
+local_pos0 = {args.get("local_pos0")!r}
+local_pos1 = {args.get("local_pos1")!r}
+if local_pos0 is not None or local_pos1 is not None:
+    if local_pos0 is not None:
+        joint.CreateLocalPos0Attr().Set(Gf.Vec3f(*[float(v) for v in local_pos0]))
+    if local_pos1 is not None:
+        joint.CreateLocalPos1Attr().Set(Gf.Vec3f(*[float(v) for v in local_pos1]))
+else:
+    from pxr import UsdGeom as _UG_anchor
+    _xc = _UG_anchor.XformCache()
+    _m1 = _xc.GetLocalToWorldTransform(stage.GetPrimAtPath(body1_path))
+    _p1_world = _m1.ExtractTranslation()
+    if body0_path:
+        _m0 = _xc.GetLocalToWorldTransform(stage.GetPrimAtPath(body0_path))
+        _lp0 = _m0.GetInverse().Transform(_p1_world)
+        # rotational frame alignment: localRot0 = R0^-1 * R1 (identity when
+        # both bodies are unrotated -> byte-equivalent to the PhysX default)
+        _q0 = Gf.Transform(_m0).GetRotation().GetQuat()
+        _q1 = Gf.Transform(_m1).GetRotation().GetQuat()
+        _qrel = _q0.GetInverse() * _q1
+        joint.CreateLocalRot0Attr().Set(Gf.Quatf(_qrel))
+    else:
+        _lp0 = _p1_world
+    joint.CreateLocalPos0Attr().Set(Gf.Vec3f(_lp0))
+    joint.CreateLocalPos1Attr().Set(Gf.Vec3f(0.0, 0.0, 0.0))
+
 # Axis (revolute/prismatic): UsdPhysics convention is 'X', 'Y', 'Z' string — pick max-mag axis
 if joint_type in ("revolute", "prismatic"):
     abs_axis = [abs(axis[0]), abs(axis[1]), abs(axis[2])]
