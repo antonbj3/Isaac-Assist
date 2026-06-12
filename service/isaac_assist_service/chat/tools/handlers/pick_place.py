@@ -6589,12 +6589,21 @@ def _build_segments(cube_pos, drop_pos, current_q):
         _p_ax, _p_lo, _p_hi = _task_joint_info(TASK_JOINT_PATH)
         # travel toward the limit with the larger magnitude (drawer: lower=-0.30)
         _p_travel = TASK_ARGS.get("task_travel_m") if isinstance(TASK_ARGS, dict) and TASK_ARGS.get("task_travel_m") is not None else (_p_lo if abs(_p_lo) > abs(_p_hi) else _p_hi)
-        # yaw: fingers parallel to the pull axis (CP-55's measured-working
-        # recipe, 3/4 PASS; the +90 form-closure experiment broke it — gate
-        # 2026-06-13 ~01:30). Lengthwise escape is solved MECHANICALLY
-        # instead: grasp a thin STEM behind a perpendicular bar — the bar is
-        # a flange against the finger fronts under load (drawer-open).
+        # yaw from SOURCE GEOMETRY: close across the smallest horizontal
+        # bbox extent (empirical mapping: yaw=0 closes across y, yaw=90
+        # across x — drawer-TS + CP-55 both measured). This reproduces
+        # CP-55's working 90 on its 2.4x4cm knob AND grips a perpendicular
+        # bar across its thin axis, so the pull load presses the bar into a
+        # finger pad (the lengthwise-escape fix that does NOT change CP-55's
+        # recipe — the global +90 experiment did, and broke it).
         _p_yaw = _gm.degrees(_gm.atan2(_p_ax[1], _p_ax[0]))
+        try:
+            _sp_pull = S.get("picked_path")
+            if _sp_pull:
+                _sb = UsdGeom.Imageable(stage.GetPrimAtPath(_sp_pull)).ComputeWorldBound(0, UsdGeom.Tokens.default_).ComputeAlignedRange()
+                _se = [float(_sb.GetMax()[_i_pb] - _sb.GetMin()[_i_pb]) for _i_pb in range(3)]
+                _p_yaw = 90.0 if _se[0] <= _se[1] else 0.0
+        except Exception: pass
         _gx, _gy = cube_pos[0] + _nv_goff[0], cube_pos[1] + _nv_goff[1]
         _gz = pz + _nv_goff[2] - 0.01  # grip the handle bar, not its top edge
         goals = goals[:3]
