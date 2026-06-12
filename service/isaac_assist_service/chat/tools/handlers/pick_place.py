@@ -6663,6 +6663,19 @@ def _build_segments(cube_pos, drop_pos, current_q):
         _sw_debris = TASK_ARGS.get("task_debris_paths") if isinstance(TASK_ARGS, dict) else None
         _sw_pts = [list(_p_sw) for _p_sw in ((_world_pos(_d) for _d in (_sw_debris or [])) if _sw_debris else []) if _p_sw is not None]
         _sw_dust = _world_pos(DEST_PATH)
+        # engagement marker — disengaged-sweep falls through to standard
+        # pick-place goals SILENTLY (live 2026-06-12: 12/12 res_None toward a
+        # goal at the dustpan-Xform origin); make the branch state observable
+        try:
+            from pxr import Sdf as _Sdf_sw
+            _rp_sw = stage.GetPrimAtPath(ROBOT_PATH)
+            _a_sw = _rp_sw.GetAttribute("ctrl:task_dbg")
+            if not _a_sw: _a_sw = _rp_sw.CreateAttribute("ctrl:task_dbg", _Sdf_sw.ValueTypeNames.String)
+            _a_sw.Set(("sweep pts=%d dust=%s grasp=%s" % (
+                len(_sw_pts),
+                str([round(float(_v_sw), 3) for _v_sw in _sw_dust]) if _sw_dust is not None else "None",
+                str([round(float(cube_pos[0] + _nv_goff[0]), 3), round(float(cube_pos[1] + _nv_goff[1]), 3), round(float(pz + _nv_goff[2] - 0.01), 3)])))[:300])
+        except Exception: pass
         if _sw_pts and _sw_dust is not None:
             _gx, _gy = cube_pos[0] + _nv_goff[0], cube_pos[1] + _nv_goff[1]
             _gz = pz + _nv_goff[2] - 0.01
