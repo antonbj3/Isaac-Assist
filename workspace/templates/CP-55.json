@@ -158,5 +158,5 @@
       "legacy_claim": null
     }
   },
-  "verification": {"function_gate": {"status": "mixed", "n": 3, "m": 4, "wilson_lower": 0.3006, "last_run_sha": "d9e044dd", "last_run_at": "2026-06-12T18:48:42+00:00", "legacy_claim": null}}
+  "verification": {"function_gate": {"status": "mixed", "n": 3, "m": 5, "wilson_lower": 0.2307, "last_run_sha": "d65d4add", "last_run_at": "2026-06-12T18:58:59+00:00", "legacy_claim": null}}
 }
