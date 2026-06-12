@@ -240,7 +240,13 @@ else:
         if _min_delta is not None:
             _ok = _ok and abs(_delta) >= float(_min_delta)
         if _target is not None:
-            _ok = _ok and abs(_end - float(_target)) <= {tol}
+            # body-world modes: _end is a POSITION LIST -> abs(_end - target)
+            # raised TypeError and the gate printed nothing ("success=?",
+            # live-found on turn-faucet 2026-06-12). The joint starts at 0 in
+            # both fallback modes, so the angle/displacement DELTA is the
+            # absolute joint value — compare that instead.
+            _endv = _delta if isinstance(_end, list) else _end
+            _ok = _ok and abs(_endv - float(_target)) <= {tol}
         _res["success"] = bool(_ok and _settled)
 print('ARTICULATION_GATE=' + _j.dumps(_res))
 """
