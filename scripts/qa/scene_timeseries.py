@@ -255,6 +255,8 @@ def _tpl_meta(name):
     sf = (tpl.get("intent", {}) or {}).get("structural_features", {}) or {}
     out["has_stacking"] = bool(sf.get("has_stacking"))
     out["color_routing"] = (tpl.get("simulate_args", {}) or {}).get("color_routing") or {}
+    # circulation templates: a moving cube at end is the SUCCESS condition
+    out["circulating"] = bool((tpl.get("simulate_args", {}) or {}).get("min_laps_per_cube"))
     # Cleanest source: role_defaults.destinations[].routing_key -> path (the explicit color->bin map).
     # ARMS the misroute guard (_expected_short) — without this it falls back to nearest-bin and a misroute reads OK.
     if not out["color_routing"]:
@@ -496,8 +498,13 @@ def _report(raw):
             for _, s in seq:
                 if s.get("p"): max_disp = max(max_disp, sum((s["p"][k]-ip[k])**2 for k in range(3))**0.5)
         state = []
-        if spd_f is not None and spd_f > 0.05: state.append("IN_FLIGHT")
-        elif plateau < 5: state.append("UNSETTLED")
+        _circ = tm.get("circulating")
+        if spd_f is not None and spd_f > 0.05:
+            # lap-aware (2026-06-13): recirculation templates DECLARE that
+            # cubes keep moving (min_laps_per_cube) — flagging IN_FLIGHT
+            # made every successful circulation read as a faithfulness issue
+            state.append("CIRCULATING" if _circ else "IN_FLIGHT")
+        elif plateau < 5 and not _circ: state.append("UNSETTLED")
         if aloft and not supported and not dt_near: state.append("ALOFT")  # supported=on a cube below; dt_near=at its own
         # declared drop_target (e.g. a 2nd/upper shelf tier the nearest-dest doesn't know about) -> not actually floating
         if d is not None and (fp[2]-half_z) < floor_ref - 0.05: state.append("ON_FLOOR")
