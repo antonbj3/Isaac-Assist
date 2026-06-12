@@ -6603,6 +6603,13 @@ def _build_segments(cube_pos, drop_pos, current_q):
                 _sb = UsdGeom.Imageable(stage.GetPrimAtPath(_sp_pull)).ComputeWorldBound(0, UsdGeom.Tokens.default_).ComputeAlignedRange()
                 _se = [float(_sb.GetMax()[_i_pb] - _sb.GetMin()[_i_pb]) for _i_pb in range(3)]
                 _p_yaw = 90.0 if _se[0] <= _se[1] else 0.0
+                # same closing axis, flipped wrist: yaw-90 can be IK-infeasible
+                # in a region where yaw-270 is fine (drawer-open: staging at
+                # z=1.295 planned, the SAME-XY descent to 1.145 res_None 12/12
+                # — orientation, not position). Alternate per 3-strike attempt.
+                _p_att = S.get("plan_fail_count", {{}}).get(_sp_pull, 0)
+                if _p_att % 2 == 1:
+                    _p_yaw += 180.0
         except Exception: pass
         _gx, _gy = cube_pos[0] + _nv_goff[0], cube_pos[1] + _nv_goff[1]
         _gz = pz + _nv_goff[2] - 0.01  # grip the handle bar, not its top edge
