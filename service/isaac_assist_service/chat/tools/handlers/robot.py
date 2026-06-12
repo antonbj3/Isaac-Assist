@@ -5328,6 +5328,25 @@ async def _handle_create_recirculation_loop(args: Dict) -> Dict:
     # carry cubes off the end (all-ON_FLOOR class, RCA 2026-06-12).
     belt_w = 0.10
     half_b = belt_w / 2
+    # Outer guide rails (real recirculation conveyors have them): corner
+    # handoff is stochastically marginal for fast/laden items — a cube with
+    # accumulated velocity can coast past the receiving band's outer edge
+    # (eyes-traced fall at lap 1.5, 2026-06-12). Two thin static walls per
+    # side, flush with the outer belt edges, 4cm above belt top.
+    rail_h = 0.06
+    rail_t = 0.02
+    rail_z = center[2] + 0.025 + rail_h / 2
+    rails = [
+        ("RailTop",    [center[0], center[1] + width / 2 + half_b + rail_t / 2, rail_z], [length + 2 * belt_w, rail_t, rail_h]),
+        ("RailBottom", [center[0], center[1] - width / 2 - half_b - rail_t / 2, rail_z], [length + 2 * belt_w, rail_t, rail_h]),
+        ("RailRight",  [center[0] + length / 2 + half_b + rail_t / 2, center[1], rail_z], [rail_t, width + 2 * belt_w, rail_h]),
+        ("RailLeft",   [center[0] - length / 2 - half_b - rail_t / 2, center[1], rail_z], [rail_t, width + 2 * belt_w, rail_h]),
+        # INNER rails — the loop's center hole is also a fall path at corners
+        ("RailTopIn",    [center[0], center[1] + width / 2 - half_b - rail_t / 2, rail_z], [length - 2 * belt_w, rail_t, rail_h]),
+        ("RailBottomIn", [center[0], center[1] - width / 2 + half_b + rail_t / 2, rail_z], [length - 2 * belt_w, rail_t, rail_h]),
+        ("RailRightIn",  [center[0] + length / 2 - half_b - rail_t / 2, center[1], rail_z], [rail_t, width - 2 * belt_w, rail_h]),
+        ("RailLeftIn",   [center[0] - length / 2 + half_b + rail_t / 2, center[1], rail_z], [rail_t, width - 2 * belt_w, rail_h]),
+    ]
     segments = [
         ("Top",    [center[0] - half_b, center[1] + width / 2, center[2]], [length, belt_w, 0.05], [+velocity, 0, 0]),
         ("Right",  [center[0] + length / 2, center[1] + half_b, center[2]], [belt_w, width, 0.05], [0, -velocity, 0]),
@@ -5341,6 +5360,15 @@ async def _handle_create_recirculation_loop(args: Dict) -> Dict:
             "prim_path": seg_path, "position": pos, "size": size, "surface_velocity": list(vel),
         })
         seg_paths.append({"path": seg_path, "name": name, "velocity": list(vel)})
+
+    for rname, rpos, rsize in rails:
+        await execute_tool_call("create_prim", {
+            "prim_path": f"{loop_path}/{rname}", "prim_type": "Cube",
+            "position": rpos, "scale": [d / 2 for d in rsize],
+        })
+        await execute_tool_call("apply_api_schema", {
+            "prim_path": f"{loop_path}/{rname}",
+            "schema_name": "PhysicsCollisionAPI"})
 
     # Corners no longer needed — segment overlap by ext_overlap covers gaps.
 
