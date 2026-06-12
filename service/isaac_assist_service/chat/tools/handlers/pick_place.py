@@ -6698,6 +6698,15 @@ def _build_segments(cube_pos, drop_pos, current_q):
         if _sw_pts and _sw_dust is not None:
             _gx, _gy = cube_pos[0] + _nv_goff[0], cube_pos[1] + _nv_goff[1]
             _gz = pz + _nv_goff[2] - 0.01
+            # grip LOW on the tool stub — the brush CG (plate) hangs below the
+            # grip; at center-grip the hop's pendulum torque pried the stub
+            # through the pads (TS 2026-06-13: handle floor-bound while the
+            # hand rose, brush flung at the first lateral move). Fingertips
+            # land just above the source bbox BOTTOM (the plate top).
+            try:
+                _swb = UsdGeom.Imageable(stage.GetPrimAtPath(S.get("picked_path"))).ComputeWorldBound(0, UsdGeom.Tokens.default_).ComputeAlignedRange()
+                _gz = max(float(_swb.GetMin()[2]) + 0.030 + 0.105, _gz - 0.06)
+            except Exception: pass
             _cx = sum(_p_sw[0] for _p_sw in _sw_pts) / len(_sw_pts)
             _cy = sum(_p_sw[1] for _p_sw in _sw_pts) / len(_sw_pts)
             _dx_sw, _dy_sw = float(_sw_dust[0]) - _cx, float(_sw_dust[1]) - _cy
@@ -6709,6 +6718,9 @@ def _build_segments(cube_pos, drop_pos, current_q):
             goals[1] = (np.array([_gx, _gy, _gz + 0.05]), None, _sw_yaw)
             goals[2] = (np.array([_gx, _gy, _gz]), "close", _sw_yaw)
             _z_hi = _gz + 0.12
+            # vertical-only lift FIRST — up+lateral in one segment swings the
+            # hanging tool out of the pinch
+            goals.append((np.array([_gx, _gy, _z_hi]), None, _sw_yaw))
             _back = float(TASK_ARGS.get("task_backswing_m") or 0.20)
             _lip = float(TASK_ARGS.get("task_lip_margin_m") or 0.08)
             _ex = float(_sw_dust[0]) - _ux * _lip
