@@ -6114,7 +6114,11 @@ def _cube_to_pick():
     # Without this, controller wastes plan_pose calls on unreachable goals.
     _h1_offset = max(0.0, float(EE_INITIAL_HEIGHT) - base_z)
     for sp in SOURCE_PATHS:
-        if sp in S["delivered"] or sp in S.get("failed", set()) or _is_in_bin(sp): continue
+        # task modes (pull): destination==source by construction, so the
+        # in-bin skip would reject the handle forever ('Handle:in_dest',
+        # diagnosed live 2026-06-12)
+        if sp in S["delivered"] or sp in S.get("failed", set()): continue
+        if TASK_MODE != "pull" and _is_in_bin(sp): continue
         cp = _world_pos(sp)
         if cp is None: continue
         # 2026-06-03 HANDOFF-SYNC gate (multi-robot only): claim a cube only when its Z has
