@@ -6589,13 +6589,12 @@ def _build_segments(cube_pos, drop_pos, current_q):
         _p_ax, _p_lo, _p_hi = _task_joint_info(TASK_JOINT_PATH)
         # travel toward the limit with the larger magnitude (drawer: lower=-0.30)
         _p_travel = TASK_ARGS.get("task_travel_m") if isinstance(TASK_ARGS, dict) and TASK_ARGS.get("task_travel_m") is not None else (_p_lo if abs(_p_lo) > abs(_p_hi) else _p_hi)
-        # form-closure yaw: fingers close ALONG the pull axis so the bar
-        # presses into a finger pad under load. The previous fingers-PARALLEL
-        # convention let the drawer's resistance slide the bar lengthwise out
-        # of the grip (TS 2026-06-12: 0.19m drag while the fingers closed
-        # 0.003->0.0 = the bar escaping). Requires the handle bar to run
-        # PERPENDICULAR to the pull (real drawer handles do).
-        _p_yaw = _gm.degrees(_gm.atan2(_p_ax[1], _p_ax[0])) + 90.0
+        # yaw: fingers parallel to the pull axis (CP-55's measured-working
+        # recipe, 3/4 PASS; the +90 form-closure experiment broke it — gate
+        # 2026-06-13 ~01:30). Lengthwise escape is solved MECHANICALLY
+        # instead: grasp a thin STEM behind a perpendicular bar — the bar is
+        # a flange against the finger fronts under load (drawer-open).
+        _p_yaw = _gm.degrees(_gm.atan2(_p_ax[1], _p_ax[0]))
         _gx, _gy = cube_pos[0] + _nv_goff[0], cube_pos[1] + _nv_goff[1]
         _gz = pz + _nv_goff[2] - 0.01  # grip the handle bar, not its top edge
         goals = goals[:3]

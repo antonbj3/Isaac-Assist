@@ -162,5 +162,5 @@
     "failed": {}
   },
   "verified_status": "drafted-2026-05-16; rebuilt-2026-05-28 ({{#each tracked_cubes}} loop replaces hardcoded 3-cube literal — cube count now driven by role_defaults.tracked_cubes); form-gate pending; function-gate pending live Kit (requires lap-marker crossing detector wired into simulate harness)",
-  "verification": {"function_gate": {"status": "fail", "n": 0, "m": 1, "wilson_lower": 0.0, "last_run_sha": "7107653e", "last_run_at": "2026-06-11T12:15:37+00:00", "legacy_claim": null}, "faithfulness": {"status": "fail", "n": 0, "m": 1, "wilson_lower": 0.0, "last_run_sha": "7107653e", "last_run_at": "2026-06-11T12:15:53+00:00"}}
+  "verification": {"function_gate": {"status": "mixed", "n": 1, "m": 5, "wilson_lower": 0.0362, "last_run_sha": "2793436f", "last_run_at": "2026-06-12T16:59:45+00:00", "legacy_claim": null}, "faithfulness": {"status": "fail", "n": 0, "m": 5, "wilson_lower": 0.0, "last_run_sha": "2793436f", "last_run_at": "2026-06-12T17:00:04+00:00"}}
 }
