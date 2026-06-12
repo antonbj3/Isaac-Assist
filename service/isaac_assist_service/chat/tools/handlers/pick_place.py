@@ -6153,6 +6153,11 @@ def _cube_to_pick():
         # admission (a still-unreachable goal will plan-fail → 3-strike), so the verified set
         # (whose cubes are already admitted) is unaffected.
         _gate_h1o = min(_h1_offset, max(0.0, (float(cp[2]) + 0.20) - base_z))
+        if TASK_MODE == "pull":
+            # pull has no transit-to-h1: the vertical term is the handle
+            # height itself ('Handle:3d_0.87_h1o_0.45' live-diagnosed —
+            # the h1 inflation pushed a reachable handle past 0.855)
+            _gate_h1o = max(0.0, float(cp[2]) - base_z)
         _3d_dist = (_xy_dist**2 + _gate_h1o**2) ** 0.5
         if _3d_dist > _reach_m: continue  # tight 3D matches 2D safety margin
         # REORIENT-01 require_upright filter: skip cubes whose +Z axis
