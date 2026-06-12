@@ -2580,6 +2580,13 @@ except AttributeError:
     physx_iface = _omni_physx_cm.get_physx_interface()
     _clearance_sub = physx_iface.subscribe_contact_report_events(_on_contact_report)
 
+# LIFETIME (2026-06-12): exec-locals are GC'd when this codegen returns —
+# the subscription silently died and no event ever fired ("latch pin").
+# Stash on builtins keyed by articulation path; re-arming replaces cleanly.
+import builtins as _bi_cm
+setattr(_bi_cm, '_clearance_mon_' + '{art_path}'.replace('/', '_'),
+        {{'sub': _clearance_sub, 'callback': _on_contact_report}})
+
 print(f'Clearance monitor armed on {{len(link_paths)}} robot links of {art_path}')
 print(f'  warning zone: <{{warning_threshold_m*1000:.0f}}mm   stop zone: <{{stop_threshold_m*1000:.0f}}mm')
 print(f'  monitoring against {{len(target_paths)}} target prims')
