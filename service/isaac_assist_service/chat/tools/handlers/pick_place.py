@@ -6597,9 +6597,14 @@ def _build_segments(cube_pos, drop_pos, current_q):
         # (EE_INITIAL_HEIGHT) plans the wrist into the furniture-face margin
         # zone (drawer-open: res_None at z=1.13, 4 cm from the cabinet front —
         # margin-probe-proven 2026-06-12). Handles sit on furniture; approach
-        # from just above the bar.
-        goals[0] = (np.array([_gx, _gy, _gz + 0.10]), None, _p_yaw)
-        goals[1] = (np.array([_gx, _gy, _gz + 0.05]), None, _p_yaw)
+        # from just above the bar. STAGING goal first (+0.25): the home->grasp
+        # transit otherwise sweeps the unmodeled grasp-source bar (cuRobo
+        # excludes the pick target from collision) — TS-proven 2026-06-12:
+        # fingertips plowed the bar at z 0.91 en route, shoving the drawer to
+        # its stop. Ending the long transit HIGH keeps the sweep clear; the
+        # descents below are short verticals.
+        goals[0] = (np.array([_gx, _gy, _gz + 0.25]), None, _p_yaw)
+        goals[1] = (np.array([_gx, _gy, _gz + 0.10]), None, _p_yaw)
         goals[2] = (np.array([_gx, _gy, _gz]), "close", _p_yaw)
         _p_n = 4
         for _pk in range(1, _p_n + 1):
@@ -6638,8 +6643,8 @@ def _build_segments(cube_pos, drop_pos, current_q):
         _r0x, _r0y = _gx - _pivot[0], _gy - _pivot[1]
         _t_yaw0 = _gm.degrees(_gm.atan2(_r0y, _r0x))
         goals = goals[:3]
-        goals[0] = (np.array([_gx, _gy, _gz + 0.10]), None, _t_yaw0)
-        goals[1] = (np.array([_gx, _gy, _gz + 0.05]), None, _t_yaw0)
+        goals[0] = (np.array([_gx, _gy, _gz + 0.25]), None, _t_yaw0)  # staging (transit clears the lever)
+        goals[1] = (np.array([_gx, _gy, _gz + 0.10]), None, _t_yaw0)
         goals[2] = (np.array([_gx, _gy, _gz]), "close", _t_yaw0)
         _t_n = max(1, int(_gm.ceil(abs(_t_target) / 15.0)))
         for _tk in range(1, _t_n + 1):
