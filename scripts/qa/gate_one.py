@@ -163,7 +163,8 @@ async def gate(tpl_name):
     # template's completeness="all" never reached the handler and the gate
     # quietly graded legacy any-delivered (caught live on CP-71 2026-06-10).
     for k in ("cube_paths", "color_routing", "target_path",
-              "targets", "routing", "completeness"):
+              "targets", "routing", "completeness",
+              "min_laps_per_cube", "lap_marker_positions", "lap_marker_order"):
         if k in sa and sa[k] is not None:
             args[k] = sa[k]
     res = await asyncio.wait_for(execute_tool_call("simulate_traversal_check", args),

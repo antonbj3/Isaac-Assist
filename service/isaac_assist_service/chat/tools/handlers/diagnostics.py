@@ -4080,6 +4080,14 @@ async def _handle_simulate_traversal_check(args: Dict) -> Dict:
     # live stage (the SAME Semantics_color/colour/class lookup the
     # controller routes by) and resolve class->bin into a targets map.
     color_routing = args.get("color_routing") or {}
+    # circulation gate (recirculation-loop class, 2026-06-12): templates that
+    # declare lap semantics get ORDERED-MARKER lap counting instead of the
+    # at-rest-in-target criterion (a circulating item never rests — that IS
+    # its success)
+    min_laps = args.get("min_laps_per_cube")
+    min_laps = int(min_laps) if min_laps is not None else None
+    lap_markers = args.get("lap_marker_positions") or []
+    lap_order = args.get("lap_marker_order") or [m.get("name") for m in lap_markers]
     color_routing_resolution = None
     if color_routing and not targets_map and not routing_list and cube_paths:
         _cls_code = (
@@ -4469,6 +4477,11 @@ def _do_one_run(run_idx, target_bbox):
     _RV_ON = bool(getattr(__import__("builtins"), "_gate_robust_velocity", True))
     _RV_N = 8
     _recent_pc = {{cp: [] for cp in cube_paths}}
+    # circulation/lap mode (None -> byte-identical legacy behavior)
+    _MIN_LAPS = {min_laps!r}
+    _LAP_MARKERS = {lap_markers!r}
+    _LAP_ORDER = {lap_order!r}
+    _lap_state = {{cp: {{"next": 0, "laps": 0}} for cp in cube_paths}} if _MIN_LAPS else {{}}
     _recent_main_rv = []
     _pre_captured = [False]  # True once the cp_pre snapshot runs; if the wall-clock timeout fires first it stays
     # False -> cp_pre is STALE (spawn) -> the old velocity is the 99.7 garbage -> use the rolling-window velocity.
@@ -4480,6 +4493,21 @@ def _do_one_run(run_idx, target_bbox):
         # here, reusing the SAME _world_pos calls -> ZERO extra per-tick work -> the gate sim is byte-identical
         # for normal (non-timeout) templates (no wall-clock perturbation of the controller; the every-5-tick
         # version added _world_pos overhead that risked nudging a borderline drop).
+        if _MIN_LAPS and _sample_tick[0] % 12 == 0:
+            # ~5 Hz lap sampling: advance a cube's marker index when it is
+            # within tolerance of its NEXT expected marker line
+            _mk_by_name = {{m.get("name"): m for m in _LAP_MARKERS}}
+            for _cp_l in cube_paths:
+                _st_l = _lap_state[_cp_l]
+                _mk = _mk_by_name.get(_LAP_ORDER[_st_l["next"] % len(_LAP_ORDER)])
+                if not _mk: continue
+                _pos_l = _world_pos(_cp_l)
+                if _pos_l is None: continue
+                _axi = 0 if _mk.get("axis") == "x" else 1
+                if abs(float(_pos_l[_axi]) - float(_mk.get("value", 0.0))) < 0.15:
+                    _st_l["next"] += 1
+                    if _st_l["next"] % len(_LAP_ORDER) == 0:
+                        _st_l["laps"] += 1
         if _sample_tick[0] % 30 == 0:
             _cp_now = _world_pos(cube_path)
             if _cp_now is not None:
@@ -4730,8 +4758,17 @@ def _do_one_run(run_idx, target_bbox):
     primary_chain_under_target = _chain_under_target(cube_path)
     cube_on_target = bool(primary_chain_under_target and at_rest and upright_ok)
 
+    # circulation verdict OVERRIDE: declared lap semantics replace the
+    # at-rest-in-target criterion entirely — a circulating item's success
+    # IS that it keeps moving through the markers in order
+    _lap_result = None
+    if _MIN_LAPS:
+        _lap_result = {{cp.split('/')[-1]: dict(_lap_state[cp]) for cp in cube_paths}}
+        success = all(st["laps"] >= _MIN_LAPS for st in _lap_state.values())
+
     return {{
         'success': success,
+        'lap_counts': _lap_result,
         'cube_final': p_final,
         'cube_velocity': velocity,
         'cube_speed': speed,
