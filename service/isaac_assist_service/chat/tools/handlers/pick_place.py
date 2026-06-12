@@ -6627,7 +6627,10 @@ def _build_segments(cube_pos, drop_pos, current_q):
         goals[0] = (np.array([_gx, _gy, _gz + 0.25]), None, _p_yaw)
         goals[1] = (np.array([_gx, _gy, _gz + 0.10]), None, _p_yaw)
         goals[2] = (np.array([_gx, _gy, _gz]), "close", _p_yaw)
-        _p_n = 4
+        # 6 bites (5cm at 0.30m travel): the 7.5cm bites dragged the drawer
+        # 6cm then stalled (first real pull, round 14); smaller bites keep the
+        # grip-slide within the end-knob flange budget per step.
+        _p_n = 6
         for _pk in range(1, _p_n + 1):
             _pp_goal = np.array([_gx + _p_ax[0] * _p_travel * (_pk / _p_n),
                                  _gy + _p_ax[1] * _p_travel * (_pk / _p_n),
