@@ -503,6 +503,7 @@ def _gen_setup_pick_place_controller(args: Dict) -> str:
             mutex_path=args.get("mutex_path"),
             scenario_profile=args.get("scenario_profile"),
             arm_scope=_arm_scope,
+            claim_radius=args.get("claim_radius"),
             phase_id=phase_id,
         )
     if mode == "diffik":
@@ -3876,6 +3877,7 @@ def _gen_pick_place_curobo(robot_path: str, sensor_path: str, belt_path: str,
                            mutex_path=None,
                            scenario_profile=None,
                            arm_scope=None,
+                           claim_radius=None,
                            phase_id: str = "default") -> str:
     """GPU-accelerated global trajectory optimization via cuRobo MotionPlanner.
 
@@ -6087,6 +6089,9 @@ def _cube_to_pick():
                     if _v: _belt_v = abs(float(_v[0]))
         except Exception: pass
     _look_ahead_x = 0.30 if _belt_v > 0.25 else 0.0
+    # per-phase claim scoping (machine-tender dual-controller contention,
+    # 2026-06-12): OPT-IN — None keeps the claim loop byte-identical
+    CLAIM_RADIUS = {claim_radius!r}
     # Phase 4 (2026-05-10): 3D-aware reach check. EE has to reach
     # h1 = EE_INITIAL_HEIGHT above cube, not the cube itself. With h1
     # significantly above robot base, the EE travel distance is sqrt(
@@ -6152,6 +6157,8 @@ def _cube_to_pick():
         # spd=147 m/s) and net-negative pass count. Per-scenario gate logic
         # belongs in the scenario-profile spec, not as a global change.
         _d_sensor = float(np.linalg.norm(cp[:2] - sxy))
+        if CLAIM_RADIUS is not None and _d_sensor > float(CLAIM_RADIUS):
+            continue
         if _look_ahead_x > 0.0:
             _approaching = (
                 cp[0] < sxy[0]
