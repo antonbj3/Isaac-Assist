@@ -6117,10 +6117,14 @@ def _cube_to_pick():
         # task modes (pull): destination==source by construction, so the
         # in-bin skip would reject the handle forever ('Handle:in_dest',
         # diagnosed live 2026-06-12)
-        if sp in S["delivered"] or sp in S.get("failed", set()): continue
+        if sp in S["delivered"] or sp in S.get("failed", set()):
+            if TASK_MODE == "pull": S["_pull_rej"] = sp.split("/")[-1] + ":delivered_or_failed"
+            continue
         if TASK_MODE != "pull" and _is_in_bin(sp): continue
         cp = _world_pos(sp)
-        if cp is None: continue
+        if cp is None:
+            if TASK_MODE == "pull": S["_pull_rej"] = sp.split("/")[-1] + ":nopos"
+            continue
         # 2026-06-03 HANDOFF-SYNC gate (multi-robot only): claim a cube only when its Z has
         # SETTLED (stable over recent ticks) and is not high. RCA via cp51_faithful: FrankaB
         # read Cube_1 at z=1.056 — its MID-TRANSPORT height while FrankaA was still carrying it
@@ -6135,11 +6139,17 @@ def _cube_to_pick():
                 _zp, _stab = _sz.get(sp, (None, 0))
                 _stab = (_stab + 1) if (_zp is not None and abs(float(cp[2]) - _zp) < 0.006) else 0
                 _sz[sp] = (float(cp[2]), _stab)
-                if _stab < 6 or cp[2] > base_z + 0.20: continue
+                if _stab < 6 or cp[2] > base_z + 0.20:
+                    if TASK_MODE == "pull": S["_pull_rej"] = sp.split("/")[-1] + ":settle_%d_%.2f" % (_stab, cp[2])
+                    continue
         except Exception: pass
-        if cp[2] < base_z - 0.30 or cp[2] > base_z + 0.50: continue
+        if cp[2] < base_z - 0.30 or cp[2] > base_z + 0.50:
+            if TASK_MODE == "pull": S["_pull_rej"] = sp.split("/")[-1] + ":zwin_%.2f" % cp[2]
+            continue
         _xy_dist = float(np.linalg.norm(cp[:2] - base_xy))
-        if _xy_dist > _reach_m: continue
+        if _xy_dist > _reach_m:
+            if TASK_MODE == "pull": S["_pull_rej"] = sp.split("/")[-1] + ":xy_%.2f" % _xy_dist
+            continue
         # 3D-aware: reject if EE goal at h1 above cube would exceed reach.
         # Use _reach_m_raw (no safety margin) for 3D check — the 5cm safety
         # is already applied to xy. Doubling it for 3D rejected too many
@@ -6159,7 +6169,9 @@ def _cube_to_pick():
             # the h1 inflation pushed a reachable handle past 0.855)
             _gate_h1o = max(0.0, float(cp[2]) - base_z)
         _3d_dist = (_xy_dist**2 + _gate_h1o**2) ** 0.5
-        if _3d_dist > _reach_m: continue  # tight 3D matches 2D safety margin
+        if _3d_dist > _reach_m:
+            if TASK_MODE == "pull": S["_pull_rej"] = sp.split("/")[-1] + ":3dv2_%.2f" % _3d_dist
+            continue  # tight 3D matches 2D safety margin
         # REORIENT-01 require_upright filter: skip cubes whose +Z axis
         # isn't aligned with world up. Lets cube ride past pick zone on
         # its side, hit a passive flip-wall, become upright, then pick.
@@ -6210,7 +6222,8 @@ def _cube_to_pick():
                 _msgs.append(_nm + ":PASS_unexpected")
             _ra = _rp.GetAttribute("ctrl:pick_reject")
             if not _ra: _ra = _rp.CreateAttribute("ctrl:pick_reject", _Sdf_dbg.ValueTypeNames.String)
-            _ra.Set(("nsrc" + str(len(SOURCE_PATHS)) + "|" + "|".join(_msgs))[:400])
+            _pr_mark = "|REAL:" + S.get("_pull_rej", "none") if TASK_MODE == "pull" else ""
+            _ra.Set(("nsrc" + str(len(SOURCE_PATHS)) + "|" + "|".join(_msgs) + _pr_mark)[:400])
         except Exception as _de:
             try:
                 _rp2 = stage.GetPrimAtPath(ROBOT_PATH)
