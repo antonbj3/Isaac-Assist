@@ -1424,6 +1424,19 @@ if not prim.HasAPI(UsdPhysics.RigidBodyAPI):
 rb = UsdPhysics.RigidBodyAPI(prim)
 attr = rb.GetVelocityAttr() or rb.CreateVelocityAttr()
 attr.Set(Gf.Vec3f({vx}, {vy}, {vz}))
+# RUNTIME branch (2026-06-13): the authored attr is an INITIAL condition —
+# PhysX ignores writes while SIMULATING (clearance-stop stimulus: the proxy
+# never moved; same silent class as teleporting a playing RB). Push the
+# velocity through the live physics view when the timeline is playing.
+import omni.timeline
+if omni.timeline.get_timeline_interface().is_playing():
+    try:
+        from isaacsim.core.prims import SingleRigidPrim
+        _rp_slv = SingleRigidPrim(prim_path)
+        _rp_slv.set_linear_velocity([{vx}, {vy}, {vz}])
+        print('Runtime velocity pushed via SingleRigidPrim')
+    except Exception as _slv_e:
+        print('Runtime velocity push failed: ' + str(_slv_e)[:120])
 print('Set linear velocity on ' + repr(prim_path) + ' to ({vx}, {vy}, {vz}) m/s')
 """
 
