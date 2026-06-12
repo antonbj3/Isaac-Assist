@@ -504,6 +504,10 @@ def _gen_setup_pick_place_controller(args: Dict) -> str:
             scenario_profile=args.get("scenario_profile"),
             arm_scope=_arm_scope,
             claim_radius=args.get("claim_radius"),
+            task=args.get("task"),
+            task_joint_path=args.get("joint_path"),
+            task_args={k: args[k] for k in ("task_travel_m", "task_target_deg")
+                       if k in args},
             phase_id=phase_id,
         )
     if mode == "diffik":
@@ -3878,6 +3882,9 @@ def _gen_pick_place_curobo(robot_path: str, sensor_path: str, belt_path: str,
                            scenario_profile=None,
                            arm_scope=None,
                            claim_radius=None,
+                           task=None,
+                           task_joint_path=None,
+                           task_args=None,
                            phase_id: str = "default") -> str:
     """GPU-accelerated global trajectory optimization via cuRobo MotionPlanner.
 
@@ -6092,6 +6099,11 @@ def _cube_to_pick():
     # per-phase claim scoping (machine-tender dual-controller contention,
     # 2026-06-12): OPT-IN — None keeps the claim loop byte-identical
     CLAIM_RADIUS = {claim_radius!r}
+    # task-mode primitive layer (pull v1, 2026-06-12): None -> every new
+    # branch below is dead code -> the 37+ verified templates untouched
+    TASK_MODE = {task!r}
+    TASK_JOINT_PATH = {task_joint_path!r}
+    TASK_ARGS = {task_args!r}
     # Phase 4 (2026-05-10): 3D-aware reach check. EE has to reach
     # h1 = EE_INITIAL_HEIGHT above cube, not the cube itself. With h1
     # significantly above robot base, the EE travel distance is sqrt(
@@ -6516,6 +6528,58 @@ def _build_segments(cube_pos, drop_pos, current_q):
     # (suction/UR10 byte-identical); fail-open in the dispatch (skip if unplannable, never fail the cube).
     if not _SG_IS_SUCTION:
         goals.append((np.array([drop_pos[0], drop_pos[1], h1]), None, drop_yaw))  # S6 retract straight up
+    # ── TASK-MODE SEAM (pull v1) ─────────────────────────────────────────
+    # task != pick_place: keep the PROVEN grasp approach (S1/S1.5/S2) and
+    # replace everything after with the primitive's waypoint chain. One
+    # contiguous gated block — revert = one hunk.
+    if TASK_MODE == "pull" and TASK_JOINT_PATH:
+        def _task_joint_info(jp):
+            _jpr = stage.GetPrimAtPath(jp)
+            _ax_attr = _jpr.GetAttribute("physics:axis")
+            _tok = str(_ax_attr.Get()) if _ax_attr and _ax_attr.Get() else "X"
+            _lo_a = _jpr.GetAttribute("physics:lowerLimit")
+            _hi_a = _jpr.GetAttribute("physics:upperLimit")
+            _lo = float(_lo_a.Get()) if _lo_a and _lo_a.Get() is not None else 0.0
+            _hi = float(_hi_a.Get()) if _hi_a and _hi_a.Get() is not None else 0.0
+            # body0 world rotation maps the local axis token to world
+            _b0_targets = []
+            _b0_rel = _jpr.GetRelationship("physics:body0")
+            if _b0_rel:
+                _b0_targets = list(_b0_rel.GetTargets())
+            _qw = [1.0, 0.0, 0.0, 0.0]
+            if _b0_targets:
+                from pxr import UsdGeom as _UG_t
+                _m = _UG_t.Xformable(stage.GetPrimAtPath(_b0_targets[0])).ComputeLocalToWorldTransform(0)
+                _q = _m.ExtractRotationQuat()
+                _qw = [float(_q.GetReal())] + [float(c) for c in _q.GetImaginary()]
+            _local = {{"X": [1.0, 0.0, 0.0], "Y": [0.0, 1.0, 0.0], "Z": [0.0, 0.0, 1.0]}}[_tok.upper()[:1]]
+            _w, _x, _y, _z = _qw
+            _tx = 2.0 * (_y * _local[2] - _z * _local[1])
+            _ty = 2.0 * (_z * _local[0] - _x * _local[2])
+            _tz = 2.0 * (_x * _local[1] - _y * _local[0])
+            _ax = [_local[0] + _w * _tx + (_y * _tz - _z * _ty),
+                   _local[1] + _w * _ty + (_z * _tx - _x * _tz),
+                   _local[2] + _w * _tz + (_x * _ty - _y * _tx)]
+            _n = (sum(c * c for c in _ax) ** 0.5) or 1.0
+            return [c / _n for c in _ax], _lo, _hi
+        _p_ax, _p_lo, _p_hi = _task_joint_info(TASK_JOINT_PATH)
+        # travel toward the limit with the larger magnitude (drawer: lower=-0.30)
+        _p_travel = TASK_ARGS.get("task_travel_m") if isinstance(TASK_ARGS, dict) and TASK_ARGS.get("task_travel_m") is not None else (_p_lo if abs(_p_lo) > abs(_p_hi) else _p_hi)
+        _p_yaw = _gm.degrees(_gm.atan2(_p_ax[1], _p_ax[0]))
+        _gx, _gy = cube_pos[0] + _nv_goff[0], cube_pos[1] + _nv_goff[1]
+        _gz = pz + _nv_goff[2] - 0.01  # grip the handle bar, not its top edge
+        goals = goals[:3]
+        goals[0] = (goals[0][0], None, _p_yaw)        # re-yaw approach to form closure
+        goals[1] = (goals[1][0], None, _p_yaw)
+        goals[2] = (np.array([_gx, _gy, _gz]), "close", _p_yaw)
+        _p_n = 4
+        for _pk in range(1, _p_n + 1):
+            _pp_goal = np.array([_gx + _p_ax[0] * _p_travel * (_pk / _p_n),
+                                 _gy + _p_ax[1] * _p_travel * (_pk / _p_n),
+                                 _gz + _p_ax[2] * _p_travel * (_pk / _p_n)])
+            goals.append((_pp_goal, "open" if _pk == _p_n else None, _p_yaw))
+        _p_back = _gm.copysign(0.10, _p_travel)
+        goals.append((goals[-1][0] + np.array([_p_ax[0] * _p_back, _p_ax[1] * _p_back, _p_ax[2] * _p_back]), None, _p_yaw))
     # 2026-06-04 UR10 TRANSIT-ARC (Anton: swing+collision are the priority root). FLAG-GATED OFF by default
     # (builtins._ur10_transit_arc) → byte-identical until verified, so the 6 + Franka + GUI-review are untouched.
     # ROOT: the S3 lift (cube_xy) → S4 transit (drop_xy) is a LARGE behind→front XY move planned DIRECTLY → cuRobo
@@ -7362,6 +7426,8 @@ def _on_step(dt):
             picked = S["picked_path"]
             # Pass cube_path so COLOR_ROUTING can dispatch destination per cube.
             cp, dp = _world_pos(picked), _bin_drop_pos(picked)
+            if TASK_MODE == "pull":
+                dp = cp  # no bin in task modes; dp only feeds height placeholders
             try:
                 if getattr(__import__("builtins"), "_sg_grip_log", False):
                     with open("/tmp/settle_dbg.log", "a") as _sd: _sd.write("SETTLE picked=%s cp=%s dp=%s\\n" % (picked, ([round(float(x),3) for x in cp] if cp is not None else None), ([round(float(x),3) for x in dp] if dp is not None else None)))
