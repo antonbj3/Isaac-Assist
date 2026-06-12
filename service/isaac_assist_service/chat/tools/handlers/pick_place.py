@@ -7703,7 +7703,16 @@ def _on_step(dt):
                     # within the bin footprint). Marking delivered stops wait_sensor from re-picking the still-
                     # in-z-window cube and carrying it back out (validated CP-70: cube reached bin xy 0.005 then
                     # got re-picked). Gated to suction (Franka places precisely -> _is_near_dest already True).
-                    if _is_near_dest(S["picked_path"]) or (_SG_IS_SUCTION and _is_in_bin(S["picked_path"])):
+                    if TASK_MODE in ("pull", "turn", "sweep"):
+                        # task modes: the SOURCE is a tool/handle released at the
+                        # task's end pose, not delivered anywhere — proximity
+                        # bookkeeping would mark it failed (sweep: brush at the
+                        # dustpan LIP -> Handle:failed, live 2026-06-12). The
+                        # GATE measures the actual outcome (joint delta /
+                        # debris-in-dustpan); mark the cycle consumed.
+                        S["delivered"].add(S["picked_path"])
+                        _a_cubes.Set(len(S["delivered"]))
+                    elif _is_near_dest(S["picked_path"]) or (_SG_IS_SUCTION and _is_in_bin(S["picked_path"])):
                         S["delivered"].add(S["picked_path"])
                         _a_cubes.Set(len(S["delivered"]))
                     else:
