@@ -4834,8 +4834,13 @@ joint = UsdPhysics.RevoluteJoint.Get(stage, {joint_path!r})
 if joint:
     drive = UsdPhysics.DriveAPI.Get(joint.GetPrim(), "angular")
     if drive:
+        # VELOCITY drive: the joint codegen's default stiffness 1e4 is a
+        # position servo pinned at angle 0 that DOMINATES targetVelocity —
+        # the disc never rotated (CP-67: cubes waited at the belt forever,
+        # live 2026-06-13). Velocity drives need stiffness 0.
+        drive.CreateStiffnessAttr().Set(0.0)
         drive.CreateTargetVelocityAttr().Set({angular_velocity_deg})
-        print(json.dumps({{"target_velocity_deg_s": {angular_velocity_deg}}}))
+        print(json.dumps({{"target_velocity_deg_s": {angular_velocity_deg}, "stiffness_zeroed": True}}))
     else:
         print(json.dumps({{"error": "no drive on joint"}}))
 else:
