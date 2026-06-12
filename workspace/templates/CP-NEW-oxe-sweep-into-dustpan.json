@@ -338,5 +338,5 @@
       "last_run_at": "2026-06-11T16:47:25+00:00"
     }
   },
-  "verification": {"function_gate": {"status": "fail", "n": 0, "m": 9, "wilson_lower": 0.0, "last_run_sha": "abe2f52c", "last_run_at": "2026-06-12T19:47:42+00:00", "legacy_claim": null}, "faithfulness": {"status": "fail", "n": 0, "m": 1, "wilson_lower": 0.0, "last_run_sha": "bdc3f698", "last_run_at": "2026-06-11T16:47:25+00:00"}}
+  "verification": {"function_gate": {"status": "mixed", "n": 1, "m": 10, "wilson_lower": 0.0179, "last_run_sha": "3776f5fd", "last_run_at": "2026-06-12T19:54:41+00:00", "legacy_claim": null}, "faithfulness": {"status": "fail", "n": 0, "m": 1, "wilson_lower": 0.0, "last_run_sha": "bdc3f698", "last_run_at": "2026-06-11T16:47:25+00:00"}}
 }
