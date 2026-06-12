@@ -7314,6 +7314,20 @@ def _fixup_asset_gripper_joint():
 def _on_step(dt):
     try:
         S["ticks"] += 1
+        # RESET EPOCH (2026-06-12): settle_after_canonical restores the SCENE
+        # to authored start but the controller's python state kept running —
+        # a chain that started DURING the canonical build (sensor-less claim)
+        # resumes mid-cycle against the reset world (drawer-open: gate replays
+        # the tail of a consumed cycle -> end pinned at the joint stop).
+        # settle bumps builtins._pp_reset_epoch; controllers re-arm cleanly.
+        # No bump (every current flow) -> S["_epoch"] stays 0 -> byte-identical.
+        _ep_rs = getattr(__import__("builtins"), "_pp_reset_epoch", 0)
+        if S.get("_epoch", 0) != _ep_rs:
+            S["_epoch"] = _ep_rs
+            S.update({{"mode": "wait_sensor", "picked_path": None, "segments": None,
+                       "seg_idx": 0, "seg_start_t": None,
+                       "delivered": set(), "failed": set(),
+                       "settle_ticks": 0, "grip_action_done": False}})
         _a_tick.Set(S["ticks"]); _a_phase.Set(S["mode"])
         _fixup_asset_gripper_joint()  # asset gripper: re-author its wrist_3 FixedJoint from correct runtime poses (once)
         _track_suction_follower()  # suction: keep the FJ'd cone on the live ee so the SG can grip (no-op for Franka)

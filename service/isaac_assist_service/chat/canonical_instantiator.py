@@ -245,6 +245,13 @@ from pxr import Gf
 omni.timeline.get_timeline_interface().stop()
 omni.timeline.get_timeline_interface().set_current_time(0.0)
 
+# Controller re-arm (2026-06-12): restoring the SCENE while a controller's
+# python state keeps mid-cycle progress desyncs the gate replay (a sensor-less
+# claim can consume the whole task DURING the canonical build). Controllers
+# watch this epoch in _on_step and re-arm to wait_sensor when it changes.
+import builtins as _bi_se
+_bi_se._pp_reset_epoch = getattr(_bi_se, "_pp_reset_epoch", 0) + 1
+
 stage = omni.usd.get_context().get_stage()
 restored_cubes = []
 for path, pos in {_j.dumps(cube_pos)}.items():

@@ -293,19 +293,39 @@ def _gen_create_physics_joint(args: Dict) -> str:
         _msg = f"create_physics_joint: axis must be X/Y/Z, got {axis!r}"
         return f"raise ValueError({_msg!r})\n"
     lo, hi = args.get("lower_limit"), args.get("upper_limit")
-    lp0 = args.get("local_pos0") or [0, 0, 0]
-    lp1 = args.get("local_pos1") or [0, 0, 0]
+    lp0 = args.get("local_pos0")
+    lp1 = args.get("local_pos1")
     lines = [
         "import omni.usd",
-        "from pxr import UsdPhysics, Gf, Sdf",
+        "from pxr import UsdPhysics, UsdGeom, Gf, Sdf",
         "stage = omni.usd.get_context().get_stage()",
         f"_j = UsdPhysics.{cls}.Define(stage, {joint_path!r})",
         f"_j.GetBody0Rel().SetTargets([Sdf.Path({body0!r})])",
         f"_j.GetBody1Rel().SetTargets([Sdf.Path({body1!r})])",
         f"_j.GetAxisAttr().Set({axis!r})",
-        f"_j.GetLocalPos0Attr().Set(Gf.Vec3f({float(lp0[0])}, {float(lp0[1])}, {float(lp0[2])}))",
-        f"_j.GetLocalPos1Attr().Set(Gf.Vec3f({float(lp1[0])}, {float(lp1[1])}, {float(lp1[2])}))",
     ]
+    if lp0 is not None or lp1 is not None:
+        lp0 = lp0 or [0, 0, 0]
+        lp1 = lp1 or [0, 0, 0]
+        lines += [
+            f"_j.GetLocalPos0Attr().Set(Gf.Vec3f({float(lp0[0])}, {float(lp0[1])}, {float(lp0[2])}))",
+            f"_j.GetLocalPos1Attr().Set(Gf.Vec3f({float(lp1[0])}, {float(lp1[1])}, {float(lp1[2])}))",
+        ]
+    else:
+        # auto-anchor at body1's current pose (2026-06-12, ports the
+        # create_articulated_joint fix): unauthored localPos = identity frames
+        # at each body's ORIGIN -> PhysX snaps body1 toward body0's origin
+        # (drawer-open: drawer authored at joint pos -0.035 snaps +0.035 to the
+        # stop on every replay) and the offset becomes phantom initial travel.
+        lines += [
+            "_xc_pj = UsdGeom.XformCache()",
+            f"_m1_pj = _xc_pj.GetLocalToWorldTransform(stage.GetPrimAtPath({body1!r}))",
+            "_p1_pj = _m1_pj.ExtractTranslation()",
+            f"_m0_pj = _xc_pj.GetLocalToWorldTransform(stage.GetPrimAtPath({body0!r}))",
+            "_lp0_pj = _m0_pj.GetInverse().Transform(_p1_pj)",
+            "_j.GetLocalPos0Attr().Set(Gf.Vec3f(_lp0_pj))",
+            "_j.GetLocalPos1Attr().Set(Gf.Vec3f(0.0, 0.0, 0.0))",
+        ]
     if lo is not None:
         lines.append(f"_j.GetLowerLimitAttr().Set({float(lo)})")
     if hi is not None:
