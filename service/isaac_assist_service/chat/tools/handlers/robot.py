@@ -4691,6 +4691,18 @@ if limit_lower is not None or limit_upper is not None:
         if limit_upper is not None:
             joint.CreateUpperLimitAttr().Set(float(limit_upper))
 
+# Passive damping (optional): damping-only force drive (stiffness 0) — the
+# honest "joint resistance" for MAXIMAL joints, where physxJoint:jointFriction
+# is silently ignored (articulation-only; measured on turn-faucet 2026-06-13).
+passive_damping = {args.get("passive_damping")!r}
+if passive_damping is not None and joint_type in ("revolute", "prismatic"):
+    _pd_token = "angular" if joint_type == "revolute" else "linear"
+    _pd = UsdPhysics.DriveAPI.Apply(joint.GetPrim(), _pd_token)
+    _pd.CreateTypeAttr().Set("force")
+    _pd.CreateStiffnessAttr().Set(0.0)
+    _pd.CreateDampingAttr().Set(float(passive_damping))
+    _pd.CreateMaxForceAttr().Set(1000.0)
+
 # Drive (optional)
 drive_type = {drive_type!r}
 if drive_type and joint_type in ("revolute", "prismatic"):

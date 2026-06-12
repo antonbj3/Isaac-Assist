@@ -2554,6 +2554,7 @@ ISAAC_SIM_TOOLS = [
                     "limit_upper": {"type": "number", "description": "Upper joint limit"},
                     "drive_type": {"type": "string", "enum": ["force", "acceleration"], "description": "Optional drive type"},
                     "anchor": {"type": "array", "items": {"type": "number"}, "description": "World [x,y,z] joint anchor. Default = body1's origin (no-snap, fine for prismatic). REQUIRED for revolute mechanisms whose pivot is NOT body1's origin (lever orbiting a post — without it the lever spins in place)"},
+                    "passive_damping": {"type": "number", "description": "Damping-only force drive (stiffness 0) — honest joint resistance on maximal joints (physxJoint:jointFriction is articulation-only and silently ignored). E.g. 0.3 stops a released faucet handle from coasting"},
                     "local_pos0": {"type": "array", "items": {"type": "number"}, "description": "Explicit physics:localPos0 (body0 frame). Overrides anchor/auto"},
                     "local_pos1": {"type": "array", "items": {"type": "number"}, "description": "Explicit physics:localPos1 (body1 frame). Overrides anchor/auto"},
                 },
