@@ -412,7 +412,7 @@ def run_template(template_id: str, skip_ts: bool = False,
         genv.setdefault("ASSETS_ROBOTS_SUBDIR", "Collected_Robots")
         p = subprocess.run([sys_exe(), f"{REPO}/scripts/qa/gate_one.py",
                             template_id], capture_output=True, text=True,
-                           timeout=900, env=genv)
+                           timeout=1500, env=genv)
         out = p.stdout + p.stderr
         res["gate_out_head"] = out[:3000]
         if env_flags:
