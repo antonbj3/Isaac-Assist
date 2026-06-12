@@ -4978,6 +4978,14 @@ def _compute_h1_curobo():
     return max(zs) + _clr_add
 EE_INITIAL_HEIGHT = _compute_h1_curobo()
 
+# task-mode primitive layer (pull v1, 2026-06-12): None -> every new branch
+# below is dead code -> the 37+ verified templates untouched. MODULE level:
+# consumed by _cube_to_pick, _build_segments AND _on_step (a _cube_to_pick-
+# local definition NameError'd in the siblings, 5625 ticks, live 2026-06-12).
+TASK_MODE = {task!r}
+TASK_JOINT_PATH = {task_joint_path!r}
+TASK_ARGS = {task_args!r}
+
 # Scene-obstacle builder — transform USD prims' world-bboxes to BASE frame cuboids
 from curobo._src.geom.types import SceneCfg as _CuroboSceneCfg
 
@@ -6099,11 +6107,6 @@ def _cube_to_pick():
     # per-phase claim scoping (machine-tender dual-controller contention,
     # 2026-06-12): OPT-IN — None keeps the claim loop byte-identical
     CLAIM_RADIUS = {claim_radius!r}
-    # task-mode primitive layer (pull v1, 2026-06-12): None -> every new
-    # branch below is dead code -> the 37+ verified templates untouched
-    TASK_MODE = {task!r}
-    TASK_JOINT_PATH = {task_joint_path!r}
-    TASK_ARGS = {task_args!r}
     # Phase 4 (2026-05-10): 3D-aware reach check. EE has to reach
     # h1 = EE_INITIAL_HEIGHT above cube, not the cube itself. With h1
     # significantly above robot base, the EE travel distance is sqrt(
