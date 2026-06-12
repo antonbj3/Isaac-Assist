@@ -45,11 +45,11 @@ def ingest(path: Path, sha: str) -> int:  # noqa: C901
         except (json.JSONDecodeError, OSError) as e:
             print(f"  SKIP unreadable template {r.get('template')}: {e}")
             continue
-        # whole-doc scan; over-blocking is the safe direction (audit MED-5:
-        # quoted-shape heuristics missed single-quoted/constraint-list refs)
-        if re.search(r"ur10", json.dumps(tpl_doc), re.I):
-            print(f"  SKIP UR10 template {r.get('template')} (cloud non-parity policy)")
-            continue
+        # UR10 guard LIFTED 2026-06-12: family parity proven after the two
+        # asset-portability fixes (gripper path + pinned UR10 revision —
+        # CP-70/73/75/79/80/83/84 green in cloud; 69 stochastic like local
+        # CP-71, 81 chronic-timeout never ledgers anyway). Cloud rows stay
+        # distinguishable via the cloud_file/gpu extras.
         extras = {"source": "cloud_gate", "gpu": r.get("gpu"),
                   "boot_s": r.get("boot_s"), "cloud_file": path.name,
                   "fresh_kit": True}
