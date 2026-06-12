@@ -177,15 +177,56 @@ else:
                 return sum((x - y) ** 2 for x, y in zip(a, b)) ** 0.5
             return b - a
         if isinstance(_start, list):
-            # body-world mode: PROJECT onto the joint axis — euclidean delta
-            # passed a yanked-loose drawer (1.1 m with 0.36 m z-fall) before
-            # the joint fix. Along-axis is the verdict; orthogonal drift is
-            # flagged (loose/broken joint or body knocked sideways).
-            _along = _end[_axis_i] - _start[_axis_i]
-            _orth = (sum((_end[i] - _start[i]) ** 2 for i in range(3) if i != _axis_i)) ** 0.5
-            _delta = _along
-            _res["orthogonal_drift"] = round(_orth, 4)
-            _res["orthogonal_drift_flag"] = bool(_orth > max(0.02, abs(_along) * 0.5))
+            _is_rev = _prim.GetTypeName() == "PhysicsRevoluteJoint"
+            if _is_rev:
+                # REVOLUTE body-world mode (2026-06-12): the along-axis
+                # projection of an ORBIT is identically zero (vertical-axis
+                # faucet: handle orbits in xy, axis=Z -> z-delta 0 even when
+                # the turn succeeds). Measure the ANGLE about the axis from
+                # body1's positions: pivot = body0 world x localPos0 (authored
+                # by the joint-anchor fix), theta in the plane normal to the
+                # axis. Units now match min_delta_deg.
+                import math as _gm_ag
+                _pivot = None
+                try:
+                    _lp0a = _prim.GetAttribute("physics:localPos0")
+                    _lp0v = list(_lp0a.Get()) if _lp0a and _lp0a.Get() is not None else [0.0, 0.0, 0.0]
+                    _b0r = _prim.GetRelationship("physics:body0")
+                    _b0t = list(_b0r.GetTargets()) if _b0r else []
+                    if _b0t:
+                        _m0g = UsdGeom.Xformable(stage.GetPrimAtPath(str(_b0t[0]))).ComputeLocalToWorldTransform(0)
+                        _pvg = _m0g.Transform(Gf.Vec3d(*[float(v) for v in _lp0v]))
+                        _pivot = [float(_pvg[0]), float(_pvg[1]), float(_pvg[2])]
+                    else:
+                        _pivot = [float(v) for v in _lp0v]
+                except Exception:
+                    _pivot = None
+                if _pivot is None:
+                    _pivot = _start  # degenerate: angle reads 0, honest fail
+                _ij = [k for k in range(3) if k != _axis_i]
+                _i2, _j2 = _ij[0], _ij[1]
+                def _theta(p):
+                    return _gm_ag.atan2(p[_j2] - _pivot[_j2], p[_i2] - _pivot[_i2])
+                _delta = _gm_ag.degrees(_theta(_end) - _theta(_start))
+                while _delta > 180.0: _delta -= 360.0
+                while _delta < -180.0: _delta += 360.0
+                def _rad(p):
+                    return ((p[_i2] - _pivot[_i2]) ** 2 + (p[_j2] - _pivot[_j2]) ** 2) ** 0.5
+                _orth = abs(_end[_axis_i] - _start[_axis_i]) + abs(_rad(_end) - _rad(_start))
+                _res["orthogonal_drift"] = round(_orth, 4)
+                _res["orthogonal_drift_flag"] = bool(_orth > max(0.02, _rad(_start) * 0.25))
+                _res["pivot"] = [round(v, 4) for v in _pivot]
+                _mode = "body1_world_angle"
+            else:
+                # body-world mode: PROJECT onto the joint axis — euclidean delta
+                # passed a yanked-loose drawer (1.1 m with 0.36 m z-fall) before
+                # the joint fix. Along-axis is the verdict; orthogonal drift is
+                # flagged (loose/broken joint or body knocked sideways).
+                _along = _end[_axis_i] - _start[_axis_i]
+                _orth = (sum((_end[i] - _start[i]) ** 2 for i in range(3) if i != _axis_i)) ** 0.5
+                _delta = _along
+                _res["orthogonal_drift"] = round(_orth, 4)
+                _res["orthogonal_drift_flag"] = bool(_orth > max(0.02, abs(_along) * 0.5))
         else:
             _delta = _d(_start, _end)
         _ps = _pre_stop if _pre_stop is not None else _end

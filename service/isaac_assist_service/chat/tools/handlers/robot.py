@@ -4632,9 +4632,25 @@ joint.CreateBody1Rel().SetTargets([Sdf.Path(body1_path)])
 # initial joint displacement (CP-55: pos started at +0.10 of limits 0..0.15,
 # capping drawer travel to 0.05m). Default: anchor the joint at body1's
 # CURRENT pose -> nothing moves at sim start, joint position starts at 0.
-# Explicit local_pos0/local_pos1 args override (mirrors create_physics_joint).
+# `anchor` (world [x,y,z]) overrides the anchor POINT — REQUIRED for revolute
+# mechanisms whose pivot is not body1's origin (faucet lever orbiting a post:
+# body1-origin anchoring makes the handle spin in place instead of orbiting).
+# Explicit local_pos0/local_pos1 args override everything (mirrors
+# create_physics_joint).
 local_pos0 = {args.get("local_pos0")!r}
 local_pos1 = {args.get("local_pos1")!r}
+anchor_world = {args.get("anchor")!r}
+if anchor_world is not None and local_pos0 is None and local_pos1 is None:
+    from pxr import UsdGeom as _UG_anchor2
+    _xc2 = _UG_anchor2.XformCache()
+    _aw = Gf.Vec3d(*[float(v) for v in anchor_world])
+    _m1a = _xc2.GetLocalToWorldTransform(stage.GetPrimAtPath(body1_path))
+    local_pos1 = list(_m1a.GetInverse().Transform(_aw))
+    if body0_path:
+        _m0a = _xc2.GetLocalToWorldTransform(stage.GetPrimAtPath(body0_path))
+        local_pos0 = list(_m0a.GetInverse().Transform(_aw))
+    else:
+        local_pos0 = list(_aw)
 if local_pos0 is not None or local_pos1 is not None:
     if local_pos0 is not None:
         joint.CreateLocalPos0Attr().Set(Gf.Vec3f(*[float(v) for v in local_pos0]))

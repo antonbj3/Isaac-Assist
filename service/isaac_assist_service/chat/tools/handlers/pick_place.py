@@ -6121,12 +6121,12 @@ def _cube_to_pick():
         # in-bin skip would reject the handle forever ('Handle:in_dest',
         # diagnosed live 2026-06-12)
         if sp in S["delivered"] or sp in S.get("failed", set()):
-            if TASK_MODE == "pull": S["_pull_rej"] = sp.split("/")[-1] + ":delivered_or_failed"
+            if TASK_MODE in ("pull", "turn"): S["_pull_rej"] = sp.split("/")[-1] + ":delivered_or_failed"
             continue
-        if TASK_MODE != "pull" and _is_in_bin(sp): continue
+        if TASK_MODE not in ("pull", "turn") and _is_in_bin(sp): continue
         cp = _world_pos(sp)
         if cp is None:
-            if TASK_MODE == "pull": S["_pull_rej"] = sp.split("/")[-1] + ":nopos"
+            if TASK_MODE in ("pull", "turn"): S["_pull_rej"] = sp.split("/")[-1] + ":nopos"
             continue
         # 2026-06-03 HANDOFF-SYNC gate (multi-robot only): claim a cube only when its Z has
         # SETTLED (stable over recent ticks) and is not high. RCA via cp51_faithful: FrankaB
@@ -6143,15 +6143,15 @@ def _cube_to_pick():
                 _stab = (_stab + 1) if (_zp is not None and abs(float(cp[2]) - _zp) < 0.006) else 0
                 _sz[sp] = (float(cp[2]), _stab)
                 if _stab < 6 or cp[2] > base_z + 0.20:
-                    if TASK_MODE == "pull": S["_pull_rej"] = sp.split("/")[-1] + ":settle_%d_%.2f" % (_stab, cp[2])
+                    if TASK_MODE in ("pull", "turn"): S["_pull_rej"] = sp.split("/")[-1] + ":settle_%d_%.2f" % (_stab, cp[2])
                     continue
         except Exception: pass
         if cp[2] < base_z - 0.30 or cp[2] > base_z + 0.50:
-            if TASK_MODE == "pull": S["_pull_rej"] = sp.split("/")[-1] + ":zwin_%.2f" % cp[2]
+            if TASK_MODE in ("pull", "turn"): S["_pull_rej"] = sp.split("/")[-1] + ":zwin_%.2f" % cp[2]
             continue
         _xy_dist = float(np.linalg.norm(cp[:2] - base_xy))
         if _xy_dist > _reach_m:
-            if TASK_MODE == "pull": S["_pull_rej"] = sp.split("/")[-1] + ":xy_%.2f" % _xy_dist
+            if TASK_MODE in ("pull", "turn"): S["_pull_rej"] = sp.split("/")[-1] + ":xy_%.2f" % _xy_dist
             continue
         # 3D-aware: reject if EE goal at h1 above cube would exceed reach.
         # Use _reach_m_raw (no safety margin) for 3D check — the 5cm safety
@@ -6166,14 +6166,14 @@ def _cube_to_pick():
         # admission (a still-unreachable goal will plan-fail → 3-strike), so the verified set
         # (whose cubes are already admitted) is unaffected.
         _gate_h1o = min(_h1_offset, max(0.0, (float(cp[2]) + 0.20) - base_z))
-        if TASK_MODE == "pull":
-            # pull has no transit-to-h1: the vertical term is the handle
-            # height itself ('Handle:3d_0.87_h1o_0.45' live-diagnosed —
+        if TASK_MODE in ("pull", "turn"):
+            # task modes have no transit-to-h1: the vertical term is the
+            # handle height itself ('Handle:3d_0.87_h1o_0.45' live-diagnosed —
             # the h1 inflation pushed a reachable handle past 0.855)
             _gate_h1o = max(0.0, float(cp[2]) - base_z)
         _3d_dist = (_xy_dist**2 + _gate_h1o**2) ** 0.5
         if _3d_dist > _reach_m:
-            if TASK_MODE == "pull": S["_pull_rej"] = sp.split("/")[-1] + ":3dv2_%.2f" % _3d_dist
+            if TASK_MODE in ("pull", "turn"): S["_pull_rej"] = sp.split("/")[-1] + ":3dv2_%.2f" % _3d_dist
             continue  # tight 3D matches 2D safety margin
         # REORIENT-01 require_upright filter: skip cubes whose +Z axis
         # isn't aligned with world up. Lets cube ride past pick zone on
@@ -6215,7 +6215,7 @@ def _cube_to_pick():
                 if _c is None: _msgs.append(_nm + ":nopos"); continue
                 if _sp in S["delivered"]: _msgs.append(_nm + ":delivered"); continue
                 if _sp in S.get("failed", set()): _msgs.append(_nm + ":failed"); continue
-                if TASK_MODE != "pull" and _is_in_bin(_sp): _msgs.append(_nm + ":in_dest"); continue
+                if TASK_MODE not in ("pull", "turn") and _is_in_bin(_sp): _msgs.append(_nm + ":in_dest"); continue
                 if _c[2] < base_z - 0.30 or _c[2] > base_z + 0.50: _msgs.append(_nm + ":zwin_" + str(round(float(_c[2]), 2))); continue
                 _xd = float(np.linalg.norm(_c[:2] - base_xy))
                 if _xd > _reach_m: _msgs.append(_nm + ":xy_" + str(round(_xd, 2))); continue
@@ -6225,7 +6225,7 @@ def _cube_to_pick():
                 _msgs.append(_nm + ":PASS_unexpected")
             _ra = _rp.GetAttribute("ctrl:pick_reject")
             if not _ra: _ra = _rp.CreateAttribute("ctrl:pick_reject", _Sdf_dbg.ValueTypeNames.String)
-            _pr_mark = "|REAL:" + S.get("_pull_rej", "none") if TASK_MODE == "pull" else ""
+            _pr_mark = "|REAL:" + S.get("_pull_rej", "none") if TASK_MODE in ("pull", "turn") else ""
             _ra.Set(("nsrc" + str(len(SOURCE_PATHS)) + "|" + "|".join(_msgs) + _pr_mark)[:400])
         except Exception as _de:
             try:
@@ -6610,6 +6610,48 @@ def _build_segments(cube_pos, drop_pos, current_q):
             goals.append((_pp_goal, "open" if _pk == _p_n else None, _p_yaw))
         _p_back = _gm.copysign(0.10, _p_travel)
         goals.append((goals[-1][0] + np.array([_p_ax[0] * _p_back, _p_ax[1] * _p_back, _p_ax[2] * _p_back]), None, _p_yaw))
+    # ── TASK-MODE: TURN (revolute v1, vertical hinge) ────────────────────
+    # Orbit the grasped lever about the joint's WORLD anchor (the joint-
+    # anchor fix authors physics:localPos0 — pivot = body0 world x localPos0;
+    # body1-origin anchoring would spin the lever in place). Same tight low
+    # descent as pull; yaw tracks the arc. Target angle: task_target_deg,
+    # else the limit with the larger magnitude (read live, like pull).
+    elif TASK_MODE == "turn" and TASK_JOINT_PATH:
+        _jpr_t = stage.GetPrimAtPath(TASK_JOINT_PATH)
+        _lp0_a = _jpr_t.GetAttribute("physics:localPos0")
+        _lp0 = list(_lp0_a.Get()) if _lp0_a and _lp0_a.Get() is not None else [0.0, 0.0, 0.0]
+        _b0_rel_t = _jpr_t.GetRelationship("physics:body0")
+        _b0_t = list(_b0_rel_t.GetTargets()) if _b0_rel_t else []
+        if _b0_t:
+            from pxr import UsdGeom as _UG_tt, Gf as _Gf_tt
+            _m0_t = _UG_tt.Xformable(stage.GetPrimAtPath(_b0_t[0])).ComputeLocalToWorldTransform(0)
+            _pv = _m0_t.Transform(_Gf_tt.Vec3d(*[float(v) for v in _lp0]))
+            _pivot = [float(_pv[0]), float(_pv[1]), float(_pv[2])]
+        else:
+            _pivot = [float(v) for v in _lp0]
+        _t_lo_a = _jpr_t.GetAttribute("physics:lowerLimit")
+        _t_hi_a = _jpr_t.GetAttribute("physics:upperLimit")
+        _t_lo = float(_t_lo_a.Get()) if _t_lo_a and _t_lo_a.Get() is not None else 0.0
+        _t_hi = float(_t_hi_a.Get()) if _t_hi_a and _t_hi_a.Get() is not None else 0.0
+        _t_target = TASK_ARGS.get("task_target_deg") if isinstance(TASK_ARGS, dict) and TASK_ARGS.get("task_target_deg") is not None else (_t_lo if abs(_t_lo) > abs(_t_hi) else _t_hi)
+        _gx, _gy = cube_pos[0] + _nv_goff[0], cube_pos[1] + _nv_goff[1]
+        _gz = pz + _nv_goff[2] - 0.01
+        _r0x, _r0y = _gx - _pivot[0], _gy - _pivot[1]
+        _t_yaw0 = _gm.degrees(_gm.atan2(_r0y, _r0x))
+        goals = goals[:3]
+        goals[0] = (np.array([_gx, _gy, _gz + 0.10]), None, _t_yaw0)
+        goals[1] = (np.array([_gx, _gy, _gz + 0.05]), None, _t_yaw0)
+        goals[2] = (np.array([_gx, _gy, _gz]), "close", _t_yaw0)
+        _t_n = max(1, int(_gm.ceil(abs(_t_target) / 15.0)))
+        for _tk in range(1, _t_n + 1):
+            _th = _gm.radians(_t_target * (_tk / _t_n))
+            _c_t, _s_t = _gm.cos(_th), _gm.sin(_th)
+            goals.append((np.array([_pivot[0] + _c_t * _r0x - _s_t * _r0y,
+                                    _pivot[1] + _s_t * _r0x + _c_t * _r0y,
+                                    _gz]),
+                          "open" if _tk == _t_n else None,
+                          _t_yaw0 + _gm.degrees(_th)))
+        goals.append((goals[-1][0] + np.array([0.0, 0.0, 0.10]), None, goals[-1][2]))  # retract up
     # 2026-06-04 UR10 TRANSIT-ARC (Anton: swing+collision are the priority root). FLAG-GATED OFF by default
     # (builtins._ur10_transit_arc) → byte-identical until verified, so the 6 + Franka + GUI-review are untouched.
     # ROOT: the S3 lift (cube_xy) → S4 transit (drop_xy) is a LARGE behind→front XY move planned DIRECTLY → cuRobo
@@ -7456,7 +7498,7 @@ def _on_step(dt):
             picked = S["picked_path"]
             # Pass cube_path so COLOR_ROUTING can dispatch destination per cube.
             cp, dp = _world_pos(picked), _bin_drop_pos(picked)
-            if TASK_MODE == "pull":
+            if TASK_MODE in ("pull", "turn"):
                 dp = cp  # no bin in task modes; dp only feeds height placeholders
             try:
                 if getattr(__import__("builtins"), "_sg_grip_log", False):

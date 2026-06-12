@@ -1077,6 +1077,9 @@ class CreateArticulatedJointArgs(BaseModel):
     limit_lower: Optional[float] = Field(None, description="Lower joint limit (degrees for revolute, meters for prismatic)")
     limit_upper: Optional[float] = Field(None, description="Upper joint limit")
     drive_type: Optional[str] = Field(None, description="Optional drive type")
+    anchor: Optional[List[float]] = Field(None, description="World [x,y,z] joint anchor (default: body1 origin; required for off-origin revolute pivots)")
+    local_pos0: Optional[List[float]] = Field(None, description="Explicit physics:localPos0 (body0 frame); overrides anchor/auto")
+    local_pos1: Optional[List[float]] = Field(None, description="Explicit physics:localPos1 (body1 frame); overrides anchor/auto")
 
 
 class SurfaceGripperArgs(BaseModel):
