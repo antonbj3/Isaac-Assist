@@ -272,5 +272,5 @@
     "target_path": "{{primary_destination.path}}",
     "duration_s": 180
   },
-  "verification": {"function_gate": {"status": "pass", "n": 3, "m": 3, "wilson_lower": 0.4385, "last_run_sha": "ffaac959", "last_run_at": "2026-06-11T20:15:05+00:00", "legacy_claim": "pass"}, "faithfulness": {"status": "pass", "n": 2, "m": 2, "wilson_lower": 0.3424, "last_run_sha": "ffaac959", "last_run_at": "2026-06-11T20:16:34+00:00"}}
+  "verification": {"function_gate": {"status": "pass", "n": 4, "m": 4, "wilson_lower": 0.5101, "last_run_sha": "e1ee3bf5", "last_run_at": "2026-06-12T02:48:14+00:00", "legacy_claim": "pass"}, "faithfulness": {"status": "pass", "n": 3, "m": 3, "wilson_lower": 0.4385, "last_run_sha": "e1ee3bf5", "last_run_at": "2026-06-12T02:49:38+00:00"}}
 }
