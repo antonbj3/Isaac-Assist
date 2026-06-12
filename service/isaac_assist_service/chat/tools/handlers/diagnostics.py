@@ -2510,15 +2510,33 @@ target_paths = set({targets_repr})
 
 # 1) Walk all descendants and arm contactOffset + contact reporting on every
 #    prim that already has a CollisionAPI (i.e. each robot link's collider).
-link_paths = []
-for desc in Usd.PrimRange(robot_prim):
-    if desc.HasAPI(UsdPhysics.CollisionAPI):
-        physx_col = PhysxSchema.PhysxCollisionAPI.Apply(desc)
-        # contactOffset is in scene units (meters in Isaac Sim defaults)
-        physx_col.CreateContactOffsetAttr().Set(monitor_offset_m)
-        # contactReport API must be applied to receive on_contact events
-        PhysxSchema.PhysxContactReportAPI.Apply(desc)
-        link_paths.append(str(desc.GetPath()))
+#    Isaac 5.x robot assets nest link colliders under INSTANCEABLE geometry
+#    scopes: a default PrimRange sees ZERO colliders ("armed on 0 robot
+#    links", live-proven 2026-06-11) — the same instance-proxy blindness the
+#    semantic USD diff hit. Proxies cannot be edited, so when the plain walk
+#    finds nothing we de-instance the hiding subtrees (stage-local override,
+#    geometry/physics unchanged) and retry.
+def _arm_robot_colliders():
+    paths = []
+    for desc in Usd.PrimRange(robot_prim):
+        if desc.HasAPI(UsdPhysics.CollisionAPI):
+            physx_col = PhysxSchema.PhysxCollisionAPI.Apply(desc)
+            # contactOffset is in scene units (meters in Isaac Sim defaults)
+            physx_col.CreateContactOffsetAttr().Set(monitor_offset_m)
+            # contactReport API must be applied to receive on_contact events
+            PhysxSchema.PhysxContactReportAPI.Apply(desc)
+            paths.append(str(desc.GetPath()))
+    return paths
+
+link_paths = _arm_robot_colliders()
+if not link_paths:
+    for _ in range(4):  # nested instances need extra passes
+        _inst_paths = [d.GetPath() for d in Usd.PrimRange(robot_prim) if d.IsInstance()]
+        if not _inst_paths:
+            break
+        for _ip in _inst_paths:
+            stage.GetPrimAtPath(_ip).SetInstanceable(False)
+    link_paths = _arm_robot_colliders()
 
 # 2) Arm the same APIs on each target so PhysX pairs them with the robot links
 for tp in target_paths:
