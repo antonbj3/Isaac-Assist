@@ -16,6 +16,20 @@ No Kit RPC or running Isaac Sim needed — retrieval is pure ChromaDB + sentence
 """
 from __future__ import annotations
 
+# ── MACHINE-SAFETY GUARD (2026-06-12) ──────────────────────────────────────
+# This module touches ChromaDB/HNSW natively. Running it while the
+# long-lived daemons on this machine hold the same store froze the whole
+# machine TWICE (05:45 + 05:59, ~1-4 min after each pytest invocation that
+# name-matched a test in here via -k). Skip locally when the sentinel file
+# exists; run these in the cloud container or with all daemons stopped.
+import pathlib as _pl_guard
+import pytest as _pt_guard
+if _pl_guard.Path("/home/anton/.no_local_chroma_tests").exists():
+    pytestmark = _pt_guard.mark.skip(
+        reason="ChromaDB tests disabled on this machine: shared HNSW store "
+               "with live daemons — parallel native access froze the machine "
+               "2x on 2026-06-12 (sentinel: ~/.no_local_chroma_tests)")
+
 import json
 import sys
 import time
@@ -356,3 +370,23 @@ class TestRetrievalBenchmark:
 if __name__ == "__main__":
     benchmark = TestRetrievalBenchmark()
     benchmark.test_retrieval_benchmark_runs()
+
+
+# ── MACHINE-SAFETY GUARD (2026-06-12) — placed LAST so it cannot be
+# overridden by earlier pytestmark assignments. This module touches
+# ChromaDB/HNSW natively; running it while this machine's long-lived
+# daemons hold the same store froze the whole machine TWICE (05:45 +
+# 05:59, minutes after each pytest invocation that matched a test in
+# here via -k). Run these in the cloud container or with daemons stopped.
+import pathlib as _pl_guard
+import pytest as _pt_guard
+if _pl_guard.Path("/home/anton/.no_local_chroma_tests").exists():
+    _skip_chroma = _pt_guard.mark.skip(
+        reason="ChromaDB tests disabled on this machine: shared HNSW store "
+               "with live daemons froze the machine 2x on 2026-06-12 "
+               "(sentinel: ~/.no_local_chroma_tests)")
+    try:
+        pytestmark = (list(pytestmark) if isinstance(pytestmark, (list, tuple))
+                      else [pytestmark]) + [_skip_chroma]
+    except NameError:
+        pytestmark = _skip_chroma
