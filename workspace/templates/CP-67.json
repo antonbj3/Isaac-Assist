@@ -364,5 +364,6 @@
       "last_run_sha": "2687c744",
       "last_run_at": "2026-06-12T16:20:29+00:00"
     }
-  }
+  },
+  "verification": {"function_gate": {"status": "fail", "n": 0, "m": 4, "wilson_lower": 0.0, "last_run_sha": "54c0ad53", "last_run_at": "2026-06-12T21:23:01+00:00", "legacy_claim": null}, "faithfulness": {"status": "fail", "n": 0, "m": 2, "wilson_lower": 0.0, "last_run_sha": "2687c744", "last_run_at": "2026-06-12T16:20:29+00:00"}}
 }
