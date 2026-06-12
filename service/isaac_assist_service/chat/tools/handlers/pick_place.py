@@ -7333,6 +7333,16 @@ def _on_step(dt):
                        "seg_idx": 0, "seg_start_t": None,
                        "delivered": set(), "failed": set(),
                        "settle_ticks": 0, "grip_action_done": False}})
+            # a held mutex would deadlock the replay (the marker prim outlives
+            # the python state) — release if this robot owns it
+            if MUTEX_PATH:
+                try:
+                    _mp_rs = stage.GetPrimAtPath(MUTEX_PATH)
+                    if _mp_rs and _mp_rs.IsValid():
+                        _ma_rs = _mp_rs.GetAttribute("mutex:claimed_by")
+                        if _ma_rs and (_ma_rs.Get() or "") == ROBOT_PATH:
+                            _ma_rs.Set("")
+                except Exception: pass
         _a_tick.Set(S["ticks"]); _a_phase.Set(S["mode"])
         _fixup_asset_gripper_joint()  # asset gripper: re-author its wrist_3 FixedJoint from correct runtime poses (once)
         _track_suction_follower()  # suction: keep the FJ'd cone on the live ee so the SG can grip (no-op for Franka)
