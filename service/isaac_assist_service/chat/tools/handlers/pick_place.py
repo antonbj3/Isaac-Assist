@@ -506,8 +506,7 @@ def _gen_setup_pick_place_controller(args: Dict) -> str:
             claim_radius=args.get("claim_radius"),
             task=args.get("task"),
             task_joint_path=args.get("joint_path"),
-            task_args={k: args[k] for k in ("task_travel_m", "task_target_deg")
-                       if k in args},
+            task_args={k: args[k] for k in args if k.startswith("task_")},
             phase_id=phase_id,
         )
     if mode == "diffik":
@@ -6652,6 +6651,45 @@ def _build_segments(cube_pos, drop_pos, current_q):
                           "open" if _tk == _t_n else None,
                           _t_yaw0 + _gm.degrees(_th)))
         goals.append((goals[-1][0] + np.array([0.0, 0.0, 0.10]), None, goals[-1][2]))  # retract up
+    # ── TASK-MODE: SWEEP (tool-use v1) ───────────────────────────────────
+    # Grasp the broom handle (tight descent), then per-debris drag passes at
+    # GRASP-LOCKED z (broom stood upright at spawn -> bristles stay on the
+    # floor as gripped) from behind each debris item to the dustpan LIP
+    # (NOT center+overshoot: EE xy == bristle xy for a vertical broom, and
+    # the dustpan far edge is outside Franka reach — the template's own
+    # hand-rolled waypoint stopped at the lip for the same reason). Debris
+    # momentum carries items over the lip. Release + retract at the end.
+    elif TASK_MODE == "sweep":
+        _sw_debris = TASK_ARGS.get("task_debris_paths") if isinstance(TASK_ARGS, dict) else None
+        _sw_pts = [list(_p_sw) for _p_sw in ((_world_pos(_d) for _d in (_sw_debris or [])) if _sw_debris else []) if _p_sw is not None]
+        _sw_dust = _world_pos(DEST_PATH)
+        if _sw_pts and _sw_dust is not None:
+            _gx, _gy = cube_pos[0] + _nv_goff[0], cube_pos[1] + _nv_goff[1]
+            _gz = pz + _nv_goff[2] - 0.01
+            _cx = sum(_p_sw[0] for _p_sw in _sw_pts) / len(_sw_pts)
+            _cy = sum(_p_sw[1] for _p_sw in _sw_pts) / len(_sw_pts)
+            _dx_sw, _dy_sw = float(_sw_dust[0]) - _cx, float(_sw_dust[1]) - _cy
+            _dn_sw = (_dx_sw * _dx_sw + _dy_sw * _dy_sw) ** 0.5 or 1.0
+            _ux, _uy = _dx_sw / _dn_sw, _dy_sw / _dn_sw
+            _sw_yaw = _gm.degrees(_gm.atan2(_uy, _ux))
+            goals = goals[:3]
+            goals[0] = (np.array([_gx, _gy, _gz + 0.10]), None, _sw_yaw)
+            goals[1] = (np.array([_gx, _gy, _gz + 0.05]), None, _sw_yaw)
+            goals[2] = (np.array([_gx, _gy, _gz]), "close", _sw_yaw)
+            _z_hi = _gz + 0.12
+            _back = float(TASK_ARGS.get("task_backswing_m") or 0.20)
+            _lip = float(TASK_ARGS.get("task_lip_margin_m") or 0.08)
+            _ex = float(_sw_dust[0]) - _ux * _lip
+            _ey = float(_sw_dust[1]) - _uy * _lip
+            for _pt_sw in _sw_pts[:4]:
+                _sx = _pt_sw[0] - _ux * _back
+                _sy = _pt_sw[1] - _uy * _back
+                goals.append((np.array([_sx, _sy, _z_hi]), None, _sw_yaw))  # hop behind item
+                goals.append((np.array([_sx, _sy, _gz]), None, _sw_yaw))    # lower to floor
+                goals.append((np.array([_ex, _ey, _gz]), None, _sw_yaw))    # drag to lip
+                goals.append((np.array([_ex, _ey, _z_hi]), None, _sw_yaw))  # lift clear
+            goals.append((goals[-1][0], "open", _sw_yaw))
+            goals.append((goals[-1][0] + np.array([0.0, 0.0, 0.10]), None, _sw_yaw))
     # 2026-06-04 UR10 TRANSIT-ARC (Anton: swing+collision are the priority root). FLAG-GATED OFF by default
     # (builtins._ur10_transit_arc) → byte-identical until verified, so the 6 + Franka + GUI-review are untouched.
     # ROOT: the S3 lift (cube_xy) → S4 transit (drop_xy) is a LARGE behind→front XY move planned DIRECTLY → cuRobo
