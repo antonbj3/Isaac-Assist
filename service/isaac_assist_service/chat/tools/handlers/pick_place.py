@@ -6195,7 +6195,7 @@ def _cube_to_pick():
                 if _c is None: _msgs.append(_nm + ":nopos"); continue
                 if _sp in S["delivered"]: _msgs.append(_nm + ":delivered"); continue
                 if _sp in S.get("failed", set()): _msgs.append(_nm + ":failed"); continue
-                if _is_in_bin(_sp): _msgs.append(_nm + ":in_dest"); continue
+                if TASK_MODE != "pull" and _is_in_bin(_sp): _msgs.append(_nm + ":in_dest"); continue
                 if _c[2] < base_z - 0.30 or _c[2] > base_z + 0.50: _msgs.append(_nm + ":zwin_" + str(round(float(_c[2]), 2))); continue
                 _xd = float(np.linalg.norm(_c[:2] - base_xy))
                 if _xd > _reach_m: _msgs.append(_nm + ":xy_" + str(round(_xd, 2))); continue
