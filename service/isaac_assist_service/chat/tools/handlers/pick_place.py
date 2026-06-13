@@ -5773,6 +5773,23 @@ _sg_tool_l_dyn = [_SG_TOOL_L]  # DYNAMIC tool length: stays _SG_TOOL_L for pick/
 try:
     _sgm_attr = stage.GetPrimAtPath(ROBOT_PATH).GetAttribute("isaac_assist:surface_gripper_path")
     _SG_PATH_RAW = _sgm_attr.Get() if (_sgm_attr and _sgm_attr.IsDefined()) else None
+    # 2026-06-13 PARALLEL-JAW DECOR GUARD. A parallel-jaw robot (Franka) may carry a SurfaceGripper
+    # marker as INERT scene decor: the surface_gripper tool authors it WITHOUT a cone/joints for finger
+    # robots (CP-54/62 "Franka with surface_gripper"; see _handle_surface_gripper _has_parallel_jaw skip).
+    # The raw-suction interface must NOT be wired for them — otherwise _grip_close()/_grip_open() below
+    # early-return into the inert suction close_gripper()/open_gripper() and the parallel JAW never
+    # actuates. MEASURED (fresh Kit): CP-54 panda_finger range 0.0deg + 0 cube contacts (jaw frozen, cube
+    # rides belt to x=1.699); the identical-build control CP-01 (no decor marker) shows finger travel +
+    # finger|cube contacts (RIGID HOLD). The prior comment claimed "Franka: _sg_path None -> _SG_IFACE
+    # None" but conflated _sg_path (nulled for Franka above) with _SG_PATH_RAW (read fresh here, ungated).
+    # Null the marker for finger robots so grip falls through to franka.gripper.forward("close"). The 37
+    # marker-less Franka passes + UR10/UR10e suction (no fingers) are byte-identical.
+    if _SG_PATH_RAW:
+        for _d in stage.Traverse():
+            _dp = str(_d.GetPath())
+            if _dp.startswith(ROBOT_PATH + "/") and "finger" in _dp.lower():
+                _SG_PATH_RAW = None  # decor only — the parallel jaw grips via friction
+                break
     _folp = stage.GetPrimAtPath(Sdf.Path(ROBOT_PATH + "_SGFollower"))
     # 2026-06-05: acquire the RAW surface_gripper interface whenever the marker points at a valid SurfaceGripper
     # -- BOTH the procedural cone (follower present -> per-tick follower tracking) AND the asset short_gripper.usd
