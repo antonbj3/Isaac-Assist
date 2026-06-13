@@ -412,5 +412,5 @@
     "failed": {}
   },
   "verified_status": "drafted-2026-05-16; form-gate-schema ✓ (lint clean, --validate-tool-calls passes); function-gate BLOCKED (requires live Isaac Sim + RTX render path for capture_camera_image + Gemini-Robotics-ER backend for vision_detect_objects/vision_analyze_scene + cuRobo motion-planning for setup_pick_place_controller; the 3-cube random-quaternion topology + per-cube IK + singularity gate is deterministic in sim and can be exercised the moment a Kit instance is available — the form-gate uses get_world_transform sim-truth as the orientation fallback so the IK chain is unblocked by Gemini availability)",
-  "verification": {"function_gate": {"status": "fail", "n": 0, "m": 1, "wilson_lower": 0.0, "last_run_sha": "c46f15eb", "last_run_at": "2026-06-11T10:15:01+00:00", "legacy_claim": null}, "faithfulness": {"status": "pass", "n": 1, "m": 1, "wilson_lower": 0.2065, "last_run_sha": "c46f15eb", "last_run_at": "2026-06-11T10:17:32+00:00"}}
+  "verification": {"function_gate": {"status": "fail", "n": 0, "m": 7, "wilson_lower": 0.0, "last_run_sha": "ccc46674", "last_run_at": "2026-06-13T07:34:30+00:00", "legacy_claim": null}, "faithfulness": {"status": "pass", "n": 1, "m": 1, "wilson_lower": 0.2065, "last_run_sha": "c46f15eb", "last_run_at": "2026-06-11T10:17:32+00:00"}}
 }
