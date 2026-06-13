@@ -839,6 +839,36 @@ ISAAC_SIM_TOOLS = [
     {
         "type": "function",
         "function": {
+            "name": "trace_goal_frame",
+            "description": (
+                "GOAL-FRAME DECISION TRACE — the controller-side analog of "
+                "scene_eyes for the PLANNER. Records every cuRobo plan attempt's "
+                "actual goal pose + success + cuRobo status, so you read what the "
+                "controller TRIED and which goals failed, instead of inferring it. "
+                "Two-step: call with arm=true to ARM capture, run the controller "
+                "(e.g. simulate_traversal_check), then call again (arm=false) to "
+                "READ the trace. The read returns, per failed goal, whether it is "
+                "INTERMITTENT (the same goal succeeded on another attempt -> "
+                "seed/branch-dependent cuRobo plan failure -> reseed/retry fix) or "
+                "DETERMINISTIC (never succeeded -> true reach/collision -> geometry/"
+                "scene fix). This distinction is unobservable from the final state "
+                "and is the difference between a planning-stochasticity fix and a "
+                "scene fix. Returns: {capture_on, n_goals, n_failed, summary, "
+                "failed:[{goal,yaw,status,intermittent}], goals:[...]}. Pairs with "
+                "diagnose_pick_execution (which localizes the controller phase); this "
+                "localizes the GOAL+planner-status."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "arm": {"type": "boolean", "description": "true = arm capture + clear the prior trace (call BEFORE the run). false/omitted = read the captured trace (call AFTER the run).", "default": False},
+                },
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "diagnose_task_outcome",
             "description": (
                 "Task-level WHY per OBJECT from recorded raw motion — the "

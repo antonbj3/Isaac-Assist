@@ -3385,6 +3385,78 @@ async def _handle_diagnose_task_outcome(args: Dict) -> Dict:
 
 
 @with_telemetry
+async def _handle_trace_goal_frame(args: Dict) -> Dict:
+    """GOAL-FRAME DECISION TRACE — controller-side analog of scene_eyes for the
+    planner. arm=true arms the capture (builtins._eyes_plan_capture) + clears the
+    prior trace; arm=false reads the captured goal sequence and classifies each
+    failed goal as INTERMITTENT (same goal succeeded elsewhere -> seed/branch-
+    dependent cuRobo plan failure) or DETERMINISTIC (never succeeded -> true
+    reach/collision). The classification is the value: it separates a planning-
+    stochasticity fix from a scene fix — unobservable from the final state.
+
+    Validated 2026-06-13 on machine-tender: the trace's [0,0.3,0.627] res_None
+    matched the independent ctrl:last_fail_goal exactly (cross-record agreement),
+    and revealed the 0.627 failure was INTERMITTENT (succeeded on a later seed) —
+    overturning two prior inferences (geometry, goal-computation-bug). The REAL
+    blocker was elsewhere (suction never lifts the blank). True trace, promoted."""
+    from .. import kit_tools  # noqa: PLC0415
+    import json as _json
+    arm = bool(args.get("arm") or False)
+    code = f"""\
+import builtins, json
+arm = {arm!r}
+out = {{}}
+if arm:
+    builtins._eyes_plan_capture = True
+    builtins._eyes_plan_log = []
+    out['armed'] = True
+    out['note'] = 'capture ON — run the controller, then call trace_goal_frame (arm=false) to read'
+else:
+    out['capture_on'] = bool(getattr(builtins, '_eyes_plan_capture', False))
+    log = getattr(builtins, '_eyes_plan_log', None)
+    if log is None:
+        out['error'] = 'no goal trace captured — call trace_goal_frame(arm=true), run the controller, then read'
+    else:
+        from collections import defaultdict
+        seen = defaultdict(lambda: {{'ok': 0, 'fail': 0}})
+        goals = []
+        for _e in log:
+            _g = tuple(round(float(_x), 3) for _x in _e.get('goal', []))
+            _ok = bool(_e.get('success'))
+            _d = _e.get('diag') or {{}}
+            _st = _e.get('status') or _d.get('status')
+            seen[_g]['ok' if _ok else 'fail'] += 1
+            goals.append({{'goal': list(_g), 'yaw': round(float(_e.get('yaw', 0)), 1), 'ok': _ok, 'status': _st}})
+        failed = [dict(_g) for _g in goals if not _g['ok']]
+        for _f in failed:
+            _f['intermittent'] = seen[tuple(_f['goal'])]['ok'] > 0
+        _inter = [_f for _f in failed if _f['intermittent']]
+        _det = [_f for _f in failed if not _f['intermittent']]
+        out['n_goals'] = len(goals)
+        out['n_failed'] = len(failed)
+        out['failed'] = failed[:24]
+        out['goals'] = goals[:80]
+        if not failed:
+            out['summary'] = 'all %d planned goals succeeded' % len(goals)
+        else:
+            out['summary'] = ('%d plan failures: %d INTERMITTENT (seed/branch-dependent — same goal succeeded elsewhere -> reseed/retry, NOT geometry); %d DETERMINISTIC (never succeeded -> true reach/collision -> scene/geometry)' % (len(failed), len(_inter), len(_det)))
+print(json.dumps(out, default=str))
+"""
+    kit_res = await kit_tools.queue_exec_patch(code, "trace_goal_frame")
+    out = (kit_res.get("output") if isinstance(kit_res, dict) else None) or ""
+    for _l in reversed(out.splitlines()):
+        _l = _l.strip()
+        if _l.startswith("{"):
+            try:
+                parsed = _json.loads(_l)
+                parsed["type"] = "data"
+                return parsed
+            except Exception:
+                break
+    return {"type": "data", "error": "trace_goal_frame: no JSON from Kit", "raw": out[:300]}
+
+
+@with_telemetry
 async def _handle_diagnose_pick_execution(args: Dict) -> Dict:
     """POST-RUN pick-place failure localizer. Reads the controller's own ctrl:* USD
     records off the robot prim + tails the always-on plan-fail / grip / settle logs,
@@ -6151,6 +6223,7 @@ def register(
     data["diagnose_physics_error"] = _handle_diagnose_physics_error
     data["diagnose_whole_body"] = _handle_diagnose_whole_body
     data["diagnose_pick_execution"] = _handle_diagnose_pick_execution
+    data["trace_goal_frame"] = _handle_trace_goal_frame
     data["diagnose_task_outcome"] = _handle_diagnose_task_outcome
     data["explain_error"] = None  # LLM-inline (no executor)
     data["get_active_state"] = _handle_get_active_state

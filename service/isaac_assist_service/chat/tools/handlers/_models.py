@@ -395,6 +395,13 @@ class DiagnosePickExecutionArgs(BaseModel):
     contact_window_s: Optional[float] = Field(None, description="Seconds to step when with_contacts=true. Default 2.0.")
 
 
+class TraceGoalFrameArgs(BaseModel):
+    """GOAL-FRAME DECISION TRACE — controller-side analog of scene_eyes for the planner. arm=true arms capture before a run; arm=false reads the captured goal sequence + intermittent/deterministic classification of failed goals."""
+    model_config = ConfigDict(populate_by_name=True, extra='allow')
+
+    arm: Optional[bool] = Field(None, description="true = arm capture + clear prior trace (before the run); false/omitted = read the captured trace (after the run).")
+
+
 class SetupRos2ControlCompatArgs(BaseModel):
     """PHASE 6 M1: configure Isaac Sim's ROS2 bridge to use the standard topic_based_ros2_control topic names (/isaac_joint_states + /isaac_joint_commands). MoveIt2 / ros2_control external clients expect the"""
     model_config = ConfigDict(populate_by_name=True, extra='allow')
@@ -4125,6 +4132,7 @@ MODEL_REGISTRY = {
     "simulate_traversal_check": SimulateTraversalCheckArgs,
     "diagnose_scene_feasibility": DiagnoseSceneFeasibilityArgs,
     "diagnose_pick_execution": DiagnosePickExecutionArgs,
+    "trace_goal_frame": TraceGoalFrameArgs,
     "setup_ros2_control_compat": SetupRos2ControlCompatArgs,
     "emit_ros2_control_yaml": EmitRos2ControlYamlArgs,
     "modbus_tcp_bridge_attach": ModbusTcpBridgeAttachArgs,
