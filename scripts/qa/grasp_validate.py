@@ -194,9 +194,23 @@ def analyse(name):
     note = "(suction robot — jaw pendulum metric N/A; face-seal TODO)" if fam == "ur10" else \
            ("(geom-OK on jaw fit+balance; contact-couple verdict needs CAD2SimReady/scene_eyes)"
             if (verdict == "geom-OK" and not composite) else "")
+    # GRIPPER-CHOOSER: the end-effector the OBJECT wants, + MISMATCH = a jaw robot (Franka) assigned an
+    # object it geometrically cannot pinch (too wide). UR10 has suction so a wide flat object is fine there;
+    # a Franka jaw cannot -> the template must either switch to suction/UR10 or grasp a NARROWER feature than
+    # the bbox (e.g. an EStop's stem, a cart's handle) -> a grasp-point refinement. Additive: verdict unchanged.
+    if jaw_w > 0.6:
+        recommend = "?(suspect-geom)"
+    elif jaw_w > MAX_JAW:
+        recommend = "suction (or narrower grasp feature)"
+    elif ratio > 2.0:
+        recommend = "jaw + form-closure/support (pendulum)"
+    else:
+        recommend = "jaw"
+    mismatch = bool(fam == "franka" and MAX_JAW < jaw_w <= 0.6)
     return {"tpl": name, "fam": fam, "grasped": g0.split("/")[-1], "composite": composite,
             "jaw_w_mm": round(jaw_w * 1000, 1), "cg_off_mm": round(cg_off * 1000, 1),
-            "ratio": round(ratio, 2), "verdict": verdict, "note": note}
+            "ratio": round(ratio, 2), "verdict": verdict, "recommend": recommend,
+            "mismatch": mismatch, "note": note}
 
 VALIDATION = ["CP-NEW-oxe-sweep-into-dustpan", "CP-08", "CP-13", "CP-NEW-turn-faucet", "CP-NEW-drawer-open"]
 
@@ -224,6 +238,15 @@ def main():
         print("\n=== corpus: %d/%d parsed ===" % (cov, len(rows)))
         for k, v in c.most_common():
             print("  %-26s %d" % (k, v))
+        mm = [r for r in rows if r.get("mismatch")]
+        print("\n=== GRIPPER-CHOOSER MISMATCH (Franka jaw assigned an object too wide to pinch -> switch to "
+              "suction/UR10 OR grasp a narrower feature): %d ===" % len(mm))
+        for r in sorted(mm, key=lambda x: -x["jaw_w_mm"]):
+            print("  %-42s grasp=%-12s jaw=%5.1fmm -> %s" % (r["tpl"], r["grasped"], r["jaw_w_mm"], r["recommend"]))
+    elif arg and arg != "all":
+        for r in rows:
+            if r.get("recommend"):
+                print("  GRIPPER-CHOOSER: %s%s" % (r["recommend"], "   [MISMATCH: jaw robot can't pinch this]" if r.get("mismatch") else ""))
 
 if __name__ == "__main__":
     main()
