@@ -560,7 +560,23 @@ def _analyse(js):
             # handle on a revolute joint) rotates the object intentionally, which the slip metric conflates with
             # real slip. But high EE-rot ALSO occurs in a genuine carry+sweep with real pendulum slip (the broom),
             # so it cannot decide the verdict — it only flags "interpret with task knowledge".
-            verdict = ("RIGID HOLD" if max_r < 15 else "SLIPPING" if max_r > 30 else "marginal")
+            # OUT-OF-SCOPE GUARDS (no false RIGID): the rotation-slip verdict is valid only for a sustained grip
+            # on a NON-symmetric object in a pick-carry. A short span = the grip barely formed (unreliable); a
+            # SYMMETRIC object (sphere/ball) rolls without changing its tracked quaternion -> rotation-slip is BLIND
+            # to it (a rolling sphere reads 0° = false RIGID). Report the limit instead of asserting a hold.
+            _sym = any(_t in held.lower() for _t in ("sphere", "ball", "round", "cylinder"))
+            # suction robot whose gripped-set is empty the WHOLE run -> the suction never engaged; any finger
+            # contact is incidental (the hand near the object), so a RIGID read would be false. This IS the finding.
+            _is_suction = any(r.get("gv") is not None for r in rows)
+            _ever_gripped = any(r.get("grp") for r in rows)
+            if _is_suction and not _ever_gripped:
+                verdict = "GRIP NEVER FORMED (suction gripped-set empty all run)"
+            elif span_s < 3.0:
+                verdict = "inconclusive (grip-span %.1fs too short)" % span_s
+            elif _sym:
+                verdict = "N/A-symmetric (rotation-slip blind to %s — roll invisible)" % held
+            else:
+                verdict = ("RIGID HOLD" if max_r < 15 else "SLIPPING" if max_r > 30 else "marginal")
             ee_note = ("  [!] EE-self-rot %.0f° high — if this is a TURN/ARC task, rotation-slip conflates the "
                        "intended rotation with slip (not verdict-grade for turns)" % max_ee) if max_ee > 60 else ""
             out.append("GRIP-SLIP (%s, grip-span t=%.1f-%.1fs %.1fs): rotation-slip=%.0f°@%.1fs  EE-self-rot=%.0f° -> %s   [translation-slip=%.0fmm@%.1fs, incl. grasp/release edges — secondary]%s"
