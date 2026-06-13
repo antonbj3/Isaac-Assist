@@ -3427,7 +3427,8 @@ else:
             _st = _e.get('status') or _d.get('status')
             seen[_g]['ok' if _ok else 'fail'] += 1
             goals.append({{'goal': list(_g), 'yaw': round(float(_e.get('yaw', 0)), 1), 'ok': _ok, 'status': _st,
-                           'world_obs': _e.get('world_obs'), 'sib_obs': _e.get('sib_obs'), 'start_q': _e.get('start_q')}})
+                           'world_obs': _e.get('world_obs'), 'sib_obs': _e.get('sib_obs'), 'start_q': _e.get('start_q'),
+                           'uw_count': _e.get('uw_count')}})
         failed = [dict(_g) for _g in goals if not _g['ok']]
         for _f in failed:
             _f['intermittent'] = seen[tuple(_f['goal'])]['ok'] > 0

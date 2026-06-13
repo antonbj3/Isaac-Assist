@@ -5394,7 +5394,15 @@ def _plan_to_world_point(point_world, current_q7, exclude_obs=None, yaw_deg=0.0,
                 # res_None apart (sibling-keepout cuboids present? scene-floor only?). Additive, no flow change.
                 try:
                     if getattr(__import__("builtins"), "_eyes_plan_capture", False):
-                        __import__("builtins")._eyes_last_world = sorted((getattr(scene_cfg, "cuboid", {{}}) or {{}}).keys())
+                        _bg = __import__("builtins")
+                        _bg._eyes_uw_count = int(getattr(_bg, "_eyes_uw_count", 0)) + 1   # times update_world fired
+                        _cub = getattr(scene_cfg, "cuboid", None)   # may be a dict OR a list of Cuboid objects
+                        if isinstance(_cub, dict):
+                            _bg._eyes_last_world = sorted(_cub.keys())
+                        elif _cub:
+                            _bg._eyes_last_world = sorted(str(getattr(_o, "name", _o)) for _o in _cub)
+                        else:
+                            _bg._eyes_last_world = []
                 except Exception: pass
                 try: _planner._pp_world_sig = _world_sig
                 except Exception: pass
@@ -5558,6 +5566,7 @@ def _plan_to_world_point(point_world, current_q7, exclude_obs=None, yaw_deg=0.0,
                     _elogf.append({{"goal": [float(_v) for _v in point_world], "yaw": float(yaw_deg),
                                     "success": False, "status": str(_st),
                                     "world_obs": getattr(_ebf, "_eyes_last_world", None),
+                                    "uw_count": int(getattr(_ebf, "_eyes_uw_count", 0)),
                                     "sib_obs": _sibo, "start_q": _sq}})
             except Exception: pass
             return None
