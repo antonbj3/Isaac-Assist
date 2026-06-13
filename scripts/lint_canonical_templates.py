@@ -947,15 +947,33 @@ def lint_one(path: Path, data: dict) -> list[Issue]:
                             err("T1_VA_STAGE_MISSING_KEY",
                                 f"verify_args.stages[{i}] is missing required key {key!r}")
 
-        # T1_SA: simulate_args structure check
+        # T1_SA: simulate_args structure check.
+        # GATE-CLASS-AWARE (2026-06-13): the delivery schema (target_path +
+        # cube_path) applies ONLY to the delivery gate. 'articulation' templates
+        # carry joint_path/min_delta_deg; 'introspection' templates carry
+        # checks/gate_class — they legitimately have NO cube/target. Requiring
+        # the delivery keys false-positived 23 templates (audit 2026-06-13),
+        # making --strict unusable in CI. Skip the delivery-key checks for
+        # non-delivery gate classes; still require duration_s where applicable.
         sa = data.get("simulate_args")
         if isinstance(sa, dict):
+            _gate_class = sa.get("gate_class")
+            _delivery = _gate_class not in ("articulation", "introspection")
             for key in schema.SIMULATE_ARGS_REQUIRED_KEYS:
                 if key not in sa:
+                    # target_path: delivery-only. duration_s: read by the
+                    # delivery + articulation gates (gate_one.py:141/160) but
+                    # NOT the introspection gate (line 97 -> introspection_gate,
+                    # which never reads it — verified: CP-63/weld-ndt/eureka
+                    # PASS introspection without it).
+                    if key == "target_path" and not _delivery:
+                        continue
+                    if key == "duration_s" and _gate_class == "introspection":
+                        continue
                     err("T1_SA_MISSING_KEY",
                         f"simulate_args is missing required key {key!r}")
-            # cube_path (single) OR cube_paths (multi) must be present
-            if not any(k in sa for k in schema.SIMULATE_ARGS_CUBE_KEY_VARIANTS):
+            # cube_path (single) OR cube_paths (multi) must be present — delivery only
+            if _delivery and not any(k in sa for k in schema.SIMULATE_ARGS_CUBE_KEY_VARIANTS):
                 err("T1_SA_MISSING_CUBE_KEY",
                     f"simulate_args must have 'cube_path' (string) or 'cube_paths' (list); neither found")
 
