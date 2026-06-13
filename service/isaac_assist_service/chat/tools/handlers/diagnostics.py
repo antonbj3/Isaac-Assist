@@ -3426,7 +3426,8 @@ else:
             _d = _e.get('diag') or {{}}
             _st = _e.get('status') or _d.get('status')
             seen[_g]['ok' if _ok else 'fail'] += 1
-            goals.append({{'goal': list(_g), 'yaw': round(float(_e.get('yaw', 0)), 1), 'ok': _ok, 'status': _st}})
+            goals.append({{'goal': list(_g), 'yaw': round(float(_e.get('yaw', 0)), 1), 'ok': _ok, 'status': _st,
+                           'world_obs': _e.get('world_obs'), 'sib_obs': _e.get('sib_obs'), 'start_q': _e.get('start_q')}})
         failed = [dict(_g) for _g in goals if not _g['ok']]
         for _f in failed:
             _f['intermittent'] = seen[tuple(_f['goal'])]['ok'] > 0
@@ -3435,7 +3436,17 @@ else:
         out['n_goals'] = len(goals)
         out['n_failed'] = len(failed)
         out['failed'] = failed[:24]
-        out['goals'] = goals[:80]
+        out['goals'] = [{{_k: _v for _k, _v in _g.items() if _k not in ('world_obs', 'sib_obs')}} for _g in goals[:80]]
+        # 2026-06-13 dual-arm/collision disambiguation: surface the obstacle world behind a res_None.
+        # sib_obs (rebuild-independent) => sibling-keepout cuboids; world_obs => full per-rebuild set.
+        _det_sib = [_f.get('sib_obs') for _f in _det if _f.get('sib_obs') is not None]
+        if not _det_sib:
+            out['sibling_obs'] = 'no_capture'  # sib_obs never recorded — INCONCLUSIVE, not "absent"
+        else:
+            out['any_sibling_obs'] = any(len(_s) > 0 for _s in _det_sib)
+            out['sibling_obs_sample'] = next((_s for _s in _det_sib if _s), [])
+        _det_wo = [_f.get('world_obs') for _f in _det if _f.get('world_obs')]
+        out['det_world_obs_sample'] = (_det_wo[0] if _det_wo else None)
         if not failed:
             out['summary'] = 'all %d planned goals succeeded' % len(goals)
         else:

@@ -5389,6 +5389,13 @@ def _plan_to_world_point(point_world, current_q7, exclude_obs=None, yaw_deg=0.0,
                 _HL("before_updateworld nobs=%d" % (len(getattr(scene_cfg, "cuboid", []) or []) if scene_cfg is not None else -1))
                 _planner.update_world(scene_cfg)
                 _HL("after_updateworld")
+                # 2026-06-13 EYES world-obs stash (gated _eyes_plan_capture -> production byte-identical):
+                # record the obstacle-cuboid names in THIS plan's world so trace_goal_frame can tell a
+                # res_None apart (sibling-keepout cuboids present? scene-floor only?). Additive, no flow change.
+                try:
+                    if getattr(__import__("builtins"), "_eyes_plan_capture", False):
+                        __import__("builtins")._eyes_last_world = sorted((getattr(scene_cfg, "cuboid", {{}}) or {{}}).keys())
+                except Exception: pass
                 try: _planner._pp_world_sig = _world_sig
                 except Exception: pass
         except Exception as _swe:
@@ -5538,8 +5545,20 @@ def _plan_to_world_point(point_world, current_q7, exclude_obs=None, yaw_deg=0.0,
                     _elogf = getattr(_ebf, "_eyes_plan_log", None)
                     if _elogf is None:
                         _elogf = []; _ebf._eyes_plan_log = _elogf
+                    try:
+                        _sq = [round(float(_q), 3) for _q in start.position.reshape(-1).tolist()][:7]
+                    except Exception:
+                        _sq = None
+                    # rebuild-independent: read the sibling keep-out cuboids THIS plan would carry
+                    # (the world-rebuild stash only fires when the sig changes, so it can be stale/None).
+                    try:
+                        _sibo = sorted(_sibling_keepout_cuboids().keys())
+                    except Exception:
+                        _sibo = None
                     _elogf.append({{"goal": [float(_v) for _v in point_world], "yaw": float(yaw_deg),
-                                    "success": False, "status": str(_st)}})
+                                    "success": False, "status": str(_st),
+                                    "world_obs": getattr(_ebf, "_eyes_last_world", None),
+                                    "sib_obs": _sibo, "start_q": _sq}})
             except Exception: pass
             return None
         interp = res.get_interpolated_plan()
