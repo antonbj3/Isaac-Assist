@@ -195,5 +195,5 @@
     "details": "4-parallel-robot robo-factory cell; pick_place pattern fits but loop_substitution for 4 robots not yet supported; awaiting loop_substitution pattern",
     "added_date": "2026-05-15"
   },
-  "verification": {"function_gate": {"status": "pass", "n": 4, "m": 4, "wilson_lower": 0.5101, "last_run_sha": "17f07370", "last_run_at": "2026-06-13T11:06:02+00:00", "legacy_claim": "pass"}, "faithfulness": {"status": "fail", "n": 0, "m": 1, "wilson_lower": 0.0, "last_run_sha": "30ef1415", "last_run_at": "2026-06-11T07:18:21+00:00"}}
+  "verification": {"function_gate": {"status": "pass", "n": 7, "m": 7, "wilson_lower": 0.6457, "last_run_sha": "9f516862", "last_run_at": "2026-06-13T12:53:35+00:00", "legacy_claim": "pass"}, "faithfulness": {"status": "fail", "n": 0, "m": 1, "wilson_lower": 0.0, "last_run_sha": "30ef1415", "last_run_at": "2026-06-11T07:18:21+00:00"}}
 }
