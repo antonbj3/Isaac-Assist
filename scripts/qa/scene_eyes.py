@@ -311,6 +311,19 @@ def _qrot_inv(q, v):
             v[2] + w * tz + (x * ty - y * tx)]
 
 
+def _qmul(a, b):                        # quaternion product [w,x,y,z]
+    aw, ax, ay, az = a; bw, bx, by, bz = b
+    return [aw * bw - ax * bx - ay * by - az * bz,
+            aw * bx + ax * bw + ay * bz - az * by,
+            aw * by - ax * bz + ay * bw + az * bx,
+            aw * bz + ax * by - ay * bx + az * bw]
+
+def _rel_q(qee, qobj):                  # object orientation IN the EE frame = conj(qee) * qobj
+    if not qee or not qobj:
+        return None
+    return _qmul([qee[0], -qee[1], -qee[2], -qee[3]], qobj)
+
+
 def _analyse(js):
     rows = js.get("rows", [])
     if not rows:
@@ -474,9 +487,12 @@ def _analyse(js):
     # Identify the held object from FINGER/CUP contacts (the exact grasp), not proximity — latching the
     # reference during the approach falsely counts the approach-to-grasp transition as slip (caught on a
     # cube control: 121mm phantom slip). Per-row grip set drives both the onset latch and the measure window.
-    _GTOK = ("finger", "cup", "gripper", "hand")
+    # SPECIFIC gripper-link tokens — NOT bare "hand": "hand" matched "Handle"/"FaucetHandle", i.e. the
+    # GRASPED objects, hiding them from contact-partner detection (broke the broom + faucet grip-slip).
+    _GTOK = ("finger", "_cup", "suction_cup", "gripper", "panda_hand", "_sgcone", "follower")
     def _is_grip(n):
-        return any(t in n.lower() for t in _GTOK)
+        nl = n.lower()
+        return any(t in nl for t in _GTOK) or nl in ("cup",)
     _gp = {}; _ginrow = []
     for r in rows:
         s = set()
@@ -487,7 +503,20 @@ def _analyse(js):
             elif _is_grip(b) and not _is_grip(a):
                 s.add(a); _gp[a] = _gp.get(a, 0) + 1
         _ginrow.append(s)
-    held = max(_gp, key=_gp.get) if _gp else None
+    # held object: PREFER the controller's declared grasp target (ctrl:picked_path) — it knows what it
+    # grasped; guessing from contact-frequency picks the wrong prim (faucet: FaucetBody one-instant contact
+    # beat the real FaucetHandle -> 0.0s span -> false RIGID). Fall back to contact-partner, then suction set.
+    held = None
+    _tracked = set()
+    for r in rows:
+        _tracked |= set((r.get("cubes") or {}).keys())
+    _picks = [r.get("pick", "").split("/")[-1] for r in rows if r.get("pick")]
+    _picks = [p for p in _picks if p and p in _tracked and p in _gp]   # contact-CONFIRMED grasp target
+    if _picks:
+        from collections import Counter as _Cnt
+        held = _Cnt(_picks).most_common(1)[0][0]
+    if held is None:
+        held = max(_gp, key=_gp.get) if _gp else None   # else the actual finger/cup-contact partner
     if held is None:  # suction (no finger contacts): the SurfaceGripper gripped-set
         for r in rows:
             g = r.get("grp")
@@ -502,8 +531,8 @@ def _analyse(js):
         if gidx:
             i0, i1 = gidx[0], gidx[-1]
             onset = rows[i0]["t"]; span_s = rows[i1]["t"] - onset
-            p_ee0 = None; cq0 = None; tq0 = None
-            max_t = max_r = max_tt = max_rt = 0.0
+            p_ee0 = None; qrel0 = None; tq0 = None
+            max_t = max_r = max_tt = max_rt = max_ee = 0.0
             for ri in range(i0, i1 + 1):
                 r = rows[ri]
                 tp, tq = r.get("tool_p"), r.get("tool_q")
@@ -511,22 +540,31 @@ def _analyse(js):
                 if not (tp and cp and tq):
                     continue
                 p_ee = _qrot_inv(tq, [cp[0] - tp[0], cp[1] - tp[1], cp[2] - tp[2]])
+                qrel = _rel_q(tq, cq)
                 if p_ee0 is None:
-                    p_ee0, cq0, tq0 = p_ee, cq, tq; continue
+                    p_ee0, qrel0, tq0 = p_ee, qrel, tq; continue
                 d_mm = math.dist(p_ee, p_ee0) * 1000.0
                 if d_mm > max_t:
                     max_t, max_tt = d_mm, r["t"]
-                if cq and cq0 and tq and tq0:
-                    rs = abs(_quat_angle(cq, cq0) - _quat_angle(tq, tq0))
+                # TRUE relative rotation: object orientation in the EE frame, drift since onset. Reads ~0 when
+                # the object turns WITH the gripper and large only on real slip.
+                if qrel and qrel0:
+                    rs = _quat_angle(qrel, qrel0)
                     if rs > max_r:
                         max_r, max_rt = rs, r["t"]
-            # ROTATION-slip drives the verdict — it is the frame-correct, robust signal (validated: a rigid
-            # cube reads ~1° while a slipping broom reads 83-149° across runs, ~80x separation). TRANSLATION-slip
-            # is reported as a SECONDARY number but does NOT drive the verdict: it picks up grasp/release-edge
-            # drift (the gripper opening at place), so a rigid cube can still show ~50mm at the release frame.
+                ee = _quat_angle(tq, tq0)          # EE's OWN rotation since onset — flags turn/arc tasks
+                if ee > max_ee:
+                    max_ee = ee
+            # ROTATION-slip drives the verdict (validated pick-carry: rigid cube ~3°, slipping broom 143°).
+            # EE-self-rot is an INFORMATIONAL caveat, NOT a verdict override: a turn/arc task (esp. a symmetric
+            # handle on a revolute joint) rotates the object intentionally, which the slip metric conflates with
+            # real slip. But high EE-rot ALSO occurs in a genuine carry+sweep with real pendulum slip (the broom),
+            # so it cannot decide the verdict — it only flags "interpret with task knowledge".
             verdict = ("RIGID HOLD" if max_r < 15 else "SLIPPING" if max_r > 30 else "marginal")
-            out.append("GRIP-SLIP (%s, grip-span t=%.1f-%.1fs %.1fs): rotation-slip=%.0f°@%.1fs -> %s   [translation-slip=%.0fmm@%.1fs, incl. grasp/release edges — secondary]"
-                       % (held, onset, rows[i1]["t"], span_s, max_r, max_rt, verdict, max_t, max_tt))
+            ee_note = ("  [!] EE-self-rot %.0f° high — if this is a TURN/ARC task, rotation-slip conflates the "
+                       "intended rotation with slip (not verdict-grade for turns)" % max_ee) if max_ee > 60 else ""
+            out.append("GRIP-SLIP (%s, grip-span t=%.1f-%.1fs %.1fs): rotation-slip=%.0f°@%.1fs  EE-self-rot=%.0f° -> %s   [translation-slip=%.0fmm@%.1fs, incl. grasp/release edges — secondary]%s"
+                       % (held, onset, rows[i1]["t"], span_s, max_r, max_rt, max_ee, verdict, max_t, max_tt, ee_note))
             out.append("    (object orientation relative to the EE over the finger/cup-contact span; >~30° = the part rotated out of a rigid couple = pinch-slip/pendulum — the signal the position-only gate cannot see)")
         else:
             out.append("GRIP-SLIP: '%s' identified but no finger/cup-contact rows captured" % held)
