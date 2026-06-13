@@ -81,6 +81,18 @@ def xform(p):
             [round(float(q.GetReal()), 4), round(float(im[0]), 4), round(float(im[1]), 4), round(float(im[2]), 4)])
 
 CUBES = [str(pr.GetPath()) for pr in stage.Traverse() if pr.GetName().startswith("Cube") or pr.GetName().startswith("Item")]  # 2026-06-06: track dispenser Item_* (CP-71) too, not just Cube_*
+# 2026-06-13: also track non-cube MANIPULABLE objects (broom handle, faucet handle, drawer knob, blanks) so
+# GRIP-SLIP can measure them. Additive (cubes already matched above) -> cube cases unaffected. A rigid-body
+# prim whose name carries a graspable token; exclude the robot subtree and obvious scene-floor.
+_GRASP_TOK = ("handle", "broom", "blank", "knob", "lever", "valve", "cap", "bottle", "brush", "peg", "gear", "bolt", "nut", "workpiece", "part", "tool")
+try:
+    for _pr in stage.Traverse():
+        _pth = str(_pr.GetPath()); _lo = _pr.GetName().lower()
+        if _pth in CUBES: continue
+        if ROBOT and _pth.startswith(ROBOT): continue
+        if any(_t in _lo for _t in _GRASP_TOK) and (_pr.HasAPI(UsdPhysics.RigidBodyAPI) or _pr.HasAPI(UsdPhysics.CollisionAPI)):
+            CUBES.append(_pth)
+except Exception: pass
 
 # cuRobo PLAN EVENTS — the handler writes USD-live ctrl: counters on the ROBOT prim
 # (plan_calls/plan_fails/picked_path/last_error/last_fail_goal). Reading them each sample
@@ -99,7 +111,7 @@ def cattr(nm, dflt):
 # Grip (gripper-vs-cube) + arm-vs-scene collisions. The UR10 swing collides forearm/wrist
 # with the support surface (Table/Pedestal) -> arm stalls -> cube held aloft; scene_eyes was
 # BLIND to this without contacts. Applied to robot links + cubes + bins/pedestals/tables.
-_contacts = set()
+_contacts = {}   # (actor0,actor1) -> max contact-impulse magnitude in the window (grip-force signal)
 try:
     from pxr import PhysxSchema, PhysicsSchemaTools
     from omni.physx import get_physx_simulation_interface
@@ -121,7 +133,18 @@ try:
             except Exception: pass
     def _oc(h, d):
         for _ch in h:
-            try: _contacts.add((str(PhysicsSchemaTools.intToSdfPath(_ch.actor0)).split("/")[-1], str(PhysicsSchemaTools.intToSdfPath(_ch.actor1)).split("/")[-1]))
+            try:
+                _key = (str(PhysicsSchemaTools.intToSdfPath(_ch.actor0)).split("/")[-1], str(PhysicsSchemaTools.intToSdfPath(_ch.actor1)).split("/")[-1])
+                _imp = 0.0
+                try:
+                    _off = int(getattr(_ch, "contact_data_offset", 0)); _num = int(getattr(_ch, "num_contact_data", 0))
+                    for _k in range(_off, _off + _num):
+                        _iv = getattr(d[_k], "impulse", None)
+                        if _iv is not None:
+                            _m = float((_iv[0] * _iv[0] + _iv[1] * _iv[1] + _iv[2] * _iv[2]) ** 0.5)
+                            if _m > _imp: _imp = _m
+                except Exception: pass
+                if (_key not in _contacts) or (_imp > _contacts[_key]): _contacts[_key] = _imp
             except Exception: pass
     _csub = get_physx_simulation_interface().subscribe_contact_report_events(_oc)
 except Exception as _ce:
@@ -217,9 +240,10 @@ for i in range(N):
     if i % 6 == 0:
         tool = xform(TOOL); foll = xform(FOLL)
         elong = round(math.dist(tool[0], foll[0]) * 1000, 1) if (tool and foll) else None
-        cubes = {}
+        cubes = {}; cubes_q = {}
         for c in CUBES:
-            cx = xform(c); cubes[c.split("/")[-1]] = (cx[0] if cx else None)
+            cx = xform(c); _cn = c.split("/")[-1]
+            cubes[_cn] = (cx[0] if cx else None); cubes_q[_cn] = (cx[1] if cx else None)
         cupx = xform(CUP) if CUP else None
         _w3 = xform("/World/UR10/wrist_3_link")
         rows.append({"t": round(i / 60.0, 2),
@@ -227,11 +251,12 @@ for i in range(N):
                      "w3_p": (_w3[0] if _w3 else None), "w3_q": (_w3[1] if _w3 else None),
                      "cup_p": (cupx[0] if cupx else None), "cup_q": (cupx[1] if cupx else None),
                      "foll_p": (foll[0] if foll else None), "elong_mm": elong,
-                     "j": jpos(), "jv": jvel(), "gv": gstat(), "grp": gripped(), "cubes": cubes,
+                     "j": jpos(), "jv": jvel(), "gv": gstat(), "grp": gripped(), "cubes": cubes, "cubes_q": cubes_q,
                      "pc": int(cattr("ctrl:plan_calls", 0)), "pf": int(cattr("ctrl:plan_fails", 0)),
                      "pick": str(cattr("ctrl:picked_path", "")), "err": str(cattr("ctrl:last_error", "")),
                      "fgoal": str(cattr("ctrl:last_fail_goal", "")),
-                     "contacts": sorted(["%s|%s" % (a, c) for (a, c) in _contacts])})
+                     "contacts": sorted(["%s|%s" % (a, c) for (a, c) in _contacts]),
+                     "cforce": {"%s|%s" % k: round(v, 3) for k, v in _contacts.items() if v > 0}})
         _contacts.clear()
         # INCREMENTAL dump every ~100 rows (~10s) so a slow/long template (CP-83 2-cube) that exceeds the
         # exec_sync timeout still leaves partial data on disk (robust observation, never a blind NO_EYES_JSON).
@@ -268,6 +293,22 @@ def _quat_angle(qa, qb):
     d = abs(sum(a * b for a, b in zip(qa, qb)))
     d = max(-1.0, min(1.0, d))
     return math.degrees(2.0 * math.acos(d))
+
+
+def _qrot_inv(q, v):
+    """Rotate world vector v into the frame of quaternion q=[w,x,y,z] (i.e. by q^-1).
+    Used to express a grasped object's offset in the EE frame so EE rotation does not
+    masquerade as grip slip — a rigidly-held object has a CONSTANT offset in this frame."""
+    if not q or not v:
+        return v
+    w, x, y, z = q
+    x, y, z = -x, -y, -z  # conjugate = inverse for a unit quat
+    tx = 2.0 * (y * v[2] - z * v[1])
+    ty = 2.0 * (z * v[0] - x * v[2])
+    tz = 2.0 * (x * v[1] - y * v[0])
+    return [v[0] + w * tx + (y * tz - z * ty),
+            v[1] + w * ty + (z * tx - x * tz),
+            v[2] + w * tz + (x * ty - y * tx)]
 
 
 def _analyse(js):
@@ -425,6 +466,84 @@ def _analyse(js):
                 out.append("      t=%5.1fs  %s" % (t, c))
     else:
         out.append("CONTACTS: none recorded (check CONTACT_SETUP_FAIL)")
+
+    # GRIP-SLIP — did the grasped object move RELATIVE TO THE EE (true slip) or hold rigid?
+    # The position-only gate is BLIND to this: it sees "delivered" but not that the part slipped/pendulumed
+    # in the grip. Translation = object offset in the EE frame (rotation-robust via _qrot_inv); drift since
+    # grasp-onset = mm of slip. Rotation = object spin minus EE spin since onset = ° of slip. ~0 = rigid hold.
+    # Identify the held object from FINGER/CUP contacts (the exact grasp), not proximity — latching the
+    # reference during the approach falsely counts the approach-to-grasp transition as slip (caught on a
+    # cube control: 121mm phantom slip). Per-row grip set drives both the onset latch and the measure window.
+    _GTOK = ("finger", "cup", "gripper", "hand")
+    def _is_grip(n):
+        return any(t in n.lower() for t in _GTOK)
+    _gp = {}; _ginrow = []
+    for r in rows:
+        s = set()
+        for c in (r.get("contacts") or []):
+            a, _, b = c.partition("|")
+            if _is_grip(a) and not _is_grip(b):
+                s.add(b); _gp[b] = _gp.get(b, 0) + 1
+            elif _is_grip(b) and not _is_grip(a):
+                s.add(a); _gp[a] = _gp.get(a, 0) + 1
+        _ginrow.append(s)
+    held = max(_gp, key=_gp.get) if _gp else None
+    if held is None:  # suction (no finger contacts): the SurfaceGripper gripped-set
+        for r in rows:
+            g = r.get("grp")
+            if g and isinstance(g, list) and g:
+                held = g[0]; break
+    if held:
+        # Window = the CONTACT SPAN [first..last finger/cup contact with this object], measured
+        # CONTINUOUSLY. Bounding by per-row contact (intermittent reports) under-samples the carry
+        # (false RIGID); bounding by proximity counts post-release drift (false SLIP). The span ends at
+        # gripper-open (last contact) so a placed object is excluded, and covers the whole carry between.
+        gidx = [ri for ri, s in enumerate(_ginrow) if held in s]
+        if gidx:
+            i0, i1 = gidx[0], gidx[-1]
+            onset = rows[i0]["t"]; span_s = rows[i1]["t"] - onset
+            p_ee0 = None; cq0 = None; tq0 = None
+            max_t = max_r = max_tt = max_rt = 0.0
+            for ri in range(i0, i1 + 1):
+                r = rows[ri]
+                tp, tq = r.get("tool_p"), r.get("tool_q")
+                cp = (r.get("cubes") or {}).get(held); cq = (r.get("cubes_q") or {}).get(held)
+                if not (tp and cp and tq):
+                    continue
+                p_ee = _qrot_inv(tq, [cp[0] - tp[0], cp[1] - tp[1], cp[2] - tp[2]])
+                if p_ee0 is None:
+                    p_ee0, cq0, tq0 = p_ee, cq, tq; continue
+                d_mm = math.dist(p_ee, p_ee0) * 1000.0
+                if d_mm > max_t:
+                    max_t, max_tt = d_mm, r["t"]
+                if cq and cq0 and tq and tq0:
+                    rs = abs(_quat_angle(cq, cq0) - _quat_angle(tq, tq0))
+                    if rs > max_r:
+                        max_r, max_rt = rs, r["t"]
+            # ROTATION-slip drives the verdict — it is the frame-correct, robust signal (validated: a rigid
+            # cube reads ~1° while a slipping broom reads 83-149° across runs, ~80x separation). TRANSLATION-slip
+            # is reported as a SECONDARY number but does NOT drive the verdict: it picks up grasp/release-edge
+            # drift (the gripper opening at place), so a rigid cube can still show ~50mm at the release frame.
+            verdict = ("RIGID HOLD" if max_r < 15 else "SLIPPING" if max_r > 30 else "marginal")
+            out.append("GRIP-SLIP (%s, grip-span t=%.1f-%.1fs %.1fs): rotation-slip=%.0f°@%.1fs -> %s   [translation-slip=%.0fmm@%.1fs, incl. grasp/release edges — secondary]"
+                       % (held, onset, rows[i1]["t"], span_s, max_r, max_rt, verdict, max_t, max_tt))
+            out.append("    (object orientation relative to the EE over the finger/cup-contact span; >~30° = the part rotated out of a rigid couple = pinch-slip/pendulum — the signal the position-only gate cannot see)")
+        else:
+            out.append("GRIP-SLIP: '%s' identified but no finger/cup-contact rows captured" % held)
+    else:
+        out.append("GRIP-SLIP: no grasped object identified (no finger/cup contact, no gripped-set)")
+    # GRIP FORCE (contact impulse) — a firm 2-finger/cup couple vs a grazing single touch
+    _cf = {}
+    for r in rows:
+        for k, v in (r.get("cforce") or {}).items():
+            if v > _cf.get(k, 0):
+                _cf[k] = v
+    _grip_cf = {k: v for k, v in _cf.items() if any(t in k.lower() for t in ("finger", "cup", "gripper", "hand"))}
+    if _grip_cf:
+        out.append("GRIP CONTACT FORCE (max impulse/pair, finger/cup contacts):")
+        for k, v in sorted(_grip_cf.items(), key=lambda kv: -kv[1])[:6]:
+            out.append("    %-42s %.3f" % (k, v))
+
     # GRIP TIMELINE — THE grip-release signal: SurfaceGripper status (0=Open 1=Closing 2=Closed) + gripped set
     # + cup<->gripped-cube distance + max joint velocity, logged at every transition. If status falls to 0 (or the
     # gripped set empties) MID-TRANSIT while cup-cube_d just exceeded maxGripDistance -> the grip auto-RELEASED on
