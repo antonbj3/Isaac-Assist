@@ -295,5 +295,5 @@
     "failed": {}
   },
   "verified_status": "drafted-2026-05-16-a82; rebuilt-2026-05-28 ({{#each workpieces}} loop replaces 5x unrolled tray spawn; drop_targets dict built from per-workpiece drop_target field; tray count now varies 3..8 via role_defaults; switched grip_style fixed_joint->friction per no-FJ-fusk policy); pattern_hint=pick_place; destination_kind=fixture; structural_tags include isaac:industrial.tray_handling + isaac:operation.{stack,unstack}; form-gate \u23f3; function-gate \u23f3 (requires runtime z-adaptive pick-height refresh via get_world_transform between pick cycles)",
-  "verification": {"function_gate": {"status": "pass", "n": 3, "m": 3, "wilson_lower": 0.4385, "last_run_sha": "1d670f35", "last_run_at": "2026-06-11T16:18:29+00:00", "legacy_claim": null}, "faithfulness": {"status": "fail", "n": 0, "m": 3, "wilson_lower": 0.0, "last_run_sha": "1d670f35", "last_run_at": "2026-06-11T16:21:17+00:00"}}
+  "verification": {"function_gate": {"status": "pass", "n": 5, "m": 5, "wilson_lower": 0.5655, "last_run_sha": "4d9da158", "last_run_at": "2026-06-13T11:51:14+00:00", "legacy_claim": null}, "faithfulness": {"status": "fail", "n": 0, "m": 3, "wilson_lower": 0.0, "last_run_sha": "1d670f35", "last_run_at": "2026-06-11T16:21:17+00:00"}}
 }
