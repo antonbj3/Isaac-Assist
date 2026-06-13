@@ -253,5 +253,5 @@
     "failed": {}
   },
   "verified_status": "patched-r-a40-fix; interpolate_trajectory-vestigial-annotated; form-gate-schema OK",
-  "verification": {"function_gate": {"status": "pass", "n": 3, "m": 3, "wilson_lower": 0.4385, "last_run_sha": "1d670f35", "last_run_at": "2026-06-11T16:07:55+00:00", "legacy_claim": null}, "faithfulness": {"status": "fail", "n": 0, "m": 3, "wilson_lower": 0.0, "last_run_sha": "1d670f35", "last_run_at": "2026-06-11T16:10:45+00:00"}}
+  "verification": {"function_gate": {"status": "pass", "n": 5, "m": 5, "wilson_lower": 0.5655, "last_run_sha": "5c026712", "last_run_at": "2026-06-13T12:03:04+00:00", "legacy_claim": null}, "faithfulness": {"status": "fail", "n": 0, "m": 3, "wilson_lower": 0.0, "last_run_sha": "1d670f35", "last_run_at": "2026-06-11T16:10:45+00:00"}}
 }
