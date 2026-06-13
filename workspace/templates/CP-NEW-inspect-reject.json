@@ -267,5 +267,5 @@
       "moveit2"
     ]
   },
-  "verification": {"function_gate": {"status": "fail", "n": 0, "m": 4, "wilson_lower": 0.0, "last_run_sha": "d13431a1", "last_run_at": "2026-06-11T14:49:36+00:00", "legacy_claim": null}, "faithfulness": {"status": "mixed", "n": 1, "m": 3, "wilson_lower": 0.0615, "last_run_sha": "8108e660", "last_run_at": "2026-06-11T03:09:48+00:00"}}
+  "verification": {"function_gate": {"status": "fail", "n": 0, "m": 5, "wilson_lower": 0.0, "last_run_sha": "17f07370", "last_run_at": "2026-06-13T11:19:43+00:00", "legacy_claim": null}, "faithfulness": {"status": "mixed", "n": 1, "m": 3, "wilson_lower": 0.0615, "last_run_sha": "8108e660", "last_run_at": "2026-06-11T03:09:48+00:00"}}
 }

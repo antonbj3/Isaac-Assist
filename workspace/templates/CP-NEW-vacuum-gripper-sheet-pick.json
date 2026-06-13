@@ -274,5 +274,5 @@
     "failed": {}
   },
   "verified_status": "drafted-2026-05-16; rebuilt-2026-05-28 ({{#each workpieces}} loop replaces 6\u00d7 unrolled sheet spawn; each sheet carries precomputed absolute `position` so n_sheets can vary 1..6 via role_defaults); form-gate-schema \u2713; function-gate \u23f3",
-  "verification": {"function_gate": {"status": "fail", "n": 0, "m": 1, "wilson_lower": 0.0, "last_run_sha": "30ef1415", "last_run_at": "2026-06-11T09:52:44+00:00", "legacy_claim": null}, "faithfulness": {"status": "fail", "n": 0, "m": 1, "wilson_lower": 0.0, "last_run_sha": "30ef1415", "last_run_at": "2026-06-11T09:53:40+00:00"}}
+  "verification": {"function_gate": {"status": "fail", "n": 0, "m": 2, "wilson_lower": 0.0, "last_run_sha": "17f07370", "last_run_at": "2026-06-13T11:19:43+00:00", "legacy_claim": null}, "faithfulness": {"status": "fail", "n": 0, "m": 1, "wilson_lower": 0.0, "last_run_sha": "30ef1415", "last_run_at": "2026-06-11T09:53:40+00:00"}}
 }

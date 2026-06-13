@@ -376,5 +376,5 @@
     "failed": {}
   },
   "verified_status": "drafted-2026-05-16; first long-horizon canonical with execute_with_retry per-step retry; form-gate ⏳; function-gate ⏳",
-  "verification": {"function_gate": {"status": "fail", "n": 0, "m": 1, "wilson_lower": 0.0, "last_run_sha": "c46f15eb", "last_run_at": "2026-06-11T11:41:30+00:00", "legacy_claim": null}, "faithfulness": {"status": "fail", "n": 0, "m": 1, "wilson_lower": 0.0, "last_run_sha": "c46f15eb", "last_run_at": "2026-06-11T11:47:29+00:00"}}
+  "verification": {"function_gate": {"status": "fail", "n": 0, "m": 2, "wilson_lower": 0.0, "last_run_sha": "17f07370", "last_run_at": "2026-06-13T11:19:43+00:00", "legacy_claim": null}, "faithfulness": {"status": "fail", "n": 0, "m": 1, "wilson_lower": 0.0, "last_run_sha": "c46f15eb", "last_run_at": "2026-06-11T11:47:29+00:00"}}
 }

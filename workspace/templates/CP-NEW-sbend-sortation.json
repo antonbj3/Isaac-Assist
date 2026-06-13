@@ -196,5 +196,5 @@
     "failed": {}
   },
   "verified_status": "drafted-2026-05-16; patched-2026-05-16-R-A60-fix (F1: conveyor_path slash-delimiter fix); form-gate pending; function-gate pending live Kit",
-  "verification": {"function_gate": {"status": "fail", "n": 0, "m": 1, "wilson_lower": 0.0, "last_run_sha": "30ef1415", "last_run_at": "2026-06-11T09:02:39+00:00", "legacy_claim": null}, "faithfulness": {"status": "fail", "n": 0, "m": 1, "wilson_lower": 0.0, "last_run_sha": "30ef1415", "last_run_at": "2026-06-11T09:03:33+00:00"}}
+  "verification": {"function_gate": {"status": "fail", "n": 0, "m": 2, "wilson_lower": 0.0, "last_run_sha": "17f07370", "last_run_at": "2026-06-13T11:19:43+00:00", "legacy_claim": null}, "faithfulness": {"status": "fail", "n": 0, "m": 1, "wilson_lower": 0.0, "last_run_sha": "30ef1415", "last_run_at": "2026-06-11T09:03:33+00:00"}}
 }

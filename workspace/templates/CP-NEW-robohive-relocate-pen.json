@@ -319,5 +319,5 @@
     "failed": {}
   },
   "verified_status": "drafted-2026-05-16-A98; form-gate-schema \u23f3; function-gate \u23f3",
-  "verification": {"function_gate": {"status": "fail", "n": 0, "m": 2, "wilson_lower": 0.0, "last_run_sha": "ffaac959", "last_run_at": "2026-06-11T21:59:05+00:00", "legacy_claim": null}, "faithfulness": {"status": "fail", "n": 0, "m": 1, "wilson_lower": 0.0, "last_run_sha": "c46f15eb", "last_run_at": "2026-06-11T11:51:42+00:00"}}
+  "verification": {"function_gate": {"status": "fail", "n": 0, "m": 3, "wilson_lower": 0.0, "last_run_sha": "17f07370", "last_run_at": "2026-06-13T11:19:43+00:00", "legacy_claim": null}, "faithfulness": {"status": "fail", "n": 0, "m": 1, "wilson_lower": 0.0, "last_run_sha": "c46f15eb", "last_run_at": "2026-06-11T11:51:42+00:00"}}
 }

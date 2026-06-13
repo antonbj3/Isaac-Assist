@@ -301,5 +301,5 @@
     "target_path": "{{exit_bin.path}}",
     "duration_s": 180
   },
-  "verification": {"function_gate": {"status": "pass", "n": 4, "m": 4, "wilson_lower": 0.5101, "last_run_sha": "ffaac959", "last_run_at": "2026-06-11T22:58:31+00:00", "legacy_claim": "pass"}, "faithfulness": {"status": "fail", "n": 0, "m": 2, "wilson_lower": 0.0, "last_run_sha": "ffaac959", "last_run_at": "2026-06-11T22:58:22+00:00"}}
+  "verification": {"function_gate": {"status": "pass", "n": 5, "m": 5, "wilson_lower": 0.5655, "last_run_sha": "8a1118e6", "last_run_at": "2026-06-13T10:29:34+00:00", "legacy_claim": "pass"}, "faithfulness": {"status": "fail", "n": 0, "m": 2, "wilson_lower": 0.0, "last_run_sha": "ffaac959", "last_run_at": "2026-06-11T22:58:22+00:00"}}
 }

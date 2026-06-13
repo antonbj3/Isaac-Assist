@@ -143,5 +143,5 @@
     "failed": {}
   },
   "verified_status": "drafted-2026-05-16; form-gate-schema \u2713 (R-A30-fix); function-gate \u23f3",
-  "verification": {"function_gate": {"status": "fail", "n": 0, "m": 2, "wilson_lower": 0.0, "last_run_sha": "1d670f35", "last_run_at": "2026-06-11T15:47:59+00:00", "legacy_claim": null}, "faithfulness": {"status": "fail", "n": 0, "m": 2, "wilson_lower": 0.0, "last_run_sha": "1d670f35", "last_run_at": "2026-06-11T15:48:05+00:00"}}
+  "verification": {"function_gate": {"status": "fail", "n": 0, "m": 3, "wilson_lower": 0.0, "last_run_sha": "17f07370", "last_run_at": "2026-06-13T11:19:43+00:00", "legacy_claim": null}, "faithfulness": {"status": "fail", "n": 0, "m": 2, "wilson_lower": 0.0, "last_run_sha": "1d670f35", "last_run_at": "2026-06-11T15:48:05+00:00"}}
 }
