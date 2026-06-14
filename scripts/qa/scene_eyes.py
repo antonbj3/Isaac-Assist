@@ -267,8 +267,15 @@ for i in range(N):
         cupx = xform(CUP) if CUP else None
         _w3 = xform("/World/UR10/wrist_3_link")
         _bsv = (_belt_sv_attr.Get() if _belt_sv_attr else None)
-        _bsv0 = (round(float(_bsv[0]), 3) if _bsv is not None else None)
-        rows.append({"t": round(i / 60.0, 2), "bsv": _bsv0,
+        # AXIS-AGNOSTIC (2026-06-14): belts can feed on ANY axis (e.g. gravity-dispenser-feeder
+        # surface_velocity=[0,0.15,0] is a Y-feed). Reading only vx[0] falsely reported "PAUSED"
+        # for every non-X belt. bsv = full-vector MAGNITUDE (registers any-axis motion); bsvv keeps
+        # the signed [vx,vy,vz] so direction/dominant-axis is still recoverable.
+        _bsvv = ([round(float(_bsv[0]), 3), round(float(_bsv[1]), 3), round(float(_bsv[2]), 3)]
+                 if _bsv is not None else None)
+        _bsv0 = (round(float((_bsv[0] ** 2 + _bsv[1] ** 2 + _bsv[2] ** 2) ** 0.5), 3)
+                 if _bsv is not None else None)
+        rows.append({"t": round(i / 60.0, 2), "bsv": _bsv0, "bsvv": _bsvv,
                      "tool_p": (tool[0] if tool else None), "tool_q": (tool[1] if tool else None),
                      "w3_p": (_w3[0] if _w3 else None), "w3_q": (_w3[1] if _w3 else None),
                      "cup_p": (cupx[0] if cupx else None), "cup_q": (cupx[1] if cupx else None),
@@ -677,7 +684,14 @@ def _analyse(js):
         for _t, _v in _bvals:
             _st = "MOVING" if abs(_v) > 0.001 else "PAUSED"
             if _st != _prev: _trans.append((_t, _st, _v)); _prev = _st
-        out.append("BELT TIMELINE (surface-velocity vx; MOVING %.0f%% of run):" % (_movf * 100))
+        # dominant feed axis from the last non-zero full vector (axis-agnostic report)
+        _axis = "?"
+        for _r in reversed(rows):
+            _vv = _r.get("bsvv")
+            if _vv and any(abs(_c) > 0.001 for _c in _vv):
+                _ai = max(range(3), key=lambda _k: abs(_vv[_k]))
+                _axis = "%s%s" % ("+-"[_vv[_ai] < 0], "xyz"[_ai]); break
+        out.append("BELT TIMELINE (surface-velocity |v|, feed-axis %s; MOVING %.0f%% of run):" % (_axis, _movf * 100))
         out.append("    " + "  ".join("%.0fs:%s(%.2f)" % (_t, _s, _v) for _t, _s, _v in _trans[:14]))
         if _movf < 0.25:
             out.append("    *** BELT MOSTLY PAUSED -> conveyor-stall: boxes don't advance to the pick zone ***")
