@@ -2638,3 +2638,15 @@ BUILD (#25, coupled, fresh context): robot_wizard velocity-drive wheels + scene-
 ## 2026-06-14 (cont.17) — nav-gate + navigate_to-drive-fix + ground-bug + scene_validate ROBOT_BURIED (Anton-steered)
 SHIPPED (committed+pushed anton): (a) scripts/qa/nav_gate.py (base-goal detector, verified honest); (b) navigate_to "direct" REAL closed-loop drive replacing the stub + gravity-repair + velocity-wheels (commit 59caa9e3); (c) CP-64 ground-bug fix -0.5->-1.0 (USD Cube default size=2 -> ground top 0.5 buried Carter; Anton's "Carter in a table" memory was RIGHT); (d) scene_validate ROBOT_BURIED check for mobile scenes (commit 0a404081) — VERIFIED two-sided control (buried FAIL / fixed CLEAN), uses PRE-SETTLE spawn bbox (post-settle sensor-overhang false-positived, caught by the control before commit).
 OPEN (the real remaining nav blocker): CP-64 still nav_gate disp=0. Ground-burial is FIXED (spawn-clean per validator). But Carter does NOT fall/simulate in the nav_gate context (stays z=0.30 under gravity 9.81 — yet falls + settles in scene_validate's passive play). => Carter articulation not physics-INITIALIZED in nav_gate's ad-hoc play loop. Arm gates work b/c setup_pick_place_controller inits World+articulation. NEXT (fresh ctx): proper articulation/World init in the nav run path (or the setup_wheeled_drive handler owns init), then nav_gate should show disp>0 + reached. Drive recipe itself proven (probe8: callback spun wheels 1.33 rad/s).
+
+## 2026-06-14 (cont.18) — ★ BREAKTHROUGH: CP-64 nav VERIFIED — the "blocker" was a MEASUREMENT ARTIFACT
+cont.17's "OPEN blocker" was WRONG. Every "disp=0 / Carter doesn't move/fall" = nav_gate + probes reading
+`/World/Carter` (parent Xform CONTAINER, which physics NEVER moves). Physics moves the articulation ROOT LINK
+`/World/Carter/chassis_link`. probe10 (3-prim readout during drive): World/Carter stayed [0,0,0.3] while
+chassis_link/get_world_pose drove 0.001->1.318. FIX (commit 31fca006): nav_gate resolves ArticulationRoot under
+robot_path + measures THAT. CP-64 NOW PASSES: Carter drives to [3.0,0.0], disp=2.85m, min_dist=0.149,
+reached_step=1140; CP-64 verified_status updated. navigate_to closed-loop diff-drive (59caa9e3) + ground-fix WORK
+END-TO-END; world.reset/stop+reset were red herrings (reverted). MOBILE KEYSTONE (drive-to-goal) FUNCTIONAL.
+LESSON: floating-base articulation motion is on the ROOT LINK, not the parent Xform — resolve ArticulationRootAPI
+(nav_gate._artroot). scene_eyes already does this (line 59). EXTEND: occupancy-map-nav has a separate build issue
+(Carter not at /World/Carter); multi-amr needs simulate_args + fleet handling — deferred. CP-64 = clean keystone win.
