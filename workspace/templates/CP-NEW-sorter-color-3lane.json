@@ -428,6 +428,6 @@
     ],
     "failed": {}
   },
-  "verified_status": "drafted-2026-05-16; form-gate-schema ✓; function-gate ⏳",
+  "verified_status": "drafted-2026-05-16; form-gate-schema ✓; function-gate VERIFIED 9/9 DELIVERED + correctly sorted into 3 lanes (x=-0.40/0.00/0.40) 2026-06-14 (local fresh Kit, CP-36 control healthy). Multi-item belt-pick delivering all items with the belt-sleep wake fix (ae895650) in effect — likely a sleep-strand uplift (without-fix baseline not separately run).",
   "verification": {"function_gate": {"status": "pass", "n": 10, "m": 10, "wilson_lower": 0.7225, "last_run_sha": "8a1118e6", "last_run_at": "2026-06-13T10:29:34+00:00", "legacy_claim": null}, "faithfulness": {"status": "mixed", "n": 4, "m": 5, "wilson_lower": 0.3755, "last_run_sha": "ffaac959", "last_run_at": "2026-06-11T21:44:47+00:00"}}
 }
