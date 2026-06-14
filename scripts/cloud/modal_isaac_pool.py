@@ -359,7 +359,13 @@ _ITEM_RE = re.compile(r"^\s{2}(\w[\w/]*): bin=.*\|\s*([A-Z_,]+|OK)\s*\|\s*final=
 
 
 @app.function(image=image, gpu=GPU, cpu=6.0, memory=12288, timeout=3600,
-              volumes=_VOLUMES, max_containers=6)
+              volumes=_VOLUMES, max_containers=6, max_inputs=1)
+# max_inputs=1 (2026-06-14): retire each container after ONE template so every
+# run gets a FRESH cold Kit. A reused/warm container re-boots a DEGRADED Kit
+# (boot~18s vs ~190s cold) that fails picks spuriously regardless of template —
+# a 100%-confounded false-NEG class in the 12-tpl parity batch (all fails were
+# warm-reuse, boot<25s; all passes were fresh, boot~190s). The Modal analog of
+# the local "restart-before-every-measurement" rule. See memory parity_11.
 def run_template(template_id: str, skip_ts: bool = False,
                  env_flags: dict | None = None, eyes: bool = False) -> dict:
     """Fresh-Kit single-template measurement: gate_one + scene_timeseries (+ scene_eyes if eyes).
