@@ -32,6 +32,11 @@ EXPECT = {
     # NEGATIVE parity (known-bad — must fail on cloud; guards cloud false-pass)
     "CP-59": "fail", "CP-38": "fail", "CP-NEW-palletizer-mixed-sku": "fail",
     "CP-43": "fail", "CP-44": "fail",  # CP-44 now 3/4 (belt-slow); sphere form-limited
+    # Multi-dest SORTER class (routing-aware gate -> genuine passes, NOT false-passes;
+    # 2026-06-14 CP-03 keystone refuted the false-pass scare). Expect cloud PASS too.
+    "CP-03": "ok", "CP-16": "ok", "CP-17": "ok", "CP-32": "ok", "CP-33": "ok",
+    "CP-34": "ok", "CP-66": "ok", "CP-82": "ok",
+    "CP-NEW-sorter-color-3lane": "ok", "CP-NEW-yrkesroll-inspector-reject-divert": "ok",
 }
 
 
@@ -59,10 +64,11 @@ def is_pass(status):
 def main():
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
     for a in sys.argv[1:]:
-        if a.startswith("--expect"):
+        if a.startswith("--expect="):  # joined form: --expect=CP-16=ok,CP-44=fail
             for kv in a.split("=", 1)[1].split(","):
-                k, v = kv.split("=")
-                EXPECT[k] = v
+                if "=" in kv:
+                    k, v = kv.split("=", 1)
+                    EXPECT[k] = v
     if args:
         path = args[0] if os.path.isabs(args[0]) else os.path.join(RES, args[0])
     else:
