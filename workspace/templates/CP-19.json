@@ -78,7 +78,24 @@
     "target_path": "/World/PalletA",
     "duration_s": 180,
     "xy_tolerance": 0.15,
-    "rest_speed_threshold": 0.1
+    "rest_speed_threshold": 0.1,
+    "cube_paths": [
+      "/World/Cube_1",
+      "/World/Cube_2",
+      "/World/Cube_3",
+      "/World/Cube_4",
+      "/World/Cube_5",
+      "/World/Cube_6"
+    ],
+    "targets": {
+      "/World/Cube_1": "/World/PalletA",
+      "/World/Cube_2": "/World/PalletA",
+      "/World/Cube_3": "/World/PalletA",
+      "/World/Cube_4": "/World/PalletB",
+      "/World/Cube_5": "/World/PalletB",
+      "/World/Cube_6": "/World/PalletB"
+    },
+    "completeness": "all"
   },
   "extends": "CP-08",
   "extension_notes": "CP-19 demonstrates that drop_targets can dispatch to multiple distinct destinations within a single controller install \u2014 not all cubes need to go to the same pallet/bin. Useful for fan-out/distribution scenarios. Future variant: 4 pallets in cardinal directions, color-coded routing.",
