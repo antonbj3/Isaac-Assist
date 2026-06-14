@@ -2688,3 +2688,15 @@ MILESTONE HONEST: composition WORKS for the primary cell (inst0 4/4); full concu
 belt/sensor-concurrency fix (careful — touches shared belt-pause; multi-template no-regression required). NEXT:
 isolate by composing a NON-belt pick-place 2x (expect 4/4+4/4 -> confirms bug is belt-specific), then fix the belt/
 sensor instance-scoping. Memory: project_isaac_assist_composition_direction.
+
+## 2026-06-15 (cont.23) — ★ HETEROGENEOUS composition WORKS (real use-case proven)
+no-regression confirmed first: CP-01 single-template (instance_root=None) still 4/4 stable_ok -> composer changes
+to execute_template_canonical are regression-free. Then the key test — compose 2 DIFFERENT templates (CP-01 inst0
++ CP-04 inst1, offset): BOTH cells deliver concurrently NEAR-FULL -> CP-04 4/4, CP-01 3/4 (12000 steps), errs=[].
+Contrast same-template 2x CP-01 = 4/4 + 1/4-stuck. => the inst1 hard-stuck is a NARROW same-template-2x edge case
+(two IDENTICAL templates collide on a shared controller-state key); the REAL composition goal — chaining DIFFERENT
+templates into a workflow — WORKS, both cells run + deliver concurrently. CP-01's 3/4 (one cube short, plateaued
+not stuck) = minor concurrent-timing. 
+COMPOSER STATUS: foundation + heterogeneous functional composition PROVEN. #26 (same-template-2x stuck) downgraded
+to edge-case. NEXT (composition real path): heterogeneous CHAIN pick->inspect->sort with per-instance gating +
+handoff-state validator (focus #2); the concurrent ~3/4 vs solo 4/4 dip is a minor tuning item.
