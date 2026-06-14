@@ -65,7 +65,20 @@
   "simulate_args": {
     "cube_path": "/World/Cube_r1",
     "target_path": "/World/RedBin",
-    "duration_s": 90
+    "duration_s": 150,
+    "cube_paths": [
+      "/World/Cube_r1",
+      "/World/Cube_r2",
+      "/World/Cube_b1",
+      "/World/Cube_b2"
+    ],
+    "targets": {
+      "/World/Cube_r1": "/World/RedBin",
+      "/World/Cube_r2": "/World/RedBin",
+      "/World/Cube_b1": "/World/BlueBin",
+      "/World/Cube_b2": "/World/BlueBin"
+    },
+    "completeness": "all"
   },
   "extends": "CP-47",
   "extension_notes": "CP-59 combines vision (CP-47), mutex (CP-52), and shared heap (CP-57) for #14 Vision-Gated Bin Picking Duo. Single setup_pick_place_with_vision installs robot A's controller with red\u2192RedBin routing. Robot B install would be separate (with blue\u2192BlueBin) \u2014 left as agent-side composition for now to avoid double Gemini call.",
