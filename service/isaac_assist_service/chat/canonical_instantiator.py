@@ -784,6 +784,8 @@ async def execute_template_canonical(
     template: Dict[str, Any],
     param_overrides: Dict[str, Any] | None = None,
     role_bindings: Dict[str, Any] | None = None,
+    instance_root: str | None = None,
+    origin_offset=(0.0, 0.0, 0.0),
 ) -> Dict[str, Any]:
     """Run a canonical template's `code` field as tool-call sequence.
 
@@ -1069,6 +1071,14 @@ async def execute_template_canonical(
             logger.info(f"[CanonicalInst] {task_id} AUTO-REPAIR: injected surface_gripper for UR10 cuRobo {_rp} (template had none)")
         _repaired.append((tool_name, args))
     captured = _repaired
+
+    # COMPOSITION (2026-06-15): when instance_root is given, re-root every authored
+    # /World/ prim path under /World/<instance_root>/ and offset positions, so this
+    # template can coexist with others in one stage without prim-path collision.
+    # Default (instance_root=None) is a no-op -> byte-identical single-template path.
+    if instance_root:
+        from .composer import namespace_and_offset_calls
+        captured = namespace_and_offset_calls(captured, instance_root, origin_offset)
 
     # Execute phase — actually invoke each captured call via execute_tool_call
     executed: List[Dict[str, Any]] = []
