@@ -731,6 +731,62 @@ def _analyse(js):
             else:
                 out.append("    %-14s never-gripped  (no tool/pos data)" % _nm)
 
+    # PICK CONVERGENCE (2026-06-14, Anton "högupplöst" — new first-class detector): for objects the controller
+    # CLAIMED (ctrl:picked_path), did the arm actually CONVERGE on them? Splits the closest EE-approach into
+    # vertical (dz) vs horizontal (dxy) gap (height-target vs lateral-reach) and synthesises a verdict against
+    # arm motion magnitude: FROZEN (barely moved — handle/gate stuck), THRASH-NO-CONVERGE (moved a lot but never
+    # closed the gap — RmpFlow/IK can't settle or target unreachable), NEAR-MISS (just short — grip/target-z),
+    # CONVERGED. Surfaces the hard-frontier signature "arm thrashes but never grips" that closest-mm alone hides.
+    _claimed = []
+    for _r in rows:
+        _pp = (_r.get("pick") or "").strip()
+        if _pp:
+            _bn = _pp.split("/")[-1]
+            if _bn and _bn not in _claimed:
+                _claimed.append(_bn)
+    if _claimed:
+        _arm_rng = 0.0; _arm_rev = 0
+        for _ji in range(nj):
+            _vals = [r["j"][_ji] for r in rows if r.get("j") and len(r["j"]) > _ji]
+            if not _vals:
+                continue
+            _nmj = (dofn[_ji] if _ji < len(dofn) else "")
+            if "finger" in _nmj.lower():
+                continue
+            _arm_rng = max(_arm_rng, math.degrees(max(_vals) - min(_vals)))
+            _pv = 0
+            for _a, _b in zip(_vals, _vals[1:]):
+                _s = 1 if _b - _a > 1e-4 else (-1 if _b - _a < -1e-4 else 0)
+                if _s != 0 and _pv != 0 and _s != _pv:
+                    _arm_rev += 1
+                if _s != 0:
+                    _pv = _s
+        out.append("PICK CONVERGENCE (claimed-pick objects; did the arm settle on what it claimed?):")
+        out.append("    arm motion: max-joint-range=%.0f°  arm-reversals=%d" % (_arm_rng, _arm_rev))
+        for _bn in _claimed:
+            _best = None
+            for _r in rows:
+                _tp = _r.get("tool_p"); _op = (_r.get("cubes") or {}).get(_bn)
+                if _tp and _op:
+                    _dd = math.dist(_tp, _op)
+                    if _best is None or _dd < _best[0]:
+                        _best = (_dd, _r["t"], abs(_tp[2] - _op[2]), math.dist(_tp[:2], _op[:2]))
+            if _best is None:
+                out.append("    %-14s CLAIMED but no tool/pos data" % _bn); continue
+            _dd, _tt, _dz, _dxy = _best
+            _grp = _bn in _grip_objs
+            if _grp or _dd < 0.03:
+                _verd = "CONVERGED" + (" + GRIPPED" if _grp else "")
+            elif _dd < 0.10:
+                _verd = "NEAR-MISS (just short — grip/target-z tuning)"
+            elif _arm_rng > 60:
+                _verd = "THRASH-NO-CONVERGE (arm moved a lot but never closed the gap — IK/RmpFlow can't settle / target unreachable)"
+            elif _arm_rng < 15:
+                _verd = "FROZEN (arm barely moved — controller/handle/gate stuck)"
+            else:
+                _verd = "STALL (partial motion, never reached)"
+            out.append("    %-14s closest=%4.0fmm (dz=%4.0fmm dxy=%4.0fmm) @%5.1fs  -> %s" % (_bn, _dd * 1000, _dz * 1000, _dxy * 1000, _tt, _verd))
+
     # GRIP TIMELINE — THE grip-release signal: SurfaceGripper status (0=Open 1=Closing 2=Closed) + gripped set
     # + cup<->gripped-cube distance + max joint velocity, logged at every transition. If status falls to 0 (or the
     # gripped set empties) MID-TRANSIT while cup-cube_d just exceeded maxGripDistance -> the grip auto-RELEASED on
