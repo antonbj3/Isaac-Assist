@@ -2619,3 +2619,10 @@ LOCAL grind (/tmp/grind_gate.sh: fresh base.kit per template — boots ~7s, rest
 - FAIL (diagnostik-först next): vision-depalletize 0/6 (vision-gated; boxes never moved -> vision-endpoint? plan_calls?), packer-box-seal 0/4 (box-interior drop, cuRobo may refuse to plan into box walls), quality-tech-fixture-gauge 0/3, label-applicator-pose 0/1, kit-prep-vision-gate 2/5.
 - INVESTIGATE: planning-10step-retry (NO_GATE_LINE), vacuum-gripper-sheet-pick (parse-?).
 CALIBRATION: CP-61 cloud gate=True CONFIRMED locally 3/3 -> cloud signal trustworthy for FULL passes but flags PARTIALS as pass (don't trust cloud gate=True blindly; delivered-count is the real bar). Tooling: scripts/qa/composability_scan.py, tier1_triage.py, /tmp/grind_gate.sh.
+
+## 2026-06-14 (cont.15) — tier-1 fails diagnostik triage (/tmp/grind_eyes.sh scene_eyes) + reach_validate
+scene_eyes triage of the 9 non-passes -> 3 FAILURE CLASSES:
+- A (picks+grips, partial/no delivery; plans fail=0): vision-depalletize 0/6 (REACH ALL OK 6/6+bin per reach_validate; grips but boxes stay at spawn + ARM_COLL = grip-stops-short/transport-collision, NOT vision, NOT reach), kit-prep-vision-gate 2/5, 3station-oee 2/9 (multi-Franka; Cube_7 never approached 467mm = per-station reach).
+- B (planning fails wholesale, RuntimeError planning-failed + FROZEN): packer-box-seal 0/4, quality-tech-gauge 0/3 (reach_validate: Part_1 top@0.905 0/3 + GoodBin xy[-0.35,-0.45] BEHIND robot = UNREACHABLE picks AND places), isaaclab-arena-lego 2/4, planning-10step-retry.
+- C (grip never latches + ARM_COLL): label-applicator 0/1 (pick-target vs item mismatch), vacuum-gripper-sheet-pick.
+CONCLUSION: tier-1 clean-wins harvested (3 verified). Remaining = scene/grip-broken NICHE yrkesroll/inspection DRAFTS, each a real per-template authoring fix, LOW composition-ROI. Lesson: my static hypotheses (vision-endpoint, beyond-reach) were WRONG twice -> live reach_validate/scene_eyes is the truth. STRATEGIC PIVOT consideration: nav drive-stub fix (#25) = ONE-FIX-MANY (unblocks 37-template mobile family) = far higher composition leverage than grinding niche drafts. Tooling: /tmp/grind_eyes.sh.
