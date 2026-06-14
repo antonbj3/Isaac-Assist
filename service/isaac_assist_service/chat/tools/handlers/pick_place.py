@@ -2215,6 +2215,21 @@ def _step(dt):
     S["tick_count"] = S.get("tick_count", 0) + 1
     now = S["elapsed_t"]
     phase = S["phase"]
+    # SELF-HEAL stale articulation handle (2026-06-14): the settle/measurement
+    # path stops+replays the timeline AFTER this controller bound its handle
+    # (settle_after_canonical -> timeline.stop()), tearing down the physics view
+    # that franka.initialize() bound to at setup. The handle then returns None
+    # forever -> RmpFlow no-ops every step (arm frozen, all joints 0deg) and the
+    # cycle-boundary ready-warp raises "'NoneType' has no attribute
+    # joint_positions". Re-initialize on the first tick after a restart so both
+    # motion and ready-warp work. cuRobo controllers already survive the restart;
+    # this brings the RmpFlow sensor_gated path to parity. No-op once the handle
+    # is live (the common case).
+    try:
+        if franka.get_joint_positions() is None:
+            franka.initialize()
+    except Exception:
+        pass
     _tick_motion_policy()
     _reassert_grip()  # Hold finger target stable every tick
 
