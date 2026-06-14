@@ -75,3 +75,4 @@ workspace/templates/_retired/
 workspace/templates/*.out
 # Large model weights (SAM2 etc.) — too big for git, fetched separately
 vision_models/
+plc_out/
