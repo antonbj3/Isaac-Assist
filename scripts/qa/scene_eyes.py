@@ -629,6 +629,29 @@ def _analyse(js):
             out.append("    %-14s vmax=%7.1f m/s @%.1fs  final=[%.2f,%.2f,%.2f]  %s" % (
                 _nm, _vmax, _vt, _fp[0], _fp[1], _fp[2], "*** EXPLODED/EJECTED ***" if _exp else "(fast — watch)"))
 
+    # OFF-SURFACE / KNOCK-OFF detector (2026-06-14, Anton: make the off-surface verdict first-class, not
+    # hand-derived). An object that reached a placed height then FALLS (final z >=0.10m below its own peak
+    # z) rolled/was-knocked OFF a surface — e.g. a box collided with a neighbour and fell off an OPEN pallet
+    # (CP-NEW-palletizer-mixed-sku Box_5: peak~0.84 -> final z=0.54 on the Ground). The position-only gate
+    # only sees "not delivered"; this NAMES the knock-off + the object-object collisions that caused it.
+    _off = []
+    for _nm in sorted(_ej_objs):
+        _zs = [(_r.get("cubes") or {}).get(_nm) for _r in rows if (_r.get("cubes") or {}).get(_nm)]
+        if len(_zs) < 3: continue
+        _zmax = max(p[2] for p in _zs); _fp = _zs[-1]
+        _drop = _zmax - _fp[2]
+        if _drop > 0.10 and abs(_fp[0]) < 5 and abs(_fp[1]) < 5:  # fell >=10cm from peak, not an explosion
+            _off.append((_nm, _zmax, _fp, _drop))
+    if _off:
+        out.append("OFF-SURFACE / KNOCKED-OFF (final z fell >=0.10m below the object's own peak — rolled/knocked off a surface):")
+        for _nm, _zmax, _fp, _drop in sorted(_off, key=lambda x: -x[3]):
+            out.append("    %-14s peak_z=%.2f -> final=[%.2f,%.2f,%.2f]  fell %.2fm" % (
+                _nm, _zmax, _fp[0], _fp[1], _fp[2], _drop))
+    # object-object contacts = place-time collisions that can knock neighbours off (both actors are tracked workpieces)
+    _oo = sorted({k for k in _cf if "|" in k and all(p.strip() in _ej_objs for p in k.split("|"))})
+    if _oo:
+        out.append("OBJECT-OBJECT CONTACTS (place-time collisions — can knock neighbours off a surface): " + ", ".join(_oo[:12]))
+
     # GRIP TIMELINE — THE grip-release signal: SurfaceGripper status (0=Open 1=Closing 2=Closed) + gripped set
     # + cup<->gripped-cube distance + max joint velocity, logged at every transition. If status falls to 0 (or the
     # gripped set empties) MID-TRANSIT while cup-cube_d just exceeded maxGripDistance -> the grip auto-RELEASED on
