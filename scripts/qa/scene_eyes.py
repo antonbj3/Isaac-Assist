@@ -90,7 +90,9 @@ _GRASP_TOK = ("handle", "broom", "blank", "knob", "lever", "valve", "cap", "bott
               # trajectory AND to the EJECTION detector (the exact sphere-blowup case it targets).
               # Safe: the branch below requires RigidBody/Collision API + excludes the robot subtree,
               # so render-only suction proxies (no rigid body) and scenery are not matched.
-              "sphere", "ball")
+              # 2026-06-14: "box" too (CP-NEW-palletizer-mixed-sku uses Box_* workpieces — same
+              # blind spot as spheres: untracked positionally -> can't SEE the actual SKU-sort).
+              "sphere", "ball", "box")
 try:
     for _pr in stage.Traverse():
         _pth = str(_pr.GetPath()); _lo = _pr.GetName().lower()

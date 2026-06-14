@@ -361,8 +361,8 @@ _ITEM_RE = re.compile(r"^\s{2}(\w[\w/]*): bin=.*\|\s*([A-Z_,]+|OK)\s*\|\s*final=
 @app.function(image=image, gpu=GPU, cpu=6.0, memory=12288, timeout=3600,
               volumes=_VOLUMES, max_containers=6)
 def run_template(template_id: str, skip_ts: bool = False,
-                 env_flags: dict | None = None) -> dict:
-    """Fresh-Kit single-template measurement: gate_one + scene_timeseries.
+                 env_flags: dict | None = None, eyes: bool = False) -> dict:
+    """Fresh-Kit single-template measurement: gate_one + scene_timeseries (+ scene_eyes if eyes).
 
     Fresh-Kit-per-template is free here: every call gets a new container,
     so the local session-degradation class is structurally impossible.
@@ -485,6 +485,24 @@ def run_template(template_id: str, skip_ts: bool = False,
             else:
                 res["ts"] = None
                 res["ts_tail"] = out2[-3000:]
+
+        if eyes:
+            # VIRTUAL EYES on cloud (Anton 2026-06-14: gates lie -> never trust
+            # delivered-counts alone). scene_eyes captures CONTACTS + EJECTION +
+            # GRIP-SLIP + per-object trajectory, so a cloud false-pass (e.g. a
+            # SKU-sort that reaches the pallet UNION but the WRONG zone, or a
+            # flung box) is visible cloud-side, not just locally.
+            try:
+                _etpl = json.load(open(f"{REPO}/workspace/templates/{template_id}.json"))
+                _edur = int((_etpl.get("simulate_args") or {}).get("duration_s") or 120)
+            except Exception:
+                _edur = 120
+            pe = subprocess.run([sys_exe(),
+                                 f"{REPO}/scripts/qa/scene_eyes.py",
+                                 template_id, str(_edur), "--noframes"],
+                                capture_output=True, text=True,
+                                timeout=_edur + 600, env=genv)
+            res["eyes_tail"] = (pe.stdout + pe.stderr)[-4800:]
     except Exception as e:  # noqa: BLE001
         res["error"] = str(e)[-3000:]
     finally:
@@ -594,7 +612,7 @@ def boot():
 
 
 @app.local_entrypoint()
-def main(templates: str = "", skip_ts: bool = False, env: str = ""):
+def main(templates: str = "", skip_ts: bool = False, env: str = "", eyes: bool = False):
     if not templates:
         print(__doc__)
         return
@@ -612,7 +630,8 @@ def main(templates: str = "", skip_ts: bool = False, env: str = ""):
                       text=True).stdout.strip()
         for res in run_template.map(names,
                                     kwargs={"skip_ts": skip_ts,
-                                            "env_flags": flags or None},
+                                            "env_flags": flags or None,
+                                            "eyes": eyes},
                                     order_outputs=False,
                                     return_exceptions=True):
             if isinstance(res, BaseException):
