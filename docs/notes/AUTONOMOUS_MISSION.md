@@ -1,4 +1,114 @@
 ＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+# ►►► CURRENT MISSION (2026-06-13 16:12Z) — READ THIS BLOCK FIRST; supersedes everything below ◄◄◄
+
+Anton: "jobba snälla står inte still" + "Sluta fråga mig nu, jag får lita på att du kan ta så bra beslut som möjligt."
+=> EXECUTE the next ungated step, commit, report. Do NOT ask permission. Keep the critical stance: measure-first,
+use a CONTROL to catch your own false positives, never accept a threshold-graze (today's grip-slip cube-control lesson:
+the metric called a good cube "slipping" until the control exposed it — fix before shipping).
+
+## GUARDRAILS (non-negotiable)
+- ONE Kit boot at a time. Single RTX 5070 on :8001. Before booting: GPU free (`nvidia-smi` = only MCP gateway ~306MiB,
+  no `[k]it/kit`). Proven stop_kit (TERM→KILL, spares isaac/omni/carb-env procs). boot+gate ≈ 12-15 min, fits a 20-min wake.
+- Measure-first; run a KNOWN-GOOD control + a known-bad case for any new metric. Control fails its own verdict => metric broken.
+- Fresh-Kit per measurement (degradation: in-batch PASS reliable, in-batch FAIL suspect).
+- Commit per fix, push to `anton` (NEVER origin/PRs), branch feat/foundation-build. Verify the hook trailer = "Opus 4.8", not Fable.
+- NEVER pytest against directories (ChromaDB freeze). Write probe scripts with the Write tool; launch nohup + grep-DONE waiter.
+- Research docs (FAIL_TRIAGE_*, GRIP_ARCH_DECISION_*, this file) are gitignored — local for Anton's review.
+
+## DECISION AUTHORITY (Anton, 2026-06-13) — I MAKE THE CALLS, don't wait for him
+- My judgment should be as good as Anton's. Do NOT wait for his verdict, do NOT park decisions as "Anton's call".
+- This INCLUDES the things previously parked: **#9 grip-architecture, #12 CP-10, and template/canonical-geometry
+  changes** — I decide A/B/C and EXECUTE. (My standing rec on #9 = A, compliant grip.)
+- **Git + hot-swap = the safety net**: if a decision is wrong, revert and try another — "förmodligen inga problem".
+- What STAYS (quality, not hesitation): measure-first with a control (known-good + known-bad) for every metric;
+  gated/byte-identical where possible; commit per fix (revertable); never threshold-graze; a control that fails
+  its own verdict = the metric is broken → fix before commit.
+
+## TRULY EXTERNAL (not my call — can't act until unblocked)
+- #11 platform-divergence — blocked until a new Modal account is up (external).
+- CAD2SimReady scope — Anton's separate-project later-decision; don't assume it as a dependency. (Everything
+  INSIDE Isaac Assist is mine to decide.)
+
+## UNGATED WORK QUEUE (do top item not yet done; re-prioritise as state changes)
+1. **grasp_validate.py** (ZERO-BOOT, first — no GPU contention): generalise today's geometric graspability discriminator
+   into a corpus-wide pre-gate. Per graspable object: jaw-fit (<8cm), CG-offset/grip-halfwidth instability ratio,
+   suction-face → {jaw|suction|none}+pendulum flag. VALIDATE vs MEASURED cases (broom 4.7=SLIP, cube 0.0=RIGID, c9094b7d).
+   Honest scope: geometric pendulum-class only; couple-class (faucet/drawer) needs CAD2SimReady physics. Sibling to scene_validate.py.
+2. **Measure grip-slip on faucet + drawer** (1 boot each: `scene_eyes.py <TPL> 50 --noframes`): upgrades grip memo Root 1
+   inferred→measured. Read GRIP-SLIP rotation° + GRIP CONTACT FORCE lines.
+3. **#10 dual-Franka world_obs** (boot): relocate `_eyes_last_world` stash OUT of the rebuild-gate (pick_place.py ~5388),
+   re-trace CP-59, read obstacle world + planner-build. Already refuted: sibling-keepout (sib_obs empty) + wound-start.
+4. Other ungated QC/tooling hardening.
+5. **[DIRECTION — Anton 2026-06-14, my timing call] PLC-export PoC** (ZERO-BOOT): lift pick-place
+   orchestration into a declarative Plan/Sequence-IR so a sim-validated sequence can be EXPORTED as
+   PLC code (IEC 61131-3 SFC/ST). FIRST STEP = define the IR + write an EXTRACTOR that reads CP-10/CP-44
+   and dumps its sequence as IR + an SFC skeleton (touches no running code; proves the sequence CAN be
+   captured declaratively before the consume-the-IR refactor). Context: ros2_cmd backend already states
+   "state machine lives outside Isaac... e.g. a real PLC"; gap = 0 templates carry a declarative sequence
+   field. Hot-swap doctrine on orchestration. Full memo: memory project_isaac_assist_plc_export_direction.
+
+## STATE
+- Branch feat/foundation-build on `anton`. Today's commits: c9094b7d (grip-scene_eyes), 8f310826 (trace enrich).
+- Tooling shipped today: trace_goal_frame (sib_obs/start_q), grip-scene_eyes (rotation grip-slip + contact-force), geometric
+  graspability discriminator (computed — item 1 turns it into a script). Maps: FAIL_TRIAGE_2026-06-13.md, GRIP_ARCH_DECISION_2026-06-13.md.
+
+## CRON — a KEEPALIVE, not a planner/scheduler (Anton, 2026-05-13/06-13)
+- The recurring cron (every 20 min, ":7,27,47", session-only, dies on Claude exit, auto-expires 7d) exists ONLY to
+  catch me if I go idle. The PLAN is THIS doc + my judgment — NOT encoded in cron. Do not say "the cron will do X".
+- Do NOT stop after one item and wait for the next firing — keep working through the queue; the cron is a safety net
+  for genuine pauses, not a turn-timer that rations work. If the cron is gone after a restart, RE-CREATE it.
+- Each working stretch: read this block, do the top ungated item(s), commit per fix, append a progress note below.
+
+## PROGRESS LOG (append one line per wake)
+- 2026-06-13 16:12Z — mission reset; cron */20 created; starting item 1 (grasp_validate.py).
+- 2026-06-13 ~16:55Z — item 1 DONE: scripts/qa/grasp_validate.py shipped. Validated on controls (broom→PENDULUM
+  ratio 4.7 matching measured 149°; CP-08/13 cubes→geom-OK; faucet→geom-OK+couple-caveat). Corpus all: 124/439
+  parsed (106 geom-OK, 13 UNGRASPABLE-JAW=suction-candidates, 2 PENDULUM-RISK, 3 SUSPECT-GEOM parse-guard, 39
+  UNPARSED, 276 NO_GRASP_TARGET=non-pick). Added >0.6m SUSPECT-GEOM guard (caught Table/Brick/Item parse artifacts —
+  did NOT assert UNGRASPABLE on scenery). NEXT: item 2 (measure grip-slip on faucet+drawer) or item 3 (#10 world_obs).
+- 2026-06-13 ~18:50Z — item 2 done (with honest negative + tool hardening, commit 37787b47). Ran grip-scene_eyes on
+  faucet+drawer; results exposed 3 grip-slip defects (held-ID picked FaucetBody not FaucetHandle; "hand" token
+  matched "Handle"; rotation magnitude-diff). FIXED all 3 (contact-confirmed picked_path, specific gripper tokens,
+  TRUE relative-rotation). Re-validated via live boot + OFFLINE re-analysis of saved eyes.json: broom SLIPPING 143°,
+  cube RIGID 3° (controls hold). HONEST OUTCOME: grip-slip validated for PICK-CARRY; faucet (turn) + drawer (pull)
+  are NOT verdict-grade (intended rotation / translational slip confound) — flagged via EE-self-rot caveat, NOT
+  silently false-positived. So faucet/drawer STAY inferred in the grip memo, only the broom carry-slip is measured.
+  NEXT: item 3 (#10 dual-Franka world_obs) — boot-based; or further grasp_validate coverage (zero-boot).
+- 2026-06-13 ~19:10Z cron-wake — ZERO-BOOT item (no GPU contention): grasp_validate gripper-chooser + jaw-mismatch
+  detector (commit 3974ae96). Flags Franka-jaw assigned an object too wide to pinch -> 7 mismatches (vacuum-sheet
+  22cm + packer-lid 20cm = wrong-gripper; cart 40cm not-a-pinch; EStop press-not-grip; snap-fit/fixture-gauge/CP-55
+  likely narrower feature). Controls unchanged. Realises Anton's gripper-chooser idea as a corpus QA signal.
+  NEXT: item 3 (#10 dual-Franka world_obs, boot) when a clear boot window — refuted sibling-keepout+wound-start,
+  remaining hypothesis = scene/start-collision; needs world_obs (relocate stash out of rebuild-gate) on CP-59.
+- 2026-06-13 ~19:50Z cron-wake — item 3 DONE (commit 9faf0ec5). Caught my OWN premature "empty world" conclusion:
+  the planner builds with base scene_model=collision_primitives_3d.yml (demo world), so empty world was NOT
+  deducible — had to MEASURE. Added uw_count (update_world fire-count); booted CP-59: uw_count=1 → update_world
+  fires → demo base REPLACED + scene_cfg empty → collision world EMPTY → scene-collision REFUTED. ALL 4 cheap
+  hypotheses now eliminated; CP-59 root = goal-ORIENTATION IK infeasibility (position reachable, orientation not)
+  OR planner-config — next step is an IK-feasibility probe = #10 dedicated session. world_obs capture had a
+  cuboid-API bug (returned None) → fixed defensively (dict OR list-of-Cuboid). FAIL_TRIAGE + task#10 updated.
+  NEXT: zero-boot item (further grasp_validate coverage / synthesis) or #10 IK-probe when Anton runs the session.
+- 2026-06-13 ~20:30Z — cron-framing CORRECTED (Anton: cron is a keepalive, NOT a planner; reminder now baked into
+  the cron prompt bf099f0a + feedback_cron_is_keepalive_not_planner memory + this doc). Then CONTINUED (not waiting
+  for a tick): measured grip-slip on CP-43/44/54 (grip-class FAILs). Result = NOT a clean Root-1 upgrade; exposed
+  grip-slip's true scope (pick-carry, non-symmetric, sustained jaw-grip). Added 3 out-of-scope guards (commit
+  32195b43, validated offline, controls hold): suction-never-formed / short-span / symmetric. FINDINGS: CP-54 =
+  suction never engages (gripped-set empty all run — #9-adjacent, not autonomous); CP-43 = sphere-roll invisible
+  to rotation-slip (tool limit); CP-44 = inconclusive (grasp barely formed). Grip-slip is now well-scoped + guarded.
+  HONEST STATE: the grip measurement/prediction frontier is comprehensively built+validated+scoped. Remaining grip
+  work is #9 (Anton) or out-of-scope for grip-slip. 7 commits today.
+- 2026-06-13 ~21:30Z — Anton: FULL decision authority (git+hot-swap net) + "nu står du ju still igen" (don't declare
+  done & wait). Persisted in cron f4e02a83 + DECISION AUTHORITY section + memory. Then KEPT WORKING:
+  (a) FAIL-triage batch → NEW local stale-PASS: CP-12, CP-58, palletizer-mixed-sku (+ narrow-clearance cloud+local).
+  (b) CP-57 gate cube_paths fixed (commit ed336cb1) — was /World/Item_N, spawn is /World/CubeHeap/Item_N.
+  (c) CLEANUP: found+killed a 7.5h ZOMBIE Modal run (stalled on no-credits) + a hung triage Kit → GPU freed.
+  (d) Recovered the zombie's output: 69-template T4 cloud re-gate, 15 cloud-PASS — cross-VALIDATES the earlier
+      stale-harvest (consistent across platforms). FAIL_TRIAGE updated (HARVEST 2 section).
+  (e) NOW: diagnosing CP-54 (Franka+suction, gripped=[] = suction never engages) — boot in flight; marker IS set
+      by _handle_surface_gripper so it's a runtime engage failure (cup-reach / close_gripper timing). My call to fix.
+  LESSON: lost track of background processes (zombie Modal 7.5h) — must track/clean background state actively.
+
+＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
 # 🏁 MISSION SLUTSUMMERING (2026-06-04 12:00 — Anton tillbaka + live-styr; autonom cron-loop avslutas här)
 **UR10-sug — vad som faktiskt hände (12h-mission):**
 1. **Synliga klagomålen FIXADE av 96752f8e** (dina GUI-symtom 2026-06-03 var på GAMLA koden, ec609990): telepati (pz 0.045→0.035 = flush ~1.5mm), kopp-render (skaft+pad), kastning (pz-interpenetration borta). Grader: **6/6 UR10 levererar dead-center**. Inväntar din GUI-bekräftelse.
@@ -1464,3 +1574,1039 @@ the bin (FINAL 0.5,-0.3,0.785, under_target=True 3/3 official gate, deterministi
 All edits suction-gated in robot.py + pick_place.py; Franka friction floor intact (CP-09 5/5). honest_pass=False is the
 known-lying controller cubes_delivered (verify_long timing) — under_target=True is the truth. Full detail: function_gate_ledger.md
 2026-06-02 entries. NOW generalizing to the UR10-suction cluster (CP-69/71-86, same handler -> should deliver too).
+
+- 2026-06-13 ~22:30Z — EXHAUSTIVE FAIL-pool sweep complete. CONFIRMED: no quick wins remain; every avenue is a real
+  implementation mini-project (mapped + designed). CP-57 heap = neighbor-interference (#9-piled). CP-54 suction-engage
+  = elusive (controller prints swallowed; needs file-instrumentation). Gate-config audit = clean negative (CP-57 lone).
+  NEW legitimate (non-cheat) avenue: GATE-TYPE MISMATCHES — iso10218-speed-separation/zone-partition-safety/
+  assembly-constraint-verify are non-pick (safety/verify) tasks mis-graded as pick-DELIVERY.
+  iso10218 DESIGN (ready to implement, my call): controller already computes+logs SSM correctly into _SSM_STATE
+  ["step_log"] (per-step sep,scale; human-proxy sweeps bands 1.5m@-0.25m/s). checks_from_expected_args does NOT
+  generate a real SSM check (would false-pass). FIX (template-only, safe, no core-gate change): (1) expose step_log
+  to builtins in the run_usd_script; (2) simulate_args gate_class=introspection + stimulus=[play, run_usd_script that
+  reads builtins step_log, compares scale at each sample_separation to expected_scales within velocity_tolerance%,
+  sets /World/Franka.ssm:verified attr]; (3) checks=[attr_equals ssm:verified True]. CAUTION: iso10218 has BOTH a
+  `code` and `code_template` (escaped scripts) — edit carefully + boot-verify (PASS only if scales genuinely match).
+  Same pattern likely fits zone-partition (zone-violation check) + assembly-constraint-verify (tolerance check).
+
+- 2026-06-13 ~23:30Z — iso10218-speed-separation: GENUINE PASS (commit ddf39f7d). Gate-TYPE-mismatch fix
+  (introspection + non-circular SSM check) + ROOT-CAUSE controller bug found via measure-first (5 boots):
+  the SSM callback never Clear()'d its XformCache -> stale transforms -> constant 1.59m sep -> the safety
+  system NEVER tracked the human (silently inert). Fix = Clear() per step (minsep 1.59->0.21; far_full+graded
+  +near_stop all True). A real safety bug, masked by delivered-count mis-grading. The gate-TYPE-mismatch avenue
+  is PROVEN valuable (legitimate, non-cheat, finds real bugs). NEXT: same pattern on zone-partition-safety +
+  assembly-constraint-verify (each its own controller + verification = its own multi-layer fix, like iso10218).
+
+- 2026-06-13 (cont.) — CP-54 GENUINE FIX 0/3 -> 3/3 fresh-each (commit 2e19cdb5). A surface_gripper DECOR
+  marker on a Franka silently froze the parallel jaw: cuRobo path read _SG_PATH_RAW from the marker UNGATED ->
+  _grip_close() early-returned into inert suction -> jaw never actuated (finger range 0.0deg, 0 cube contacts,
+  Cube_1 rode belt to x=1.699). CONTROL CP-01 (identical build minus decor, 7/7) showed fingers travel+grip ->
+  decisive. Fix = null _SG_PATH_RAW for finger robots (mirrors authoring handler's parallel-jaw decor-skip);
+  37 marker-less Franka + 11 UR10 suction byte-identical. Verified: 4/4 each of 3 fresh runs, fingers
+  0.0->1.1/0.8deg gripping all 4 (matches control), decor-guard fired. Earlier "suction never engages" = WRONG-LENS.
+
+- 2026-06-13 (cont.) — assembly-constraint-verify GENUINE PASS 0/2 -> PASS (commit 01f2397d). TWO defects:
+  (1) gate-TYPE mismatch (API-workflow task graded as pick-place; peg "delivered" to where it starts) ->
+  introspection re-class (4 workflow call_counts + attr_equals qa:assembly_ok from a stimulus verify_code
+  reading settled peg-vs-bushing geometry, bounded both sides). (2) buried-bushing SCENE bug: ground Cube
+  size-vs-scale (default size=2 * scale z=1, pos -0.5 -> top z=0.5) buried the bushing (top 0.15); peg landed
+  on the FLOOR at z=0.53 -> fixed ground scale z->0.5 (top z=0). DISCIPLINE WIN: first run reported PASS but
+  pp=0.53 showed the peg floating -> caught+refused the false-positive, bounded the check, probed the traverse
+  to find the ground bug. Verified: peg seats z=0.18 centered, 5/5.
+
+- 2026-06-13 (cont.) — gate-type-mismatch POOL DRAINED of clean wins (investigated, no commits). Scanned for
+  introspection-mis-graded FAILs; the verb-heuristic over-flagged 3, ALL turned out to be execution/bridge
+  challenges, NOT mis-classed gates: (a) paint-sprayer — UR10 articulation EXPLODES during the raster (NPZ
+  positions = 6-DOF joint angles up to 1.7e9, TCP collapses to z=0.061); coverage math ready+offline-controlled
+  but blocked on UR10 stability + record_trajectory logs joints (needs FK). (b) snap-fit — fails at cuRobo
+  PICK-PLAN ("planning failed for /World/TopClip", plan_fails=12, clip never leaves StagingPad, fingers 0.0deg);
+  deeper plan-fail RCA (clip-reachability/grasp-pose/prong-collision/warp-cache), not gate-type. (c) door-interlock
+  — OPC-UA bridge-BLOCKED + UR10-suction family, wrong tool. CONCLUSION: clean re-class wins were iso10218 +
+  assembly-constraint (2 this thread). Remaining FAILs = execution-physics frontier (#9 grip, UR10 stability,
+  plan-fail RCA) — deeper multi-boot work. Diagnostic-first SAVED wasted effort (didn't build a coverage gate
+  for an exploding arm). NEXT (fresh context): snap-fit clip-reachability is the cleanest plan-fail lead.
+
+- 2026-06-13 (cont.) — snap-fit DEEP-RCA (measured, NO commit — refused an unverified non-fix). Localized 3
+  stacked issues: (1) jaw-width: TopClip was 120x100mm (min 100mm) > Franka 80mm jaw -> grasp_validate
+  UNGRASPABLE-JAW; shrank clip+shell to 70mm (grasp_validate flipped to geom-OK) — but the gate STILL failed
+  identically -> jaw-width was a LATENT secondary defect, NOT the plan-fail cause (refuted by measurement);
+  reverted the resize. (2) GATING ROOT (cp_planfail_tagged.log): cuRobo plan-fails at seg=4/8, goal=[0.0,-0.25,
+  1.025] = the TRANSIT to the place/shell side (pick segs 0-3 at [0.3,0.1] not the blocker); controller retries
+  -> 12 plan_fails -> aborts -> clip never leaves StagingPad. Place-side transit/IK/collision at the 90deg-rotated
+  Franka base. (3) compliance-press (seg 6, snap_fit impedance) untested behind (2). => snap-fit is a DEEP
+  3-stage execution challenge, not a quick win; next RCA = trace_goal_frame on the seg-4 place transit. LESSON:
+  grasp_validate's geometric UNGRASPABLE verdict != the cuRobo ARM plan-fail cause — the arm planner fails before
+  grip width matters; don't conflate them.
+
+- 2026-06-13 (cont.) — REGRESSION SCAN + next clean win identified (no commit; context-bounded close). Scanned for
+  templates claiming legacy/verified PASS but now FAIL: 26 found (incl. the 3 already fixed CP-54/iso10218/assembly).
+  NEXT CLEAN WIN = CP-NEW-teaching-mode-pose-replay (0/7) — CONFIRMED gate-type mismatch (goal literally "No physics
+  delivery gate; success = completed replay, no IK failures") graded as pick-place. Full re-class recipe in task #16
+  (introspection: workflow call_counts incl teach_robot_pose==6 + a replay-completed attr_equals reading the dense
+  trajectory's last waypoint vs live Franka joints; offline-control the comparison FIRST). Other regressed leads:
+  6dof-pose-estimate-pick, conveyor-tracking-moving-pick, cart-handoff-amr, CP-36/CP-50 (Franka conveyor variants —
+  CHECK for a shared controller regression root), CP-43/44 (sphere/mixed = #9 grip frontier). This wake: 2 commits
+  (CP-54 3/3, assembly PASS) + drained the verb-scan mismatch pool (paint-sprayer UR10-explode, snap-fit seg-4
+  plan-fail — both deep, recorded) + regression scan + teaching-mode scoped. Context deep -> clean close, loop
+  continues on task #16 (do NOT rush a complex introspection gate on thin context -> false-positive risk).
+
+- 2026-06-13 (cont.) — teaching-mode-pose-replay GENUINE PASS 0/7 -> PASS (commit d16232c4). 4th gate-type
+  re-class win (after iso10218/CP-54/assembly). Goal literally "No physics delivery gate" but graded as pick-place.
+  Introspection: 5 workflow call_counts + attr_equals qa:traj_ok (fresh dense trajectory >=200 cubic wps ending at
+  last taught pose). KEY = STALE-PROOF via prepended artifact-delete in code_template (post-build file proves THIS
+  run). DISCIPLINE: first tried reading post-replay robot joints -> stimulus play RESET to zeros (caught via printed
+  actuals); SingleArticulation can't init post-build (no physics view) -> pivoted to stale-proof artifact check.
+  NEXT introspection candidates (broader scan, 13): conveyor-recirculation-loop (demonstrate topology),
+  ergonomics-lift-assist (deliv=0), zone-partition-safety, tool-changer-swap, multi-rate-sensor-fusion.
+
+- 2026-06-13 (cont.) — tool-changer-swap GENUINE PASS -> PASS (commit 4206bc25). 5th gate-type re-class win.
+  Goal: success is "structural (which tool is FixedJoint'd to the wrist at the end)" — graded as pick-place.
+  Introspection: call_count create_articulated_joint==2 + move_to_pose==2 + attr_equals qa:swap_ok (stimulus
+  reads USD joint state: Wrist_to_VacuumCup enabled+targets VacuumCup AND Wrist_to_ParallelJaw DISABLED).
+  CLEAN + reliable (pure USD joint attrs, NO sim-state fragility unlike teaching-mode). Offline-controlled.
+  Verified: SWAP_OK True vac=(T,T,[VacuumCup]) jaw=(T,False,[ParallelJaw]). LESSON: structural/USD-state
+  re-classes are the SAFEST (no physics-view/reset issues). NEXT: multi-rate-sensor-fusion (config-verify?),
+  zone-partition (iso10218-sibling, needs stop-mechanism = deeper).
+
+- 2026-06-13 (cont.) — zone-partition-safety DIAGNOSED HOLLOW (zero-GPU, NO commit — prevented a false-positive).
+  Read the full code_template: the robot is NEVER commanded to move (no move_to_pose / controller / trajectory) —
+  only robot_wizard + safety config (setup_zone_partition, add_proximity_sensor, teleop_safety_config,
+  set_clearance_monitor) + the human capsule moving -y. So check_robot_velocity_zero_after_entry is TRIVIALLY
+  satisfied (a STATIC robot always reads ~0 velocity) regardless of whether any inhibit fires. A naive
+  "velocity-zero-after-entry" introspection gate would PASS a HOLLOW safety test = fake safety pass = worst
+  false-positive. Diagnostic-first caught it before any boot. GENUINE FIX (fresh context, EXTREME care — SAFETY):
+  (1) command the robot to MOVE (slow joint trajectory / move_to_pose loop), (2) verify the inhibit GENUINELY
+  fires (zero velocity on zone entry) — likely needs IMPLEMENTING (markers-only today, like iso10218's inert SSM),
+  (3) gate before/after (moving pre-entry -> ~0 post-entry) + CONTROL (non-entering human must NOT trigger).
+  STATUS: clean gate-type re-class vein DRAINED (5 wins: iso10218/CP-54/assembly/teaching-mode/tool-changer).
+  Remaining = deep frontier: zone-partition (safety rework), #9 grip-arch (Anton's dir A), UR10 stability
+  (paint-sprayer), plan-fail RCA (snap-fit seg-4), conveyor lap-physics. All need fresh context for careful work.
+
+- 2026-06-14 — zone-partition PoC (2 boots, mechanism PROVEN, NO commit — freeze bug, correctly not committed).
+  Stimulus-injected motion+inhibit callback: robot DOES move (apply_action(ArticulationAction(joint_positions)),
+  mov=515 vmax_mov=2.175 j1 0->1.358) + the proximity sensor isaac_sensor:triggered fires on human entry
+  (inh=89). BUT the naive freeze [set_joint_velocities(0)+apply_action(hold-current)] CONFLICTS -> joint coasts
+  to its 2.0 target (no hold) + velocity SPIKES to 38.8 (instability) = a BAD safety stop. Reverted (backup
+  /tmp/zone_backup.json restored). NEXT (fresh ctx, SAFETY): fix the freeze (hold at-trigger pose / stiffness->0
+  brake / velocity-DRIVE-target 0), then move controller into the TEMPLATE (mirror iso10218, not the gate
+  stimulus), gate with the offline-controlled moved-before+froze-after verdict (kills the static-robot hollow
+  case). Mechanism de-risked; remaining = clean-freeze tuning + template-integration. Full detail task #18.
+  SESSION TOTALS: 5 commits (iso10218/CP-54/assembly/teaching-mode/tool-changer), clean re-class vein drained,
+  3 false-positives caught, zone-partition de-risked. Remaining frontier all deep multi-boot (zone freeze,
+  #9 grip, UR10 stability, snap-fit plan-fail).
+
+- 2026-06-14 (cont.) — zone-partition PoC iterated (4 boots total) — mechanism DE-RISKED, 4th FALSE-POSITIVE
+  CAUGHT (read-the-actuals), NO commit. Hold-trigger-pose freeze brought v_last->0.0001 and the gate said PASS,
+  BUT j1 (first 0.0, at_trig 1.358, LAST 2.0): the robot COASTED to its motion target 2.0 and stopped because it
+  FINISHED MOVING, not because the inhibit held it (j1_last != j1_at_trig). v_last~0 = "reached target" not
+  "inhibited"; my verdict missed it (no stopped-at-motion-target known-bad). Reverted. Genuine fix needs: hold
+  ACTUALLY holds (brake stiffness / velocity-target-0 / robust re-init for the flaky SingleArticulation init),
+  CONTINUOUS motion (so stop=inhibit not motion-complete), verdict requires j1_last~=j1_at_trig, then template
+  integration (mirror iso10218). Full issue-list task #18. DISCIPLINE: 4 false-positives caught this session
+  (assembly pp=0.53, teaching robot-nollor, zone static-robot, zone reached-target-not-held) — all via reading
+  actual numbers, never shipping a fake pass. zone is SAFETY -> careful fresh-context fix, not rushed on deep ctx.
+
+- 2026-06-14 (cont.) — zone-partition-safety GENUINE SAFETY FIX 0/3 -> PASS (commit 3678b170). 6th win,
+  hardest (8 boots). Implemented a real motion+proximity-LATCH inhibit controller in the build (physics-step
+  callback: oscillate joint1 while clear; on /World/ZoneBoundarySensor isaac_sensor:triggered, LATCH + hold
+  at-trigger pose + zero velocity; robust re-init). Gate=introspection: stimulus provokes (human -y velocity)
+  + steps; verdict qa:inhibit_fired = moved-before AND stopped AND HELD-at-trigger. VERIFIED clean: moved True
+  (vmax 2.174), v_last 0.0, j1_last=j1_at_trig=0.11 EXACTLY, latched 566 steps. The LATCH was key (human passes
+  THROUGH the thin sensor -> transient trigger needs latching = correct safety). 2 false-positives caught en
+  route (static-hollow, reached-target-not-held) via reading actual joint numbers. FOLLOW-UP: wire into
+  teleop_safety_config handler (more reusable). SESSION: 6 commits (iso10218/CP-54/assembly/teaching-mode/
+  tool-changer/zone-partition), 6 false-positives caught total, discipline held throughout.
+
+- 2026-06-14 (cont.) — zone-partition safety fix ROBUSTNESS-CONFIRMED 3/3 fresh-each (deterministic): all
+  runs identical INHIBIT_FIRED True, moved/stopped/held True, v_last 0.0, j1 (0.0, 0.11, 0.11) [j1_last=
+  j1_at_trig EXACT], latched 566. init-retry handled, no flakiness. A flaky safety stop would be unacceptable;
+  this is deterministic. Memory project_isaac_assist_gate_type_mismatch_pattern.md written (the 6-win re-class
+  vein + read-the-actuals false-positive discipline). SESSION DELIVERABLE: 6 genuine committed wins, zone
+  robustness 3/3. Remaining frontier (deep, fresh context): #9 grip-arch (major), UR10 stability (paint-sprayer
+  explode), snap-fit seg-4 plan-fail RCA, + zone handler-wiring follow-up (teleop_safety_config, more reusable).
+
+- 2026-06-14 (cont.) — snap-fit seg-4 DIAGNOSED (zero-GPU, /tmp/curobo_planfail.log): place goal
+  [0,-0.25,1.025] yaw=0 -> status=res_None x111 DETERMINISTIC = chronic cuRobo goal-orientation/reach
+  res_None class (CP-59 family, see project_isaac_assist_2026_06_13_day). The place-side carry orientation at
+  the 90deg-rotated Franka base is persistently infeasible. snap-fit = 3-layer deep (jaw-fit too-wide +
+  res_None place-orientation + untested compliance-press) -> NOT a quick fix. ENTIRE remaining frontier now
+  deep: #9 grip-arch (HIGHEST LEVERAGE — unblocks CP-43/44/57/broom/faucet/drawer/machine-tender/vacuum-sheet,
+  Anton dir A compliant-grip, MAJOR architecture = fresh session), paint-sprayer UR10-explosion, snap-fit
+  3-layer, CP-59/#10 dual-Franka goal-orientation-IK. SESSION CLOSE: 6 committed wins + zone robust 3/3 +
+  memory written + remaining frontier fully diagnosed. Clean re-class vein DRAINED; deep frontier = fresh context.
+
+
+- 2026-06-14 (cont.) — NEW VEIN: multi-target gate false-negatives. CP-36 (two-tier shelf) + CP-50 (color
+  kitting) FIXED + committed 2b1066b2 (0/5,0/8 -> PASS 4/4): controllers ALWAYS worked (0 res_None, cubes to
+  intended per-cube destinations) but the gate checked a SINGLE target_path + completeness=all -> false 0/N.
+  Fix = set simulate_args.targets to the INTENDED per-cube routing (drop_targets/color), keep completeness=all;
+  honest gate checks each cube at ITS target (misrouted=false verified). DISCIPLINE: most drop_targets-as-
+  POSITIONS candidates (CP-10/20 palletizer, kit-prep, vision-depal, heap-zone) are SINGLE-bin (positions
+  within ONE bin) = REAL failures, NOT false-negatives -> setting targets would GRAZE. Genuine = routes to
+  >=2 DISTINCT destination PRIMS. + SOURCE-vs-DEST filter: 6dof(SourceBin), gravity-dispenser(Dispenser),
+  vision-depal(Pallet), packer(InfeedBin) have 2 prims but one is the SOURCE = single-dest, NOT multi-target.
+  GENUINE remaining 2-bin SORTS (need MEASUREMENT + per-template care, fresh ctx): sbend-sortation (BinA/BinB
+  by color, CONVEYOR diverter no-robot -> measure the sort), quality-tech-fixture-gauge (GoodBin/RejectBin by
+  RUNTIME tolerance is_in_spec -> data-dependent targets), CP-59 (RedBin/BlueBin but dual-Franka deep #10).
+  Process per template: read INTENDED routing -> set targets -> MEASURE cubes reach them (misrouted fails) ->
+  commit. SESSION: 8 committed wins (iso10218/CP-54/assembly/teaching-mode/tool-changer/zone-partition 3/3/
+  CP-36/CP-50). Clean re-class vein + 2 multi-target false-negs done. Deep frontier (#9 grip, sorts, UR10,
+  snap-fit) = fresh context.
+
+- 2026-06-14 (cont.) — sbend-sortation DISPROVEN as a multi-target false-negative (measured, reverted, NO commit).
+  Looked genuine (BinA/BinB color sort) but MEASUREMENT: set INTENDED targets (Item_1/2/3->BinA Orange,
+  Item_4/5/6->BinB Cyan) + ran -> delivered 0/6, all items at x~0-0.12 z~0.52 (BELOW floor) = they FALL OFF the
+  S-bend belt long before the bins (x=2.7, start x=-2.8). misrouted=0 (reached NO bin). REAL conveyor-track
+  physics failure, NOT a gate mis-config. Reverted. DISCIPLINE refined: a 2-bin candidate is only a false-
+  negative if the items GENUINELY reach the distinct bins — MUST measure before committing the targets fix
+  (sbend's items don't). The intended-targets-then-measure process correctly disproved it (not a graze: I set
+  intended routing, items failed to reach it -> revert). Remaining multi-target candidates (quality-tech spec-
+  routing, CP-59 dual-Franka, forklift/machinist) likely a MIX of false-negatives + real failures like sbend
+  -> each needs measurement. SESSION: 8 committed wins; multi-target vein = 2 wins (CP-36/CP-50) + sbend
+  disproven. Deep frontier (#9 grip, remaining sorts, UR10, snap-fit) = fresh context.
+
+- 2026-06-14 (cont.) — quality-tech-fixture-gauge DISPROVEN as multi-target false-negative (measured, reverted).
+  Static intended routing Part_1/3->GoodBin Part_2->RejectBin (labels good/reject + scale_z 0.05/0.07). Set
+  targets + measured: delivered 0/3, parts at x~0.86-0.90 y~0.39 (~start) falling/stacked = Franka never picks+
+  routes to bins. REAL failure, not gate. Reverted. => MULTI-TARGET VEIN EXHAUSTED of clean wins: CP-36/CP-50
+  genuine (controllers deliver to 2 bins); sbend + quality-tech REAL failures (don't reach bins). Pattern: a
+  2-bin candidate is a false-negative ONLY if the controller genuinely delivers to both — most don't (real
+  grip/route failures). CP-59=dual-arm deep. Remaining frontier all deep (#9 grip, real pick/route failures,
+  UR10, snap-fit). SESSION: 8 committed wins; clean+contained vein fully harvested + characterized.
+
+- 2026-06-14 (cont.) — introspection-gated-but-failing lead INVESTIGATED (3 templates) — NO contained wins, all
+  REAL issues (gates correctly fail), GRAZE risk flagged. (1) ik-singularity-avoidance: cond_number 10.47 vs
+  check >=100 — I almost flipped output_min->output_max BUT the goal "DELIBERATELY passes through a singularity
+  zone to DETECT it" means the check is CORRECT (expects the deliberate singularity to register >=100); got
+  10.47 = singularity NOT reached/detected = REAL failure (flipping would have been a graze of a correct check).
+  (2) robohive-door-open: class=articulation, delta_deg=0.0 — door hinge never rotates = REAL door-open
+  controller failure (drawer/turn-primitive family). (3) convex-hull-collision-opt: MeshC is "(repair target,
+  degenerate)" + the which=2 check checks the PRE-repair degenerate mesh for n_error_issues=0 (a degenerate mesh
+  SHOULD error) + no post-repair re-check exists -> mis-designed gate/workflow; genuine fix = add post-repair
+  check + verify fix_collision_mesh cleans it (NOT relax max=0 = graze).
+  FRONTIER FULLY CHARACTERIZED: 54 hard fails — 13 pick-place(grip/plan/reach), 8 grip-round(#9), 7 grip-piled
+  (#9), 4 grip-suction(#9), 4 UR10, 4 INSERT/plan-fail, 4 BRIDGE-blocked, 2 dual-arm, + 5 stale-PASS fields
+  (my fixes) + 3 real introspection issues. ALL contained/clean wins HARVESTED (8 this session across 4 veins).
+  Everything remaining is deep RCA/architecture (mostly #9 grip) or bridge-blocked -> fresh dedicated context;
+  rushing any (relaxing checks, shared-grip-path change w/o the 48-passer sweep) violates the quality bar.
+
+- 2026-06-14 (cont.) — convex-hull-collision-opt root CONFIRMED real (corrected my read): the 3 check_collision_mesh
+  calls = MeshA(0), MeshC-pre-repair(1), MeshC-POST-repair(2). which=2 IS the post-repair check (gate is CORRECT).
+  got=1 post-repair = fix_collision_mesh did NOT clean MeshC. ROOT: MeshC is a CUBE prim (degenerate flat scale
+  z=0.0005), check_collision_mesh reports 'not_a_mesh' (wants a Mesh prim), fix_collision_mesh can't repair a
+  non-mesh -> error persists. Real failure (fix = author MeshC as a degenerate MESH with degenerate faces + verify
+  fix_collision_mesh removes them; uncertain). ALMOST GRAZED (relaxing max=0 on a correct post-repair check) —
+  reading the workflow ORDER stopped it. => DEFINITIVE: every contained-looking lead this wake (sbend, quality-
+  tech, ik-singularity, robohive-door, convex-hull) is a REAL failure; the 8 harvested wins are the COMPLETE
+  clean+contained harvest. Frontier = 54 hard fails ALL deep (#9 grip dominant). Next = #9 grip dedicated session
+  (major + 48-passer regression sweep) or per-template deep RCA — fresh context. 5 graze-traps caught this wake.
+
+- 2026-06-14 (cont.) — #9 GRIP ENGAGED + compliant-suction RESEARCH STARTED (not parked). Ruled out every
+  contained sub-fix (round/offset-CG/piled/suction all hard physics, no quick gated win). Then started the
+  dir-A centerpiece: docs/research/compliant_suction_prototype.py — a D6 (cup<->cube) finite-stiffness-drive
+  grip = faithful compliance, NOT a FixedJoint, NOT a kinematic-teleport oracle. FIRST RESULT (test scene):
+  K=100000 -> cube HELD at the cup, gap=0 (rigid/weld-equiv), n_fixedjoint=0 => VALIDATES a D6 grip holds with
+  NO FJ (Anton's no-FJ rule is satisfiable). Compliant window (moderate K -> held AND gap>0) UNTESTED: K=500/8000
+  errored on a harness stage-readiness race (first exec_syncs raced stage init; 3rd worked). NEXT (fresh focused
+  ctx, task #9): fix harness (stage-ready guard / fresh-Kit-per-K), K-sweep the compliant window, wire into the
+  suction grip path (gated), regression-spot-check 48 passers, apply to 4 suction fails. SESSION TOTAL: 8 wins +
+  exhaustive frontier map + #9 compliant-suction research seeded (the highest-leverage unblock now has a
+  validated no-FJ D6 starting point). The compliant-window tuning is delicate -> deserves fresh context, not
+  ~36-boot fatigue (a rushed result would mislead the dedicated session).
+
+- 2026-06-14 (cont.) — #9 BREAKTHROUGH: faithful compliant-suction MODEL VALIDATED (the dir-A research
+  centerpiece, open item). docs/research/compliant_suction_prototype.py — D6 cup<->cube finite-stiffness
+  drives. K-sweep (test scene, gravity static-hold, harness re-run race FIXED): K=1000 gap=2.4mm held COMPLIANT
+  n_fixedjoint=0; K=3000 0.7mm; K=10000 0.1mm rigid. KEY: a D6 holds with ZERO FixedJoint (Anton's no-FJ rule
+  satisfiable) + compliance TUNABLE/physics-predictable (gap≈weight/K); K~1000 = faithful (held + real 2.4mm
+  compliance, NOT the CP-70 weld/kinematic-teleport cheat). The SUCTION sub-class unblock — de-risked at model
+  level, safely on a test scene. NEXT (dedicated session, task #9): dynamic lift/shear test + tune K/D ->
+  integrate into suction grip path (gated, replace weld-D6) -> regression spot-check 48 passers -> apply to 4
+  suction fails. SESSION TOTAL: 8 committed wins (4 veiner) + exhaustive frontier map + #9 compliant-suction
+  model VALIDATED. Engaged #9 fully (analysis + prototype + validated model), not parked.
+
+- 2026-06-14 (cont.) — #9 compliant-suction model FULLY VALIDATED (static + DYNAMIC). Dynamic lift (kinematic cup
+  test-fixture raised +0.30m): cube FOLLOWS held by the compliant D6, NO FixedJoint, tunable compliance:
+  K=1000 max_lag 38mm, K=5000 max_lag 8mm, K=10000 4mm — all followed=True (cube_dz~0.30). Faithful window
+  K~1000-5000 (real compliance + stable through accel). NB the kinematic cup is the test FIXTURE (in prod it
+  rides the robot EE; the GRIP cup<->cube is the compliant D6 — no-FJ-grip rule satisfied; cup<->EE tool-mount
+  is a separate allowed FJ). docs/research/compliant_suction_prototype.py is the validated reference.
+  => #9 SUCTION sub-class UNBLOCKED at model level (the open dir-A research item is solved as a model).
+  INTEGRATION (dedicated session, task #9): swap the suction grip path's weld-D6/kinematic-follower for this
+  compliant-D6 (K~3000, body0=cup-on-EE body1=cube-on-close), gated to suction robots, regression spot-check 48
+  passers, apply to 4 suction fails + scene_eyes faithful-grip re-verify. SESSION TOTAL: 8 committed wins + the
+  #9 compliant-suction model fully validated (static+dynamic, no-FJ, tunable). Engaged #9 fully — analysis +
+  prototype + static + dynamic validation.
+
+- 2026-06-14 (cont.) — #9 suction frontier REFOCUSED + machine-tender RCA'd (deep). KEY: UR10 faithful suction
+  HOLD already done (robot.py ~6649-6693: 4-point-ring D6 rot-stiff 2000, transZ give 0.01, "breakable@100N not
+  weld" — replaced the old 1e5 weld 2026-06-06); my compliant-suction model (static+dynamic validated) CONFIRMS
+  that approach. So remaining suction = grip-FORMATION + Franka-enable, NOT the hold. machine-tender (UR10 0/9
+  fail) localized: blanks NEVER picked (0/4, stay on infeed), UR10 res_None at CNC-load descend [0,0.3,0.627],
+  FlangeMount 'disjointed body transforms' warn (cone<->EE mount; maybe benign-snap maybe root), grip-engage
+  detail NOT in kit-log (handler prints don't reach it -> need file-sentinels/diagnose_pick_execution; clear
+  /tmp/curobo_planfail.log first — it had stale Franka pollution). => machine-tender is MULTI-LAYER (plan-fail +
+  grip-form + infeed->CNC->outfeed flow), deep. Franka-suction (vacuum-sheet etc.) still decor-inert -> add the
+  4-point-ring D6 as a separate top-level cone (UR10 pattern, planning-safe).
+  WAKE TOTAL #9: model validated (static+dynamic) + integration understood (UR10-hold DONE) + frontier
+  refocused (grip-form/Franka-enable) + machine-tender localized. SESSION: 8 committed wins + #9 deeply advanced.
+  All remaining = dedicated fresh context (grip-form RCA w/ file-sentinels, Franka-suction-enable, deep per-template).
+
+- 2026-06-14 (cont.) — WIN #9 (commit d015d474): CP-54 decor-fix GENERALIZES to the jaw-via-decor sub-class.
+  Re-read the 3 "Franka+surface_gripper" templates' BUILD code (zero-boot): robot_wizard(franka) builds a Panda
+  WITH panda_hand fingers => the authored SG marker is nulled to decor by the parallel-jaw guard (CP-54 path)
+  => the JAWS grip. yrkesroll-gripper-vacuum-pick picks 50-70mm mixed cubes = jaw-graspable (side-pinch
+  sidesteps the goal's "per-item top-z size-variance" worry). MEASURED fresh-Kit (GRIPLOG=1): delivered 4/4,
+  all on OutfeedBin/Floor under_target, upright_dot 0.9999, stable_ok, rate 1.0 (res_None = transient cuRobo
+  retries, recovered). CAUSAL: yrkesroll last gated 2026-06-13 11:19 -> 0/2, ~10h BEFORE the CP-54 fix
+  (21:48) -> decor froze the jaw -> 0; post-fix -> 4/4. Set completeness any->all (goal wants all 4; default
+  "any" was a latent false-positive; measured 4/4 satisfies "all" = full pass, not a graze; CP-36/50 family).
+  Sub-class members: CP-54 (already 4/4 at fix-time, record managed elsewhere=skip), adaptive-3finger
+  (MEASURING now), yrkesroll (WON). Bounded at 3 (scan: 18 SG/vacuum templates; only these 3 are Franka+
+  panda_hand+non-thin; 2 thin-sheet = real-suction-need; rest UR10). NEXT: read the adaptive-3finger + yrkesroll
+  -confirm batch result.
+
+- 2026-06-14 (cont.) — SUB-CLASS batch result + HONESTY ALERT on yrkesroll. (1) adaptive-3finger-gripper:
+  REAL FAIL 0/3, fresh+trustworthy — the custom 3-finger PROXY (extra cube-fingers + prismatic joints on
+  panda_hand) is broken: SmallCube+Cylinder dropped to /World/Ground, Rod flung to y=2.98 (speed 0.043). NOT a
+  jaw-via-decor clean case (the proxy itself is the problem) -> leave it; dedicated 3-finger-proxy work, honest
+  negative. (2) yrkesroll CONFIRM re-run (2nd in batch, AFTER adaptive-3finger): only 1/4 (Item_2 delivered;
+  Item_1 fell to ground INVERTED, Item_3 stuck on table, Item_4 on ground). This CONTRADICTS the fresh-solo 4/4
+  I committed (d015d474). Per guardrail this re-run is DEGRADATION-SUSPECT (in-batch FAIL after a Rod-flinging
+  res_None-spamming template; "never revert on a batch verdict") — BUT "falska positiver = progressgift" forbids
+  resting a committed "stable 4/4" on ONE fresh run when a re-run got 1/4. => RE-MEASURING yrkesroll fresh-Kit-
+  SOLO x2 (degradation-free) for 3 total fresh-solo data points. If 3/3 -> commit sound, batch 1/4 = degradation.
+  If flaky -> the "stable 4/4" claim overclaimed; completeness="all" STAYS (correct config regardless), but I
+  must add an honest follow-up qualifying the stability + NOT mark verified. Awaiting /tmp/yr_freshx2.log.
+
+- 2026-06-14 (cont.) — yrkesroll VINDICATED 3/3 fresh-solo (commit d950f3ff). fresh-Kit-SOLO boot A=4/4
+  stable_ok, boot B=4/4 stable_ok; + original d015d474=4/4 => 3/3, every run all-4-delivered (upright, at-rest,
+  under_target), each with the same 12 recoverable res_None retries. The batch 1/4 = CONFIRMED in-batch Kit
+  degradation (guardrail held: never revert on a batch verdict; the quality-bar re-measure caught it). Marked
+  motion_controllers.curobo verified + verified_status function-gate ✓. JAW-VIA-DECOR SUB-CLASS now DRAINED:
+  yrkesroll WON (committed+verified), CP-54 already-4/4 (skip), adaptive-3finger REAL-FAIL (broken custom
+  3-finger proxy: explodes objects to /World/Ground + flings Rod y=2.98 — deep, leave it). SESSION: 9 committed
+  wins (added yrkesroll) + #9 model validated. The contained/autonomous-safe frontier is drained again; remaining
+  = deep (#9 Franka-suction-enable thin-sheets, #10 dual-Franka orient-IK, #12 CP-10 near-field-fold, #20 3
+  introspection-REALs, adaptive-3finger proxy). NEXT: zero-boot RCA on the most-tractable deep item (CP-10).
+
+- 2026-06-14 (cont.) — NEW VEIN: batch-degradation FALSE-NEGATIVES from the unreliable 2026-06-13T11:19
+  batch (sha 17f07370). yrkesroll proved that batch unreliable (it false-failed yrkesroll 0/2). Zero-boot scan
+  of the corpus for verification.function_gate {last_run_at~11:19, status=fail, legacy_claim=pass} = exactly 4
+  suspects: CP-10(0/4), CP-43(0/3), CP-44(0/3), CP-54(0/3). METHODOLOGY VALIDATED: CP-54 is in the list and we
+  KNOW it's 4/4 post-fix => the list correctly flags a confirmed false-negative. The 3 unknowns are all Franka
+  JAW pick-place (no SG marker, curobo legacy-verified, completeness=all): CP-10=9-cube 3x3 palletizer (pallet
+  BEHIND robot; memo "near-field-fold" => may be a REAL fail even fresh), CP-43=4 spheres->bin, CP-44=2cubes+
+  2spheres->bin. RE-MEASURING each fresh-Kit-SOLO (own Kit process; batching is what caused the false-negatives
+  -> must isolate) via /tmp/reverify3.sh. Each pass = recovered false-negative (record update); each fail = real
+  (RCA). Awaiting /tmp/reverify3.log.
+
+- 2026-06-14 (cont.) — false-negative hypothesis DISPROVEN by measurement (honest negative). All 3 fresh-Kit-
+  SOLO: CP-43=1/4 (0 planfails -> SPHERE-GRIP fails: round objects roll out of the parallel jaw, the difficulty
+  the goal names), CP-44=3/4 (0 planfails, one item short), CP-10=3/9 (10 planfails). So the 11:19 batch made
+  them WORSE (0/N) but they were never full passes — legacy_claim=pass was stale/lenient. NOT clean wins; real
+  partials. CP-10 near-field-fold LOCALIZED precisely: all 10 planfails at the NEAR ROW y=-0.30 (closest to base
+  at y=0) at approach z~0.93/0.99; the MID (y=-0.40) + FAR (y=-0.50) rows plan FINE. It's a FLAT 3x3 grid (not
+  stacked). EXPERIMENT (#12, authorized geometry change): re-center the grid into the proven-reachable band —
+  pallet -0.40->-0.45, rows -0.39/-0.45/-0.51 (spacing 0.06), so the failing near row (-0.30) moves to -0.39
+  (~the known-good mid band) and far stays ~-0.51 (known-good). Single-variable, grounded in the planfail
+  signature, git-revertable. Baseline 3/9 = control. MEASURING fresh-solo /tmp/cp10_test.log; commit ONLY if it
+  genuinely improves (toward 9/9), else revert + hand the RCA to the dedicated #12 session.
+
+- 2026-06-14 (cont.) — CP-10 attempt #1 INERT + key LESSON. Edited the `code` field's drop_targets, booted,
+  but planfails stayed at the OLD y=-0.30 -> the change didn't reach the controller. RCA: execute_template_
+  canonical (canonical_instantiator.py:822) routes to the ROLE-BASED `code_template` path when the template has
+  code_template+roles+role_defaults (CP-10 does) -> the `code` field is LEGACY/INERT for such templates. The
+  live drop targets are role_defaults.workpieces[N].drop_target + primary_destination.position (filled into
+  {{...}} placeholders). LESSON (memo-worthy): to change a role-based template's scene, edit role_defaults, NOT
+  the `code` field. Reverted the dead code edit; re-applied to role_defaults (formatting-preserving load/dump +
+  recompact the harness-managed verification block). Refined the shift after reachability analysis: the Franka's
+  reachable band behind the base is ~[-0.40,-0.50]; a 3-row 0.05-cube grid barely fits -> KEEP the proven-good
+  far row at -0.50, pull mid -0.40->-0.44, near -0.30->-0.38 (+0.08 relief, minimal change, far untouched).
+  Re-MEASURING fresh-solo. If still ~3/9 -> CP-10 may be geometrically infeasible as a behind-robot 3x3 grid
+  (needs pallet-to-side / fewer cubes = fundamental rethink for the dedicated #12 session); revert.
+
+- 2026-06-14 (cont.) — CP-10 #12 RCA COMPLETE (reverted, no commit — gate still fails, no false-positive). The
+  role_defaults grid-shift (far -0.50 keep / mid -0.44 / near -0.38) ELIMINATED the near-field planning fold:
+  planfails 10 -> 0 (cuRobo now solves every placement goal). PROVES the near-field-fold is real + fixable via
+  grid placement. BUT delivery stayed 3/9 (same cubes 6,8,9). Bumped duration 180->360 = STILL 3/9, run finished
+  in ~225s wall (controller stopped EARLY, not a timeout). => NOT planning, NOT throughput/time. The controller
+  delivers conveyor-arrivals #1,#2,#4 (Cube_9,8,6), FAILS arrival #3 (Cube_7), never completes #5+ (Cube_5..1)
+  even with 2x time. ROOT (strong lead): BELT-CADENCE JAM — CP-10 belt = 0.2 m/s (10x the yrkesroll 0.02 m/s
+  that delivers 4/4); 9 cubes at 0.30m spacing arrive at the pick zone every ~1.5s while a pick-place cycle
+  takes ~20s -> cubes pile up / knock each other off the belt -> only the first few near the sensor get picked.
+  FIX DIRECTION for dedicated #12 session (iterative, multi-variable — slow belt + bump duration + maybe meter
+  spacing/feed-gate): NOT a one-shot config. Geometry/planning is SOLVED (grid into [-0.40,-0.50] band); the
+  binding constraint is feed cadence + a Cube_7-specific grip/collision. Reverted grid-shift+duration (the
+  grid-shift alone doesn't pass; keep repo clean). LESSON saved: role-based templates -> edit role_defaults,
+  the `code` field is INERT.
+
+  ===== STRETCH SUMMARY (2026-06-14, ~10 boots) =====
+  COMMITTED WIN: yrkesroll-gripper-vacuum-pick (d015d474 + d950f3ff) — CP-54 decor-fix generalizes; Franka jaw
+  delivers 4/4, 3/3 fresh-Kit-solo, curobo verified, completeness any->all. HONEST NEGATIVES (measured, no
+  false-positive): adaptive-3finger (broken custom 3-finger proxy, 0/3), batch-false-negative hypothesis for
+  CP-10/43/44 DISPROVEN (all real partials: CP-43 1/4 sphere-grip, CP-44 3/4, CP-10 3/9). DEEP RCA: CP-10 #12
+  near-field-fold solved-at-planning but belt-cadence-jam dominates. Quality bar HELD throughout (caught inert
+  code-field edit, caught in-batch degradation via fresh-solo re-measure, reverted non-passing CP-10). Contained
+  frontier drained again; remaining = deep-fresh-context (#9 thin-sheet suction, #10 dual-arm, #12 belt-cadence,
+  sphere-grip CP-43/44, adaptive-3finger proxy).
+
+- 2026-06-14 (cont., work-wake) — EXECUTING #12 CP-10 combined fix (directive: take #12, git=safety net, drop
+  hesitation). All 3 RCA layers at once: (1) grid-shift role_defaults (far -0.50/mid -0.44/near -0.38 → planning
+  fold fixed, planfails 10→0), (2) belt 0.2→0.02 m/s (the proven yrkesroll cadence → de-jam the feed), (3)
+  duration 180→280 (cover the slower one-at-a-time feed). At 0.02 m/s cubes arrive ~every 15s (0.30m spacing),
+  Cube_1 reaches sensor ~155s, no belt-end fall-off (130s sensor→end margin). Baseline 3/9 = control. Measuring
+  fresh-solo /tmp/cp10_test.log. Commit ONLY if it genuinely reaches completeness (9/9 for completeness=all; or
+  honest partial-improvement worth recording); else revert.
+
+- 2026-06-14 (cont.) — CP-10 #12 BREAKTHROUGH: combined fix → 9/9 stable_ok (fresh-solo), planfails 0, ALL
+  Cube_1..9 delivered, GATE success=True. All 3 RCA layers were necessary: grid-shift (planning) + belt 0.02
+  (cadence) + duration 280 (feed time). The earlier 3/9 plateau is now explained+fixed: it was belt-cadence-jam
+  (0.2 m/s raced cubes past/jammed the pick zone), masked on top of the near-field-fold. CONFIRMING reproducibility
+  with 2 more fresh-Kit-solo (→3/3 like yrkesroll) BEFORE committing the stable_ok claim (completeness=all +
+  stochastic planner; the yrkesroll lesson: 1 run can mislead). Awaiting /tmp/cp10_freshx2.log; if 3/3 → commit
+  the #12 fix, else investigate the flaky cube.
+
+- 2026-06-14 (cont.) — ★ #12 CP-10 SOLVED + COMMITTED (99ad5f2f). 3/3 fresh-Kit-solo all 9/9 stable_ok, 0
+  planfails (C=9/9, D=9/9, + original 9/9). Combined fix (role_defaults live path): grid-shift (near-field-fold)
+  + belt 0.2→0.02 (cadence-jam) + duration 280. Task #12 (ANTON-STEER, prior-deferred-to-dedicated-session)
+  DONE. KEY GENERALIZABLE INSIGHT: belt-too-fast (0.2 m/s) jams multi-cube conveyor picks — the robot can't keep
+  up, cubes race past/jam the pick zone. Slow belt (0.02, the yrkesroll cadence) + adequate duration = the fix.
+  → NEW VEIN to scan: other multi-cube fast-belt templates stuck below full delivery (CP-43/44 + any 0.2-belt
+  conveyor pick). NEXT: scan corpus for belt-cadence-jam candidates.
+
+- 2026-06-14 (cont.) — belt-cadence VEIN scan: 63 multi-cube fast-belt templates, but most belt-0.2 + 4-cube
+  PASS (jam needs HIGH cube count + long spread). Best analog = CP-38 (12 cubes single-bin 5m belt 0.2,
+  "stress-tests cuRobo stamina", mixed 4/9) — pure CP-10-style cadence/throughput (no near-field-fold, single
+  bin). CP-35=4-bin color sorter (more vars), CP-20=2-layer brick-stack (complex) — skip for now. TESTING CP-38
+  belt 0.2->0.02 + duration 240->360 (mirror CP-10's proven fix), one fresh-solo to validate the cadence
+  hypothesis. If 12/12 clean -> 2 confirmation runs then commit; if partial -> root isn't cadence -> revert.
+
+- 2026-06-14 (cont.) — CP-38 belt-cadence test: 4/9-mixed → 11/12 (HUGE jam improvement, vein VALIDATED) but
+  reverted (not a clean 12/12 pass). RCA of the residual: CP-38 dumps all 12 cubes at ONE bin point (no per-cube
+  drop spread); 12×0.05m piled ≈ 0.6m >> the 0.2m bin wall → the pile spills, capping deterministic delivery at
+  ~11/12. The 1 planfail was the 12th cube's bin-approach (status=None, goal [0,-0.4,1.105]). So CP-38's cap =
+  single-point-dump PILE-SPILL (physics/design), NOT cadence. A clean 12/12 needs drop-spread (→ would make
+  CP-38 a CP-10 clone, killing its "single-bin dump" identity) or a deeper/wider bin (geometry redesign) —
+  neither a clean unilateral tuning fix. Reverted (no non-passing commit; 11/12 on 1 run ≠ pass). NET: belt-
+  cadence-jam is a REAL generalizable root (CP-10 9/9 + CP-38 4→11), but CP-38 specifically is bin-pile-capped.
+  Belt-cadence clean wins this arc: CP-10 (committed). Other high-cube candidates (CP-35 4-bin sorter, CP-20
+  2-layer brick) are complex/different-root — deferred.
+
+- 2026-06-14 (cont.) — false-negative vein REFINED scan (legacy=pass + status mixed/fail) = 9 suspects; most
+  accounted for (CP-10/54 fixed this session, CP-36/50 fixed via 2b1066b2 [records stale pre-fix], CP-43/44/38
+  tested real/capped, CP-20 18-cube brick complex, CP-56 rotary-table inherent-stochastic ✓-already). One new:
+  CP-35 (4-bin color sorter, 10 cubes 0.2m-spacing on 0.2 m/s belt = arrivals ~1s vs ~20s pick = SEVERE jam).
+  CP-35 fresh-solo: baseline 8/8 (LUCKY) then E=6/8, F=6/8 (misrouted=0, planfails=0 → 2 cubes just not
+  delivered = jam). Quality bar caught it AGAIN (the lucky-first-run trap, opposite of yrkesroll) — did NOT
+  commit on the 8/8. CONFIRMS cadence-flakiness. CP-35 is multi-bin (2/bin → NO pile-cap like CP-38), so belt-
+  slow should give CLEAN deterministic 8/8. Applied belt 0.2→0.015 + duration 240→300; running 3x fresh-solo
+  verdict (/tmp/cp35_fix3.log). 3/3 at 8/8 misrouted=0 → commit; any <8 → revert.
+
+- 2026-06-14 (cont.) — ★ CP-35 SOLVED + COMMITTED (04f4768e). belt 0.015 = 2/3 (8/8,8/8,6/8, still mild lag);
+  belt 0.01 (matched cadence, arrivals ~= 20s pick cycle) = 3/3 ALL 8/8 misrouted=0 stable_ok 0 planfails +
+  duration 240→340. 2nd belt-cadence clean win (after CP-10). curobo→verified. KEY: multi-bin routing (2/bin)
+  has NO pile-cap, so belt-cadence fix gives a fully clean 8/8 (vs CP-38's single-bin pile cap at 11/12). VEIN
+  STATUS: belt-cadence-jam = 2 clean wins (CP-10 grid+belt, CP-35 belt). CP-38 capped (pile). CP-20 (18-cube
+  2-layer brick, belt 0.1, mixed 7/10) = remaining, but 2-layer stacking-precision likely dominates over cadence
+  → assess zero-boot before spending boots.
+
+  ===== ARC TALLY (2026-06-14): 4 COMMITTED WINS =====
+  yrkesroll (d015d474+d950f3ff), CP-10 #12 (99ad5f2f), CP-35 (04f4768e). NEW reusable insight: belt-cadence-jam
+  (high-cube fast-belt; fix = match belt speed to pick cycle + duration; multi-dest = clean, single-bin = pile-
+  capped). Quality bar held: caught 2 lucky-first-run traps (CP-35 baseline, yrkesroll batch) + 2 reverts
+  (CP-38 pile, CP-10 grid-alone) via fresh-solo confirmation. role-based-template edit-path lesson saved.
+
+- 2026-06-14 (cont., work-wake) — engaging #10 CP-59 (dual-Franka vision-gated 2-color sort: FrankaA-left red->
+  RedBin-left, FrankaB-right blue->BlueBin-right, 4 cubes r1/r2/b1/b2 at a heap). Found its gate was badly
+  MISCONFIGURED: cube_path=Cube_r1 + target=RedBin ONLY (ignored 3 cubes + the whole dual-arm/2-color routing),
+  dur 90 — a guaranteed false-fail regardless of controller (the CP-36/50 multi-target pattern). Also: scan for
+  the empty-cube_paths gate-config-incomplete vein found ONLY CP-59 (not broad). Fixed CP-59 gate: cube_paths=4,
+  targets={r1/r2->RedBin, b1/b2->BlueBin}, completeness=all, dur 90->150. MEASURING with the proper gate to see
+  the controller's REAL behavior (delivers? or orientation-IK/dual-arm-exec-gate root per prior RCA). /tmp/
+  cp59_test.log. If it delivers -> gate was the false-fail (win); if 0/partial + planfails -> deep #10 root.
+
+- 2026-06-14 (cont.) — CP-59 measured with proper gate: controller GENUINELY BROKEN (deep #10/#14), gate-harden
+  COMMITTED (c4d8694b). delivered 0/4 correct, misrouted 1 (FrankaA the RED arm picked BLUE Cube_b1 -> RedBin);
+  FrankaA res_None reaching cubes on FrankaB's side; FrankaB IDLE. ROOT (from code): the code authors ONLY robot
+  A's controller with destination_map={red:RedBin} but cube_paths=ALL 4 ("Robot B install left as agent-side
+  composition"). Fix-recipe for dedicated #10/#14: (1) robot A cube_paths=red-only [wp0,wp2]; (2) ADD a 2nd
+  setup_pick_place_with_vision for robot B (blue-only [wp1,wp3], destination_map={blue:BlueBin}, sensor_b);
+  vision_precomputed bypasses Gemini so 2 installs are free; (3) move Cube_r2 [-0.1,0.45] closer (reach edge);
+  (4) verify the shared-heap mutex doesn't exec-gate-starve (CP-52 precedent = solvable). Intricate code_template
+  rewrite + reach + exec-gate = genuine dedicated session, NOT a one-shot at this depth. Committed the gate-harden
+  (anti-false-positive: old gate=1-cube check could false-pass; "måttet trasigt → fixa").
+
+- 2026-06-14 (cont.) — NEW VEIN: lenient-gate FALSE-PASSES (Anton's #1 principle). Scanned PASSING templates
+  for gates too lenient for the goal. Most "completeness=None on multi-cube" = the INTENTIONAL any-criterion
+  (gate_criterion memo) — NOT bugs. CP-PRECISION-3CUBE = legit deliver-one-of-many. The clear false-pass =
+  CP-19 (twin-pallet feeder: 6 cubes -> cubes 1-3 PalletA / 4-6 PalletB, but gate checked ONLY Cube_1->PalletA,
+  PASSING 6/6 — could pass on 1 cube + ignore PalletB entirely). Hardened gate (6 cubes + routing + all);
+  MEASURING /tmp/cp19_test.log to see honest result (all-6-routed = honest pass, keep harden; <6 = was a
+  false-pass, harden flips to honest fail). Either way the harden is correct + committed.
+
+- 2026-06-14 (cont.) — CP-19 HARDEN committed (0fc6f9e9): honest pass confirmed 3/3 fresh-solo all 6/6
+  misrouted=0 (controller genuinely does the twin-pallet routing; old 1-cube gate just couldn't see it).
+  EXTENDED the multi-dest false-pass scan (PASSING + single-target gate + >=2 dest prims) = 11 suspects; most
+  have Cell/SourceBin (scenery/source, skip). Clear sorter false-passes: CP-47 (red/blue->RedBin/BlueBin, gated
+  red-only), CP-48 (4 green->GoodBin + bad->RejectBin, gated GREEN-ONLY = the REJECT routing, the station's whole
+  purpose, was UNVERIFIED!), CP-NEW-palletizer-mixed-sku (SKU-A/B->ZoneA/B, gated single Pallet). Hardened CP-47
+  + CP-48 gates (per-cube routing + completeness=all); MEASURING /tmp/cp4748_test.log. mixed-sku (UR10) deferred.
+  ARC TALLY now 6 commits: yrkesroll x2, CP-10 #12, CP-35, CP-59-harden, CP-19-harden.
+
+- 2026-06-14 (cont.) — multi-dest false-pass vein RESOLVED. CP-47 HARDEN committed (50235ec4): honest 3/3 2/2
+  (both red->RedBin + blue->BlueBin sorted; old gate red-only). CP-48 REVERTED after READ-THE-ACTUALS corrected
+  my misdiagnosis: I assumed "reject broken" but Cube_bad IS in RejectBin (final [0.297,-0.397,0.785] on
+  RejectBin/Floor, honest delivered=true) — the REJECT WORKS. The real residual = GoodBin GREEN-PILE: 4 green
+  dropped at one bin point, the 4th (Cube_g1) sits ABOVE GoodBin z-bbox(0.90) at z=1.117 -> not-in-bbox ->
+  completeness=all FALSE-NEGATIVES a correctly-routed cube (CP-38-class single-point pile-cap + strict-all-cubes
+  false-neg). Ambiguous gate verdict = don't commit (måttet trasigt). CP-48 reject works; old gate weak (reject
+  unverified) but NOT false-passing (reject genuinely works); clean reject-gate needs green-drop-spread first
+  (controller change = dedicated). mixed-sku (UR10 SKU sorter, gate=single Pallet) = last candidate, deferred
+  (UR10 complexity). LESSON reinforced: read-the-actuals before labeling a fail (the primary target_bbox check
+  false-negs cubes correctly routed to a NON-primary bin; trust honest_per_cube/actual_location).
+  ARC TALLY: 7 commits (yrkesroll x2, CP-10 #12, CP-35, CP-59-harden, CP-19-harden, CP-47-harden).
+
+- 2026-06-14 (cont.) — mixed-sku (CP-NEW-palletizer-mixed-sku) = confirmed false-pass, DOCUMENTED for dedicated
+  UR10 session (not committed). Pallet[0,-0.55] scale[0.5,0.25]=1.0x0.5 UNION covers ZoneA(x-0.25)+ZoneB(x0.25);
+  gate target=Pallet+comp=any -> a SKU-A box in ZoneB still "in Pallet" = pass -> SKU SORT UNVERIFIED. Harden
+  recipe: cube_paths=[Box_1..6], targets={Box_1,3,5(sku a)->PalletZoneA; Box_2,4,6(sku b)->PalletZoneB},
+  completeness=all. NOT done now: UR10 asset-suction is documented-STOCHASTIC (needs N-of-M not single-boot) +
+  varying box sizes (0.08/0.12) + zone-pile risk (CP-48 ambiguity) -> dedicated UR10 session, precise recipe
+  saved. FALSE-PASS VEIN CLOSED: CP-19 ✓committed-honest, CP-47 ✓committed-honest, CP-59 ✓committed-exposes-deep,
+  CP-48 reverted(reject-works/green-pile), mixed-sku documented(UR10-dedicated).
+
+  ===== FINAL ARC SUMMARY (2026-06-14, ~35 boots, multi work-wake) — 7 COMMITS =====
+  GENUINE WINS (4): yrkesroll jaw-via-decor 4/4 (d015d474+d950f3ff); CP-10 #12 3/9->9/9 (99ad5f2f, near-field-
+  fold+belt-cadence, the prior-deferred ANTON-STEER item); CP-35 4-bin sorter cadence 3/3 8/8 (04f4768e).
+  ANTI-FALSE-POSITIVE GATE HARDENS (3): CP-59 (c4d8694b, exposes broken dual-arm), CP-19 (0fc6f9e9, honest 6/6),
+  CP-47 (50235ec4, honest 2/2). NEW VALIDATED INSIGHTS: belt-cadence-jam (high-cube fast-belt; match belt to
+  pick cycle; clean for multi-dest, pile-capped for single-bin); multi-dest false-pass (sorter gated on 1 of N
+  dests); role-based-template edit-path; read-the-actuals (primary-bbox false-negs non-primary-bin deliveries).
+  QUALITY BAR HELD: 3 reverts (CP-38 pile, CP-10-grid-alone, CP-48 ambiguous), 3 lucky-run-traps caught
+  (yrkesroll batch, CP-35 baseline, CP-48 reject-misdiagnosis), all wins 3/3 fresh-Kit-solo confirmed.
+  REMAINING = deep dedicated: CP-59 controller (#10/#14, recipe saved), mixed-sku SKU-sort (UR10), #9 thin-sheet
+  suction, sphere-grip CP-43/44, CP-38/CP-48 pile (drop-spread), CP-20 brick, adaptive-3finger proxy.
+
+- 2026-06-14 (cont., work-wake) — ATTEMPTING #10 CP-59 controller (directive: take it, git=safety net). INFRA
+  CONFIRMED tractable (zero-boot handler read): setup_pick_place_with_vision (robot.py:6084) delegates to
+  setup_pick_place_controller — the SAME per-robot infra CP-52 proved works for 2 arms. So the fix = call it
+  TWICE. Edited code_template (Python string-replace, ensure_ascii=True, verif recompacted): robot A red-only
+  [wp0,wp2]->RedBin + ADDED robot B blue-only [wp1,wp3]->BlueBin (sensor_b). Split-only first (isolate: does
+  dual-vision-install work + both arms engage?). MEASURING /tmp/cp59_test.log. Watch: exec-gate/mutex-starvation
+  (CP-52 needed per-cube mutex), Cube_r2 [-0.1,0.45] reach (FrankaA res_None'd there). If both arms sort -> win
+  /iterate; if deadlock/errors -> revert.
+
+- 2026-06-14 (cont.) — ★ CP-59 ADVANCED broken→1/4, authoring COMMITTED (688e7535). Trajectory: split engaged
+  BOTH arms (each res_None-stalled on its FAR cube: FrankaA Cube_r2 y=0.485, FrankaB Cube_b2 near-center) ->
+  reach fix (Cube_r2→[-0.25,0.30]/SensorA, Cube_b2→[0.25,0.30]/SensorB) -> 0 planfails, FrankaB delivers
+  Cube_b2→BlueBin (CORRECT route). Committed correct dual-arm authoring (A=red/B=blue split + reachable cubes —
+  strictly better than the robot-A-does-everything original; honest 1/4, not claimed pass). REMAINING = dual-arm
+  EXEC-GATE: 1/4 despite 0 planfails — both plan, only FrankaB completes; CP-52-class exec-gate/starvation (heap
+  mutex no runtime enforcement). Fix = CP-52 per-cube mutex + dual-exec coordination (8b54efb8) + per-robot exec
+  trace (is FrankaA starved? does 2nd vision-install overwrite A's controller?). Multi-boot dedicated (task #10).
+  NOT attempted at ~40-boot depth (CP-52-class = documented-hard; fatigue-graze risk). ARC = 8 COMMITS.
+
+- 2026-06-14 (cont., work-wake) — CP-59 exec-gate SHARPENED (duration ruled out). Read CP-52 fix (8b54efb8):
+  per-cube mutex is in the handler, GATED len(_curobo_live_pp_subs())>1, lets DISJOINT pickers claim concurrently
+  (PLAN_LOCK serializes planning, MOVE_LOCK exec; "stuck-in-executing" = mutex starvation not deadlock). CP-59's
+  pickers ARE disjoint (A=reds,B=blues) so should claim concurrently — yet 1/4. Tested duration 150→300: STILL
+  1/4 (Cube_b2 only) → NOT duration. So the system STALLS after ~1 delivery (FrankaB's b2); FrankaA delivers 0,
+  FrankaB delivers only 1 of 2. REGISTRATION RULED OUT: the split-only run had planfails from BOTH FrankaA AND
+  FrankaB -> both controllers planned -> both registered (len>=2) -> per-cube mutex IS active; yet CP-59 stalls
+  after ~1 delivery despite DISJOINT pickers (which CP-52's fix says claim concurrently). So it's a DEEPER exec-
+  scheduling issue than CP-52 (not registration, not duration[tested], not reach[fixed], not mutex-inactive).
+  PRECISE next for dedicated #10: per-robot exec trace (scene_eyes is per-robot-blind — add per-controller
+  step/grip/MOVE_LOCK logging) to see WHY both stall after 1 delivery (MOVE_LOCK not released? grip not forming
+  on the 2nd cube? HeapMutex[no-runtime-enforcement] interfering?). CP-59 clean stopping point: committed
+  688e7535 (1/4, correct authoring + reach), exec-gate = dedicated per-robot-exec handler-debug.
+
+- 2026-06-14 (cont., work-wake) — pivoted to CP-48 green-spread (closest-to-clean: reject works, only 4-green-
+  pile blocks 5/5). KEY (zero-boot): _bin_drop_pos (pick_place.py:4810) supports per-cube DROP_TARGETS (dict,
+  PRIORITY) + COLOR_ROUTING (fallthrough) TOGETHER; vision handler forwards drop_targets (only pops class_labels/
+  destination_map/camera_path/cube_paths). So: add drop_targets spreading the 4 greens across GoodBin 2x2 (greens
+  use spread via DROP_TARGETS) + bad falls through color_routing->RejectBin. Applied code_template drop_targets
+  (g1[-0.36,-0.46], g2[-0.24,-0.46], g3[-0.36,-0.34], g4[-0.24,-0.34] @z0.82, all in GoodBin) + re-hardened gate
+  (5 cubes, targets, completeness=all). MEASURING /tmp/cp48_test.log. 5/5 (greens spread + bad rejected) -> clean
+  inspect-reject win; else diagnose/revert.
+
+- 2026-06-14 (cont.) — ★ CP-48 WIN COMMITTED (294bf97f): green-drop-spread → 3/3 fresh-solo 5/5 (4 green spread
+  in GoodBin + bad→RejectBin, misrouted=0). Turned a false-pass (reject unverified + green-pile) into a genuine,
+  properly-gated inspect-reject. REUSABLE TECHNIQUE: per-cube drop_targets + color_routing COEXIST (DROP_TARGETS
+  priority, COLOR_ROUTING fallthrough) — spread same-class cubes via drop_targets, route others via color_routing.
+  → UNLOCKS CP-38 (single-bin pile I reverted at 11/12): belt-slow (de-jam) + drop-spread (de-pile 12 in the Bin)
+  → potential 12/12, STILL single-bin identity (distribute within bin ≠ CP-10 grid palletizer). NEXT: CP-38
+  belt-slow + drop-spread. ARC = 9 COMMITS (5 genuine wins: yrkesroll, CP-10, CP-35, CP-48 + CP-59 authoring;
+  3 gate-hardens: CP-59/19/47).
+
+- 2026-06-14 (cont.) — CP-38 RE-ATTEMPT combining 3 proven techniques (belt-cadence CP-35 + drop-spread CP-48 +
+  reachable-band CP-10). Bin at [0,-0.4] is BEHIND robot (near-field-fold zone like CP-10), so spread grid must
+  sit in CP-10's proven band. Applied: belt 0.2→0.015 (de-jam), 12-cube drop_targets 4x3 grid (cols
+  x{-0.18,-0.06,0.06,0.18} × rows y{-0.51,-0.45,-0.39} @z0.82, all in-bin + reachable-band = de-pile + avoid
+  fold), duration 240→360. (Earlier CP-38 was reverted at 11/12 pile-cap — single-point dump; this distributes
+  within the SAME bin = still single-bin-fill identity, not a CP-10 pallet.) MEASURING /tmp/cp38_test.log. 12/12
+  → clean win (confirm 3x); else diagnose/revert.
+
+- 2026-06-14 (cont.) — CP-38 belt+spread = improved but INHERENTLY MARGINAL → reverted. belt 0.015 + 12-cube
+  drop-spread (4x3 reachable-band grid) + dur 360: original 12/12 (LUCKY) but confirm N1=11/12, N2=11/12 — ~50%
+  flaky, 55-60 planfails EVERY run. Tightened cols ±0.18→±0.10 (CP-10 envelope): STILL 60 planfails + 12/12-
+  lucky → the planfails are NOT x-corner-specific; placing 12 cubes BEHIND the Franka generates ~60 retries
+  inherently (1 cube occasionally lost → 11/12). So CP-38's behind-robot 12-cube placement is a fundamental
+  reach/capacity margin (CP-10's 9-cube/3x3 was robust 0-pf; +3 cubes pushes past robust). Belt+spread improved
+  it (pile-cap→sometimes-12/12) but NOT robust → reverted (consistency: don't commit ~50%-flaky). Robust 12/12
+  needs fewer cubes / side-bin (not behind) / different robot = fundamental, dedicated. The drop-spread TECHNIQUE
+  is validated (CP-48 5/5 clean) — its LIMIT is behind-robot high-count. ARC = 9 COMMITS (CP-48 the latest win).
+
+  ===== ARC SUMMARY (2026-06-14, ~16 boots, 2 work-wakes) =====
+  3 COMMITTED WINS: yrkesroll (d015d474+d950f3ff, jaw-via-decor 4/4 3/3-fresh-solo), CP-10 #12 (99ad5f2f,
+  3/9→9/9 3/3-fresh-solo, near-field-fold + belt-cadence both fixed). HONEST NEGATIVES (measured, no false-pos):
+  adaptive-3finger (broken proxy), CP-43/44 sphere-grip partials, CP-38 bin-pile cap, batch-false-neg disproven.
+  NEW VALIDATED INSIGHTS: belt-cadence-jam (high-cube fast-belt), role-based-template edit-path. Quality bar HELD
+  (caught inert edit, in-batch degradation, reverted 2 non-passing experiments). Remaining = deep-fresh-context:
+  #9 thin-sheet suction, #10 dual-arm, sphere-grip, CP-38 bin-pile, adaptive-3finger proxy, CP-35/CP-20.
+- 2026-06-14 (cont., Anton-steer) — WARP-CONFOUND AUDIT (workflow, Anton's "felaktiga slutsatser→felaktiga
+  byggen"): REFUTED. The 2-cache "red flag" was MY false alarm — ~/.cache/warp/1.13.0 = sibling-project
+  (FEM kernels, NOT Isaac); Isaac/cuRobo = 1.11.0 (all 31 today's Kit banners, warm/healthy/no-mismatch). Zero
+  NVRTC/CuboidDataWarp signatures in ~115 logs; planfails = clean res_None (=reach/geometry); CP-10(9cube,0pf)
+  vs CP-38(12cube,60pf) same env = template-specific. So CP-38/mixed-sku/CP-59 conclusions VALIDATED (genuine
+  reach, not warp); reverts correct. CRUCIAL: did NOT run clear-cache+retest — recipe warns clearing a healthy
+  cache SPIRALS corruption; audit resolved it zero-GPU. Memory: [[project_isaac_assist_warp_1130_red_herring]].
+  Brev OUT (card rejected) → Modal new-account (hours) is the throughput path. MODAL_RETURN_PLAN.md written
+  (#11 parity set + parallel batch). #11 clarified to Anton = cloud-vs-local verdict PARITY RCA, not credit-hunt.
+
+- 2026-06-14 (cont., Anton live-debug) — SPHERE-GRIP RCA via measure-first (overturned my wrong "form-limited
+  #9-frontier" assumption). CP-44 diag: Cube_1/Cube_2/Sphere_2 delivered, but Sphere_1 final z=-39750 (PhysX
+  EXPLOSION, not roll-out) — and Sphere_2 (identical) delivered, so the jaw CAN hold a sphere. Anton's hypothesis
+  (confirmed in code): _grip_close()→franka.gripper.forward("close") drives fingers to close_val=0.0; a cube's
+  flat faces give a stable rigid clamp, a sphere has point-contact at the equator so driving past its 0.025
+  radius OVER-PENETRATES → PhysX ejects it (z=-39750). Cube↔sphere TENSION: cubes want tight close (0.018
+  compress), spheres want light close-at-radius — one target can't serve both → grip must be OBJECT-AWARE (#9
+  grip-control). FIX (pick_place.py _grip_close, fail-safe + sphere-gated): if picked prim IsA(UsdGeom.Sphere),
+  set fingers to radius-0.002 (light contact) via set_joint_position_targets; ANY non-sphere or error → falls
+  back to forward("close") → cube grips byte-identical (worst-case = no change). VALIDATING fresh-solo: CP-01
+  (cube CONTROL must stay pass) + CP-44 (was 3/4) + CP-43 (4 spheres, was 1/4). If control holds + spheres
+  improve → 2-template win + generalizes to any round-object jaw pick. /tmp/sphere_fix_val.log.
+
+- 2026-06-14 (cont.) — sphere-fix VALIDATION: CP-01 cube CONTROL 4/4 byte-identical (gating SAFE) but CP-44 3/4
+  + CP-43 1/4 UNCHANGED → object-aware-close didn't land (didn't fire [IsA] or finger value radius-0.002 too
+  tight). REVERTED pick_place.py (unproven). RCA solid (Anton's over-close hypothesis confirmed, mechanism safe);
+  remaining = file-sentinel-confirm-fire + finger-position sweep (radius..radius+1mm light-contact-window) =
+  Modal-parallel-ideal. Memory: [[project_isaac_assist_sphere_grip_explosion]]. Folded into MODAL_RETURN_PLAN
+  sweep set.
+
+- 2026-06-14 (cont.) — sphere-fix: 2 failed local attempts → STOPPED hand-editing (fatigue/quality-bar). RCA
+  solid (Anton's over-close, z=-39750). But: 4 _grip_close variants (spline@3527/curobo@6040/diffik/osc);
+  edited spline (wrong) then curobo — BOTH sentinels EMPTY (could NOT confirm which variant CP-44 runs OR that
+  S["picked_path"] is the sphere at grip-time). curobo run 0/4 = likely STOCHASTIC explosion-cascade (sphere at
+  z=-100000 flies through scene, knocks cubes), edit was inert. All reverted CLEAN (py_compile ok). Quality-bar
+  call: stop hand-editing the 4-variant codegen at fatigue (felaktiga-byggen risk). HANDOFF recipe (memory
+  project_isaac_assist_sphere_grip_explosion): FIRST add UNCONDITIONAL file-sentinel to the TOP of all 4
+  _grip_close → 1 boot reveals which fires + the picked path/type → THEN fix the right one + finger-value sweep.
+  Dedicated/Modal. RCA + safe mechanism done; the landing is blocked on confirming the code path.
+
+- 2026-06-14 (cont., Anton steer→scene_eyes) — COURSE-CORRECT: had drifted to gate_one delivered-counts +
+  ad-hoc handler file-sentinels for grip DIAGNOSIS (lapse — memory says scene_eyes/TS every measurement). Anton
+  flagged it. Used scene_eyes (proper tool): CP-44 RCA enriched — the sphere ROLLS (Sphere_1|Cube_2 @10.1s BEFORE
+  any finger contact) -> jaw misses / glancing over-close -> stochastic miss/eject (z=-39750). Round-object-on-
+  belt grip = deep #9 (roll + over-close), not one-line. WIN: committed scene_eyes EJECTION/EXPLOSION detector
+  (31b5dc24, Anton's "addera det" — per-object max-speed + |pos|>5m flag; validated clean negative-control).
+  Lesson saved [[feedback_scene_eyes_first_for_diagnosis]]. Honest: several fatigue-errors this stretch (wrong
+  handler variant, sentinel fails, scene_eyes-no-boot) -> CP-44 grip fix = deep #9 fresh-context. Arc=10 commits.
+- 2026-06-14 (FRESH CONTEXT, post-compact) — resumed CP-44 #9 measure-first. Fresh Kit booted. scene_eyes on
+  current CP-44 (belt 0.2) confirmed the mechanism: nearest-first pick (Sphere_2 gripped clean 0.84 @5.8s ->
+  DROPPED to floor @15.6s = transit form-closure loss, NOT belt; Sphere_1 rolled into Cube_2 @18s -> EJECTED to
+  x=12.8m). Found+fixed a TOOL false-negative: scene_eyes tracked only Cube*/Item* -> spheres invisible to the
+  per-object trajectory AND the new ejection detector (the case it targets!). Added sphere/ball to _GRASP_TOK
+  (safe branch: requires RigidBody/Collision + excludes robot subtree; cubes byte-unaffected). VALIDATED: Sphere_1
+  now flagged *** EJECTED ***; cubes unchanged. Commit 31d4de13. This unblocks the deferred Modal sphere-sweep
+  (it can now MEASURE sphere ejection). Diagnosis: belt-slow fixes the roll (Sphere_1) but NOT Sphere_2's
+  transit-drop (parallel-jaw form-closure on a sphere) -> CP-44 4/4 needs a grip/transit lever too. PAUSED the
+  belt-slow gate run for Anton's live architecture Q&A.
+- 2026-06-14 (Anton live, ARCHITECTURE) — Anton's PLC-export idea: generate PLC code from the sim-validated
+  pick/advance/pick sequence; is our format hot-swappable? Grounded answer given. KEY: ros2_cmd backend already
+  says "state machine lives outside Isaac... e.g. a real PLC"; gap = 0 templates carry a declarative sequence IR.
+  Captured as DIRECTION (don't-lose-it): memory project_isaac_assist_plc_export_direction + queue item 5 above
+  (zero-boot PoC = Plan-IR + SFC extractor on CP-10, my timing call). Sensors: faithful-synthetic behind a signal
+  interface -> asset-swap = the sim2real-honesty test (oracle-readers break on real-sensor swap).
+  COMMITTED this stretch: ba3cf421 (PLC PoC extract_sequence_ir.py), 31d4de13 (scene_eyes sphere-tracking),
+  ba3a2433 (CP-44 belt-cadence 3/4).
+- 2026-06-14 (cont., #9 grip) — CRACKED the months-old "sentinel never fired": a `\n` in the GENERATED controller
+  string -> unterminated-string SyntaxError -> setup_pick_place_controller pre-flight-BLOCKED -> no picking (the
+  fake "stochastic 0/4 explosions" were this). Fixed (\\n). CONFIRMED curobo _grip_close@6040 fires, picked_path
+  IS the sphere, IsA(Sphere) detection works (memory reference_generated_code_escaping). Built object-aware close
+  (finger->radius-preload, sphere-gated). MEASURED: eliminates ejection in scene_eyes, but preload sweep
+  0.002..0.020 (force 0.108..0.658, all <0.84 eject pt) STILL drops Sphere_2 @~15s (rolls up into palm) =>
+  form-closure-limited, NOT force. Full-gate (preload 0.008): 3/4 — Sphere_1 still ejects (x7.8 vs 19.4), count
+  UNCHANGED vs belt-slow-default => object-aware close is a gate-WASH -> REVERTED (don't commit a non-improvement).
+  Honest verdict: parallel-jaw + smooth sphere through the swing = gripper-mismatch; needs gentler-transit OR
+  suction/tool-change. 2-axis sweep (preload x transit-velocity) specced for Modal (memory sphere_grip_explosion).
+- 2026-06-14 (Anton: "Modal nu med fria krediter") — pivot to #11 (now UNBLOCKED). Recreated the new account's
+  isaac-kit-cache volume from saved migration (~/modal_migration/, MODAL_MIGRATION.md): os.walk upload of all 60
+  qa_assets (the bundled glob uploader skips .thumbs dot-dirs -> only 24/60; os.walk = complete). Kicked off CP-01
+  smoke (forces image build ~15min) -> then #11 cloud-parity batch (POS: yrkesroll/CP-10/35/48/19/47; NEG:
+  CP-59/38/44/43/mixed-sku; +CP-70 UR10-asset check). Parity MUST hold before trusting cloud verdicts.
+- 2026-06-14 (cont.) — Modal VERIFIED: CP-01 smoke gate=True boot=193s (image builds, pool works, known-good
+  control passes on cloud). Committed parity_check.py (0852e122, cloud-vs-local #11 comparator).
+- 2026-06-14 (Anton 2x: "använder du scene eyes? även på modal?") — CAUGHT drifting to gate-JSON inference again.
+  (a) scene_eyes didn't track Box_* (mixed-sku) — added "box" to _GRASP_TOK. (b) Modal pool ran gate_one+diagnose+
+  scene_timeseries, NOT scene_eyes — wired scene_eyes into run_template/main (eyes=True). Commit 279faed2.
+  Relaunched the parity batch WITH --eyes (gate_one + scene_eyes per template) so cloud false-passes are visible.
+- 2026-06-14 (#21 WIN-in-progress) — scene_eyes EXPOSED a mixed-sku FALSE-PASS: union gate (target=/World/Pallet,
+  no per-SKU targets, no completeness) reports 4/6 stable_ok, but scene_eyes shows only 1/6 CORRECTLY SORTED
+  (Box_1/3/5 SKU-A -> WRONG zone x>0; Box_2/4 SKU-B FLUNG to x=1.71; only Box_6 correct). Controller color-routing
+  is broken in execution (drop_targets ARE correct but ignored). HARDENED the gate: zones Xform->Cube+scale (bbox,
+  no collision, camera looks at conveyor so no occlusion) + sim_args targets{Box->correct zone} + completeness=all.
+  Measuring fresh-boot to validate ~1/6 (control: Box_6 must register in zone_b). Commit pending validation.
+- 2026-06-14 (cont.) — mixed-sku hardening VALIDATED + COMMITTED (c461821b): fresh-boot gate 1/6 stable_fail,
+  Box_6 delivered=True (zone_b), Box_1-5 False — matches scene_eyes ground truth. False-pass killed.
+- 2026-06-14 (#11 parity) — cloud batch HOLDING: 5/5 positive controls (CP-47/19/yrkesroll/48/35) gate=True on
+  cloud, parity_check.py = 0 DIVERGENCE. Cloud faithful to local. 7 left (CP-10/70 + negatives).
+- 2026-06-14 (#21 VEIN found) — systematic false-pass scan (scripts: inline) found ~10 multi-dest SORTS that
+  claim PASS (recent 06-13) with completeness=all + single target_path + NO per-target `targets`: CP-03/16/17/
+  32/33/34/66/82/sorter-color-3lane/inspector-reject-divert. honest_gate.classify_cube grades in_xy vs the
+  ASSIGNED target (= the single target_path when no targets map) -> an off-color cube can't be in the one bin ->
+  should FAIL, yet they claim pass. Either stale-claim OR union behavior. Keystone CP-03 measuring fresh-boot to
+  disambiguate -> then batch-harden (add targets) + Modal-validate the class. Do NOT mass-edit on assumption.
+- 2026-06-14 (#21 VEIN REFUTED by keystone CP-03) — measured CP-03: GENUINE pass (Cube_red->RedBin,
+  Cube_blue->BlueBin, controller sorts right). honest_per_cube shows Cube_blue target=/World/BlueBin
+  delivered=true misrouted=false => the honest gate is ROUTING-AWARE: it DERIVES each cube's correct target
+  from color_routing + the real bin bboxes, even WITHOUT an explicit sim_args.targets map. So the 10 bin-based
+  sorters (CP-03/16/17/32/33/34/66/82/sorter-color-3lane/inspector-reject-divert) are NOT false-passes -> NO
+  action. mixed-sku was the LONE false-pass because its "zones" were bbox-less Xforms (gate couldn't grade
+  per-zone -> fell back to pallet-union). LESSON: measure the keystone before mass-editing — saved 10 wrong edits.
+  Falsk-positiv-jakten gäller åt BÅDA håll (antog falsk-positiv utan bevis = lika illa). See memory.
+- 2026-06-14 (#11 RESULT, 8/12) — parity_check: 6 Franka FULL PARITY (CP-10/19/35/47/48/yrkesroll all pass
+  cloud=local), CP-59 fail=fail. CP-70 (UR10) DIVERGES: cloud stable_fail 0/1 — scene BUILDS (CENSUS ok, 100
+  prims, robot_valid) + sim ran 180s, but Cube_1 NEVER PICKED (stayed on Feeder x=-0.43; diagnose=
+  cube_marked_failed_after_plan_strikes; kit log has 'No module named warp.sim'). => UR10 suction/cuRobo planning
+  fails on CPU-physics cloud while passing locally (GPU). CONFIRMS the historical "Modal=Franka-only, ej UR10"
+  caveat, now MEASURED. boot=18s on CP-59/70 = warm-container REUSE, not the failure. CAVEAT: CP-70 is stochastic
+  UR10 -> single-run; confirm with N-of-M (CP-70 x3 cloud) before final verdict. Remaining 4 (CP-38/44/43/mixed-sku,
+  Franka) still running on cloud (--eyes = 2x sim). NET #11: trust cloud for FRANKA gate batches, NOT UR10.
+- 2026-06-14 (#11 12/12 COMPLETE) — final parity_check: 11/12 PARITY, CP-70 the SOLE divergence. CP-38/43/44
+  fail=fail. mixed-sku cloud gate=None (it's UR10 too -> also fails on cloud = reinforces UR10-cloud-broken;
+  its sha=0852e122 predates my hardening so not a version-skew false-pass). LOCAL CP-70 CONTROL = stable_ok 1/1
+  (delivers) -> divergence CONFIRMED both sides (local pass, cloud fail). N-of-M CP-70 x3 cloud running.
+- 2026-06-14 (GOTCHA caught + fixed) — ledger_cloud_results.py MERGES cloud runs into each template's per-template
+  `verification` counts -> CP-70 pass(7/7)->"mixed"(7/8) because the cloud-divergence-fail got merged into its
+  LOCAL status (WRONG: CP-70 passes locally; cloud-fail is the #11 artifact). Corrupted 11 templates. REVERTED all
+  11 (git checkout), restored .ledgered markers. RULE: do NOT ledger cloud results into per-template verification —
+  it conflates cross-platform counts. Cloud verdicts live in the cloud_results JSONL + parity_check, not the
+  template status blocks. (Quality bar: a metric that merges known-divergent cloud into local status = broken.)
+- 2026-06-14 (#11 CLOSED — first conclusion OVERTURNED by N-of-M) — CP-70 x3 cloud on FRESH containers = 3/3 PASS
+  (boot 187/193/205s) vs the parity-batch's single warm-reuse FAIL (boot 18.9s). The 12-tpl batch had a 100%
+  boot-vs-verdict CONFOUND: every PASS=fresh(~187s), every FAIL=warm-reuse(18-24s). So there is NO platform
+  divergence — cloud is FAITHFUL to local (Franka AND UR10); the "fails" were Modal warm-container Kit-degradation
+  (the cloud analog of local Kit-session degradation). FIX committed 8712e7f1: run_template max_inputs=1 (retire
+  container after 1 template -> fresh cold Kit each). Until a run lands with the fix, DISTRUST any cloud verdict
+  with boot<~60s. #11 task -> completed. Memory project_isaac_assist_modal_parity_11 (rewritten correct).
+  ★ LESSON: my FIRST read ("UR10 diverges", even wrote the memo) was the OPPOSITE of truth; the mandatory N-of-M
+  flipped it. Had boot=18s BACKWARDS (dismissed as innocent; it's the CAUSE). Measure-first + N-of-M = the save.
+- 2026-06-14 (#11 fully closed + tooling) — codified the warm-reuse lesson: parity_check.py now flags cloud-fail
+  + boot<60s as WARM-REUSE (re-run), NOT divergence (commit 22e1dd62; validated on the confounded batch: 0 div,
+  1 warm). MODAL_RETURN_PLAN marked DONE (Modal production-ready: volume + scene_eyes --eyes + comparator +
+  max_inputs=1). Fix-validation re-gate (CP-10 control + CP-59/38/43/44/mixed-sku) running on the FIXED pool to
+  confirm fresh boots (~190s) + genuine verdicts; max_inputs=1 already spun 6 SEPARATE containers (was reuse).
+- NEXT (fresh-context deep items, all named/ungated): (1) #21 mixed-sku CONTROLLER bug — color-routing places
+  SKU-A in the WRONG zone (drop_targets correct but result wrong). HYPOTHESIS (zero-boot prep done): the vision
+  classifier uses USD-color introspection (reads diffuse_color->label->destination_map); if introspection FAILS
+  it falls back to VLM (likely unavailable headless -> mislabel -> wrong zone). DIAGNOSE: run + check the
+  'USD-color introspection succeeded/failed' print + per-box label at runtime (sensors.py:732/742). (2) #9 sphere
+  2-axis sweep (preload x transit-velocity) now runnable on the FIXED Modal pool (Franka parity confirmed).
+  (3) #10 dual-Franka CP-59 exec-gate. (4) broad cloud re-gate to refresh true pass/fail picture (pool now reliable).
+- 2026-06-14 (#11 DEFINITIVELY CLOSED) — fix-validation re-gate on the FIXED pool: ALL 6 fresh boots (174-199s,
+  no warm-reuse) -> parity_check = 0 divergence, 0 warm-reuse, FULL PARITY. CP-10 control passes; CP-59/38/43/44/
+  mixed-sku fail GENUINELY (match local; mixed-sku hardened version correctly fails on cloud too -> validates the
+  hardening cross-platform). max_inputs=1 CONFIRMED working. Cloud faithfully reproduces local. #11 done.
+- 2026-06-14 (#21 vein-refutation, rigorous finish) — launched cloud re-gate of CP-03's 9 sorter siblings
+  (CP-16/17/32/33/34/66/82/sorter-color-3lane/yrkesroll-inspector-reject-divert) on the fixed pool. If all PASS
+  on cloud -> confirms the routing-aware-gate conclusion (genuine passes, NOT false-passes) across the whole class,
+  not just the CP-03 keystone. Fire-and-forget; parity_check on the result next wake.
+- 2026-06-14 (#21 sorter-class REFUTATION COMPLETE) — cloud re-gate result: ALL 9 siblings PASS (fresh boots
+  169-248s), parity_check 0 divergence/0 warm-reuse. So CP-03 keystone + 9 siblings = the whole multi-dest sorter
+  class genuinely passes (routing-aware gate). The 10-template false-pass scare is FULLY refuted; mass-edit
+  correctly avoided. parity_check EXPECT updated with the class (commit d4040336).
+- 2026-06-14 (#21 mixed-sku CONTROLLER — derived, no defer per Anton) — agent-traced the routing: controller routes
+  by AUTHORED semantic label (_cube_semantic_class) + cube-path drop_targets; NO linkage to add_vision_classifier_gate
+  (so the classifier-VLM-fallback + the latent class-keyed-drop_targets bug are BOTH red herrings — confirmed: 0
+  templates use class-keyed drop_targets). scene_eyes (plan-goals + finals + CONTACTS) showed: plan AIMS correct
+  (SKU-A->x-0.3 left, SKU-B->x0.2 right) but boxes COLLIDE on an open pallet (Box|Box contacts) + knock off
+  (Box_5 -> y-0.98/Ground). ROOT = overlapping drop targets (SKU-B 0.12m boxes at 0.10 x / 0.08 y spacing).
+  FIX: drop-spread to single-column-per-zone, y-spacing 0.15 (>0.12). Measuring local GPU gate + Modal x3 N-of-M
+  (fresh). Also made the off-surface verdict FIRST-CLASS in scene_eyes (OFF-SURFACE/KNOCKED-OFF + OBJECT-OBJECT
+  CONTACTS detectors, Anton's "addera det" pattern) — collision pairs were already in CONTACTS; the knock-off
+  verdict I'd derived by hand, now named. Commit pending the measurement.
+- 2026-06-14 (#21 mixed-sku FINALIZED) — drop-spread committed (2790001d): single-column-per-zone y0.15 fixes the
+  overlap-collision (off-surface detector validated Box_5 knock-off). verified_status CORRECTED (routing IS correct;
+  the old "color-routing broken" was wrong). BINDING root = belt-pause-stall (deep/shared, load-bearing CP-52/65).
+  Modal x3 = gate=None (mixed-sku errors on cloud-CPU); local stochastic 1/6..5/6. Pool single_use_containers=True
+  (max_inputs deprecated, 8f8c76d7). Off-surface detector committed 81ab3389. NEXT: belt-pause-stall (verify
+  single-robot path myself — agent conflated CP-52; narrow the pause to grip-only, gated, Modal before/after
+  no-regression on CP-10/12/35/44/52/65). Risky shared logic -> careful, not reckless.
+- 2026-06-14 (Anton: "baka in scene_eyes-påminnelsen i cron wake-up") — DONE: cron 891f002d (was f4e02a83) now
+  leads with "ANVÄND SCENE_EYES FÖR ALL DIAGNOSTIK — gates ljuger; läs CONTACTS/EJECTION/OFF-SURFACE/BELT-TIMELINE/
+  GRIP-SLIP + per-objekt-banor, scene_eyes-FÖRST, gissa aldrig från gate-JSON". Also refreshed Modal/#11 status
+  (Modal UP, #11 RESOLVED, Franka-only). + belt-pause mode-clause-gate fix REVERTED (no-op: scene_eyes BELT
+  TIMELINE post-fix still 12% moving == pre-fix 14%; CP-10 control 9/9 both -> the mixed-sku belt-stall is a
+  DIFFERENT pause path, not the mode-clause; mixed-sku = hard compound (belt-stall multi-path + fling), parked).
+- 2026-06-14 (broad Franka re-gate, 14 mixed templates, fresh-Kit cloud) — RESULT: 6 stale-"mixed"->CONFIRMED-PASS
+  (CP-55, barcode-scanner-divert, bottle-cap-tighten, forklift-handoff-arm, kit-prep-vision-gate,
+  safety-clearance-monitor-stop) = refresh-wins (corpus healthier than stale verdicts). 7 genuine fails: deep
+  manipulation (CP-NEW-drawer-open, turn-faucet, oxe-sweep-into-dustpan, wire-harness-route = articulation/sweep/
+  route; both drawer/faucet already gate_class=articulation -> GENUINE manip fail, not a re-class), CP-56 (rotary
+  timing). Pick-place-ish: CP-NEW-sorter-size-weight (belt 0.1, 9-cube 2-bin), CP-NEW-vision-depalletize (6-box
+  grid, completeness=None yet fails). CP-20 = gate=None (cloud error, investigate). Next: scene_eyes-diagnose
+  sorter-size-weight (belt-cadence vein?) per the baked-in discipline.
+- 2026-06-14 (#21 sorter-size-weight WIN 0/9->8/9, commit 171b6401) — genuine re-gate fail, full tool-chain
+  diagnosis (Anton's steer): reach_validate=REACHABLE, grasp_validate=geom-OK, sensor triggered (plan_calls=96,
+  all 9 claimed) -> NOT reach/grasp/sensor. scene_eyes: arm moves a lot, plan_fails=72; NEW high-res GRIP-ATTEMPT
+  detector showed Cube_7/8/9 reached ~104mm then MISSED (moving-pick near-miss) + Cube_1-6 rode past (never reached).
+  ROOT=MOVING-PICK (belt 0.1 moves cube during replanning approach). FIX=belt-slow 0.1->0.02 (CP-10/35 vein) ->
+  8/9 correctly sorted (0 misrouted), 1 residual near-miss. scene_eyes detectors added this session: ejection,
+  off-surface/knock-off, belt-timeline, GRIP-ATTEMPT (all committed). cron a7495dfb now bakes in scene-validation
+  + scene_eyes-first. NEXT genuine fails: CP-56 (rotary — Anton: didn't rotate? check), vision-depalletize.
+- 2026-06-14 (CP-56 rotary — Anton's "didn't rotate" memory OUTDATED) — scene_eyes: disc DOES rotate (cubes
+  trace 5-7m circular paths, 30 deg/s = 0.105 m/s tangential), plan_fails=0, 3/4 GRIPPED (Cube_3 near-miss 111mm).
+  Tried the cadence-slow vein (30->8 deg/s) -> REGRESSED to 0/4 (slow disc doesn't FEED cubes to the pick zone;
+  rotary != linear belt: belt-slow lingers-at-zone GOOD, rotary-slow breaks-the-feed BAD). REVERTED. CP-56 = 3/4
+  natural; the 4th is a hard rotary near-miss (moving-pick on a circle), not cadence-fixable. Measure-first caught
+  the regression. NEXT: vision-depalletize (completeness=None yet fails).
+- 2026-06-14 (vision-depalletize assessed — DEEP, not quick) — reach_validate=REACHABLE 6/6, grasp_validate=geom-OK
+  (boxes are 0.05m not the goal-text's "0.10m"), plan_fails=0, 19 finger contacts (boxes ARE picked). BUT most end
+  back at the SOURCE (y~0.5; only Box_5 reached dest y=-0.54) + grid-pick OBJECT-OBJECT collisions. = deep
+  depalletize PLACE/DELIVERY issue (picks succeed, delivery to dest fails + neighbor-disturb), not cadence/scene.
+- 2026-06-14 (★ GENUINE-FAIL MAP from the broad re-gate — tractable processing COMPLETE) — of the 14 "mixed"
+  re-gated: 6 stale->CONFIRMED-PASS (refresh-wins: CP-55, barcode-scanner-divert, bottle-cap-tighten,
+  forklift-handoff-arm, kit-prep-vision-gate, safety-clearance-monitor-stop). Tractable WIN: CP-NEW-sorter-size-weight
+  0/9->8/9 (belt-cadence, committed 171b6401). Assessed-DEEP (fresh-context per-template, NOT quick): CP-56 (3/4
+  rotary near-miss, rotary-slow REGRESSES feed), vision-depalletize (place/delivery), drawer-open/turn-faucet/
+  oxe-sweep (articulation/sweep MANIP — both drawer/faucet already gate_class=articulation = genuine manip fail),
+  wire-harness-route (route). CP-20=gate=None cloud-error. NET: the easy/cadence vein is drained; remainder = deep
+  manipulation/place + 1 cloud-error. Methodology proven: re-gate -> reach/grasp/scene_eyes tool-chain -> cadence/
+  scene fix -> verify.
+- 2026-06-14 (Franka-fail re-gate launched, 29 tpl, running) — early (4/29): CP-54/CP-36/CP-50 = PASS (stale
+  "fail" -> REFRESH-WINS, confirm prior fixes landed: CP-54=2e19cdb5 etc). CP-87 = genuine-fail but
+  INFRA-BLOCKED (ROS2-MoveIt2 external controller; no ROS2 stack / ros-mcp not installed -> robot gets no
+  commands; not a scene/controller fix). Process the full batch on completion: refresh-wins (record) + genuine
+  (categorize deep/infra/tractable, attack tractable via the tool-chain). Net pattern holding: most "fail"
+  verdicts are STALE (fixed-but-not-reledgered) -> re-gate refreshes the true corpus map.
+
+## 2026-06-14 (cont.) — sensor_gated FREEZE root-caused + FIXED + scene_eyes belt-axis fix
+
+RE-GATE (29 Franka-fail templates, Modal FRESH containers boot>=160s = genuine):
+  8 PASS (refresh-wins, mostly CONFIRMATIONS prior fixes hold on fresh cloud Kit): CP-54, CP-36, CP-50,
+    CP-10, iso10218-speed-separation, teaching-mode-pose-replay, zone-partition-safety, yrkesroll-gripper-vacuum-pick.
+  21 genuine FAIL. Controller-type triage (cheap grep): 16 use cuRobo (survive timeline restart — NOT the freeze
+    class), 2 NO-PPC (cart-handoff-amr=AMR, multi-rate-sensor-fusion), 2 sensor_gated-coord (feeder + machine-tender).
+  Fail clusters: vision/endpoint(6), suction/3-finger gripper(2), assembly-contact(3), manip-logic(~6), AMR(1), ROS2(1).
+
+WIN — sensor_gated controller FREEZE root-caused + FIXED (commit 15e48991):
+  Symptom: feeder/machine-tender arm TOTALLY frozen (all joints 0deg, plan_calls=0, ready-warp
+    "'NoneType' has no attribute joint_positions"). Looked dead.
+  Diagnostik-först (control CP-36 moved fine on same Kit -> Kit healthy, not degradation; exec_sync probe ->
+    fresh handle reads 9 joints fine; refuted CPU-dynamics + setup-None hypotheses with data; builtins-diag ->
+    arm moved EXACTLY 3 ticks then stopped). ROOT: settle_after_canonical's omni.timeline.stop()+play() (and
+    scene_eyes' tl.stop/play) tears down the physics view franka.initialize() bound to AT SETUP -> handle None
+    forever -> _tick_motion_policy no-ops every step. cuRobo controllers survive; RmpFlow sensor_gated didn't.
+  FIX: self-heal at top of _step (if get_joint_positions() None -> re-initialize). Additive/no-op when live.
+  VERIFIED: feeder 0deg->90-155deg, ready-warp gone, approaches items 545mm->160mm; CP-28 pose NO-REGRESSION;
+    machine-tender (UR10) moves (no freeze). REMAINING (task #22): RmpFlow doesn't CONVERGE on the moving-belt
+    pick (thrashes, closest ~160-260mm, no grip) — shared coord reach-tuning sub-project.
+
+TOOL — scene_eyes belt timeline now AXIS-AGNOSTIC (commit e1ddb0fc): was vx[0]-only -> falsely "PAUSED 0%"
+  for any non-X belt (feeder Y-feed). Now bsv=full-vector magnitude + bsvv signed[vx,vy,vz] + header reports
+  feed-axis (e.g. +y). Confirmed feeder belt MOVING 46% feed-axis +y.
+
+ROS2/CP-87 SCOPED (Anton "installera ros2 om du behöver det"): NOT a quick install. code_template uses
+  target_source="ros2_cmd" -> controller WAITS for an EXTERNAL MoveIt2/cuMotion publisher; gate_one boots ONE
+  Kit and has NO sidecar-launch. So CP-87 needs (a) ROS2 runtime + (b) external MoveIt2 node + (c) gate-harness
+  sidecar orchestration = multi-hour harness project for ~2 templates. Deferred; higher-yield work available
+  without ROS2. (Ties to the ros2_cmd/PLC-export direction if/when pursued.)
+
+NEXT: background triage (/tmp/triage_manip.log) of 6 manip-logic cuRobo fails via scene_eyes to find
+  scene-geometry problems (template fixes, my authority) vs controller/endpoint.
+
+## 2026-06-14 (cont.2) — triage map COMPLETE, frontier drained, scene_eyes PICK-CONVERGENCE detector
+
+COMMITS this session: e1ddb0fc (scene_eyes belt-axis), 15e48991 (sensor_gated self-heal freeze fix),
+  917b266f (feeder honest status), 01ac2688 (scene_eyes PICK-CONVERGENCE detector).
+
+GENUINE-FAIL MAP (21 from re-gate, roots via scene_eyes triage — Kit was healthy during triage: heap-unstack/
+  planning-10step/CP-57 all moved 95-236deg in the same batch, so the data is trustworthy):
+  - ROS2-infra (blocked): CP-87 (external MoveIt2 + gate-sidecar), ergonomics-lift-assist (frozen plan_calls=0, torque-gated).
+  - Vision/endpoint (blocked, need Gemini-ER): 6dof-pose-estimate-pick, conveyor-tracking-moving-pick,
+    label-applicator-pose, nir-material-divert, inspect-reject, multi-rate-sensor-fusion, quality-tech-fixture-gauge.
+  - Suction/3-finger (architectural, Anton #9): adaptive-3finger-gripper, vacuum-gripper-sheet-pick.
+  - Assembly-contact (hard): peg-bushing-impedance, assembler-snap-fit, assembler-peg-bushing.
+  - Tower-stacking (hard jaw class — plans fine, knocks neighbours): planning-10step-retry.
+  - Random-heap (stochastic/thrash): heap-zone-unstack (plan 26/50, thrash 186-236deg), CP-57 (arm works, stochastic grip 4/16).
+  - Moving-pick (hard coord): y-merge-singulation (72/72 plan-fail — cubes start 0.85-1.45m away, controller plans
+    before they ride to the pick zone).
+  - RmpFlow coord convergence (task #22): feeder + machine-tender (freeze FIXED, convergence open).
+  - AMR/mobile: cart-handoff-amr.
+  CONCLUSION: autonomous-safe tractable frontier is DRAINED — every remaining fail is a hard/blocked class.
+  The sensor_gated freeze fix was the clean structural win in this batch. NOT grinding hard-class into false wins
+  (Anton: falska positiver = progressgift).
+
+scene_eyes NEW DETECTOR (01ac2688): PICK-CONVERGENCE — per claimed-pick object, closest EE-approach split into
+  dz/dxy + verdict (CONVERGED / NEAR-MISS / THRASH-NO-CONVERGE / FROZEN / STALL) vs arm-motion magnitude. Doubles
+  as a degradation tripwire (flagged known-good CP-36 as FROZEN max-range=0deg on a session-degraded Kit).
+
+KIT DEGRADATION observed: after ~15 measurements + 1h15m uptime, control CP-36 went FROZEN (max-range=0deg) — the
+  "restart before EVERY measurement" rule. Triage data predates the degradation (trustworthy). Restarting Kit for
+  any further measurement.
+
+OPEN / NEXT (dedicated efforts, not autonomous-grind): task #22 RmpFlow convergence (feeder near-win); hard
+  classes need Anton's architectural calls (#9 suction) or infra (ROS2 stack, vision endpoints).
+
+## 2026-06-14 (cont.3) — scene-validation sweep: nir robot-instantiation bug FIXED + scene_validate clarified
+
+DIRECTIVE FOLLOW-UP (scene-validation FIRST): ran scene_validate (zero-... actually LIVE-Kit) across all 17
+genuine Franka fails. 15 CLEAN. 2 flagged:
+- planning-10step-retry: VIOLATIONS 2 in the 17-build batch, but 0 in ALL 5 isolated + 2 N-of-M re-runs
+  (byte-identical block positions). => DETERMINISTIC; the batch "2" was a Kit-session-stress transient
+  (17 consecutive build+settles in one Kit without restart -> a stressed settle flung blocks; scene_validate
+  is designed to flag settle-explosions, lines 85-87). CORRECTION to a too-strong earlier claim: scene_validate
+  is NOT non-deterministic — it BUILDS+SETTLES in the live Kit (new_stage->execute_template_canonical->
+  settle_after_canonical->ComputeWorldBound), so it inherits the Kit-degradation caveat. Use like the gate:
+  isolate / N-of-M / restart-between. (Anton challenged the "non-deterministic" claim — rightly.)
+- nir-material-divert: VIOLATIONS 1 (Item_6 reach) — but the REAL root (scene_eyes runtime): the template
+  created /World/Franka as a bare create_prim(Xform) and NEVER instantiated the robot (no robot_wizard) while
+  setup_pick_place_controller(robot_path=/World/Franka) expected an articulation. => articulation init failed,
+  plan_calls=0, nothing picked, belt ran forever. The scene_validate REACH flag was a downstream SYMPTOM of
+  free-belt travel. FIX (commit f223fb29): bare Xform -> robot_wizard("franka_panda", dest_path=/World/Franka).
+  VERIFIED (fresh Kit, control CP-36=4 picks CONVERGED+GRIPPED): nir 0 picks/plan_calls=0 -> Franka loads
+  (joints 80-224deg), plan_calls=24/0 fails, 3 items CONVERGED+GRIPPED in 75s + 3 upstream riding the belt in
+  (gate duration_s=320 gives all 6 time). Confirming full delivery with a 200s run.
+
+DILIGENCE (no mass-fix): scanned all templates for the bare-Xform-robot anti-pattern. 5 other hits are MOBILE
+bases (AMR/Forklift/Jetbot — custom wheeled/differential builds, bare-Xform is INTENTIONAL; forklift-handoff-arm
+even robot_wizards its arm). nir was the UNIQUE Franka-arm-never-loaded case. Did NOT touch the mobile ones.
+
+## 2026-06-14 (cont.4) — nir belt-carry-upstream: deep PhysX diagnosis (GPU + sleep RULED OUT)
+
+After the nir robot_wizard win (3/6), drove task #23 by diagnostik-först:
+- GPU-dynamics test (healthy CP-36 control): nir STILL 3/6 identical, Item_1/2/3 frozen, belt MOVING 87% ->
+  GPU is NOT the fix. Reverted to CPU.
+- create_conveyor: applies physxSurfaceVelocity UNIFORMLY over the full belt Cube (kinematic, local-space,
+  identity rot -> world +x everywhere). No region limit.
+- Live rigid-body probe: Item_1(frozen) and Item_6(delivered) are PHYSICALLY IDENTICAL (both UsdPhysics.
+  RigidBodyAPI, sleepThreshold=0.0, no PhysxRigidBodyAPI). Both IN CONTACT with /World/ConveyorBelt. Item_1
+  dx=0.0 EXACTLY every tick.
+=> NOT sleep/attr/API, NOT CPU-vs-GPU, NOT a belt region limit. It is a deep PhysX surface-velocity CONTACT
+   subtlety: items that settle far-upstream and aren't picked within ~18s (unlike the downstream 3) never
+   receive the tangential surface-velocity impulse despite resting in contact. Working belt templates (CP-44,
+   sorter 8/9) use the same sleepThreshold=0.0 but a SLOW belt (0.02) + pick items before they'd stall.
+NEXT (task #23, focused session): live during-run PhysX contact-report on an upstream item -> per-tick contact
+impulse + linearVelocity; candidate root = kinematic surface-velocity drives on contact-GAIN, not steady
+resting contact. Then a principled fix (NOT spawn-compression / initial-velocity guess = threshold-graze).
+robot_wizard fix stands (3/6 PARTIAL, committed f223fb29).
+
+## 2026-06-14 (cont.5) — nir belt-carry: 3rd fix refuted; robot-instantiation bug class CLOSED library-wide
+
+- initial-velocity fix (physics:velocity=[0.12,0,0]) REFUTED: upstream items move 0.01m then STOP (decelerate
+  as if on a STATIC surface) => belt's EFFECTIVE surface velocity is ZERO at x<=-0.84 despite uniform attr.
+  3 fixes now refuted (GPU, sleep/identical-items, initial-velocity). Reverted. Sharpest lead: working-zone
+  correlates with DISTANCE-FROM-BELT-CENTER (0.56 works, 0.84 doesn't) -> task #23 focused session: test a
+  SHORTER belt / create_conveyor_track, + live contact-impulse decomposition. NOT spawn-compression (graze).
+- Library-wide scan: setup_pick_place_controller(robot_path=P) where P isn't properly instantiated -> 0 hits.
+  nir was the UNIQUE robot-never-loaded bug; now fixed (f223fb29). Bug class CLOSED.
+- Quick-scene-fix frontier now SYSTEMATICALLY exhausted this wake: scene_validate sweep (15 CLEAN), bare-Xform
+  scan (5 intentional mobile bases), robot-instantiation scan (0). Remaining = deep sessions (#22 RmpFlow, #23
+  belt-PhysX) or Anton architectural calls (#9 suction, vision endpoints, ROS2 stack). No false-positive grinding.
+
+## 2026-06-14 (cont.6) — nir belt-carry ROOT-CAUSED (restart per Anton); 6 fixes refuted; needs runtime-wake (focused session)
+
+Anton nudged: "why not restart Kit?" — correct; the World errors WERE the degradation signal. Restarted, then
+clean controlled experiments cracked the root:
+- MINIMAL REPRO (clean belt replica + 7 cubes, continuous, no robot, timeline-stepped): drives ALL positions
+  incl x=-1.4 (dx +2.88). => belt surface-velocity works everywhere; NOT a scene-geometry / long-belt / belt-
+  center limit (all REFUTED).
+- nir-NOPAUSE test (nir scene + Franka, controller REMOVED -> belt continuous): ALL 6 drive. => Franka presence
+  INNOCENT. The PAUSE is the culprit.
+- ROOT: curobo _pause_belt(sv->0)/_resume_belt(sv->nominal). PhysX kinematic surface-velocity does NOT re-engage
+  bodies in STEADY RESTING contact. Far-upstream items settle through pauses (while nearer cubes picked) -> never
+  re-driven. CP-44/sorter avoid it via spacing/cadence (no item waits through many pauses).
+- FIXES TESTED IN SHARED BELT-PAUSE LOGIC (all 4 backend copies, CP-44=4/4 control no-regression each, then
+  REVERTED): (a) re-seed physics:velocity attr on resume -> FAILED (attr is init-only, no runtime effect);
+  (b) toggle surfaceVelocityEnabled across pause -> FAILED. => USD-attribute changes CANNOT wake a resting body.
+- CONCLUSION: only a RUNTIME wake (physics tensor API RigidPrim.set_velocities / omni.physx wake on the on-belt
+  items in _resume_belt) can fix it = focused session w/ no-regression on CP-44/sorter/CP-52/CP-65. OR redesign
+  nir feed (CP-44 pattern). robot_wizard fix (3/6) is the banked deliverable. Task #23 has the full plan.
+
+## 2026-06-14 (cont.7) — nir belt-carry ROOT-CAUSED & CLOSED (9 fixes refuted); GENERAL belt-pick limitation
+
+Decisive beyond-reach test: all items rode only +0.15 then STOPPED WHILE THE BELT STILL RAN; only the front
+item (never at rest) rode to the station + delivered (1/6). => ROOT (definitive): PhysX kinematic surface-
+velocity does NOT re-engage a body once it comes to REST. On every belt pause/restart, settled items are
+stranded. Original nir spawns = 3/6 OPTIMAL (3 spawn-reachable picked directly + 3 far stranded); beyond-reach
+removed that advantage -> 1/6. This is a GENERAL multi-item sensor-gated belt-pick limitation (CP-44=3/4,
+sorter=8/9 show the same residual stranding).
+9 FIXES REFUTED (clean-Kit, CP-44 control): GPU dynamics, sleep/attrs, init physics:velocity, physics:velocity-
+on-resume, surfaceVelocityEnabled-toggle, belt-slow 0.02 (CP-44 rides@0.02 so NOT speed), RigidPrim runtime-wake
+(can't bind in physx step-callback), belt-position, beyond-reach spawn.
+NET: nir robot_wizard fix (0/6 -> 3/6) is the banked, committed win. 3/6 is the floor without an engine-level
+re-drive-after-pause fix. HIGH-VALUE INSIGHT: a working runtime-wake (omni.physx wake that binds in the step-
+callback) would lift ALL belt-pick templates (CP-44 3/4->4/4, sorter 8/9->9/9, nir 3/6->6/6). Documented as
+task #23 focused-session paths: (A) omni.physx wake API; (B) moving-pick controller; (C) accept 3/6. NOT
+spawn-within-reach (games the conveyor/NIR-ride intent). Belt-pause logic is shared (CP-52/65) -> any fix needs
+multi-template no-regression.
+
+## 2026-06-14 (cont.8) — BELT-SLEEP WAKE FIX LANDED (general win): nir 3/6->6/6, sorter 8/9->9/9
+
+Anton: "köper inte djup-PhysX-limit-förklaringen rakt av" — HE WAS RIGHT. It was not a limitation; the items
+SLEEP during belt pauses (sleepThreshold=0 = '0=engine-default' gotcha; confirmed get_physx_simulation_interface
+().is_sleeping == True). A resumed belt does NOT re-drive a sleeping body. FIX (commit ae895650): wake_up via the
+physx sim interface on belt-resume in _gen_pick_place_curobo._resume_belt (z-filtered; skips lifted/grasped/
+delivered). Isolation probe nailed it: woken item rides +0.71 vs 0.0 control, and wake_up BINDS in the physx
+step-callback (RigidPrim.set_velocities did not). A WKD=null builtins-diag caught the first edit was in the WRONG
+backend copies (curobo _resume_belt @5700, not the spline/diffik/osc copies). 9 attribute/scene fixes refuted first.
+VERIFIED (fresh Kit + CP-36 control; Modal fresh-container no-regression batch):
+  nir 3/6 -> 6/6 (gate=True local + Modal) ; sorter-size-weight 8/9 -> 9/9 (IMPROVED) ;
+  CP-44 3/4 -> 3/4 NO-REGRESS (4th item Sphere_1 EJECTS/rolls off — sphere-on-belt, NOT sleep) ;
+  CP-52 PASS + CP-65 PASS (flagged dual-Franka belt-pause -> no regression).
+Commits: ae895650 (fix), 26ca4e97 (nir 6/6 + sorter 9/9 status). Task #23 RESOLVED. Memory
+project_isaac_assist_belt_sleep_wake. SCOPE: lifts SLEEP-STRANDED belt items only (ejection/reach residuals
+unaffected). Also: robot_wizard fix f223fb29 (nir robot was never instantiated) was the prerequisite 0->3/6.
+NEXT belt-template candidates to re-check for sleep-strand uplift: any multi-item curobo belt-pick still <N/N.
+
+## 2026-06-14 (cont.9) — BELT-SLEEP FIX: consolidated milestone + Modal max-per-krona
+
+GENERAL FIX (commit ae895650): wake_up sleeping on-belt items on belt-resume in _gen_pick_place_curobo.
+VERIFIED TEMPLATES (N/N delivered, all with CP-36 control healthy):
+  - nir-material-divert        3/6 -> 6/6   (commit 26ca4e97; + prerequisite robot_wizard fix f223fb29 0->3/6)
+  - sorter-size-weight         8/9 -> 9/9   (commit 26ca4e97)
+  - conveyor-recirculation-overflow  -> 5/5 (commit 70ba5879; was function-gate ⏳; FREE local)
+  - sorter-color-3lane         -> 9/9, 3-lane sorted (commit 70ba5879; was ⏳; FREE local)
+NO-REGRESSION (flagged shared dual-Franka belt-pause): CP-52 PASS, CP-65 PASS. CP-44 3/4->3/4 (4th item
+  Sphere_1 EJECTS/rolls off — sphere-on-belt, NOT sleep — correctly unaffected).
+ROOT: on-belt items SLEEP through pauses (sleepThreshold=0 = '0=default' gotcha; confirmed physx is_sleeping);
+  resumed belt won't re-drive a sleeping body. Anton's skepticism ("köper inte djup-PhysX-limit") was right.
+  Isolation: wake_up -> +0.71 vs 0.0; binds in step-callback (RigidPrim did not). 9 prior fixes refuted.
+Memory: project_isaac_assist_belt_sleep_wake. Task #23 RESOLVED.
+
+MODAL MAX-PER-KRONA (Anton 2026-06-14, after ~$9 more drained): credits finite+watched. NEW DEFAULT =
+  LOCAL Kit (free) for measurement; Modal ONLY for parallel-gated decisions (large N-of-M / multi-template
+  no-regression that's time-critical), never UR10, ALWAYS `modal app stop <id> -y` after (killing local CLI
+  doesn't stop the cloud app). Stopped a running exploratory uplift batch mid-boot; all isaac-pool apps stopped.
+  Memory updated: project_isaac_assist_modal_parity_11 (MAX-PER-KRONA section).
+
+## 2026-06-14 (cont.10) — belt-sleep 6th template: inspect-reject 5/5
+CP-NEW-inspect-reject (re-gate fail, mislabeled vision-endpoint -> actually route-by-label + sleep-strand): 5/5 DELIVERED+routed with the belt-sleep wake fix (commit 668e3d10 barcode 6/6 + this). BELT-SLEEP VEIN TOTAL: 6 templates lifted to N/N (nir 6/6, sorter-size-weight 9/9, recirculation 5/5, sorter-color-3lane 9/9, barcode 6/6, inspect-reject 5/5) + CP-52/65 no-regress + CP-44 unaffected(sphere). LESSON: re-gate "vision-endpoint" labels were partly WRONG — several route by authored label (offline) and the real fail was belt-sleep/robot-instantiation (nir, inspect-reject). 6dof + conveyor-tracking-moving-pick genuinely need a vision endpoint.
+
+## 2026-06-14 (cont.11) — belt-sleep 7th: y-merge 6/6 (72/72 plan-fail was SLEEP-STRAND, not moving-pick)
+CP-NEW-y-merge-singulation: 72/72 plan-FAIL -> plan_calls=48/0 -> 6/6 with belt-sleep wake (commit this). CORRECTS my earlier deep mis-diagnosis (moving-pick plan-storm). Cubes slept far upstream (unreachable->planfail); wake rides them in. BELT-SLEEP VEIN: 7 templates N/N (nir,sorter-size-weight,recirculation,sorter-color-3lane,barcode,inspect-reject,y-merge) + CP-52/65 no-regress. LESSON: plan-FAIL storms on belt templates can be SLEEP-STRAND (cubes never reach reachable zone), not reach/coordination.
+
+## 2026-06-14 (cont.12) — STRATEGIC PIVOT: COMPOSITION (Anton's reframe) + RmpFlow verdict
+Anton reframed the goal from "1000+ perturbations" -> **COMPOSITION**: chain templates (end-state -> next start-state), each robust template a MULTIPLIER. Ran a grounded 4-survey workflow (composition-focus-strategy). VERDICT:
+- **RmpFlow = deprecate.** Only 1 tpl uses sensor_gated (CP-NEW-gravity-dispenser-feeder); 130 use cuRobo, which already covers all sensor_gated caps (sensor/belt/drop-routing). RmpFlow=reactive, fragile to start-state drift = exactly what chaining produces. cuRobo re-plans per scene = right tool. -> task #22 re-scoped: migrate the feeder sensor_gated->cuRobo (~1d), retire RmpFlow (NOT "fix convergence").
+- **Top-3 focus:** (1) composer layer at canonical_instantiator seam (execute_template_canonical :783; substitute_role_placeholders :621) — add instance_root + origin_offset + compose_canonicals() wrapper; phase_id isolation already exists; first target pick->inspect->sort. Design pre-written in docs/notes/COMPOSITION_AND_BRANCH_AUDIT.md PART A. (2) handoff-state validator (N end-state satisfies N+1 start preconds) + CHAIN-SAFE vs SOLO-SAFE ledger. (3) curate vocabulary (only 28/439=6.4% function-gate verified; composition amplifies fragility).
+- **Deprioritize:** RmpFlow, CAT-A deep blockers off composition critical path, PLC Sequence-IR-as-source-of-truth (80% stubbed), library breadth.
+- **Honest risk (probe FIRST, smallest case):** Kit session state-leakage across a composed scene — new_stage() doesn't fully reset World/cuRobo-cache/subs, and composition CAN'T fall back on fresh-boot-per-template. Probe whether phase_id isolation is enough before wide rollout.
+Memory: project_isaac_assist_composition_direction. NEXT: implement composer plumbing (additive/gated/reversible) -> Kit-leakage probe on 2 stable role-based tpls.
+
+## 2026-06-14 (cont.13) — ARM tier-1 Modal screen + CARTER/AMR recon (2 workflows)
+ANTON STEER: chose "tier-1 -> verified" (drives BOTH '100% on existing' AND composer building-blocks). Built scripts/qa/composability_scan.py (439 tpl: 60 tier-0 role+curobo+verified-ish, 51 tier-1, 19 tier-2-legacy, 309 other) + tier1_triage.py. Library classes: 130 arm-pickplace, 37 carter/amr/mobile, 8 humanoid, ~7 quadruped, ~257 dialog/advisory.
+MODAL arm-tier-1 screen (15 Franka tier-1): 5/15 gate=True (cad-revision-drift, dr-curriculum, controller-shootout-cp, CP-61, isaaclab-arena-lego — PROVISIONAL, gates lie, local-confirm needed); 10/15 INFRA-errored (RemoteError('') + App-STOPPED, never booted = NOT failures). Root: single-wave >6 respawn issue -> re-run as batches of <=5 (batch A running). app ap-R03X stopped (max-per-krona). Modal=screen, local=verdict.
+CARTER/AMR/NAV RECON (workflow wghn248k9) — KEYSTONE FINDING: navigate_to codegen (robot.py:1594-1741) is a NO-OP STUB (wheels never apply_action'd; start_pos hardcoded [0,0,0]; JetBot wheel geom). CONFIRMED by reading codegen myself. CP-64 "✓"=form-gate mirage. ROS2 NOT needed to verify (Isaac drives base internally). Fix=drive-wiring then nav-gate (simulate_traversal_check nav_goal branch + scene_eyes BASE-TRAJECTORY). First targets CP-64/occupancy-map-nav/multi-amr-corridor. Memory: project_isaac_assist_nav_stub. = track #2 (after arm tier-1).
+CRON updated (2959f8a0): added 🔧 VERKTYGEN-ÄR-LEVANDE (upgrade scene_eyes/validators opportunistically) + 🎯 STRATEGI section + pgrep-Isaac-is-just-"python" gotcha.
