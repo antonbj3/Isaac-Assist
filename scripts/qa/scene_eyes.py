@@ -598,6 +598,29 @@ def _analyse(js):
         for k, v in sorted(_grip_cf.items(), key=lambda kv: -kv[1])[:6]:
             out.append("    %-42s %.3f" % (k, v))
 
+    # EJECTION / EXPLOSION detector (2026-06-14, Anton's "addera det"): a PhysX over-close blowup (e.g. the
+    # parallel jaw over-penetrating a sphere) ejects the object to huge speed/position (CP-44 sphere -> z=-39750).
+    # The position-only gate only sees "not delivered"; this NAMES the blowup so grip-physics RCA is one read.
+    _ej_objs = set()
+    for _r in rows: _ej_objs |= set((_r.get("cubes") or {}).keys())
+    _ej = []
+    for _nm in sorted(_ej_objs):
+        _ps = [(_r["t"], (_r.get("cubes") or {}).get(_nm)) for _r in rows if (_r.get("cubes") or {}).get(_nm)]
+        if len(_ps) < 2: continue
+        _vmax = 0.0; _vt = _ps[0][0]
+        for _aa, _bb in zip(_ps, _ps[1:]):
+            _dt = max(1e-3, _bb[0] - _aa[0]); _v = math.dist(_aa[1], _bb[1]) / _dt
+            if _v > _vmax: _vmax = _v; _vt = _bb[0]
+        _fp = _ps[-1][1]
+        _exp = (abs(_fp[0]) > 5.0 or abs(_fp[1]) > 5.0 or abs(_fp[2]) > 5.0 or _vmax > 8.0)
+        if _exp or _vmax > 2.0:
+            _ej.append((_nm, _vmax, _vt, _fp, _exp))
+    if _ej:
+        out.append("EJECTION / EXPLOSION (per-object max sample-speed + final pos; >8 m/s or |pos|>5m = PhysX blowup):")
+        for _nm, _vmax, _vt, _fp, _exp in sorted(_ej, key=lambda x: -x[1]):
+            out.append("    %-14s vmax=%7.1f m/s @%.1fs  final=[%.2f,%.2f,%.2f]  %s" % (
+                _nm, _vmax, _vt, _fp[0], _fp[1], _fp[2], "*** EXPLODED/EJECTED ***" if _exp else "(fast — watch)"))
+
     # GRIP TIMELINE — THE grip-release signal: SurfaceGripper status (0=Open 1=Closing 2=Closed) + gripped set
     # + cup<->gripped-cube distance + max joint velocity, logged at every transition. If status falls to 0 (or the
     # gripped set empties) MID-TRANSIT while cup-cube_d just exceeded maxGripDistance -> the grip auto-RELEASED on
