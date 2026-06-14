@@ -87,7 +87,7 @@
     "completeness": "all",
     "cube_path": "/World/Cube_1",
     "target_path": "/World/Pallet",
-    "duration_s": 180,
+    "duration_s": 280,
     "xy_tolerance": 0.15,
     "rest_speed_threshold": 0.1,
     "cube_paths": [
@@ -185,7 +185,7 @@
         0.05
       ],
       "surface_velocity": [
-        0.2,
+        0.02,
         0,
         0
       ]
@@ -265,7 +265,7 @@
         ],
         "drop_target": [
           -0.1,
-          -0.4,
+          -0.44,
           0.825
         ]
       },
@@ -278,7 +278,7 @@
         ],
         "drop_target": [
           0.0,
-          -0.4,
+          -0.44,
           0.825
         ]
       },
@@ -291,7 +291,7 @@
         ],
         "drop_target": [
           0.1,
-          -0.4,
+          -0.44,
           0.825
         ]
       },
@@ -304,7 +304,7 @@
         ],
         "drop_target": [
           -0.1,
-          -0.3,
+          -0.38,
           0.825
         ]
       },
@@ -317,7 +317,7 @@
         ],
         "drop_target": [
           0.0,
-          -0.3,
+          -0.38,
           0.825
         ]
       },
@@ -330,7 +330,7 @@
         ],
         "drop_target": [
           0.1,
-          -0.3,
+          -0.38,
           0.825
         ]
       }
