@@ -258,7 +258,7 @@
     "target_path": "{{pass_bin.path}}",
     "duration_s": 180
   },
-  "verified_status": "build-spec-2026-05-10; smoke-test \u2713 1/1 (52s); vision-gated routing",
+  "verified_status": "build-spec-2026-05-10; smoke-test \u2713 1/1 (52s); vision-gated routing. function-gate VERIFIED 5/5 DELIVERED+routed 2026-06-14 (local fresh Kit, CP-36 control healthy). Was re-gate genuine-fail mislabeled 'vision-endpoint' \u2014 actually route-by-label (no live endpoint) + sleep-stranded belt items; belt-sleep wake fix (ae895650) in effect -> all 5 ride in + route to bins.",
   "motion_controllers": {
     "verified": [],
     "untested": [
