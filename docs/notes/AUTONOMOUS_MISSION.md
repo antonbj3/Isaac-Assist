@@ -2663,3 +2663,14 @@ Strategy focus #1 (chain robust templates -> multiplier) foundation now FUNCTION
 - compose_canonicals([(tpl,root,offset),...]) wrapper (canonical_instantiator) — VERIFIED: two CP-01 cells (inst0@origin + inst1@+2x) coexist in one stage, both build clean (errs=[[],[]]), all prims namespaced+offset (inst0/Franka@[0,0,.75], inst1/Franka@[2,0,.75], both Bins), inst1's build does NOT corrupt inst0 -> the Kit-leakage worry does not materialize at build time.
 This is the 2026-06-09 audit's "smallest viable slice" + the synthesis's #1 recommendation, DONE.
 NEXT (composer, next increment): (a) compose a HETEROGENEOUS chain pick->inspect->sort (CP-01+CP-18+CP-03) + gate each instance (verify_args are per-template -> per-instance); (b) handoff-state validator (instance-N end-state satisfies instance-N+1 start preconds); (c) shared-scene-baseline policy (share ground/light, namespace per-instance tables); (d) deferred single world.reset for chained handoff. Memory: project_isaac_assist_composition_direction.
+
+## 2026-06-15 (cont.21) — COMPOSITION FUNCTIONALLY PROVEN (both cells deliver) + deferred-reset finding
+compose_canonicals(2x CP-01, inst0@origin + inst1@+2x) then play 2000 steps: BOTH cells deliver concurrently
+to their OWN bins -> inst0 2/4 to /World/inst0/Bin, inst1 1/4 to /World/inst1/Bin. phase_id controller isolation
+holds AT RUNTIME (both Frankas pick simultaneously, no cross-talk). = composition is a real MULTIPLIER, not just
+co-resident prims. PARTIAL rate (not 4/4 each) — root cause = the audit-predicted per-instance world.reset:
+execute_template_canonical's controller install calls world.reset(), so inst1's build re-seeds inst0's
+articulation MID-CYCLE -> disrupts inst0's in-progress picking. FIX (next): deferred single reset — add a
+skip_reset path to execute_template_canonical/the pick-place install, compose_canonicals does ONE world.reset
+after all instances built. Then expect ~4/4 + 4/4. Honest: composition WORKS (both deliver), full-rate pending
+the deferred-reset refinement. Memory: project_isaac_assist_composition_direction.
