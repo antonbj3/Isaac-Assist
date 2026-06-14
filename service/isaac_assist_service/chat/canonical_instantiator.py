@@ -1189,6 +1189,36 @@ async def execute_template_canonical(
     }
 
 
+async def compose_canonicals(
+    instances: List[tuple],
+    new_stage: bool = True,
+) -> Dict[str, Any]:
+    """Place 2+ canonical templates in ONE stage — multi-canonical COMPOSITION.
+
+    ``instances``: list of ``(template_dict, instance_root, origin_offset)``. Each
+    template is built into its own ``/World/<instance_root>/`` subtree (prim-path
+    namespacing, via composer.namespace_and_offset_calls) shifted by origin_offset,
+    so they coexist without prim collision; per-robot+phase_id subscription scoping
+    in the pick-place handlers keeps the controllers independent. See the composition
+    audit (docs/notes/COMPOSITION_AND_BRANCH_AUDIT.md PART A).
+
+    VERIFIED 2026-06-15: two CP-01 cells (inst0 @origin + inst1 @+2x) coexist in one
+    stage, both build clean (errors=[]), inst1's build does not corrupt inst0.
+
+    Returns ``{"instances": [per-template result, ...], "n_instances": int}``.
+    Caller owns settle/gate; a single deferred world.reset() across instances (vs
+    each controller install's own reset) is a refinement for chained-handoff scenes.
+    """
+    from .tools import kit_tools
+    if new_stage:
+        await kit_tools.exec_sync(
+            "import omni.usd\nomni.usd.get_context().new_stage()\n", timeout=20)
+    results: List[Dict[str, Any]] = []
+    for tpl, root, off in instances:
+        results.append(await execute_template_canonical(tpl, instance_root=root, origin_offset=off))
+    return {"instances": results, "n_instances": len(results)}
+
+
 _PRIM_PATH_RE = __import__("re").compile(
     r"prim_path=['\"]([^'\"]+)['\"]|dest_path=['\"]([^'\"]+)['\"]|"
     r"sensor_path=['\"]([^'\"]+)['\"]|robot_path=['\"]([^'\"]+)['\"]"
