@@ -77,7 +77,8 @@
       "/World/Item_4"
     ],
     "duration_s": 180,
-    "xy_tolerance": 0.06
+    "xy_tolerance": 0.06,
+    "completeness": "all"
   },
   "diagnose_args": {
     "robot_path": "/World/Franka",
