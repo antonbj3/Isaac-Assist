@@ -682,6 +682,41 @@ def _analyse(js):
         if _movf < 0.25:
             out.append("    *** BELT MOSTLY PAUSED -> conveyor-stall: boxes don't advance to the pick zone ***")
 
+    # GRIP-ATTEMPT (2026-06-14, Anton "högupplöst"): per-object, HIGH-RES grip outcome — was each tracked object
+    # ever finger/cup-contacted (GRIPPED), and if NOT, how CLOSE did the gripper (tool) get? closest approach
+    # <~60mm = NEAR-MISS (e.g. moving-pick: the cube moved during approach, the arm just missed); 60-150mm =
+    # approached; >150mm = NEVER really approached (reach / sensor-not-triggered / not-claimed). Distinguishes
+    # "missed by a little" from "never tried" PER OBJECT — finer than a never-gripped count.
+    _grip_objs = set()
+    for _k in _cf:
+        if any(_t in _k.lower() for _t in ("finger", "cup")):
+            for _p in _k.split("|"):
+                if _p.strip() in _ej_objs:
+                    _grip_objs.add(_p.strip())
+    _ga = []
+    for _nm in sorted(_ej_objs):
+        _gr = _nm in _grip_objs
+        _md = None; _mt = None
+        for _r in rows:
+            _tp = _r.get("tool_p"); _op = (_r.get("cubes") or {}).get(_nm)
+            if _tp and _op:
+                _dd = math.dist(_tp, _op)
+                if _md is None or _dd < _md:
+                    _md = _dd; _mt = _r["t"]
+        _ga.append((_nm, _gr, _md, _mt))
+    if any(not g[1] for g in _ga):   # report when something was never gripped (the interesting case)
+        out.append("GRIP-ATTEMPT (per-object; gripped? else closest gripper-to-object approach):")
+        for _nm, _gr, _md, _mt in sorted(_ga, key=lambda x: (x[1], x[2] if x[2] is not None else 9.0)):
+            if _gr:
+                out.append("    %-14s GRIPPED" % _nm)
+            elif _md is not None:
+                _tag = ("NEAR-MISS (moving-pick? cube moved during approach)" if _md < 0.06
+                        else "approached but not gripped" if _md < 0.15
+                        else "NEVER approached (reach / sensor-not-triggered / not-claimed)")
+                out.append("    %-14s never-gripped  closest tool approach=%4.0fmm @%5.1fs  %s" % (_nm, _md * 1000, _mt or 0, _tag))
+            else:
+                out.append("    %-14s never-gripped  (no tool/pos data)" % _nm)
+
     # GRIP TIMELINE — THE grip-release signal: SurfaceGripper status (0=Open 1=Closing 2=Closed) + gripped set
     # + cup<->gripped-cube distance + max joint velocity, logged at every transition. If status falls to 0 (or the
     # gripped set empties) MID-TRANSIT while cup-cube_d just exceeded maxGripDistance -> the grip auto-RELEASED on
