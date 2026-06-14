@@ -2700,3 +2700,12 @@ not stuck) = minor concurrent-timing.
 COMPOSER STATUS: foundation + heterogeneous functional composition PROVEN. #26 (same-template-2x stuck) downgraded
 to edge-case. NEXT (composition real path): heterogeneous CHAIN pick->inspect->sort with per-instance gating +
 handoff-state validator (focus #2); the concurrent ~3/4 vs solo 4/4 dip is a minor tuning item.
+
+## 2026-06-15 (cont.24) — compose_gate.py shipped: composition toolchain complete
+scripts/qa/compose_gate.py — function-gate for COMPOSED scenes: compose_canonicals(N templates) -> step once ->
+measure EACH instance's delivery vs its namespaced+offset target bbox -> per-instance + summary verdict. VERIFIED
+on CP-01+CP-04: inst0 3/4 (/World/inst0/Bin), inst1 4/4 (/World/inst1/Bin), summary 1/2 full (CP-01's 3/4 = the
+minor concurrent-timing dip, not a stall). Composition foundation + TOOLCHAIN now complete: composer.py/
+compose_canonicals (BUILD) + compose_gate.py (VERIFY), proven on heterogeneous composition. NEXT PHASE (focus-2,
+substantial): heterogeneous CHAIN with end-state->start-state handoff + handoff-state validator + grow the robust
+building-block set (composer multiplies them). Memory: project_isaac_assist_composition_direction.
