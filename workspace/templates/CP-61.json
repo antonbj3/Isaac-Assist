@@ -73,7 +73,7 @@
     "Previous bug: peck_demo Cortex behavior does NOT implement belt pick-place \u2014 robot stood still while all cubes rode off the belt end. Fixed 2026-05-20 by adding add_proximity_sensor + setup_pick_place_controller alongside the Cortex wrapper.",
     "Cortex peck_demo + cuRobo pick-place may conflict if both try to drive the robot simultaneously \u2014 if robot oscillates, disable setup_cortex_behavior and rely on cuRobo alone."
   ],
-  "verified_status": "build-spec-2026-05-08; patched-2026-05-20 (added add_proximity_sensor + setup_pick_place_controller \u2014 robot was stationary because Cortex peck_demo never triggers belt pick-place; cubes flew off belt); re-verify pending",
+  "verified_status": "build-spec-2026-05-08; patched-2026-05-20 (added add_proximity_sensor + setup_pick_place_controller \u2014 robot was stationary because Cortex peck_demo never triggers belt pick-place; cubes flew off belt); re-verify pending - 2026-06-14 function-gate VERIFIED 3/3 delivered (gate_one local fresh-Kit, stable_ok, 1-run)",
   "diagnose_args": {
     "robot_path": "/World/Franka",
     "drop_pose": [
@@ -88,7 +88,7 @@
     ]
   },
   "motion_controllers": {
-    "verified": [],
+    "verified": ["curobo"],
     "untested": [],
     "failed": {
       "cortex": "build-only verification 2026-05-08; form-gate expected to fail (Cortex does not install pick-place controller \u2014 uses RmpFlowCortex internally; no function-gate or form-gate run passed)"

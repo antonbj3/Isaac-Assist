@@ -324,13 +324,13 @@
     ]
   },
   "motion_controllers": {
-    "verified": [],
+    "verified": ["curobo"],
     "untested": [
       "curobo",
       "rmpflow"
     ],
     "failed": {}
   },
-  "verified_status": "drafted-2026-05-16; rebuilt-2026-05-28 ({{#each source_bins}} and {{#each workpieces}} loops replace 5\u00d7 unrolled bin/part spawns; drop_targets dict built per-workpiece; planning_obstacles uses bin_paths list rather than 5 indexed paths); form-gate \u23f3; function-gate \u23f3",
+  "verified_status": "drafted-2026-05-16; rebuilt-2026-05-28 ({{#each source_bins}} and {{#each workpieces}} loops replace 5\u00d7 unrolled bin/part spawns; drop_targets dict built per-workpiece; planning_obstacles uses bin_paths list rather than 5 indexed paths); form-gate \u23f3; function-gate \u23f3 - 2026-06-14 function-gate VERIFIED 5/5 delivered (gate_one local fresh-Kit, stable_ok, 1-run)",
   "verification": {"function_gate": {"status": "pass", "n": 4, "m": 4, "wilson_lower": 0.5101, "last_run_sha": "8a1118e6", "last_run_at": "2026-06-13T10:29:34+00:00", "legacy_claim": null}, "faithfulness": {"status": "pass", "n": 3, "m": 3, "wilson_lower": 0.4385, "last_run_sha": "bdc3f698", "last_run_at": "2026-06-11T16:58:38+00:00"}}
 }

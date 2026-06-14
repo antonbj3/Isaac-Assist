@@ -381,9 +381,9 @@
     "duration_s": 240,
     "xy_tolerance": 0.1
   },
-  "verified_status": "build-spec-2026-05-16; form-gate pending; function-gate pending",
+  "verified_status": "build-spec-2026-05-16; form-gate pending; function-gate pending - 2026-06-14 function-gate VERIFIED 4/4 delivered (gate_one local fresh-Kit, stable_ok, 1-run)",
   "motion_controllers": {
-    "verified": [],
+    "verified": ["curobo"],
     "untested": [
       "curobo",
       "rmpflow"
