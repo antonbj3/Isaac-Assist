@@ -54,7 +54,16 @@
   "simulate_args": {
     "cube_path": "/World/Cube_red",
     "target_path": "/World/RedBin",
-    "duration_s": 180
+    "duration_s": 180,
+    "cube_paths": [
+      "/World/Cube_red",
+      "/World/Cube_blue"
+    ],
+    "targets": {
+      "/World/Cube_red": "/World/RedBin",
+      "/World/Cube_blue": "/World/BlueBin"
+    },
+    "completeness": "all"
   },
   "extends": "CP-33",
   "extension_notes": "CP-47 is the FULL real-runtime-vision sorter \u2014 vision classification + dynamic semantic labels + controller install all in one tool call (setup_pick_place_with_vision). No pre-tagged cubes. CP-33 used hardcoded color_routing matching what vision-gate produces; CP-47 derives routing FROM vision at install time.",
