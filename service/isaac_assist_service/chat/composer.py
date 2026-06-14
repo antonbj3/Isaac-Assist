@@ -46,6 +46,15 @@ FILESYSTEM_PATH_KWARGS = frozenset({
 
 _WORLD = "/World/"
 
+# Tools whose per-robot+phase_id controller state must be ISOLATED per composed
+# instance — without a distinct phase_id, two instances of the same template share
+# the controller's subscription/state keys and the 2nd instance stalls (audit PART A:
+# "the composer must pass a distinct phase_id per instance"). The composer sets
+# phase_id = instance_root for these.
+PHASE_ID_TOOLS = frozenset({
+    "setup_pick_place_controller", "setup_cortex_behavior", "setup_nav_robot",
+})
+
 
 def reroot_prim_path(path: str, instance_root: str) -> str:
     """/World/Cube_1 -> /World/<instance_root>/Cube_1. Non-/World/ strings pass
@@ -94,6 +103,10 @@ def namespace_and_offset_calls(
     out: List[Tuple[str, Dict[str, Any]]] = []
     for tool, kwargs in captured:
         nk = {k: _transform_value(k, v, instance_root, off) for k, v in kwargs.items()}
+        # isolate per-instance controller state (distinct phase_id) so two instances
+        # of the same template don't share subscription/state keys (2nd one stalls).
+        if tool in PHASE_ID_TOOLS or "phase_id" in nk:
+            nk["phase_id"] = instance_root
         out.append((tool, nk))
     return out
 

@@ -2674,3 +2674,17 @@ articulation MID-CYCLE -> disrupts inst0's in-progress picking. FIX (next): defe
 skip_reset path to execute_template_canonical/the pick-place install, compose_canonicals does ONE world.reset
 after all instances built. Then expect ~4/4 + 4/4. Honest: composition WORKS (both deliver), full-rate pending
 the deferred-reset refinement. Memory: project_isaac_assist_composition_direction.
+
+## 2026-06-15 (cont.22) — composition full-rate diagnosed: 2nd-instance belt/sensor-gating (clean-Kit)
+Diligence: earlier compose probes ran on ONE un-restarted Kit -> leftover pp-subs confounded. Clean-Kit re-measure
+(restart-fresh, single run): SAME result -> inst0 delivers 4/4 (progressive 1->2->3->4), inst1 STUCK at 1.
+Controller state: inst0 phase=retreating (cycling), inst1 phase='wait_sensor' (CP-01 is sensor-gated: PickSensor +
+conveyor feed picks). inst1 picked cube 1 then waits for its sensor to re-trigger -> the belt isn't feeding cube 2
+into inst1's sensor zone. inst0's does. => 2nd-instance BELT/SENSOR-GATING bug in concurrent composition (likely the
+shared belt-pause logic [CP-52/65 — load-bearing, cron-flagged] not instance-scoped, or belt surface-velocity/sensor
+state shared). NOT phase_id (added distinct phase_id per instance, no change), NOT steps (inst0 completes), NOT
+confound (clean Kit reproduces). composer phase_id kept (audit-prescribed correctness). 
+MILESTONE HONEST: composition WORKS for the primary cell (inst0 4/4); full concurrent multi-cell rate needs the
+belt/sensor-concurrency fix (careful — touches shared belt-pause; multi-template no-regression required). NEXT:
+isolate by composing a NON-belt pick-place 2x (expect 4/4+4/4 -> confirms bug is belt-specific), then fix the belt/
+sensor instance-scoping. Memory: project_isaac_assist_composition_direction.
