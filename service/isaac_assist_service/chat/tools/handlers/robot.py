@@ -1632,7 +1632,10 @@ def _gen_navigate_to(args: Dict) -> str:
     wheel_radius = args.get("wheel_radius", 0.14)
     wheel_base = args.get("wheel_base", 0.413)
 
-    if planner == "astar":
+    if False:  # astar drive was a no-op stub AND its occupancy grid is hardcoded-empty (real grids
+        # were never wired from generate_occupancy_map -> A* path == straight == direct). Route "astar"
+        # through the REAL direct closed-loop drive below; A* code kept here for re-enabling
+        # waypoint-following once a real occupancy grid feeds navigate_to.
         return f"""\
 import numpy as np
 import heapq
