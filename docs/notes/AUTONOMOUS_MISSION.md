@@ -2650,3 +2650,8 @@ END-TO-END; world.reset/stop+reset were red herrings (reverted). MOBILE KEYSTONE
 LESSON: floating-base articulation motion is on the ROOT LINK, not the parent Xform — resolve ArticulationRootAPI
 (nav_gate._artroot). scene_eyes already does this (line 59). EXTEND: occupancy-map-nav has a separate build issue
 (Carter not at /World/Carter); multi-amr needs simulate_args + fleet handling — deferred. CP-64 = clean keystone win.
+
+## 2026-06-15 (cont.19) — navigate_to astar completed + COMPOSER FOUNDATION shipped
+- navigate_to "astar" branch routed through the real direct drive (was a stub; empty-grid A*==straight). VERIFIED CP-64-astar drives to goal (commit f3f8dd39). navigate_to now functional for BOTH planners on clear paths.
+- COMPOSER FOUNDATION (strategy focus #1 — chain robust templates): service/isaac_assist_service/chat/composer.py — pure namespace_and_offset_calls(captured, instance_root, origin_offset): re-roots every /World/ prim path under a per-instance subtree (the /World/ prefix auto-excludes filesystem paths — output_path/file_path/hdri_path) + offsets POSITION_KWARGS. Kwarg surface derived from tool_schemas. OFFLINE SELFTEST PASSES (paths/lists/dicts/ee_link re-rooted, file paths untouched, idempotent). This is the namespacing+offset piece the single-template path lacks (audit PART A).
+- NEXT (composer, fresh context): wire compose_canonicals() = for each tpl: capture calls -> namespace_and_offset_calls -> merge -> execute with unique phase_id -> defer one world.reset; then Kit-leakage probe (does phase_id isolation hold across 2 templates in one stage). First target: pick->inspect->sort (CP-01 + CP-18 + CP-03, all role-based tier-0).
