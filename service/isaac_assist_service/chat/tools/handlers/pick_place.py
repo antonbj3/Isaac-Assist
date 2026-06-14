@@ -5700,6 +5700,38 @@ def _pause_belt():
 def _resume_belt():
     if _belt_sv: _belt_sv.Set(_nominal_belt)
     _belt_pause_request_curobo[0] = False
+    # WAKE settled items (2026-06-14): items resting on the belt SLEEP during a pause
+    # (confirmed via physx is_sleeping; sleepThreshold=0 does NOT prevent it — the
+    # "0 = engine default" gotcha). A resumed belt does NOT re-drive a SLEEPING body,
+    # so items that sat through a pick-pause are stranded (nir 3/6, CP-44 residual,
+    # sorter 8/9 — a general multi-item belt-pick bug). Wake the on-belt source items
+    # via the physx simulation interface so the surface velocity carries them again.
+    # Verified in isolation: wake_up -> item rides (+0.71) vs 0.0 without. Only items
+    # still resting ON the belt (z within ~6cm of belt top), not delivered, are woken;
+    # the lifted/grasped cube and delivered cubes are skipped -> picks/deliveries
+    # undisturbed. ADDITIVE (waking a moving body is a no-op).
+    try:
+        from omni.physx import get_physx_simulation_interface as _gsiw
+        from pxr import PhysicsSchemaTools as _pstw
+        _bpw = _belt_sv.GetPrim() if _belt_sv else None
+        if _bpw and _bpw.IsValid():
+            _siw = _gsiw(); _sidw = omni.usd.get_context().get_stage_id()
+            _btopw = float(UsdGeom.Xformable(_bpw).ComputeLocalToWorldTransform(0).ExtractTranslation()[2]) + 0.05
+            for _spw in SOURCE_PATHS:
+                if _spw in S.get('delivered', set()):
+                    continue
+                _ipw = stage.GetPrimAtPath(_spw)
+                if not _ipw or not _ipw.IsValid():
+                    continue
+                _izw = float(UsdGeom.Xformable(_ipw).ComputeLocalToWorldTransform(0).ExtractTranslation()[2])
+                if abs(_izw - _btopw) > 0.06:
+                    continue
+                try:
+                    _siw.wake_up(_sidw, _pstw.sdfPathToInt(Sdf.Path(_spw)))
+                except Exception:
+                    pass
+    except Exception:
+        pass
 try:
     _BELT_PRESTEP_CUROBO_ATTR = "_belt_prestep_curobo_" + _ROBOT_TAG + "_" + _PHASE_ID
     _old_pre_c = getattr(builtins, _BELT_PRESTEP_CUROBO_ATTR, None)
