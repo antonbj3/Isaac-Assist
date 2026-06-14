@@ -106,6 +106,23 @@ for _pr in stage.Traverse():
             _t0 = UsdGeom.Xformable(_pr).ComputeLocalToWorldTransform(0).ExtractTranslation()
             _pre_pos_all[_pr.GetPath().pathString] = [float(_t0[0]), float(_t0[1]), float(_t0[2])]
         except Exception: pass
+# Capture robot top-level SPAWN bboxes BEFORE the settle (for the ROBOT_BURIED spawn-interpenetration check).
+# Post-settle a robot rests on its support but downward VISUAL geometry (Carter's owl sensors hang ~0.17 m below
+# the wheel contact) reads as "buried" -> false positive. The spawn state is the true signal: a robot authored
+# inside an over-tall ground overlaps it at spawn; a correctly-placed one sits above it.
+_robot_spawn_bb = {}
+for _rp in stage.Traverse():
+    if not _rp.HasAPI(UsdPhysics.ArticulationRootAPI): continue
+    _rtop2 = "/".join(_rp.GetPath().pathString.split("/")[:3])
+    if _rtop2 in _robot_spawn_bb: continue
+    try:
+        _rr = UsdGeom.Imageable(stage.GetPrimAtPath(Sdf.Path(_rtop2))).ComputeWorldBound(0, UsdGeom.Tokens.default_).ComputeAlignedRange()
+        if not _rr.IsEmpty():
+            _mn, _mx = _rr.GetMin(), _rr.GetMax()
+            if not any(abs(float(v)) > 1e6 for v in (_mn[0],_mn[1],_mn[2],_mx[0],_mx[1],_mx[2])):
+                _robot_spawn_bb[_rtop2] = ([float(_mn[0]),float(_mn[1]),float(_mn[2])],[float(_mx[0]),float(_mx[1]),float(_mx[2])])
+    except Exception: pass
+
 # Settle PASSIVE dynamics (items fall onto their support + clumps form) with the arm parked. ~2.5 s.
 try:
     omni.timeline.get_timeline_interface().play()
@@ -306,6 +323,39 @@ for _rb in ROBOTS:
         _pen = min(min(_base_bb[1][k], _sbb[1][k]) - max(_base_bb[0][k], _sbb[0][k]) for k in range(3))
         if _pen > _OVL_TOL:
             V.append("GEOMETRIC_OVERLAP: robot base %s footprint intersects static %s (min-axis depth %.3f m) — base spawned inside scenery (CP-67 class)" % (_rb["path"].split("/")[-1], _spp.split("/")[-1], _pen))
+
+# 00c) ROBOT FULL-BODY BURIAL (mobile bases especially) — the base-footprint check above probes only a thin
+# slab just ABOVE the base origin and MISSES a robot whose LOWER body (wheels/chassis) is sunk into a static
+# collider. Classic: a Carter spawned at z=0.30 while the ground Cube's top is at z=0.5 (USD Cube default
+# size=2.0 makes a scale-only ground 2x taller than the authored "top at 0.0") -> Carter buried 0.34 m -> pinned,
+# never drives. nav scenes have no pick objects so the geometry checks were SKIPPED; this one runs regardless.
+# Compares the robot's FULL AABB bottom to each overlapping static collider's top. Wheel-on-ground contact is
+# ~0 penetration; only GROSS burial (>5 cm) flags, so a robot correctly resting on a table/ground is clean.
+for _rb in ROBOTS:
+    if not _rb["path"]: continue
+    # use the TOP-LEVEL robot prim (/World/Carter), NOT the ArticulationRoot
+    # (/World/Carter/chassis_link) — the root's own bbox excludes the wheel links
+    # (separate children) so its bottom sits at the chassis, missing wheel burial.
+    _rparts = _rb["path"].split("/")
+    _rtop = "/".join(_rparts[:3]) if len(_rparts) > 2 else _rb["path"]
+    _rbb = _robot_spawn_bb.get(_rtop)  # SPAWN bbox (pre-settle) — post-settle sensor-overhang false-reads as buried
+    if not _rbb: continue
+    _rbot = _rbb[0][2]
+    _rcx = (_rbb[0][0]+_rbb[1][0])/2.0; _rcy = (_rbb[0][1]+_rbb[1][1])/2.0
+    for _sp in stage.Traverse():
+        if not _sp.HasAPI(UsdPhysics.CollisionAPI): continue
+        _spp = _sp.GetPath().pathString
+        if _spp == _rtop or _spp.startswith(_rtop.rstrip("/") + "/"): continue
+        if _sp.HasAPI(UsdPhysics.RigidBodyAPI):
+            _k = _sp.GetAttribute("physics:kinematicEnabled")
+            if not (_k and _k.Get()): continue  # dynamic bodies are not scenery
+        _sbb = aabb(_spp)
+        if not _sbb: continue
+        if _sbb[0][0]-0.1 <= _rcx <= _sbb[1][0]+0.1 and _sbb[0][1]-0.1 <= _rcy <= _sbb[1][1]+0.1:
+            _bury = _sbb[1][2] - _rbot  # collider top above the robot's lowest point = sunk depth
+            if _bury > 0.05:
+                V.append("ROBOT_BURIED: %s bbox bottom z=%.2f is %.2fm BELOW static %s top z=%.2f — robot spawned sunk into scenery (pins a mobile base; Cube-default-size=2 ground class)" % (_rtop.split("/")[-1], _rbot, _bury, _spp.split("/")[-1], _sbb[1][2]))
+                break
 
 # 0) PHYSICS INSTABILITY — a pick that travelled >1 m during the passive settle was EJECTED (spawn-overlap
 # explosion). Its post-settle pos is garbage, so flag the instability (the true root) and SKIP its reach/support.
