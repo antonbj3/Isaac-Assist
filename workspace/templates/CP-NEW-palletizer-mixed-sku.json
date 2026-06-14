@@ -300,8 +300,8 @@
           0.845
         ],
         "drop_target": [
-          -0.3,
-          -0.47,
+          -0.25,
+          -0.4,
           0.84
         ]
       },
@@ -314,8 +314,8 @@
           0.865
         ],
         "drop_target": [
-          0.2,
-          -0.47,
+          0.25,
+          -0.4,
           0.86
         ]
       },
@@ -328,8 +328,8 @@
           0.845
         ],
         "drop_target": [
-          -0.2,
-          -0.47,
+          -0.25,
+          -0.55,
           0.84
         ]
       },
@@ -342,8 +342,8 @@
           0.865
         ],
         "drop_target": [
-          0.3,
-          -0.47,
+          0.25,
+          -0.55,
           0.86
         ]
       },
@@ -356,8 +356,8 @@
           0.845
         ],
         "drop_target": [
-          -0.3,
-          -0.55,
+          -0.25,
+          -0.7,
           0.84
         ]
       },
@@ -370,8 +370,8 @@
           0.865
         ],
         "drop_target": [
-          0.2,
-          -0.55,
+          0.25,
+          -0.7,
           0.86
         ]
       }
@@ -385,7 +385,7 @@
     ],
     "failed": {}
   },
-  "verified_status": "drafted-2026-05-16; form-gate-schema \u2713 (R-A30-fix); GATE-HARDENED 2026-06-14 (was a FALSE-PASS: union gate target=/World/Pallet reported 4/6 stable_ok, but scene_eyes showed only 1/6 correctly SORTED \u2014 SKU-A->wrong zone, SKU-B flung). Added per-SKU targets{Box->correct zone} + completeness=all + zone bboxes (Cube scale, no collision). Now honestly 1/6 stable_fail. Controller color-routing is broken in execution (drop_targets correct but ignored) = separate deeper fix.",
+  "verified_status": "drafted-2026-05-16; form-gate-schema OK; GATE-HARDENED 2026-06-14 (was union FALSE-PASS 4/6 stable_ok; now per-SKU targets+completeness=all+zone-bboxes -> honest fail). ROUTING IS CORRECT (plan-goals aim SKU-A left/SKU-B right; controller routes by authored semantic label + cube-path drop_targets; NO vision-classifier linkage -> the classifier-VLM-fallback is a red herring). Two execution roots: (1) COLLISION FIXED via drop-spread (overlapping 0.12m SKU-B boxes at 0.10 spacing knocked neighbours off the open pallet -> Box_5 to Ground; now single-column-per-zone y-spacing 0.15). (2) BELT-PAUSE-STALL = BINDING root (belt pauses during pick phases -> boxes barely advance -> only nearest picked; stochastic 1/6..5/6 local-GPU; gate=None on cloud-CPU). Belt-pause is shared/load-bearing for multi-robot CP-52/65 -> deep multi-template-safe fix, NOT a reckless edit. So gate still honestly FAILS until the belt-pause-stall is addressed.",
   "_patch_history": [
     {
       "date": "2026-05-28",
