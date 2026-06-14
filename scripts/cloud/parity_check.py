@@ -76,16 +76,26 @@ def main():
         "template", "cloud", "deliv", "boot_s", "expect", "PARITY")
     print(hdr); print("-" * len(hdr))
     n_div = 0
+    n_warm = 0
     for r in sorted(rows, key=lambda x: x.get("template", "")):
         t = r.get("template", "?")
         st, dc, tot, boot, err = verdict(r)
         exp = EXPECT.get(t)
         deliv = ("%s/%s" % (dc, tot)) if dc is not None else "-"
         cloud_pass = is_pass(st)
+        # WARM-CONTAINER-REUSE guard (2026-06-14, #11): a fresh cold Kit boots in
+        # ~180-210s; a REUSED Modal container re-boots a DEGRADED Kit in <~60s that
+        # fails picks spuriously REGARDLESS of template. A FAIL on a warm-reuse boot
+        # is unreliable -> never call it a divergence; flag for re-run on a fresh
+        # container (pool max_inputs=1). A warm-reuse PASS is still trustworthy
+        # (degradation causes false-NEG, not false-POS).
+        warm = isinstance(boot, (int, float)) and boot < 60
         if exp is None:
             par = "(no baseline)"
         elif (exp == "ok") == cloud_pass:
             par = "OK"
+        elif not cloud_pass and warm:
+            par = "WARM-REUSE? (boot<60s — degraded, re-run fresh)"; n_warm += 1
         else:
             par = "*** DIVERGENCE ***"; n_div += 1
         bs = ("%.0f" % boot) if isinstance(boot, (int, float)) else "-"
@@ -94,10 +104,13 @@ def main():
         if err:
             line += "  ERR=" + str(err)[:50]
         print(line)
-    print("\n%d template(s), %d DIVERGENCE(s)." % (len(rows), n_div))
+    print("\n%d template(s), %d DIVERGENCE(s), %d warm-reuse (unreliable)." % (len(rows), n_div, n_warm))
+    if n_warm:
+        print("=> %d FAIL(s) ran on a degraded warm-reused Kit (boot<60s) — RE-RUN on fresh "
+              "containers (pool max_inputs=1) before trusting; do NOT treat as divergence." % n_warm)
     if n_div:
         print("=> RCA each divergence (hardcoded path? asset-resolve? CPU-physics determinism?).")
-    else:
+    elif not n_warm:
         print("=> full parity — cloud verdicts trustworthy for this wave.")
 
 
