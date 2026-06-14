@@ -2626,3 +2626,11 @@ scene_eyes triage of the 9 non-passes -> 3 FAILURE CLASSES:
 - B (planning fails wholesale, RuntimeError planning-failed + FROZEN): packer-box-seal 0/4, quality-tech-gauge 0/3 (reach_validate: Part_1 top@0.905 0/3 + GoodBin xy[-0.35,-0.45] BEHIND robot = UNREACHABLE picks AND places), isaaclab-arena-lego 2/4, planning-10step-retry.
 - C (grip never latches + ARM_COLL): label-applicator 0/1 (pick-target vs item mismatch), vacuum-gripper-sheet-pick.
 CONCLUSION: tier-1 clean-wins harvested (3 verified). Remaining = scene/grip-broken NICHE yrkesroll/inspection DRAFTS, each a real per-template authoring fix, LOW composition-ROI. Lesson: my static hypotheses (vision-endpoint, beyond-reach) were WRONG twice -> live reach_validate/scene_eyes is the truth. STRATEGIC PIVOT consideration: nav drive-stub fix (#25) = ONE-FIX-MANY (unblocks 37-template mobile family) = far higher composition leverage than grinding niche drafts. Tooling: /tmp/grind_eyes.sh.
+
+## 2026-06-14 (cont.16) — NAV keystone DEEP-DIAGNOSED (Anton steering Carter architecture)
+Pivoted to nav (#25). Live-diagnosed CP-64 (Carter) via /tmp/nav_probe{1..7}.py. ANTON Qs answered:
+- CONTROLLER: Carter does NOT use cuRobo. cuRobo=arm-only. Carter = isaacsim.robot.wheeled_robots DifferentialController + WheelBasePoseController (diff-drive joint_wheel_left/right). Path=internal A*/direct or external Nav2(incomplete). Separate stack.
+- "Carter needs own handlers like UR10/Franka?" -> YES, confirmed. It's a MULTI-LAYER build-time problem (NOT one-fix-many as I'd hoped):
+  L1 navigate_to=stub (no apply_action; dxy=0). L2 wheels spawn in POSITION drive (stiffness=500)=locked. L3 PhysicsScene gravMag=-inf (CP-64 skips create_scene_baseline) -> no traction (probe4: wheels spin 11.96 rad/s but chassis dxy=0).
+CAVEAT: runtime probes can't verify the fix (ad-hoc app.update() driving outside the physx-callback path is unreliable in Kit-RPC exec; gravity edit doesn't take even before play). Fix MUST be in the handler + real nav-gate. STOPPED probing (diminishing returns vs infra wall).
+BUILD (#25, coupled, fresh context): robot_wizard velocity-drive wheels + scene-baseline; setup_wheeled_drive handler (=mobile's setup_pick_place_controller); nav-gate (base-goal detector). Memory project_isaac_assist_nav_stub updated w/ full recipe. SESSION very long -> recommend build with fresh context.
