@@ -40,7 +40,7 @@
     "No occupancy map specified — runtime nav would need actual map data.",
     "Verify_args is loose (mobile robots aren't pick-place); form-gate skip."
   ],
-  "verified_status": "build-spec-2026-04-XX; form-gate ✓; function-gate diagnostic — Carter + nav config setup verified via prim_exists + attr inspection. Runtime nav execution (Nav2 + ROS2 bridge) is downstream of this canonical. Wave-2 self-ref redesign 2026-05-18.",
+  "verified_status": "build-spec-2026-04-XX; form-gate ✓; function-gate diagnostic — Carter + nav config setup verified via prim_exists + attr inspection. Runtime nav execution (Nav2 + ROS2 bridge) is downstream of this canonical. Wave-2 self-ref redesign 2026-05-18. - 2026-06-14 NAV function-gate VERIFIED: Carter drove to goal [3.0,0.0], disp=2.85m, min_dist=0.149 (nav_gate.py, fresh Kit)",
   "intent": {
     "pattern_hint": "navigate",
     "structural_features": {

@@ -43,15 +43,27 @@ async def nav_gate(tpl_name):
 
     code = f'''
 import omni.usd, omni.timeline, omni.kit.app
-from pxr import UsdGeom
+from pxr import UsdGeom, UsdPhysics, Usd
 stage = omni.usd.get_context().get_stage()
 ROBOT = {robot!r}; GX, GY = {float(goal[0])}, {float(goal[1])}; TOL = {tol}; N = {nsteps}
+# CRITICAL: physics moves the articulation ROOT LINK (e.g. /World/Carter/chassis_link), NOT the parent Xform
+# container (/World/Carter) — reading the container reports a false disp=0 even while the robot drives metres.
+# Resolve the ArticulationRoot prim under ROBOT and measure THAT.
+def _artroot(rp):
+    pr = stage.GetPrimAtPath(rp)
+    if pr and pr.IsValid():
+        if pr.HasAPI(UsdPhysics.ArticulationRootAPI): return rp
+        for c in Usd.PrimRange(pr):
+            if c.HasAPI(UsdPhysics.ArticulationRootAPI): return c.GetPath().pathString
+    return rp
+BODY = _artroot(ROBOT)
 def bpos():
-    pr = stage.GetPrimAtPath(ROBOT)
+    pr = stage.GetPrimAtPath(BODY)
     if not pr or not pr.IsValid(): return None
     t = UsdGeom.Xformable(pr).ComputeLocalToWorldTransform(0).ExtractTranslation()
     return [float(t[0]), float(t[1]), float(t[2])]
 valid = bool(stage.GetPrimAtPath(ROBOT) and stage.GetPrimAtPath(ROBOT).IsValid())
+print("NAV_BODY", BODY)
 tl = omni.timeline.get_timeline_interface(); tl.play()
 app = omni.kit.app.get_app()
 p0 = bpos(); samples = []; reached = None; mind = 1e9
