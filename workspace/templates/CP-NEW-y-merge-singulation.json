@@ -221,7 +221,7 @@
     "target_path": "{{primary_destination.path}}",
     "duration_s": 180
   },
-  "verified_status": "build-spec-2026-05-10; smoke-test \u2713 1/1 (53s); 6 cubes via Y-merge",
+  "verified_status": "build-spec-2026-05-10; smoke-test \u2713 1/1 (53s); 6 cubes via Y-merge. function-gate VERIFIED 6/6 DELIVERED 2026-06-14 (local fresh Kit, CP-36 control healthy). Was re-gate genuine-fail with 72/72 plan-FAIL \u2014 RE-DIAGNOSED: NOT moving-pick coordination (earlier wrong read); the cubes SLEEP-STRANDED far upstream (unreachable -> cuRobo plan-failed on every attempt). belt-sleep wake fix (ae895650) rides them into reach -> plan_calls=48/0 fails -> all 6 picked + merged/delivered.",
   "motion_controllers": {
     "verified": [],
     "untested": [
