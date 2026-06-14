@@ -71,6 +71,18 @@ for _gpr in stage.Traverse():
     _gp = str(_gpr.GetPath())
     if _gp.endswith("_ShortGripper/suction_cup"): CUP = _gp; break
 TOOL = CONE or FOLL or CUP or EE   # tool proxy: cone/cup is USD-live (tracks the suction tip)
+# 2026-06-14: belt surface-velocity per tick -> pins the belt-PAUSE/RESUME timeline (the conveyor-stall
+# class: belt pauses during pick phases / while a cube is "imminent"; if it never resumes the boxes stall).
+BELT = None
+for _bpr in stage.Traverse():
+    _bnm = _bpr.GetName()
+    if ("Conveyor" in _bnm) or _bnm.endswith("Belt"):
+        BELT = str(_bpr.GetPath()); break
+_belt_sv_attr = None
+if BELT:
+    _bp = stage.GetPrimAtPath(Sdf.Path(BELT))
+    if _bp and _bp.IsValid():
+        _belt_sv_attr = _bp.GetAttribute("physxSurfaceVelocity:surfaceVelocity")
 
 def xform(p):
     pr = stage.GetPrimAtPath(Sdf.Path(p)) if p else None
@@ -254,7 +266,9 @@ for i in range(N):
             cubes[_cn] = (cx[0] if cx else None); cubes_q[_cn] = (cx[1] if cx else None)
         cupx = xform(CUP) if CUP else None
         _w3 = xform("/World/UR10/wrist_3_link")
-        rows.append({"t": round(i / 60.0, 2),
+        _bsv = (_belt_sv_attr.Get() if _belt_sv_attr else None)
+        _bsv0 = (round(float(_bsv[0]), 3) if _bsv is not None else None)
+        rows.append({"t": round(i / 60.0, 2), "bsv": _bsv0,
                      "tool_p": (tool[0] if tool else None), "tool_q": (tool[1] if tool else None),
                      "w3_p": (_w3[0] if _w3 else None), "w3_q": (_w3[1] if _w3 else None),
                      "cup_p": (cupx[0] if cupx else None), "cup_q": (cupx[1] if cupx else None),
@@ -651,6 +665,22 @@ def _analyse(js):
     _oo = sorted({k for k in _cf if "|" in k and all(p.strip() in _ej_objs for p in k.split("|"))})
     if _oo:
         out.append("OBJECT-OBJECT CONTACTS (place-time collisions — can knock neighbours off a surface): " + ", ".join(_oo[:12]))
+
+    # BELT TIMELINE (2026-06-14): belt surface-velocity over the run — pins the PAUSE/RESUME behaviour
+    # behind the conveyor-stall class. A belt that stays at 0 most of the run = boxes never advance to the
+    # pick zone (the controller pauses the belt during pick phases / while a cube is "imminent"; if it
+    # never resumes the boxes stall at spawn). Shows moving-fraction + the first 0<->nominal transitions.
+    _bvals = [(_r["t"], _r.get("bsv")) for _r in rows if _r.get("bsv") is not None]
+    if _bvals:
+        _movf = sum(1 for _, _v in _bvals if abs(_v) > 0.001) / len(_bvals)
+        _trans = []; _prev = None
+        for _t, _v in _bvals:
+            _st = "MOVING" if abs(_v) > 0.001 else "PAUSED"
+            if _st != _prev: _trans.append((_t, _st, _v)); _prev = _st
+        out.append("BELT TIMELINE (surface-velocity vx; MOVING %.0f%% of run):" % (_movf * 100))
+        out.append("    " + "  ".join("%.0fs:%s(%.2f)" % (_t, _s, _v) for _t, _s, _v in _trans[:14]))
+        if _movf < 0.25:
+            out.append("    *** BELT MOSTLY PAUSED -> conveyor-stall: boxes don't advance to the pick zone ***")
 
     # GRIP TIMELINE — THE grip-release signal: SurfaceGripper status (0=Open 1=Closing 2=Closed) + gripped set
     # + cup<->gripped-cube distance + max joint velocity, logged at every transition. If status falls to 0 (or the
