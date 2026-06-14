@@ -1626,6 +1626,11 @@ def _gen_navigate_to(args: Dict) -> str:
     robot_path = args["robot_path"]
     target = args["target_position"]
     planner = args.get("planner", "direct")
+    # Wheel geometry for the differential controller. Defaults are Nova Carter's
+    # (measured: radius ~0.14 m, track width ~0.413 m). Other wheeled robots
+    # (JetBot etc.) should pass their own via wheel_radius / wheel_base.
+    wheel_radius = args.get("wheel_radius", 0.14)
+    wheel_base = args.get("wheel_base", 0.413)
 
     if planner == "astar":
         return f"""\
@@ -1708,36 +1713,90 @@ def _nav_step(dt):
 sub = omni.physx.get_physx_interface().subscribe_physics_step_events(_nav_step)
 print(f"A* navigation started: {{len(waypoints)}} waypoints to {{target}}")
 """
-    else:  # direct
+    else:  # direct — REAL closed-loop differential drive (2026-06-14 fix)
+        # Prior impl was a no-op stub: it computed pose_ctrl.forward() with a
+        # hardcoded start_position=[0,0,0] and NEVER applied the action to the
+        # articulation, so the wheels were never commanded. Three live-diagnosed
+        # layers are fixed here: (a) physics-scene gravity (CP-64 spawns it as
+        # gravMag=-inf -> no wheel traction), (b) wheel joints spawn in POSITION
+        # drive (stiffness>0) which locks them -> force VELOCITY drive, (c) read
+        # the LIVE base pose each step and apply_wheel_actions toward the goal.
         return f"""\
 import numpy as np
-import omni.physx
-from isaacsim.robot.wheeled_robots.controllers import WheelBasePoseController
-from isaacsim.robot.wheeled_robots.controllers import DifferentialController
+import omni.physx, omni.usd
+from pxr import UsdPhysics, Gf
+from isaacsim.robot.wheeled_robots.robots import WheeledRobot
+from isaacsim.robot.wheeled_robots.controllers.differential_controller import DifferentialController
+from isaacsim.robot.wheeled_robots.controllers.wheel_base_pose_controller import WheelBasePoseController
+from isaacsim.core.utils.types import ArticulationAction
+from isaacsim.core.prims import SingleArticulation
 
 robot_path = '{robot_path}'
 target = np.array([{target[0]}, {target[1]}, 0.0])
+WHEEL_RADIUS = {wheel_radius}
+WHEEL_BASE = {wheel_base}
+_stage = omni.usd.get_context().get_stage()
 
-pose_ctrl = WheelBasePoseController(
-    name="pose_ctrl",
-    open_loop_wheel_controller=DifferentialController(name="nav_diff", wheel_radius=0.05, wheel_base=0.3),
+# (a) ensure physics-scene gravity is valid (no wheel traction without it)
+for _p in _stage.Traverse():
+    if _p.IsA(UsdPhysics.Scene):
+        _sc = UsdPhysics.Scene(_p)
+        _ga = _sc.GetGravityMagnitudeAttr()
+        _gm = _ga.Get() if _ga else None
+        if (_gm is None) or (_gm != _gm) or (_gm <= 0.0) or (_gm == float('inf')):
+            _sc.CreateGravityDirectionAttr().Set(Gf.Vec3f(0.0, 0.0, -1.0))
+            _sc.CreateGravityMagnitudeAttr().Set(9.81)
+
+# (b) detect drive wheels + force VELOCITY drive (position drive locks them)
+_wheels = []
+try:
+    _atmp = SingleArticulation(robot_path); _atmp.initialize()
+    _wheels = [n for n in list(_atmp.dof_names) if ('wheel' in n.lower() and 'caster' not in n.lower())]
+except Exception:
+    _wheels = []
+if not _wheels:
+    _wheels = ['joint_wheel_left', 'joint_wheel_right']
+for _pr in _stage.Traverse():
+    if _pr.GetPath().name in _wheels:
+        _drv = UsdPhysics.DriveAPI.Get(_pr, "angular")
+        if _drv and _drv.GetStiffnessAttr():
+            _drv.GetStiffnessAttr().Set(0.0)
+            if _drv.GetDampingAttr():
+                _drv.GetDampingAttr().Set(1.0e4)
+
+# (c) closed-loop diff-drive toward the goal (LIVE pose -> apply_wheel_actions)
+_robot = WheeledRobot(prim_path=robot_path, name="nav_wheeled",
+                      wheel_dof_names=list(_wheels), create_robot=False)
+_pose_ctrl = WheelBasePoseController(
+    name="nav_pose",
+    open_loop_wheel_controller=DifferentialController(name="nav_diff", wheel_radius=WHEEL_RADIUS, wheel_base=WHEEL_BASE),
     is_holonomic=False,
 )
+_nav_state = {{"init": False}}
 
 def _nav_step(dt):
-    \"\"\"Physics callback: drive toward target each step.\"\"\"
-    # In production, read actual robot pose from ArticulationView
-    action = pose_ctrl.forward(
-        start_position=np.array([0, 0, 0]),
-        start_orientation=np.array([1, 0, 0, 0]),
+    if not _nav_state["init"]:
+        try:
+            _robot.initialize(); _nav_state["init"] = True
+        except Exception:
+            return
+    pos, orient = _robot.get_world_pose()
+    dist = float(((pos[0]-target[0])**2 + (pos[1]-target[1])**2) ** 0.5)
+    if dist < 0.15:
+        try: _robot.apply_wheel_actions(ArticulationAction(joint_velocities=np.zeros(len(_wheels))))
+        except Exception: pass
+        print("navigate_to: reached target")
+        _nav_sub.unsubscribe(); return
+    action = _pose_ctrl.forward(
+        start_position=np.array(pos, dtype=float),
+        start_orientation=np.array(orient, dtype=float),
         goal_position=target,
     )
-    if action is None:
-        print(f"Direct navigation complete: reached {{target[:2]}}")
-        sub.unsubscribe()
+    try: _robot.apply_wheel_actions(action)
+    except Exception: pass
 
-sub = omni.physx.get_physx_interface().subscribe_physics_step_events(_nav_step)
-print(f"Direct navigation started: target=[{target[0]}, {target[1]}]")
+_nav_sub = omni.physx.get_physx_interface().subscribe_physics_step_events(_nav_step)
+print("navigate_to (closed-loop diff-drive) -> [{target[0]}, {target[1]}], wheels=" + str(_wheels))
 """
 
 
