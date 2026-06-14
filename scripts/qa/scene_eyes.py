@@ -84,7 +84,13 @@ CUBES = [str(pr.GetPath()) for pr in stage.Traverse() if pr.GetName().startswith
 # 2026-06-13: also track non-cube MANIPULABLE objects (broom handle, faucet handle, drawer knob, blanks) so
 # GRIP-SLIP can measure them. Additive (cubes already matched above) -> cube cases unaffected. A rigid-body
 # prim whose name carries a graspable token; exclude the robot subtree and obvious scene-floor.
-_GRASP_TOK = ("handle", "broom", "blank", "knob", "lever", "valve", "cap", "bottle", "brush", "peg", "gear", "bolt", "nut", "workpiece", "part", "tool")
+_GRASP_TOK = ("handle", "broom", "blank", "knob", "lever", "valve", "cap", "bottle", "brush", "peg", "gear", "bolt", "nut", "workpiece", "part", "tool",
+              # 2026-06-14: geometric-primitive workpieces (CP-43/44 spheres). Without these, round
+              # objects were tracked in CONTACTS but NOT positionally -> invisible to per-object
+              # trajectory AND to the EJECTION detector (the exact sphere-blowup case it targets).
+              # Safe: the branch below requires RigidBody/Collision API + excludes the robot subtree,
+              # so render-only suction proxies (no rigid body) and scenery are not matched.
+              "sphere", "ball")
 try:
     for _pr in stage.Traverse():
         _pth = str(_pr.GetPath()); _lo = _pr.GetName().lower()
