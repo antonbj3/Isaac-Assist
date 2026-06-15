@@ -51,9 +51,12 @@ def _io_kinds(name, t, h):
     return src, sink
 
 
-def build_catalog(limit=40):
+def build_catalog(limit=None):
     """Compact catalog of VERIFIED_CORE delivery blocks the LLM chooses from: id + one-line goal
-    + EXPLICIT IO (consumes-from / delivers-to kind) so chain handoffs can be matched."""
+    + EXPLICIT IO (consumes-from / delivers-to kind) so chain handoffs can be matched. CATALOG_LIMIT
+    env caps it; default = ALL verified-core (realistic block-selection / discrimination difficulty)."""
+    if limit is None:
+        limit = int(os.environ.get("CATALOG_LIMIT", "999"))
     hints_path = os.path.join(REPO, "workspace", "composition_hints.json")
     hints = json.load(open(hints_path))["hints"] if os.path.exists(hints_path) else {}
     cat = []
@@ -118,6 +121,44 @@ TASKS = [
      "expect_kind": "chain whose FIRST cell delivers onto a FLAT pickable surface (NOT a deep bin) so stage 2 can pick"},
 ]
 
+# ── ADVERSARIAL set: designed to FIND the reasoning error boundary (the base set passes 10/10, so
+# it does NOT box the error rate — Anton's 'ruta in felprocenten'). These probe block DISCRIMINATION
+# (pick the right KIND per cell, not identical copies), under-/over-composition traps with misleading
+# phrasing, ambiguous counts, and heterogeneous parallel. expect_goal_keywords = set-cover of block
+# KINDS each plan must include (graded against the chosen blocks' goals). Run: EVAL_SET=adv.
+ADV_TASKS = [
+    {"id": "A1-hetero-sort+stack",
+     "prompt": "I need two stations running side by side: one station sorts incoming cubes by color into colored bins, and the OTHER station stacks cubes into a tower. Two different jobs, at the same time.",
+     "expect_layout": "parallel", "expect_n_cells": 2, "expect_kind": "HETEROGENEOUS parallel: one SORT cell + one STACK cell (must pick two DIFFERENT block kinds)",
+     "expect_goal_keywords": [["sort", "color"], ["stack", "tower"]]},
+    {"id": "A2-under-compose-line",
+     "prompt": "Build a full processing line: cubes come in on a conveyor, get picked, and end up neatly placed in a bin. Just the one standard pick-and-place operation.",
+     "expect_layout": "single", "expect_n_cells": 1, "expect_kind": "ONE pick-place block — 'full line' is rhetorical, do NOT over-compose"},
+    {"id": "A3-three-different",
+     "prompt": "Stand up three cells at once: the first sorts cubes by color, the second stacks cubes into a tower, the third palletizes cubes onto a pallet. All three run in parallel, each doing its own thing.",
+     "expect_layout": "parallel", "expect_n_cells": 3, "expect_kind": "THREE heterogeneous parallel cells: sort + stack + palletize (three different kinds)",
+     "expect_goal_keywords": [["sort", "color"], ["stack", "tower"], ["pallet", "palletiz"]]},
+    {"id": "A4-ambiguous-count-parallel",
+     "prompt": "Set up a couple of identical pick-and-place cells running together, each Franka feeding its own bin off its own conveyor.",
+     "expect_layout": "parallel", "expect_n_cells": 2, "expect_kind": "'a couple' = 2 identical pick-place cells in parallel"},
+    {"id": "A5-chain-sort-then-stack",
+     "prompt": "A two-stage line: stage one picks cubes off a conveyor and lays them out on a flat handoff surface; stage two then picks those same cubes from the surface and stacks them into a tower. Stage two consumes stage one's output.",
+     "expect_layout": "chain", "expect_n_cells": 2, "expect_kind": "chain: upstream delivers to FLAT surface, downstream STACKS from it",
+     "expect_goal_keywords": [["stack", "tower", "pick", "place"]]},
+    {"id": "A6-single-palletize-disguised",
+     "prompt": "I want cubes arranged into a tidy 3x3 grid layer on a pallet by a single robot arm. Standard palletizing.",
+     "expect_layout": "single", "expect_n_cells": 1, "expect_kind": "ONE palletizing block",
+     "expect_goal_keywords": [["pallet", "palletiz", "grid"]]},
+    {"id": "A7-trap-bin-chain",
+     "prompt": "Two-stage line where the first cell drops cubes into a bin, and a second cell then needs to pick those cubes and stack them. Chain the second after the first.",
+     "expect_layout": "chain", "expect_n_cells": 2, "expect_kind": "TRAP: chaining out of a deep BIN is not physically pickable — a correct planner must avoid bin->pick handoff (io_semantic_check should flag it)"},
+    {"id": "A8-hetero-2-parallel-pickplace+sort",
+     "prompt": "Run two cells together: one plain pick-and-place into a bin, and one color-sorting cell that splits cubes into colored bins. Side by side, same time.",
+     "expect_layout": "parallel", "expect_n_cells": 2, "expect_kind": "heterogeneous parallel: pick-place + color-sort (two different kinds)",
+     "expect_goal_keywords": [["sort", "color"], ["pick", "place", "bin"]]},
+]
+
+
 SYS_PROMPT = """You are the scene-composition planner for a robotics system. You solve a user task by
 COMPOSING verified canonical blocks (each block = a known-good robot work-cell). You do NOT write code
 or coordinates — you choose WHICH blocks and WHAT topology; the system owns all spacing/wiring.
@@ -141,6 +182,11 @@ upstream cell's DELIVERS-to must be a place the downstream cell can physically p
     cleanly pick them back out. BAD chain handoff — avoid chaining out of a terminal container.
   * The object KIND and COUNT the upstream delivers must match what the downstream consumes.
 Pick each block so the chain's output->input is physically realizable, not just topologically a line.
+PHYSICAL REALIZABILITY OVER LITERAL WORDING: if the user's literal phrasing would force an
+unrealizable handoff (e.g. "drop cubes into a bin, then a second cell picks them from the bin"),
+do NOT comply literally — the walled bin makes the pick impossible. Choose an upstream block that
+delivers onto a FLAT pickable surface instead, so the downstream can actually pick. A chain whose
+upstream delivers into a terminal container is never a correct plan.
 
 CATALOG (block: goal || CONSUMES n objects from <source> -> DELIVERS to: <sink kind> | curobo):
 %s
@@ -181,6 +227,44 @@ def io_semantic_check(plan):
     return ok, notes
 
 
+_GOAL_CACHE = {}
+
+
+def _goal(template):
+    """Lower-cased goal text for a chosen block (for block-SELECTION grading: did the LLM pick the
+    right KIND of block per cell, not just the right count?)."""
+    if template not in _GOAL_CACHE:
+        try:
+            t = json.load(open(os.path.join(TPL_DIR, str(template) + ".json")))
+            _GOAL_CACHE[template] = ((t.get("goal") or "") + " " + (t.get("name") or "") + " " + str(template)).lower()
+        except Exception:
+            _GOAL_CACHE[template] = ""
+    return _GOAL_CACHE[template]
+
+
+def _block_selection_ok(cells, keyword_groups):
+    """SET-COVER: each keyword group must be satisfied by a DISTINCT chosen cell (greedy). A group is
+    a list of synonyms; a cell satisfies it if its block goal contains ANY synonym. This grades
+    heterogeneous compositions — e.g. 'one SORT cell + one STACK cell' must pick two different KINDS,
+    not two identical stackers. Returns (ok, unmatched_groups)."""
+    used = set()
+    unmatched = []
+    for grp in keyword_groups:
+        hit = None
+        for idx, c in enumerate(cells):
+            if idx in used:
+                continue
+            g = _goal(c.get("template") if isinstance(c, dict) else None)
+            if any(kw in g for kw in grp):
+                hit = idx
+                break
+        if hit is None:
+            unmatched.append("/".join(grp))
+        else:
+            used.add(hit)
+    return (not unmatched), unmatched
+
+
 def score(task, plan):
     if not isinstance(plan, dict):
         return False, "no JSON plan"
@@ -194,13 +278,20 @@ def score(task, plan):
     if task["expect_layout"] == "chain":
         chain_ok = bool(plan.get("handoffs"))
         sem_ok, sem_notes = io_semantic_check(plan)
+    # BLOCK-SELECTION grading (adversarial set): did the LLM pick the right KIND of block per cell?
+    sel_ok, sel_notes = True, []
+    kw = task.get("expect_goal_keywords")
+    if kw:
+        sel_ok, unmatched = _block_selection_ok(cells, kw)
+        if unmatched:
+            sel_notes.append("block-selection MISS — no cell covers: " + ", ".join(unmatched))
     struct_passed = ok_layout and ok_n and valid and chain_ok
-    # PASS now requires BOTH well-formed STRUCTURE and no gross IO-semantic mismatch (reasoning
-    # sanity). Delivery-correctness still needs compose_and_verify (Kit).
-    passed = struct_passed and sem_ok
-    return passed, "layout=%s(want %s) n_cells=%d(want %d) handoffs=%s struct=%s sem=%s%s" % (
+    # PASS requires well-formed STRUCTURE, no gross IO-semantic mismatch, AND correct block KINDS
+    # (when the task specifies them). Delivery-correctness still needs compose_and_verify (Kit).
+    passed = struct_passed and sem_ok and sel_ok
+    return passed, "layout=%s(want %s) n_cells=%d(want %d) handoffs=%s struct=%s sem=%s sel=%s%s" % (
         layout, task["expect_layout"], len(cells), task["expect_n_cells"], bool(plan.get("handoffs")),
-        struct_passed, sem_ok, (" | " + "; ".join(sem_notes)) if sem_notes else "")
+        struct_passed, sem_ok, sel_ok, (" | " + "; ".join(sem_notes + sel_notes)) if (sem_notes or sel_notes) else "")
 
 
 def _save_record(rec):
@@ -215,20 +306,22 @@ def _save_record(rec):
 
 async def main():
     import time
+    eval_set = os.environ.get("EVAL_SET", "base").lower()
+    pool = {"base": TASKS, "adv": ADV_TASKS, "all": TASKS + ADV_TASKS}.get(eval_set, TASKS)
     start = int(os.environ.get("EVAL_START", "0"))
-    n = int(sys.argv[1]) if len(sys.argv) > 1 else len(TASKS)
-    todo = TASKS[start:start + n]
+    n = int(sys.argv[1]) if len(sys.argv) > 1 else len(pool)
+    todo = pool[start:start + n]
     from google import genai
     client = genai.Client()   # Vertex (env set above)
     catalog = build_catalog()
-    sys.stderr.write("catalog: %d blocks; model=%s (vertex); running %d tasks [%d:%d]\n" % (len(catalog), MODEL, len(todo), start, start + n))
+    sys.stderr.write("set=%s catalog: %d blocks; model=%s (vertex); running %d tasks [%d:%d]\n" % (eval_set, len(catalog), MODEL, len(todo), start, start + n))
     sysmsg = SYS_PROMPT % "\n".join(catalog)
     npass = 0
     for i, task in enumerate(todo):
         if i:
             await asyncio.sleep(SPACING_S)
         user_content = sysmsg + "\n\nUSER TASK: " + task["prompt"] + "\n\nJSON plan:"
-        rec = {"ts": time.time(), "kind": "compose_reasoning",
+        rec = {"ts": time.time(), "kind": "compose_reasoning", "eval_set": eval_set,
                "verification_tier": "candidate_heuristic",  # Gemini PLAN; passed structural+IO-semantic only — NOT Kit-delivery-verified
                "model": MODEL, "task_id": task["id"],
                "task_prompt": task["prompt"], "catalog": catalog, "system_prompt": SYS_PROMPT,

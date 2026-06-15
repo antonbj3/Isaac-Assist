@@ -3684,3 +3684,21 @@ layout) so re-runs RECONFIRM without duplicating gold records. Gold count = 11 r
 '12' in cont.91). Re-running CP-03+{CP-13,CP-28,CP-01} under the hardened measure to (a) reconfirm record 11 genuinely
 per-bin-correct, (b) capture CP-03+CP-28 (was blocked only by the pre-fix measure). Same fix-the-measure discipline,
 now closing the false-POSITIVE direction (Anton's principle: falska positiver = progressgift).
+
+cont.93 (2026-06-15): TWO clean results.
+(A) GOLD: CP-03 batch complete under the hardened per-cube-correct-bin measure — CP-03+CP-13 RECONFIRMED 2/2 (dedup, no
+dup), CP-03+CP-28 (CP-03 2/2 + CP-28 1/1) and CP-03+CP-01 (CP-03 2/2 + CP-01 4/4) appended NEW. Gold now = 13 records.
+Decisive: the strict measure REQUIRES Cube_red in RedBin AND Cube_blue in BlueBin; CP-03 still reads 2/2 -> genuine
+sorting, not a false positive. Sorter blocks (CP-03) are now valid gold cells alongside stackers/pick-place/1-cube.
+(B) REASONING harness — Anton's 'ruta in felprocenten' loop, executed end-to-end: extended compose_reasoning_eval with
+an ADVERSARIAL set (block DISCRIMINATION via set-cover goal-keyword grading: heterogeneous parallel must pick DIFFERENT
+block KINDS; under-/over-compose traps; ambiguous counts; the bin-chain trap) + full 70-block catalog (12 sort/14 stack/
+14 pallet present, so discrimination is real). First run: 7/8. The lone FAIL (A7 bin-chain trap) was a GENUINE, physics-
+grounded reasoning error: model complied with a literal 'chain out of a bin' request; io_semantic_check flagged the
+deep-container handoff (would deliver 0/N in Kit, = the CP-01->CP-01 deep-bin 0/4 we measured). Added a GENERAL
+'physical-realizability over literal wording' rule to SYS_PROMPT (substitute a flat-handoff upstream block when the
+literal request forces an unpickable bin handoff). Re-run: 8/8 — A7 now picks CP-30 (palletizer, output=Pallet=FLAT,
+n_obj 4 matches CP-08's 4) -> CP-08, and the other 7 did NOT regress (general fix, not teaching-to-the-test). VERIFIED
+the fix at block level (CP-30 genuinely flat, not a harness false-negative). This is the weak-model + strong-harness
+loop: box error rate -> improve instructions -> re-measure. Data (gitignored, on-disk, append-only): verified_
+compositions.jsonl (13 gold_kit_delivery_verified) + compose_reasoning.jsonl (candidate_heuristic, now with eval_set tag).
