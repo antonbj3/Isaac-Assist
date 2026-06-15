@@ -101,6 +101,43 @@ CATALOG (block: goal [in/out/curobo]):
 """
 
 
+def _hints():
+    p = os.path.join(REPO, "workspace", "composition_hints.json")
+    return json.load(open(p))["hints"] if os.path.exists(p) else {}
+
+
+def io_semantic_check(plan):
+    """For a CHAIN: does each handoff's FROM-cell output plausibly feed the TO-cell's input?
+    Returns (ok, notes). Heuristic via the hints cache: gross mismatch = from delivers to a
+    PALLET/TOWER (a terminal sink) while to expects a CONVEYOR feed, or object-count mismatch.
+    This is a STRUCTURAL-SEMANTIC check (reasoning sanity), NOT proof — only compose_and_verify
+    (Kit delivery) proves a chain CORRECT. Catches the CP-30(pallet)->CP-09(conveyor) class."""
+    H = _hints()
+    cells = {c.get("id"): c.get("template") for c in (plan.get("cells") or [])}
+    notes = []
+    ok = True
+    for ho in (plan.get("handoffs") or []):
+        ft, tt = cells.get(ho.get("from")), cells.get(ho.get("to"))
+        fh, th = H.get(ft) or {}, H.get(tt) or {}
+        fout = " ".join(p.get("name", "") for p in fh.get("output_ports", [])).lower()
+        tn = (tt or "")
+        # to-cell sources from a conveyor (its goal/inputs imply a belt) but from-cell delivers to a terminal sink
+        terminal = any(w in fout for w in ("pallet", "tower", "bin", "tray"))
+        tcode = ""
+        try:
+            tcode = (json.load(open(os.path.join(REPO, "workspace", "templates", tn + ".json"))).get("code") or "").lower()
+        except Exception:
+            pass
+        to_needs_belt = ("create_conveyor" in tcode)
+        n_from = (fh.get("n_objects") or 0); n_to = (th.get("n_objects") or 0)
+        if terminal and to_needs_belt:
+            ok = False
+            notes.append("%s->%s: from delivers to a terminal sink (%s) but to expects a CONVEYOR feed" % (ft, tt, fout.strip()))
+        if n_from and n_to and n_from != n_to:
+            notes.append("%s->%s: object-count %d->%d mismatch" % (ft, tt, n_from, n_to))
+    return ok, notes
+
+
 def score(task, plan):
     if not isinstance(plan, dict):
         return False, "no JSON plan"
@@ -108,14 +145,19 @@ def score(task, plan):
     cells = plan.get("cells") or []
     ok_layout = (layout == task["expect_layout"])
     ok_n = (len(cells) == task["expect_n_cells"])
-    # all chosen templates must exist in the catalog ids
     valid = all(isinstance(c, dict) and isinstance(c.get("template"), str) for c in cells)
     chain_ok = True
+    sem_ok, sem_notes = True, []
     if task["expect_layout"] == "chain":
         chain_ok = bool(plan.get("handoffs"))
-    passed = ok_layout and ok_n and valid and chain_ok
-    return passed, "layout=%s(want %s) n_cells=%d(want %d) handoffs=%s" % (
-        layout, task["expect_layout"], len(cells), task["expect_n_cells"], bool(plan.get("handoffs")))
+        sem_ok, sem_notes = io_semantic_check(plan)
+    struct_passed = ok_layout and ok_n and valid and chain_ok
+    # PASS now requires BOTH well-formed STRUCTURE and no gross IO-semantic mismatch (reasoning
+    # sanity). Delivery-correctness still needs compose_and_verify (Kit).
+    passed = struct_passed and sem_ok
+    return passed, "layout=%s(want %s) n_cells=%d(want %d) handoffs=%s struct=%s sem=%s%s" % (
+        layout, task["expect_layout"], len(cells), task["expect_n_cells"], bool(plan.get("handoffs")),
+        struct_passed, sem_ok, (" | " + "; ".join(sem_notes)) if sem_notes else "")
 
 
 def _save_record(rec):
