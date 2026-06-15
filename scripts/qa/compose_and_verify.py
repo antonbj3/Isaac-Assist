@@ -87,7 +87,9 @@ for d in INSTS:
             deliv[root] = {"delivered": d, "total": tot}
     all_full = bool(deliv) and all(v["delivered"] == v["total"] and v["total"] > 0 for v in deliv.values())
     rec = {
-        "ts": time.time(), "level": "L2_composition", "task": task,
+        "ts": time.time(), "level": "L2_composition",
+        "verification_tier": "gold_kit_delivery_verified",  # only appended when it DELIVERED full in Kit
+        "task": task,
         "plan": {"cells": cells, "layout": "parallel"},
         "offsets": r.get("offsets"),
         "composed_tool_calls": [{"id": ins.get("template") if isinstance(ins, dict) else None}

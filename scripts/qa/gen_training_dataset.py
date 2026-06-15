@@ -67,6 +67,7 @@ def record(name, t):
     fx = template_footprint(t, "x"); fy = template_footprint(t, "y")
     return {
         "task_id": t.get("task_id") or name,
+        "verification_tier": "gold_verified_core",  # verified-core template (delivers standalone)
         "goal": (t.get("goal") or "").strip(),
         "code": code,
         "tool_calls": parse_tool_calls(code),

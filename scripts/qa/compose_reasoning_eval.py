@@ -228,7 +228,9 @@ async def main():
         if i:
             await asyncio.sleep(SPACING_S)
         user_content = sysmsg + "\n\nUSER TASK: " + task["prompt"] + "\n\nJSON plan:"
-        rec = {"ts": time.time(), "kind": "compose_reasoning", "model": MODEL, "task_id": task["id"],
+        rec = {"ts": time.time(), "kind": "compose_reasoning",
+               "verification_tier": "candidate_heuristic",  # Gemini PLAN; passed structural+IO-semantic only — NOT Kit-delivery-verified
+               "model": MODEL, "task_id": task["id"],
                "task_prompt": task["prompt"], "catalog": catalog, "system_prompt": SYS_PROMPT,
                "expected": {k: task[k] for k in ("expect_layout", "expect_n_cells", "expect_kind")}}
         try:
