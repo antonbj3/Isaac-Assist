@@ -143,6 +143,15 @@ try:
         if any(_t in _lo for _t in _GRASP_TOK) and (_pr.HasAPI(UsdPhysics.RigidBodyAPI) or _pr.HasAPI(UsdPhysics.CollisionAPI)):
             CUBES.append(_pth)
 except Exception: pass
+# 2026-06-15 COMPOSE OBJECT-SCOPING FIX: in a composed multi-instance scene the SAME leaf
+# names exist under every instance (/World/inst0/Cube_3 AND /World/inst1/Cube_3). The row
+# dict keys cubes by leaf name (c.split('/')[-1]) -> same-named cubes across instances
+# COLLIDE (last wins) -> the focused instance's object is silently overwritten by another
+# instance's, producing bogus per-object trajectory + grip-slip (a ~inter-instance-distance
+# phantom). Scope CUBES to the FOCUS instance so leaf names are unique. Empty FOCUS
+# (single-template) -> no-op, byte-identical.
+if FOCUS:
+    CUBES = [c for c in CUBES if c.startswith(FOCUS + "/")]
 
 # cuRobo PLAN EVENTS — the handler writes USD-live ctrl: counters on the ROBOT prim
 # (plan_calls/plan_fails/picked_path/last_error/last_fail_goal). Reading them each sample
