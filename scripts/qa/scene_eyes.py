@@ -729,10 +729,22 @@ def _analyse(js):
         _levels = []
         for _z in sorted(p[2] for p in _finals.values()):
             if not _levels or abs(_z - _levels[-1]) > 0.03: _levels.append(_z)
-        out.append("STACK STRUCTURE (%d tracked objects' final z): %d distinct level(s) %s" % (
-            len(_finals), len(_levels), [round(x, 3) for x in _levels]))
-        if len(_finals) >= 3 and len(_levels) == 1:
-            out.append("    ^ FLAT LAYER, not a column — a STACKER reading 'delivered' here is a SCATTER false-success")
+        _fpl = list(_finals.values())
+        _minpair = min((math.dist((a[0], a[1]), (b[0], b[1])) for i, a in enumerate(_fpl) for b in _fpl[i + 1:]), default=0.0)
+        _xext = max(p[0] for p in _fpl) - min(p[0] for p in _fpl)
+        _yext = max(p[1] for p in _fpl) - min(p[1] for p in _fpl)
+        out.append("STACK STRUCTURE (%d objs): %d z-level(s) %s | xy-extent=%.2fx%.2fm | min-pair-xy=%.3fm" % (
+            len(_finals), len(_levels), [round(x, 3) for x in _levels], _xext, _yext, _minpair))
+        # Report observations; the PASS/FAIL verdict depends on the TEMPLATE'S INTENT (the detector can't
+        # know it). >=2 z-levels = a real vertical column. 1 z-level = flat: CORRECT for a PALLETIZER grid
+        # (Anton 2026-06-15: items must sit with gaps so the gripper fits between them — parallel-jaw needs
+        # finger clearance, a SUCTION cup can place flush), but a SCATTER/no-stack FALSE-SUCCESS for a
+        # TOWER/column stacker. min-pair-xy separates a spaced grid (gaps present) from a piled/overlapping heap.
+        if len(_levels) >= 2:
+            out.append("    -> COLUMN / multi-tier vertical structure — consistent with a TOWER/column stacker")
+        elif len(_finals) >= 3:
+            _kind = "spread grid (gaps present, gripper-clearance ok)" if _minpair > 0.045 else "clustered/piled (overlapping, no clean gaps)"
+            out.append("    -> FLAT 1-tier %s. OK for a PALLETIZER; a SCATTER FALSE-SUCCESS for a TOWER/column stacker — judge by template intent." % _kind)
 
     # BELT TIMELINE (2026-06-14): belt surface-velocity over the run — pins the PAUSE/RESUME behaviour
     # behind the conveyor-stall class. A belt that stays at 0 most of the run = boxes never advance to the
