@@ -2974,3 +2974,19 @@ disp 0.664/reached False is NOT a pass-claim; the committed fix is the correct, 
 any nav). PATTERN for the other broken AMR templates (cart-handoff-amr, forklift-*, yrkesroll-forklift): same
 missing-spawn -> add robot_wizard spawn. setup_wheeled_drive handler still the clean long-term abstraction. Memory:
 project_isaac_assist_nav_stub.
+
+## 2026-06-15 (cont.41) — nav_gate FLEET upgrade (living-tools) + multi-amr spawn-fix fully verified (3/3)
+LIVING-TOOLS: scripts/qa/nav_gate.py now FLEET-AWARE — reads simulate_args.fleet=[{robot_path,nav_goal},...],
+measures EACH robot's spawn/disp/min_dist/reached in one physics run + a fleet summary (n_spawned/n_moved/n_reached);
+backward-compatible (single robot_path/nav_goal -> fleet of 1). The lucka: nav_gate could only verify ONE robot, so
+multi-AMR templates couldn't be verified (only Carter_1 in cont.40). Now any fleet is gradeable.
+VALIDATED (leak-safe Kit, restart-per-template):
+  * CP-64 (single, backward-compat KONTROLL): reached 1/1, disp 2.852 (matches prior 2.85) -> tool upgrade sound.
+  * CP-NEW-multi-amr-corridor (fleet=3): spawned=3, moved=3, reached=0/3. ALL THREE Carters spawn + drive
+    (Carter_1 disp 0.673, Carter_2 0.106, Carter_3 0.815 / min_dist 0.229 — close). => the cont.40 spawn-fix works
+    for the WHOLE FLEET, not just Carter_1 -> multi-amr SPAWN BUG FULLY VERIFIED FIXED. reached=0/3 = head-on
+    corridor coordination (Carter_1 +x meets Carter_2 -x) = the template's inherent multi-AMR challenge, deeper.
+Added simulate_args.fleet to multi-amr. Honest: 0/3 reached is NOT a pass-claim; the spawn-fix (the #25 root bug) is
+done + fleet-verified. NOTE: CP-64 build_err shows generate_occupancy_map fails ('No module isaacsim.asset.gen') —
+benign for CP-64 (nav works without it) but it's the same env-block that gates occupancy-map-nav (#25). Memory:
+project_isaac_assist_nav_stub.
