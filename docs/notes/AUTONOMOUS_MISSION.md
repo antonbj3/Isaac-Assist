@@ -3318,3 +3318,12 @@ authored scene footprints (esp. conveyors) -> instances' belts overlap -> unpick
 end. FIX = a scene-extent-aware spacing helper (compute each template's axis footprint, lay instances out with a gap so
 footprints don't overlap), replacing the fixed 2.5. CONFIRMING NOW: CP-01@0 + CP-09@+6 (belts clear) N-of-M -> expect
 reliable 2/2. Then wire the spacing helper into compose_gate + expose for the production composer.
+
+## 2026-06-15 (cont.64) — offset-6 CONFIRMS belt-overlap for inst1; scene_eyes upgraded for composed scenes (Anton)
+CP-01@0 + CP-09@+6 (belts cleared) N-of-M: inst1 (CP-09) = 5/5 ALL 3 runs (was 3-4/5 flinging @ offset 2.5); full 2/2
+= 2/3 (RUN1's only miss = inst0 CP-01 3/4, a separate residual at offset 0, NOT the overlap). => clearing the conveyor
+overlap RESOLVED inst1's failure. Belt-overlap (too-small compose spacing) CONFIRMED as inst1's cause.
+ANTON CORRECTION (heeded): "scene_eyes can't see composed scenes" is a GAP TO CLOSE, not a limit — scene_eyes/Kit > static.
+UPGRADED scene_eyes with --compose mode (build via compose_canonicals, probe focuses EYES_FOCUS instance; single-template
+byte-identical). NEXT: run composed scene_eyes on CP-01+CP-09 @ offset 2.5 focus=inst1 to SEE the mechanism live
+(ride-off gradual vs fling sudden) — the question static analysis couldn't settle.
