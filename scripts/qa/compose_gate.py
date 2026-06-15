@@ -54,6 +54,8 @@ async def run(specs):
     await compose_canonicals(compose_arg)
 
     spec_json = json.dumps([{k: v for k, v in d.items() if k in ("name", "root", "cubes", "target")} for d in insts])
+    import os as _osc
+    dbg = bool(_osc.environ.get("COMPOSE_DEBUG"))
     chk = f'''
 import omni.usd, omni.timeline, omni.kit.app, json as _j
 from pxr import UsdGeom
@@ -72,14 +74,28 @@ def cpos(p):
 tl = omni.timeline.get_timeline_interface(); tl.play(); app = omni.kit.app.get_app()
 N = 6000 * max(1, len(INSTS))   # concurrent cells run slower; scale budget
 for _ in range(N): app.update()
+DBG = {dbg}
 for d in INSTS:
     tb = bbox(d["target"]) if d["target"] else None
     n = 0
     for c in d["cubes"]:
         cp = cpos(c)
-        if tb and cp and tb[0][0]-0.05<=cp[0]<=tb[1][0]+0.05 and tb[0][1]-0.05<=cp[1]<=tb[1][1]+0.05 and cp[2]>tb[0][2]-0.05:
+        hit = bool(tb and cp and tb[0][0]-0.05<=cp[0]<=tb[1][0]+0.05 and tb[0][1]-0.05<=cp[1]<=tb[1][1]+0.05 and cp[2]>tb[0][2]-0.05)
+        if hit:
             n += 1
-    print("COMPOSE_GATE inst=%s tpl=%s delivered=%d/%d target=%s" % (d["root"], d["name"], n, len(d["cubes"]), d["target"]))
+        if DBG and not hit:
+            # how far did the MISSED cube land from the target bbox? (tolerance-miss vs genuine)
+            if tb and cp:
+                dx = max(tb[0][0]-cp[0], 0, cp[0]-tb[1][0])
+                dy = max(tb[0][1]-cp[1], 0, cp[1]-tb[1][1])
+                dz_below = (tb[0][2]-0.05) - cp[2]
+                print("COMPOSE_MISS inst=%s cube=%s pos=[%.3f,%.3f,%.3f] xy_out=[%.3f,%.3f] below_z=%.3f" % (
+                    d["root"], c.split("/")[-1], cp[0], cp[1], cp[2], dx, dy, dz_below))
+            else:
+                print("COMPOSE_MISS inst=%s cube=%s NO_POS/NO_TARGET" % (d["root"], c.split("/")[-1]))
+    print("COMPOSE_GATE inst=%s tpl=%s delivered=%d/%d target=%s tbbox=%s" % (
+        d["root"], d["name"], n, len(d["cubes"]), d["target"],
+        ("[%.2f,%.2f,%.2f]-[%.2f,%.2f,%.2f]" % (tb[0][0],tb[0][1],tb[0][2],tb[1][0],tb[1][1],tb[1][2])) if tb else "None"))
 '''
     rr = await kit_tools.exec_sync(chk, timeout=int(6000 * max(1, len(insts)) / 8) + 90)
     out = (rr.get("output") or rr.get("error") or "").strip()
