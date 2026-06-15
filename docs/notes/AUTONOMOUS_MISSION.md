@@ -3814,3 +3814,10 @@ build_catalog() filters by composable_blocks.json (TRUSTED_ONLY=1 default) -> ex
 (CP-09 scatter-false + CP-20/25/43/71 partial + CP-42 unclear), leaving 64 scene_eyes-verified blocks the
 LLM may choose from. Closes the loop: verification (scene_eyes) -> registry -> the reasoning LLM can no
 longer propose a known-false/partial block. (CP-08+CP-01 scene_eyes-gated gold run in flight.)
+
+cont.105 (2026-06-15): scene_eyes-gold pipeline end-to-end. eyes_gold_gate.py --append: on a GOLD verdict
+appends a gold_scene_eyes_verified record (dedup on ordered cells) -> verify->gold is one step. Caught +
+fixed a path-collision bug: run_eyes_gold used fixed /tmp/goldeyes_inst$i.txt for ALL compositions, so the
+in-flight CP-08+CP-01 run overwrote CP-01+CP-13's files; the FAIL-CLOSED gate correctly REFUSED to append
+the contaminated (mid-overwrite) data (gold stayed 13, no false record) — the fail-closed design paid off.
+Fixed: ifile paths now composition-specific (/tmp/goldeyes_<combo>_inst$i.txt). CP-08+CP-01 run finishing.

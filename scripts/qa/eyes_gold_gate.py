@@ -62,15 +62,42 @@ def verdict_for_instance(text, cls):
 def main():
     pairs = [a.split(":", 1) for a in sys.argv[1:] if ":" in a]
     if not pairs:
-        print("usage: eyes_gold_gate.py CP-01:inst0.txt CP-09:inst1.txt ..."); return 2
+        print("usage: eyes_gold_gate.py [--append] CP-01:inst0.txt CP-09:inst1.txt ..."); return 2
     all_ok = True
+    cells, verdicts = [], []
     for tpl, path in pairs:
         cls = _class(tpl)
         text = open(path).read() if os.path.exists(path) else ""
         ok, reason = verdict_for_instance(text, cls)
         all_ok = all_ok and ok
+        cells.append(tpl); verdicts.append({"template": tpl, "class": cls, "genuine": ok, "reason": reason})
         print(f"  {tpl:12s} [{cls:16s}] {'GENUINE' if ok else 'REJECT '} — {reason}")
     print("EYES_GOLD_VERDICT:", "GOLD (all cells scene_eyes-genuine)" if all_ok else "NOT GOLD (a cell failed scene_eyes)")
+    # end-to-end: on a GOLD verdict, APPEND a scene_eyes-verified gold record (dedup on ordered cells).
+    if all_ok and "--append" in sys.argv:
+        import time
+        p = "/home/anton/projects/Omniverse_Nemotron_Ext/workspace/training_data/verified_compositions.jsonl"
+        key = tuple(cells)
+        seen = set()
+        if os.path.exists(p):
+            for ln in open(p):
+                try:
+                    pr = json.loads(ln)
+                    if pr.get("verification_tier") == "gold_scene_eyes_verified":
+                        seen.add(tuple(c["template"] for c in pr["plan"]["cells"]))
+                except Exception:
+                    pass
+        if key in seen:
+            print("SCENE_EYES_GOLD already recorded (not duplicated):", "+".join(cells))
+        else:
+            rec = {"ts": time.time(), "level": "L2_composition",
+                   "verification_tier": "gold_scene_eyes_verified",
+                   "task": "compose " + " + ".join(cells),
+                   "plan": {"cells": [{"id": f"inst{i}", "template": t} for i, t in enumerate(cells)], "layout": "parallel"},
+                   "scene_eyes_composition_verified": True, "scene_eyes_cells": verdicts}
+            with open(p, "a") as f:
+                f.write(json.dumps(rec) + "\n")
+            print("SCENE_EYES_GOLD_APPENDED:", "+".join(cells), "->", p)
     return 0 if all_ok else 1
 
 
