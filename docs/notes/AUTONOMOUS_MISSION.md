@@ -3645,3 +3645,11 @@ so more combinations become composable — that expands the gold combinatorially
 more reliably (CP-13 2-cube robust; high-cube self-pairs drop under contention). Session has built the full composition +
 training-data infrastructure (parallel works + gold pipeline; chain diagnosed for dedicated session; LLM-flow on Vertex;
 verification tiers). Steady-state gold collection can continue via the batch over time.
+
+## 2026-06-15 (cont.89) — +3 robust blocks (CP-28/29 1-cube, CP-03 2-cube); gold batch 2 launched (low-contention)
+Block-verification batch: CP-28 3/3 stable_ok, CP-29 3/3 stable_ok (both 1-cube), CP-03 3/3 stable_ok (2-cube) = 3 NEW
+robust single-Franka blocks. CP-07 unconfirmed (no n_ok — likely timeout/non-deliver; its 20m footprint). Robust
+composable block set now = CP-01/09/13/28/29/03 (6 blocks) -> many more gold combinations. Low-cube blocks (CP-28/29
+1-cube, CP-03/13 2-cube) = minimal contention -> reliable gold. Launched gold batch 2 (7 pairs: CP-28+CP-29/13/01,
+CP-29+CP-13/09, CP-03+CP-28/13) — low-contention -> expect most to deliver full -> diverse verified gold. Steady-state
+collection: verify robust blocks (multiplier) -> compose low-contention pairs -> verified gold. ~35min bg.
