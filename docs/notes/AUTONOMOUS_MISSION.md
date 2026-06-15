@@ -3735,3 +3735,21 @@ show (CP-44 z=-39750), offset-free. (2) Added first-class STACK STRUCTURE line (
 Verifying CP-29 (audit smoking gun: template says "cube NEVER PICKED") + CP-13 (palletizer structure) via
 scene_eyes now. Then PURGE/retier the false-positive gold. RULE (reinforced): scene_eyes is the validator;
 read its OWN output; upgrade scene_eyes when a gap shows — never a static side-parser.
+
+cont.98 (2026-06-15): scene_eyes GOLD RE-VERIFICATION complete + PURGE. Anton steer: "få alla grund-
+templates 100% innan kompositioner". scene_eyes verdict on the 6 gold base templates (read scene_eyes'
+OWN Kit output, per-object trajectory + STACK STRUCTURE):
+  CP-01 bin pick-place      GENUINE (4/4 CONVERGED+GRIPPED, rigid hold)
+  CP-03 sorter              GENUINE (function-gate cube_final in BlueBin; pick-into-bin)
+  CP-13 2-cube column       GENUINE (2 z-levels [0.825,0.875] 0.05 apart, xy 0.01x0.02m = vertically stacked)
+  CP-28 1-cube              GENUINE (CONVERGED+GRIPPED)
+  CP-29 1-cube              GENUINE (picked, lifted z=1.07, placed [0,-0.39,0.82]; the audit "never picked"
+                            was its standalone y-bias PRECISION experiment, not basic delivery)
+  CP-09 5-cube tower        FALSE — genuine grasps (all 5 CONVERGED+GRIPPED) BUT flat scatter (all final
+                            z=0.825, 1 z-level); CP-09 faithfulness-gate already 0/4. Position measure over-credits.
+PURGED 4 CP-09 records (CP-01+CP-09, CP-09+CP-01, CP-29+CP-09, CP-29+CP-09+CP-13). KEPT 13, all on
+scene_eyes-genuine bases, tagged scene_eyes_base_verified=true. KEY LESSON: position-gate is HONEST for
+bin/place/sort ("in bin" needs real transport+grasp) but LIES for STRUCTURE (tower/grid). Classified the
+70 verified-core: 14 STACKER + 8 PALLETIZER = 22 STRUCTURE-SENSITIVE need scene_eyes re-verify; 42 bin/
+place/sort are position-honest. NEXT: diagnose+fix CP-09 tower (why scatter not column), then scene_eyes-
+sweep the 22 structure-sensitive blocks to build a TRUSTED composable-block registry before resuming gold.
