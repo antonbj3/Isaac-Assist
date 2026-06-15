@@ -3046,3 +3046,11 @@ doesn't — deeper WheeledRobot blocker). NET mobile track: CARTER nav fully wor
 jetbot/non-carter nav blocked on WheeledRobot.initialize (focused Isaac-internals investigation). The mobile spawn-fix
 pattern + nav_gate fleet tool + the generic wheel-discovery are the durable gains. Memory: project_isaac_assist_nav_stub,
 feedback_diagnostic_first_then_fix.
+
+## 2026-06-15 (cont.45) — CP-58 measured 4/4 (batch-4 GPU-leak casualty) + hardened; 10 blocks hardened
+Closed the batch-4 loose end: CP-58 (assembly peg-bushing, 4 pegs->HolePanel) never got a result in cont.34's batch
+(its Kit died as the GPU leak peaked). Re-measured leak-safe on clean GPU (start 4253 MiB): 4/4 stable_ok -> full
+all-deliverer. Hardened completeness="all". Completeness-audit hardened total = 10 (CP-65/83/73/22/09/46/13/01/61/58),
+all measured-FULL on clean GPU. Verified set remains SOUND (10/10 spot-checked deliver complete; the honesty-hole
+stays latent, never an active false-pass in the verified set). Remaining ~42 risk templates are stochastic/multi-robot/
+UR10/routing -> need N-of-M or per-template care (not single-run harden). Memory: feedback_false_positives_progress.
