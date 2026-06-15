@@ -85,3 +85,32 @@ So the dataset to assemble: per template {goal, tool_calls(from code), usd_effec
 compose_reasoning_eval.py T1 (gemini-2.5-flash): PASS — "two pick-place stations side by side" ->
 ['CP-01','CP-01'] parallel (correct). Data saved. Gemini quota is TIGHT (free-tier per-minute 429) ->
 runs are spaced (asyncio.sleep) + small. Catalog = 40 verified-core blocks (goal + IO + curobo flag).
+
+## CORPUS STATE — the TRUST LADDER (run `scripts/qa/dataset_manifest.py` for current counts)
+Three tiers, scanned/generated never hand-counted (`workspace/dataset_manifest.json`):
+  - `gold_verified_core`         L1  one canonical template, Kit-gate-verified to deliver (70).
+  - `gold_kit_delivery_verified` L2  a COMPOSITION BUILT + measured to deliver FULL in Kit
+                                     (compose_and_verify.py). Delivery-truth. 13 as of cont.94 (2-cell).
+  - `candidate_heuristic`        --  a Gemini PLAN that passed structural + IO-semantic checks only
+                                     (reasoning-truth, NOT delivery-verified). 65; this is the error-rate axis.
+TWO error rates (Anton's framing): REASONING (does Gemini pick the right blocks+topology — measured by
+compose_reasoning_eval, ~92% base / ~94% adversarial across the corpus, 8/8+8/8 at latest instructions)
+vs DELIVERY (does the chosen composition actually deliver in Kit — measured by compose_and_verify; the
+hard failures are contention + chain-handoff geometry, not block choice). Only Kit promotes candidate->gold.
+
+## THE MEASURE MUST NOT LIE (cont.91-92) — applied to the pipeline itself
+- ROUTING-AWARE + PER-CUBE-CORRECT-BIN: a sorter routes each cube to ITS designated bin (color in leaf
+  name -> color_routing). Counting "any bin" fixed a false-NEGATIVE (2-color read 1/2) but opened a
+  false-POSITIVE (both cubes in wrong bin = full); per-cube-correct closes both. CP-03 reads 2/2 under
+  the STRICT measure -> genuine gold. Dedup on (ordered cells, layout) so re-runs RECONFIRM, not duplicate.
+
+## REASONING HARNESS — boxing the error rate (cont.93)
+compose_reasoning_eval has a BASE set (10 tasks, easy, 10/10) AND an ADVERSARIAL set (`EVAL_SET=adv`, 8
+tasks) that probes block DISCRIMINATION (heterogeneous parallel must pick DIFFERENT block KINDS — graded
+by set-cover over goal keywords), under/over-compose traps, ambiguous counts, and the bin-chain trap.
+First adv run 7/8; the FAIL was a real physics-grounded error (model chained out of a deep bin =
+unpickable, would deliver 0/N). A GENERAL 'physical-realizability over literal wording' rule in SYS_PROMPT
+-> 8/8, no regression (CP-30 palletizer=FLAT handoff substituted, verified genuine). NOTE: this improved
+instruction lives in the EVAL's SYS_PROMPT; promoting it to the PRODUCTION orchestrator SYSTEM_PROMPT is
+the L5 composition-tool gap (gated on Anton's interface decisions — do NOT wire composition into prod
+unilaterally).
