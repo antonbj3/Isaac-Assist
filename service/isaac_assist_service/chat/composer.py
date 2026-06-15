@@ -218,6 +218,43 @@ def compute_layout_offsets(templates, axis="x", throw_pad=2.5, clearance=0.6):
     return out
 
 
+# ── LAYER 2: precondition check (2026-06-15) ───────────────────────────────
+# Convert the SILENT-fusion failure classes into LOUD, explicit findings BEFORE a composed
+# scene is built (serves "false positives = progress poison"). Pure + offline. Returns a list of
+# {severity, kind, template, detail}: 'refuse' = a real fusion/contention risk the builder must
+# refuse or serialize; 'warn' = inspect. The REFUSAL POLICY (refuse vs serialize-fallback) is a
+# product decision (Anton) — this layer only DETECTS + reports.
+def precondition_check(templates, layout="parallel"):
+    issues = []
+    curobo_idxs = []
+    for i, t in enumerate(templates or []):
+        code = (t or {}).get("code") or ""
+        tid = (t or {}).get("task_id")
+        mc = ((t or {}).get("motion_controllers") or {}).get("verified") or []
+        # (a) NAMESPACING-ESCAPE: run_usd_script bakes absolute /World/ paths inside a body string
+        # that namespace_and_offset_calls (which only re-roots captured kwargs) cannot reach ->
+        # template A's /World/Cube_1 clobbers template B's. (CP-07/08/22 class.)
+        if "run_usd_script" in code and _WORLD in code:
+            issues.append({"severity": "refuse", "kind": "namespacing_escape", "template": tid,
+                           "detail": "run_usd_script bakes absolute %s paths -> not re-rooted -> prim collision across instances" % _WORLD})
+        # (b) EXCLUSIVE cuRobo planner: the plan/move locks are process-global (per-instance scope
+        # was MEASURED ineffective + reverted). >1 concurrent in a parallel layout -> contention.
+        if ("curobo" in mc) or ("_gen_pick_place_curobo" in code) or ("setup_pick_place_controller" in code):
+            curobo_idxs.append(tid or i)
+        # (c) POSITION-LIKE kwarg outside POSITION_KWARGS -> namespaced but NOT offset -> placed at
+        # absolute world coords (silently fused). Best-effort: a *position*-suffixed kwarg not covered.
+        for m in _re.finditer(r"(\w+)\s*=\s*\[\s*-?\d", code):
+            k = m.group(1)
+            if k.endswith("position") and k not in POSITION_KWARGS:
+                issues.append({"severity": "warn", "kind": "uncovered_position_kwarg", "template": tid,
+                               "detail": "kwarg '%s' looks positional but is not in POSITION_KWARGS -> may not be offset (verify)" % k})
+                break
+    if layout == "parallel" and len(curobo_idxs) > 1:
+        issues.append({"severity": "refuse", "kind": "concurrent_curobo", "template": None,
+                       "detail": "%d instances share the process-global cuRobo plan/move lock in a 'parallel' layout (%s) -> serialize or expect contention ride-off (per-instance planner scope was measured ineffective)" % (len(curobo_idxs), curobo_idxs)})
+    return issues
+
+
 def _selftest():
     cap = [
         ("robot_wizard", {"robot_name": "carter", "dest_path": "/World/Carter", "position": [0.0, 0.0, 0.3]}),
