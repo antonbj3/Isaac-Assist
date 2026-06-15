@@ -47,19 +47,30 @@ async def main():
         sa = t.get("simulate_args") or t.get("verify_args") or {}
         cubes = (sa.get("cube_paths") or sa.get("source_paths") or ([sa.get("cube_path")] if sa.get("cube_path") else []))
         target = sa.get("target_path")
-        # ROUTING-AWARE: a sorter routes cubes to MULTIPLE bins (color_routing/drop_targets).
-        # Count a cube delivered if it reached ANY routed bin, not just target_path (else a 2-color
-        # sorter reads 1/2 — a measure false-negative, cont.90 CP-03). Fix the measure, not the gold.
-        dests = set()
-        if target:
-            dests.add(target)
-        for v in list((sa.get("color_routing") or {}).values()) + list((sa.get("drop_targets") or {}).values()):
-            if isinstance(v, str) and v.startswith("/"):
-                dests.add(v)
+        # ROUTING-AWARE + PER-CUBE CORRECT-BIN (anti-false-positive, cont.90/cont.92):
+        # A sorter routes each cube to ITS designated bin (color_routing/drop_targets: key->bin).
+        # The old "any routed bin" measure fixed a false-NEGATIVE (2-color sorter read 1/2) but opened
+        # a false-POSITIVE: both cubes in the WRONG bin would read full. The cube's color is in its
+        # leaf name (/World/Cube_red -> "red"); we map each cube to its CORRECT bin and require it land
+        # there. Unknown color / no routing -> fall back to target_path (single-dest templates).
+        routing = {}
+        for src in (sa.get("color_routing"), sa.get("drop_targets")):
+            for k, v in (src or {}).items():
+                if isinstance(v, str) and v.startswith("/"):
+                    routing[str(k).lower()] = v
+        cube_targets = {}
+        for c in cubes:
+            if not c:
+                continue
+            leaf = c.rsplit("/", 1)[-1].lower()
+            acc = [b for key, b in routing.items() if key in leaf]   # color key appears in cube leaf
+            if not acc:
+                acc = [target] if target else sorted(set(routing.values()))
+            cube_targets[reroot_prim_path(c, f"inst{i}")] = [reroot_prim_path(b, f"inst{i}") for b in acc]
         insts.append({"root": f"inst{i}", "name": n,
                       "cubes": [reroot_prim_path(c, f"inst{i}") for c in cubes if c],
                       "target": reroot_prim_path(target, f"inst{i}") if target else None,
-                      "targets": [reroot_prim_path(d, f"inst{i}") for d in sorted(dests)]})
+                      "cube_targets": cube_targets})
 
     spec = json.dumps(insts)
     chk = f'''
@@ -79,12 +90,14 @@ def cpos(p):
 tl = omni.timeline.get_timeline_interface(); tl.play(); app = omni.kit.app.get_app()
 for _ in range(6000 * max(1, len(INSTS))): app.update()
 for d in INSTS:
-    tbs = [bbox(t) for t in (d.get("targets") or ([d["target"]] if d["target"] else []))]
-    tbs = [t for t in tbs if t]
+    ct = d.get("cube_targets") or dict()
     n = 0
     for c in d["cubes"]:
         cp = cpos(c)
-        if cp and any(tb[0][0]-0.05<=cp[0]<=tb[1][0]+0.05 and tb[0][1]-0.05<=cp[1]<=tb[1][1]+0.05 and cp[2]>tb[0][2]-0.05 for tb in tbs):
+        if not cp: continue
+        accs = ct.get(c) or ([d["target"]] if d.get("target") else [])
+        tbs = [bbox(t) for t in accs]; tbs = [t for t in tbs if t]
+        if any(tb[0][0]-0.05<=cp[0]<=tb[1][0]+0.05 and tb[0][1]-0.05<=cp[1]<=tb[1][1]+0.05 and cp[2]>tb[0][2]-0.05 for tb in tbs):
             n += 1
     print("DELIV inst=%s tpl=%s delivered=%d/%d" % (d["root"], d["name"], n, len(d["cubes"])))
 '''
@@ -113,7 +126,20 @@ for d in INSTS:
     }
     os.makedirs(OUT_DIR, exist_ok=True)
     path = os.path.join(OUT_DIR, "verified_compositions.jsonl")
-    if all_full:
+    # dedup key: ordered cell templates + layout (CP-01+CP-09 vs CP-09+CP-01 stay distinct). Re-running
+    # the same composition (e.g. under a hardened measure) re-CONFIRMS but does not duplicate the record.
+    key = (tuple(names), "parallel")
+    existing = set()
+    if os.path.exists(path):
+        for ln in open(path):
+            try:
+                pr = json.loads(ln)
+                existing.add((tuple(c["template"] for c in pr["plan"]["cells"]), pr["plan"]["layout"]))
+            except Exception:
+                pass
+    if all_full and key in existing:
+        print("VERIFIED_RECONFIRMED (already in gold, not duplicated):", json.dumps(deliv))
+    elif all_full:
         with open(path, "a") as f:
             f.write(json.dumps(rec) + "\n")
         print("VERIFIED_COMPOSITION_APPENDED:", json.dumps(deliv), "-> ", path)

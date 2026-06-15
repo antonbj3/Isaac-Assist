@@ -3672,3 +3672,15 @@ be ROUTING-AWARE (count a cube delivered if it reached ANY destination bin from 
 Re-running CP-03+CP-13 with the fix (expect CP-03 2/2 -> gold). Verified gold now 12 records (single-dest 1-2-cube
 pick-place/stack); the routing fix unlocks SORTERS (CP-03/32/33/47) as valid gold blocks too -> more diversity. This is
 the diagnostic-first / fix-the-measure discipline applied to the gold pipeline itself.
+
+cont.92 (2026-06-15): Routing-aware measure CONFIRMED — CP-03+CP-13 re-run read CP-03 2/2 (was 1/2 pre-fix) -> appended
+gold. The 1/2->2/2 transition is itself proof of GENUINE sorting: if the sorter had dumped both cubes in RedBin
+(target_path), the pre-fix measure would already have read 2/2; seeing 1 in RedBin pre-fix and the other in BlueBin
+post-fix means each cube went to a DISTINCT bin. BUT the 'any routed bin' measure opened a false-POSITIVE risk (both
+cubes in the WRONG bin would read full). HARDENED to per-cube-correct-bin: cube color is in its leaf name
+(/World/Cube_red->'red'), mapped via color_routing to its DESIGNATED bin (Cube_red MUST reach RedBin, Cube_blue MUST
+reach BlueBin). Strictly stricter -> can only reveal mis-binning, never mask it. Also added DEDUP on (ordered cells,
+layout) so re-runs RECONFIRM without duplicating gold records. Gold count = 11 records (corrected from the miscounted
+'12' in cont.91). Re-running CP-03+{CP-13,CP-28,CP-01} under the hardened measure to (a) reconfirm record 11 genuinely
+per-bin-correct, (b) capture CP-03+CP-28 (was blocked only by the pre-fix measure). Same fix-the-measure discipline,
+now closing the false-POSITIVE direction (Anton's principle: falska positiver = progressgift).
