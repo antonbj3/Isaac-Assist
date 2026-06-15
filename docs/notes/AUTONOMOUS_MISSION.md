@@ -3345,3 +3345,16 @@ LLM-FLOW (Anton's new direction, parallel-safe/no-Kit): infra largely EXISTS —
 confidence gate) + scripts/qa/retrieval_eval_set.json (33 cases: prompt/ground_truth/hard_negatives/intent_dims) +
 chat/llm_gemini.py (supports Gemini 3.x). GAPS for Anton's vision: composition (multi-template) eval cases;
 scene_eyes exposed as an LLM tool (currently NOT); Gemini model switch to 3.1/flash-2.5. Running the retrieval baseline next.
+
+## 2026-06-15 (cont.66) — RETRACTION: grip-slip was a scene_eyes --compose BUG (leaf-name conflation) + over-read summary metric
+Anton was skeptical of "cube slipped/flung 2m during carry". He was RIGHT. Analyzed the SAVED eyes.json (Kit-free):
+(1) cubes are keyed by LEAF NAME -> in the composed scene /World/inst0/Cube_3 AND /World/inst1/Cube_3 COLLIDE (my
+--compose upgrade scoped ROBOT to inst1 but NOT objects). (2) The tracked "Cube_3" RAW trajectory shows CLEAN DELIVERY
+(x 1.22->1.95->2.49 tower, ends [2.42,-0.45,0.82] = on the tower) — it did NOT fly to 4.8. (3) The "1990mm translation-
+slip" was largely legitimate transport + 113° intended EE-rotation conflated as slip — scene_eyes FLAGGED this itself
+("incl. grasp/release edges — secondary"). => RETRACT the grip-slip/2m-fling claim. Fixed scene_eyes --compose to scope
+CUBES to the focus instance (commit). Anton's "what does grip-slip on combining two working templates MEAN?" — answer:
+I CANNOT claim a grip-slip even happened (the tool was buggy + I over-read a caveated metric). IF a real one is later
+confirmed with the FIXED tool, it would mean dynamic robustness (grip/contacts) does NOT compose — but NOT established.
+LESSONS (-> memory feedback_static_vs_kit_scene_eyes + cron): static < Kit scene_eyes; read RAW eyes.json not summary
+metrics; scope multi-instance probes by full path. NEXT: re-run the FIXED composed scene_eyes for the TRUE mechanism.
