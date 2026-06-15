@@ -99,7 +99,7 @@
     "Robot cycle too long for belt pace → cubes pile up at downstream end of belt. Acceptable for canonical demo.",
     "Same physics gotchas as CP-01: GPU dynamics off, sleepThreshold=0, rubber on cubes."
   ],
-  "verified_status": "draft; passes=31 n=55 wilson_lower=0.4327; was form-gate-pending; demoted 2026-05-15",
+  "verified_status": "draft; passes=31 n=55 wilson_lower=0.4327; was form-gate-pending; demoted 2026-05-15 | VERIFIED 4/4 2026-06-15 clean-GPU (completeness=all)",
   "diagnose_args": {
     "robot_path": "/World/Franka",
     "sensor_path": "/World/PickSensor",
@@ -129,6 +129,6 @@
     "details": "High-speed belt variant of CP-01; pick_place pattern fits but unrun — zero QA runs, no verified delivery",
     "added_date": "2026-05-15"
   },
-  "motion_controllers": {"verified": [], "failed": {}, "untested": ["curobo"]},
+  "motion_controllers": {"verified": ["curobo"], "failed": {}, "untested": []},
   "verification": {"function_gate": {"status": "pass", "n": 9, "m": 9, "wilson_lower": 0.7009, "last_run_sha": "8a1118e6", "last_run_at": "2026-06-13T10:29:34+00:00"}, "faithfulness": {"status": "pass", "n": 5, "m": 5, "wilson_lower": 0.5655, "last_run_sha": "ffaac959", "last_run_at": "2026-06-11T19:46:24+00:00"}}
 }
