@@ -3374,3 +3374,19 @@ Composition RCA RESTS here (honest, mostly-positive): (1) scene-extent-aware spa
 overlap); (2) clock-freeze (cont.59) is a valid carry-stability aid; (3) remaining degradation is stochastic contention
 (the dedicated multi-arm session #10/#26 if we want concurrent-2-arm bulletproof). PIVOT to the LLM-flow/Gemini
 direction (task #28) per Anton's steer + the design-review workflow result.
+
+## 2026-06-15 (cont.68) — design-review landed; built layout_solver (STEP 1, the primary composition fix)
+Design-review workflow (6 agents) verdict: composition DIRECTION right, plan ~30% built (spacing solver MISSING =
+hardcoded 2.5; 0/439 templates carry footprint/IO metadata; chain machinery unbuilt; ZERO production callers -> LLM
+can't compose today). Per-pair grind = NO (failures are per-CLASS; validate on 4 adversarial probes). Interface answer
+(Anton's CP07xCP28): SEAMLESS runtime, NOT pre-named — LLM emits template-ids + topology word + role->role handoff
+edges; SYSTEM owns ALL coordinates. Two tools: plan_scene_decomposition (inspectable) + build_composed_scene(cells,
+layout:parallel|chain|grid, handoffs). Metadata = DERIVED cache (footprint+ports from role_defaults), hand-author only
+exclusive_resources + handoff_port. Full layered architecture (L0 keep compose_canonicals; L1 layout_solver; L2
+precondition_check fail-closed; L3 finish chain source_override+deferred-reset; L4 build_composed_scene; L5 the 2 LLM
+tools) in the workflow result (tool-results/bes0ur2bd.txt) + docs/notes/LLM_FLOW_SIMULATION_PROTOCOL.md.
+6 DECISIONS surfaced for Anton (serialize-only v1 ceiling? decomposition review-seam? derived-cache metadata?
+composability promotion-gate? ratify class-based validation? parallel-only milestone?) — not blocking.
+BUILT STEP 1 (composer.compute_layout_offsets + template_footprint), wired into compose_gate, unit-tested static:
+CP-01+CP-09 -> CP-09@6.6 gap 3.1m CLEAR (old 2.5 = 1.0m overlap). NEXT: Kit-verify CP-01+CP-09 (no @, solver spacing)
+N-of-M -> expect reliable delivery; then extend scene_eyes --compose to consume solver offsets (STEP 6).
