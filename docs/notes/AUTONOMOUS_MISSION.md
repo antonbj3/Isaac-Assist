@@ -3188,3 +3188,15 @@ Must verify base reliability before blaming the composer. Launched CP-09 solo SI
 EJECT/GRIP-SLIP/PICK-CONVERGENCE per-object). If CP-09 solo is also ~1/3 -> the verified-core marks need N-of-M re-audit
 (many may be single-run optimistic); if solo is 3/3 -> composition introduces the fling (serialization-lock interrupts
 mid-carry?). Either outcome is high-value. compose_gate per-cube-miss committed cont.53.
+
+## 2026-06-15 (cont.55) — CP-09 standalone = 3/3 SOLID -> composition INTRODUCES the fling (genuine composition defect)
+Diagnostic-first verdict on "is marginality base or composition": CP-09 SIMRUNS=3 standalone = n_ok=3/3,
+success_rate=1.0, stable_ok — ALL 5 cubes delivered in seeds 42/43/44, perfect tower (z=1.025/0.975/0.925/0.875/0.825,
+all upright+at-rest, deterministic). => CP-09's "5/5 verified" mark is CORRECT (NOT single-run-optimistic). GOOD for the
+collection — the verified-core marks hold. The marginality is INTRODUCED BY COMPOSITION (1/3 full vs 3/3 standalone) =
+a genuine composer defect, the real task #26 work. World-swap ruled out (base_sig folded in world_sig). Remaining
+suspect: two-arm cuRobo contention via the shared-planner serialization lock (_curobo_plan_serial_lock_v1,
+pick_place.py:4681). Upgraded compose_gate with per-cube TRAJECTORY capture (COMPOSE_TRAJ) to SEE the fling moment
+(scene_eyes can't run composed scenes). Trajectory run launched. NEXT: read the trail -> pinpoint the fling step +
+correlate with the loser-arm's plan-token contention; if the fling is the lock interrupting mid-carry-release, the fix
+is in the lock/gripper-timing, not the templates.
