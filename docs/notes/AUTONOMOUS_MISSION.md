@@ -3788,3 +3788,14 @@ honest partial counts after fixing the pend-filter string-mismatch): of 70 verif
 kit, CP-73 UR10. Base templates are now scene_eyes-structure-assessed (not just delivery-gated) = the
 "grundtemplates 100%" Anton asked for. Compositions resume scene_eyes-GATED (run_eyes_gold.sh + eyes_gold
 _gate.py) on the trusted canonical reps. Partials/false are KNOWN-limited and excluded from composition.
+
+cont.102 (2026-06-15): FIRST scene_eyes-GATED GOLD produced. run_eyes_gold.sh CP-01 CP-13 -> EYES_GOLD_
+VERDICT: GOLD. inst0 CP-01 delivery-verified (4 cubes CONVERGED+GRIPPED), inst1 CP-13 column-verified
+(2 z-levels [0.825,0.875], 2 gripped). The corrected pipeline (build -> scene_eyes --compose per instance
+-> eyes_gold_gate) runs end-to-end; tagged that gold record scene_eyes_composition_verified. Hardened the
+gate FAIL-CLOSED on unknown template class (else a scattered stacker could pass via the lenient bin branch);
+fixed run_eyes_gold to pass gate args via a FILE (bash array doesn't survive the `{ }|tee` piped subshell ->
+had shown empty tpl/unknown, though the verdict was correct). Gate logic confirmed correct by manual re-run.
+Trust basis for the 13 gold: all bases (CP-01/03/13/28/29) scene_eyes-genuine standalone + representative
+compositions scene_eyes-confirmed (CP-01 inst0, CP-29/CP-28, CP-13 inst0+in CP-01+CP-13); 6m offsets rule
+out cross-instance interference. Next: confirm CP-03 sorter in-composition (run_eyes_gold CP-03 CP-01).

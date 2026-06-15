@@ -44,6 +44,11 @@ def verdict_for_instance(text, cls):
         return False, "no CONVERGED+GRIPPED and no structure data (likely no grasp / no rows)"
     if real_explosion:
         return False, "real EJECTION/EXPLOSION detected"
+    if cls in ("unknown", ""):
+        # FAIL-CLOSED: if we can't classify the template's intent we must NOT fall through to the
+        # lenient bin/sort branch (that would pass a scattered stacker). Demand explicit re-run with
+        # a known template id.
+        return False, "template class UNKNOWN — fail-closed (re-run with a resolvable template id)"
     if cls == "stack/column":
         if zlevels is None or zlevels < 2:
             return False, f"stacker but {zlevels} z-level(s) = FLAT SCATTER, not a column"
