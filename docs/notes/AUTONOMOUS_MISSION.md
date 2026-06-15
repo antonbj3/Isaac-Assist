@@ -2773,3 +2773,23 @@ partial-as-pass). Docstring carries the deep-bin caveat so a low count isn't mis
 build (future), not worth grinding on the deep-bin same-template case. NEXT: pivot to GROWING robust blocks
 (#24 arm tier-1) / mobile track (#25) — composition value now comes from more solid multipliers. Memory:
 project_isaac_assist_composition_direction.
+
+## 2026-06-15 (cont.29) — tier-1 batch: 0/3 verified + GATE COMPLETENESS honesty-hole (51 templates)
+Drove 3 SMOKE-bucket tier-1 candidates through gate_one (fresh Kit each). Honest result — NONE verified
+(SMOKE-pass = builds, NOT delivers):
+ * CP-NEW-y-merge-singulation: 5/6 stable_fail — Cube_L2 knocked to /World/Table at the lane-merge (off-lane
+   y=+0.21 vs bin y=-0.49). Real partial; merge-collision = scene-geometry fix (lane spacing / stagger). scene_eyes next.
+ * CP-NEW-vision-depalletize: 1/6 but gate said stable_ok=True — FALSE PASS. Root: its simulate_args lacked
+   `completeness`, so the honest-gate defaulted completeness="any" -> min_delivered_required=1 -> 1 box "passes".
+   The depalletize-all-6 task is genuinely delivering only 1/6 (real failure, likely grid arm-over-box collisions).
+ * CP-NEW-dr-curriculum: introspection-gate PASS (class=introspection) — structural, NOT a delivery verify.
+SYSTEMIC FINDING (Anton's #1 principle): swept all templates — 106 multi-cube; 32 have completeness set, 23 are
+routing-aware (separate), **51 multi-cube SINGLE-target templates have completeness unset -> gate grades min=1**
+(lenient). For genuine all-deliver tasks (CP-01 really does 4/4) it merely fails to catch regressions; for
+partial-deliverers (vision-depalletize 1/6) it's an ACTIVE false-pass. Did NOT mass-edit: many of the 51 are
+sorters/streamers/routers (cross-belt-sorter->Chute_1, wire-harness-route->Clip_4, spc-sensor-stream n=20,
+recirculation loops) where completeness="all" would create FALSE-NEGATIVES (the other half of the principle).
+FIXED the one unambiguous all-deliver case I measured: CP-NEW-vision-depalletize simulate_args += completeness="all"
+(surgical) -> gate now honestly reports 1/6 fail instead of false-passing. The remaining 50 need a per-template
+audit (is it all-to-one-bin vs sort/stream/route?) — flagged, not swept. NEXT: y-merge scene_eyes (tractable real
+win) + the completeness per-template audit. Memory: feedback_false_positives_progress.

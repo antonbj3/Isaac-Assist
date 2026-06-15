@@ -99,7 +99,8 @@
       "/World/Box_6"
     ],
     "duration_s": 240,
-    "xy_tolerance": 0.14
+    "xy_tolerance": 0.14,
+    "completeness": "all"
   },
   "diagnose_args": {
     "robot_path": "/World/Franka",
