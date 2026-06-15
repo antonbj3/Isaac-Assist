@@ -2813,3 +2813,19 @@ TIER-1 BATCH NET (cont.29-30): 0/3 clean verifies, but real value: caught+fixed 
 honesty-hole, characterized y-merge (belt-cadence) + vision-depalletize (1/6 grid arm-over-box) + dr-curriculum
 (introspection-only). SMOKE-pass != delivers. NEXT: per-template completeness audit (careful, false-negative risk)
 or a non-belt-cadence tier-1 candidate. Memory: feedback_false_positives_progress, feedback_diagnostic_first_then_fix.
+
+## 2026-06-15 (cont.31) — verified-set spot-check: SOUND + hardened 3 against the completeness hole
+Followed up the cont.29 completeness honesty-hole (51 templates gate at min=1) by MEASURING actual delivery
+(delivered_count is truth even when success lies) on 3 core verified multi-cube templates in the risk list, fresh
+Kit each:
+  CP-65 (multi-robot relay) = 4/4   CP-83 (UR10 2-cube) = 2/2   CP-73 (machine-tend) = 4/4
+=> the VERIFIED SET IS SOUND for these — they genuinely deliver FULL despite the lenient gate. The honesty-hole is
+LATENT (a regression-protection gap), not an active false-pass in the verified set (contrast vision-depalletize,
+which was an unverified candidate genuinely at 1/6). Reassuring re Anton's #1 principle.
+HARDENED (measure-then-harden, zero false-negative risk since each is CONFIRMED N/N): added completeness="all" to
+CP-65/CP-83/CP-73 simulate_args (surgical text-edit). They pass at "all" today (delivered==total) AND can no longer
+false-pass if they regress -> closes the partial-as-pass gap the directive forbids. NOT hardened: CP-01 (chain
+probes showed an occasional 3/4 under concurrent load — needs a clean solo N/N before "all"); the other ~47 risk
+templates need per-template goal-reading (sorters/streamers/routers must stay "any"/routing or "all" false-negates)
++ a measured N/N before hardening — that's the careful per-template audit, done measure-first not swept.
+Memory: feedback_false_positives_progress.

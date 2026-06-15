@@ -50,7 +50,8 @@
       "/World/Cube_1",
       "/World/Cube_2"
     ],
-    "xy_tolerance": 0.1
+    "xy_tolerance": 0.1,
+    "completeness": "all"
   },
   "intent": {
     "pattern_hint": "pick_place",

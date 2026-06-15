@@ -67,7 +67,8 @@
       "/World/Cube_4"
     ],
     "target_path": "/World/Bin",
-    "duration_s": 180
+    "duration_s": 180,
+    "completeness": "all"
   },
   "extends": "CP-72",
   "extension_notes": "CP-73 swaps CP-72's stationary feeder for an active conveyor (v=0.2 m/s). Realizes #33 demo_ur10_conveyor — the canonical Isaac Sim 5.x UR10+Cortex demo. With CP-71 (bin filling) + CP-72 (vertical stacking) + CP-73 (moving conveyor), the UR10+Cortex research scenario triad is complete.",
