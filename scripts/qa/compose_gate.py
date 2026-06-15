@@ -56,6 +56,7 @@ async def run(specs):
     spec_json = json.dumps([{k: v for k, v in d.items() if k in ("name", "root", "cubes", "target")} for d in insts])
     import os as _osc
     dbg = bool(_osc.environ.get("COMPOSE_DEBUG"))
+    traj = bool(_osc.environ.get("COMPOSE_TRAJ"))
     chk = f'''
 import omni.usd, omni.timeline, omni.kit.app, json as _j
 from pxr import UsdGeom
@@ -72,9 +73,33 @@ def cpos(p):
     bb = bbox(p)
     return [(bb[0][i]+bb[1][i])/2.0 for i in range(3)] if bb else None
 tl = omni.timeline.get_timeline_interface(); tl.play(); app = omni.kit.app.get_app()
-N = 6000 * max(1, len(INSTS))   # concurrent cells run slower; scale budget
-for _ in range(N): app.update()
 DBG = {dbg}
+N = 6000 * max(1, len(INSTS))   # concurrent cells run slower; scale budget
+# Trajectory capture (COMPOSE_TRAJ): sample every TRAJ_EVERY steps so a FLING shows
+# as a sudden per-cube jump -> distinguishes flung (bad trajectory) from topple/slip.
+TRAJ = {traj}
+TRAJ_EVERY = 600
+_trail = {{}}  # cube_path -> list of (step, x, y, z)
+if TRAJ:
+    _allc = [c for d in INSTS for c in d["cubes"]]
+    for _s in range(N):
+        app.update()
+        if _s % TRAJ_EVERY == 0 or _s == N - 1:
+            for c in _allc:
+                cp = cpos(c)
+                if cp: _trail.setdefault(c, []).append((_s, cp[0], cp[1], cp[2]))
+    for c, tr in _trail.items():
+        # report max single-step jump (fling signature) + the trail
+        jmax = 0.0; jstep = -1
+        for i in range(1, len(tr)):
+            j = ((tr[i][1]-tr[i-1][1])**2 + (tr[i][2]-tr[i-1][2])**2) ** 0.5
+            if j > jmax: jmax = j; jstep = tr[i][0]
+        flag = " FLING" if jmax > 0.5 else ""
+        print("COMPOSE_TRAJ cube=%s max_jump=%.2f@step%d%s trail=%s" % (
+            c.split("/")[-1], jmax, jstep, flag,
+            ";".join("%d:[%.2f,%.2f,%.2f]" % (s, x, y, z) for s, x, y, z in tr)))
+else:
+    for _ in range(N): app.update()
 for d in INSTS:
     tb = bbox(d["target"]) if d["target"] else None
     n = 0
