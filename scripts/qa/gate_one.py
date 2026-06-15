@@ -167,8 +167,15 @@ async def gate(tpl_name):
               "min_laps_per_cube", "lap_marker_positions", "lap_marker_order"):
         if k in sa and sa[k] is not None:
             args[k] = sa[k]
+    # N-of-M for STOCHASTIC templates (rotary-disc / mixed-mass / multi-robot):
+    # a single run gives false-negatives (one bad draw -> 0/N on a working block).
+    # SIMRUNS=k runs k seeds; the handler reports n_ok/success_rate. Default 1
+    # (byte-identical single-run path for deterministic blocks).
+    _nr = _os.environ.get("SIMRUNS")
+    if _nr:
+        args["n_runs"] = int(_nr)
     res = await asyncio.wait_for(execute_tool_call("simulate_traversal_check", args),
-                                 timeout=args["duration_s"] + int(_os.environ.get("SIMTO", 200)))
+                                 timeout=args["duration_s"] * args.get("n_runs", 1) + int(_os.environ.get("SIMTO", 200)))
     out = (res.get("output") or "").strip()
     jl = [l for l in out.splitlines() if l.strip().startswith("{")]
     verdict = "?"
