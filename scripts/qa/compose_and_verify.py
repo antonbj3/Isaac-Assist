@@ -47,9 +47,19 @@ async def main():
         sa = t.get("simulate_args") or t.get("verify_args") or {}
         cubes = (sa.get("cube_paths") or sa.get("source_paths") or ([sa.get("cube_path")] if sa.get("cube_path") else []))
         target = sa.get("target_path")
+        # ROUTING-AWARE: a sorter routes cubes to MULTIPLE bins (color_routing/drop_targets).
+        # Count a cube delivered if it reached ANY routed bin, not just target_path (else a 2-color
+        # sorter reads 1/2 — a measure false-negative, cont.90 CP-03). Fix the measure, not the gold.
+        dests = set()
+        if target:
+            dests.add(target)
+        for v in list((sa.get("color_routing") or {}).values()) + list((sa.get("drop_targets") or {}).values()):
+            if isinstance(v, str) and v.startswith("/"):
+                dests.add(v)
         insts.append({"root": f"inst{i}", "name": n,
                       "cubes": [reroot_prim_path(c, f"inst{i}") for c in cubes if c],
-                      "target": reroot_prim_path(target, f"inst{i}") if target else None})
+                      "target": reroot_prim_path(target, f"inst{i}") if target else None,
+                      "targets": [reroot_prim_path(d, f"inst{i}") for d in sorted(dests)]})
 
     spec = json.dumps(insts)
     chk = f'''
@@ -69,10 +79,12 @@ def cpos(p):
 tl = omni.timeline.get_timeline_interface(); tl.play(); app = omni.kit.app.get_app()
 for _ in range(6000 * max(1, len(INSTS))): app.update()
 for d in INSTS:
-    tb = bbox(d["target"]) if d["target"] else None; n = 0
+    tbs = [bbox(t) for t in (d.get("targets") or ([d["target"]] if d["target"] else []))]
+    tbs = [t for t in tbs if t]
+    n = 0
     for c in d["cubes"]:
         cp = cpos(c)
-        if tb and cp and tb[0][0]-0.05<=cp[0]<=tb[1][0]+0.05 and tb[0][1]-0.05<=cp[1]<=tb[1][1]+0.05 and cp[2]>tb[0][2]-0.05:
+        if cp and any(tb[0][0]-0.05<=cp[0]<=tb[1][0]+0.05 and tb[0][1]-0.05<=cp[1]<=tb[1][1]+0.05 and cp[2]>tb[0][2]-0.05 for tb in tbs):
             n += 1
     print("DELIV inst=%s tpl=%s delivered=%d/%d" % (d["root"], d["name"], n, len(d["cubes"])))
 '''
