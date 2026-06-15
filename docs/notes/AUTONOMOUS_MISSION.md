@@ -2709,3 +2709,14 @@ minor concurrent-timing dip, not a stall). Composition foundation + TOOLCHAIN no
 compose_canonicals (BUILD) + compose_gate.py (VERIFY), proven on heterogeneous composition. NEXT PHASE (focus-2,
 substantial): heterogeneous CHAIN with end-state->start-state handoff + handoff-state validator + grow the robust
 building-block set (composer multiplies them). Memory: project_isaac_assist_composition_direction.
+
+## 2026-06-15 (cont.25) — 2nd composed scenario (verified blocks) + concurrent-dip characterized
+compose_gate CP-61 + kit-prep-operator (both verified THIS session, heterogeneous): inst0 CP-61 3/3 FULL
+(/World/inst0/StackBin), inst1 kit-prep 3/5 (/World/inst1/KitTray), errs=[]. 2nd heterogeneous composition success
+(after CP-01+CP-04 3/4+4/4). PATTERN: heterogeneous composition works on the real verified blocks — every cell
+delivers SUBSTANTIALLY, with a minor per-cell shortfall (one short: 3/4, 3/5) = concurrent-interference dip (12k-step
+CP-01 PLATEAUED at 3, so not pure step-budget — a real minor concurrent timing/contention effect, NOT a stall).
+COMPOSITION DIRECTION STATUS: foundation + toolchain (composer/compose_canonicals + compose_gate) PROVEN on 2
+heterogeneous composed scenarios. Minor refinement = full concurrent rate (the one-cube dip). Substantial NEXT phase
+= focus-2 chain (end-state->start-state handoff) + handoff-validator + grow robust-block set. Edge case = same-
+template-2x stuck (#26). Memory: project_isaac_assist_composition_direction.
