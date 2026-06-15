@@ -3470,3 +3470,14 @@ CONVENTION: all LLM-flow + library data -> workspace/training_data/*.jsonl (docu
 Two abstraction levels captured: per-template (goal->tool-calls->USD), per-composition (task->plan->composed tool-calls).
 NEXT: run more compose_reasoning tasks (spaced, quota-aware) for more (task->plan) pairs; eventually the full
 (task->plan->composed code) once L5 wires the tool. Composition architecture L0-L4 done; L5 + Gemini-3.1 switch = Anton's call.
+
+## 2026-06-15 (cont.75) — Gemini compose-reasoning 3/3 across topology classes (parallel/single/chain) — product flow VALIDATED
+compose_reasoning_eval N=3 (gemini-2.5-flash): T1 parallel -> [CP-01,CP-01] PASS; T2 single (don't over-compose) ->
+[CP-09] single PASS; T3 chain -> [CP-08,CP-27] chain+handoff PASS. => Gemini DECOMPOSES + picks the right blocks AND the
+right topology, including correctly NOT over-composing a single-template task. Block choices spot-on for T1/T2, plausible
+for T3. Honest scope: the score checks topology+structure+valid-blocks, not deep semantic optimality of the block pick.
+This VALIDATES the core product question (the LLM can compose-reason) — combined with the built L0-L4 architecture (the
+system can BUILD what the LLM plans) and the training-data store, the only gap to end-to-end is L5 (wire
+build_composed_scene as an LLM tool) = Anton's interface decision. All interactions saved to
+workspace/training_data/compose_reasoning.jsonl (4 records). Gemini quota tight -> stop here on the eval; expand the task
+suite for more (task->plan) training pairs when quota allows.
