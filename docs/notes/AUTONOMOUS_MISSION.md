@@ -3590,3 +3590,16 @@ picks). This is real progress: 0/4 -> working. Remaining: 1/4 -> 4/4 throughput 
 12000 steps) to let inst1 pick the clustered cubes one-by-one; if still ~1/4, the cluster/grip is the limit (-> a wider
 flat handoff so cubes spread, or the proper no-walls platform). Diagnostic-first paid off twice: refuted sensor-gating,
 then found the explosion, now the relay works.
+
+## 2026-06-15 (cont.84) — L3 milestone: concept validated (0/4->2/4); clean fix = no-walls SOLID platform (composer)
+z=0.08 + 12000 steps: inst1 = 2/4 (up from 1/4 — more time helps) but Cube_3 EXPLODED again ([66,201,-175112]). So the
+shallow-bin hack is PARTIAL + fragile: it still has intermittent interpenetration explosions (a cube hits the bin
+floor/walls -> blowup -> lost). Tweaking bin z is fundamentally fragile (still a bin with walls + thin floor).
+WELL-DIAGNOSED CONCLUSION: the clean L3 fix = a real NO-WALLS SOLID PLATFORM (create_prim slab; cubes rest ON TOP, no
+walls to interpenetrate, no thin floor to fall through) -> eliminates the explosion entirely. This is a COMPOSER-level
+change (for a chain handoff, replace the upstream's create_bin destination with a create_prim solid slab), NOT a probe
+size-hack. L3 progress this session (genuine, diagnostic-first): 0/4 -> refuted sensor-gating -> found degenerate-
+collider explosion -> shallow handoff unblocks the relay (0/4->2/4, inst1 plans+picks) -> identified the clean fix
+(no-walls solid platform). NEXT: implement the composer solid-platform chain handoff (create_prim slab + redirect
+upstream drop onto it), verify 4/4, then make it automatic (the LLM emits 'chain A->B', the system builds the platform).
+Task #29 holds the precise build. Marathon-session L3 investigation at a strong, honest milestone.
