@@ -3883,3 +3883,11 @@ FIX (real lever): key the move-token PER-INSTANCE-ROOT so non-overlapping compos
 only genuinely-overlapping zones (CP-52) serialize. Would fix 3-cell drops + speed parallel cells. RISK:
 protects CP-52/CP-65 -> needs multi-template no-regression (SCOPED session, not a hot edit). Latency is
 measurable: instrument move-token hold-duration per arm (or static-joint stretches from scene_eyes).
+
+cont.113 (2026-06-15): CP-28+CP-29+CP-13 run-2 = GOLD again (2/2 scene_eyes). Refined finding: 3-cell
+stochasticity correlates with cuRobo-HEAVINESS of cells (CP-03 sorter as 3rd arm = more planning = longer
+move-token holds = drop), NOT just cell count — all-simple-cell 3-cell (CP-28+CP-29+CP-13) passes
+consistently. This is consistent with the global-move-token RCA: heavier planning -> longer holds ->
+higher slip prob. The per-root token fix (#31) makes ALL of this moot (non-overlapping cells never hold).
+Deferring full 3/3 N-of-M of the caveated records to AFTER the fix (they'll pass deterministically then).
+Multi-arm-concurrency DESIGN workflow (wgudoc4tu) running to harden the fix before implementation.
