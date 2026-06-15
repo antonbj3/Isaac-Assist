@@ -3579,3 +3579,14 @@ must be a real flat PLATFORM (create_prim slab, no walls, cubes rest on top) = c
 on all records — gold_verified_core (70), gold_kit_delivery_verified (compose_and_verify, 1), candidate_heuristic
 (compose_reasoning, 49 = Gemini plans NOT delivery-verified). Proven: heuristic-pass != delivers. NEXT L3: composer
 flat-platform handoff injection (create_prim slab + redirect drop), then re-diagnose inst1 pick.
+
+## 2026-06-15 (cont.83) — L3 BREAKTHROUGH: shallow flat handoff (z=0.08) UNBLOCKS the chain relay (0/4 -> 1/4)
+After the degenerate-collider finding (cont.82), set the handoff to z=0.08 (8cm: >cube 5cm -> no interpenetration
+explosion; low rim -> pickable). RESULT: inst0 4/4; inst1 = 1/4 (UP from 0/4); inst1 plan_calls=32 (UP from 0),
+plan_fails=0; source cubes at SANE positions z~0.83 (not exploded); Cube_2 delivered to inst1's bin. => the flat-handoff
+CONCEPT is VALIDATED: a shallow flat-ish handoff unblocks the chain relay (no explosion -> cubes present -> inst1 plans +
+picks). This is real progress: 0/4 -> working. Remaining: 1/4 -> 4/4 throughput (the 3 remaining cubes are CLUSTERED at
+[0.2,-0.4,0.83]; plan_calls=32/fails=0/1-delivered = cycling on the cluster). NEXT iteration: more stage-1 time (7000->
+12000 steps) to let inst1 pick the clustered cubes one-by-one; if still ~1/4, the cluster/grip is the limit (-> a wider
+flat handoff so cubes spread, or the proper no-walls platform). Diagnostic-first paid off twice: refuted sensor-gating,
+then found the explosion, now the relay works.
