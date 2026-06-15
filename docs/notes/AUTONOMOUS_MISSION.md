@@ -3200,3 +3200,17 @@ pick_place.py:4681). Upgraded compose_gate with per-cube TRAJECTORY capture (COM
 (scene_eyes can't run composed scenes). Trajectory run launched. NEXT: read the trail -> pinpoint the fling step +
 correlate with the loser-arm's plan-token contention; if the fling is the lock interrupting mid-carry-release, the fix
 is in the lock/gripper-timing, not the templates.
+
+## 2026-06-15 (cont.56) — ROOT CAUSE = SHARED cuRobo planner; fix = per-instance planner scope (candidate, verifying)
+Trajectory capture nailed it: inst1 (CP-09) flings Cube_3 AND Cube_4 TOGETHER @ step 7800 to x~4.8,z~0.52 (floor, 2.3m
+past the tower at 2.5 = BEYOND Franka reach -> THROWN, not knocked); inst1's other 3 cubes land at base-level spread
+(tower never stacks). inst0 (CP-01) = 4/4 clean. Pattern across all 5 runs: inst0 4/4 in 4/5, inst1 (2nd instance)
+degrades in 4/5 -> a SECOND-INSTANCE / shared-resource signature. ROOT CAUSE: two same-cfg Franka SHARE one cached
+MotionPlanner (_PLANNER_ATTR keyed robot_cfg+scope+seeds, NOT robot_path; pick_place.py:4625). The 2nd arm's plans
+corrupt under shared trajopt/world state -> fling. World-swap already ruled out (base_sig in world_sig). This is the
+SAME frontier as dual-Franka CP-51/52/53 (0/3) = task #10.
+FIX (committed, GATED): composer.namespace_and_offset_calls injects arm_scope=instance_root for
+setup_pick_place_controller -> each cell gets its OWN planner (the mechanism G1 bimanual already uses for left/right).
+Only when unset (preserves G1 left/right); single-template never calls composer -> byte-identical (37 hold). If it
+works it unlocks BOTH composition AND dual-Franka — a real multiplier. N-of-M (3x) verifying now. compose_gate
+trajectory-capture committed cont.55.
