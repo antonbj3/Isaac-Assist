@@ -25,7 +25,10 @@ os.environ.setdefault("GOOGLE_CLOUD_LOCATION", "global")
 os.environ.pop("GOOGLE_API_KEY", None)
 os.environ.pop("GEMINI_API_KEY", None)
 MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.5-flash")
-SPACING_S = float(os.environ.get("EVAL_SPACING", "0"))
+# Vertex per-minute quota on gemini-3.5-flash is TIGHT (saw 429 RESOURCE_EXHAUSTED at ~3 back-to-back
+# calls, cont.95). Space calls out by default so a run doesn't burn into 429 (which is an INFRA failure,
+# NOT a reasoning failure — see _save_record / manifest, which separate errored records from fails).
+SPACING_S = float(os.environ.get("EVAL_SPACING", "12"))
 
 
 _TERMINAL_SINKS = ("bin", "bowl", "tray", "crate", "bucket", "tote", "hopper")
@@ -156,6 +159,10 @@ ADV_TASKS = [
      "prompt": "Run two cells together: one plain pick-and-place into a bin, and one color-sorting cell that splits cubes into colored bins. Side by side, same time.",
      "expect_layout": "parallel", "expect_n_cells": 2, "expect_kind": "heterogeneous parallel: pick-place + color-sort (two different kinds)",
      "expect_goal_keywords": [["sort", "color"], ["pick", "place", "bin"]]},
+    {"id": "A9-graduated-tower-fine-discrim",
+     "prompt": "Build one cell where a single arm stacks 3 cubes into a TAPERED tower — each cube smaller than the one beneath it, so the tower narrows toward the top. A graduated stack, not a uniform one.",
+     "expect_layout": "single", "expect_n_cells": 1, "expect_kind": "FINE discrimination: must pick the GRADUATED/mixed-SKU tower block (CP-15), NOT a generic uniform stacker",
+     "expect_goal_keywords": [["graduat", "decreas", "taper", "mixed-sku", "smaller"]]},
 ]
 
 
@@ -265,7 +272,7 @@ def _block_selection_ok(cells, keyword_groups):
     return (not unmatched), unmatched
 
 
-def score(task, plan):
+def score(task, plan, valid_ids=None):
     if not isinstance(plan, dict):
         return False, "no JSON plan"
     layout = (plan.get("layout") or "").lower()
@@ -273,6 +280,13 @@ def score(task, plan):
     ok_layout = (layout == task["expect_layout"])
     ok_n = (len(cells) == task["expect_n_cells"])
     valid = all(isinstance(c, dict) and isinstance(c.get("template"), str) for c in cells)
+    # HALLUCINATION GUARD: every chosen block must EXIST in the catalog. A made-up CP-NN is an
+    # unambiguous failure (the system could not instantiate it) — catch it on ALL tasks, not just adv.
+    halluc = []
+    if valid_ids is not None:
+        halluc = [c.get("template") for c in cells if isinstance(c, dict) and c.get("template") not in valid_ids]
+        if halluc:
+            valid = False
     chain_ok = True
     sem_ok, sem_notes = True, []
     if task["expect_layout"] == "chain":
@@ -289,6 +303,8 @@ def score(task, plan):
     # PASS requires well-formed STRUCTURE, no gross IO-semantic mismatch, AND correct block KINDS
     # (when the task specifies them). Delivery-correctness still needs compose_and_verify (Kit).
     passed = struct_passed and sem_ok and sel_ok
+    if halluc:
+        sel_notes.append("HALLUCINATED block id(s) not in catalog: " + ", ".join(map(str, halluc)))
     return passed, "layout=%s(want %s) n_cells=%d(want %d) handoffs=%s struct=%s sem=%s sel=%s%s" % (
         layout, task["expect_layout"], len(cells), task["expect_n_cells"], bool(plan.get("handoffs")),
         struct_passed, sem_ok, sel_ok, (" | " + "; ".join(sem_notes + sel_notes)) if (sem_notes or sel_notes) else "")
@@ -314,6 +330,7 @@ async def main():
     from google import genai
     client = genai.Client()   # Vertex (env set above)
     catalog = build_catalog()
+    valid_ids = {c.split(":", 1)[0].strip() for c in catalog}   # for the hallucination guard in score()
     sys.stderr.write("set=%s catalog: %d blocks; model=%s (vertex); running %d tasks [%d:%d]\n" % (eval_set, len(catalog), MODEL, len(todo), start, start + n))
     sysmsg = SYS_PROMPT % "\n".join(catalog)
     npass = 0
@@ -337,7 +354,7 @@ async def main():
             _save_record(rec)
             print("EVAL %s: ERR %s" % (task["id"], rec["error"][:120]))
             continue
-        passed, detail = score(task, plan)
+        passed, detail = score(task, plan, valid_ids=valid_ids)
         npass += int(passed)
         rec["parsed_plan"] = plan
         rec["score_passed"] = passed

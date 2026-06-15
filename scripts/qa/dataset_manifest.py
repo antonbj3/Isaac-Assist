@@ -41,14 +41,19 @@ def main():
         recs = _load(os.path.join(DDIR, fn))
         tiers = collections.Counter(r.get("verification_tier", "?") for r in recs)
         entry = {"records": len(recs), "desc": desc, "tiers": dict(tiers)}
-        # reasoning: pass-rate per eval_set (the boxed error rate)
+        # reasoning: pass-rate per eval_set (the boxed error rate). EXCLUDE errored records (429
+        # quota / network) — an infra failure is NOT a reasoning failure; conflating them would be a
+        # false-negative in our OWN error-rate measure. Report errors separately.
         if "reasoning" in fn:
-            by_set = collections.defaultdict(lambda: [0, 0])
+            by_set = collections.defaultdict(lambda: [0, 0, 0])  # [passed, scored, errored]
             for r in recs:
                 s = r.get("eval_set", "?")
+                if r.get("error"):
+                    by_set[s][2] += 1
+                    continue
                 by_set[s][0] += int(bool(r.get("score_passed")))
                 by_set[s][1] += 1
-            entry["reasoning_pass"] = {s: f"{p}/{n}" for s, (p, n) in by_set.items()}
+            entry["reasoning_pass"] = {s: f"{p}/{n}" + (f" (+{e} infra-err excluded)" if e else "") for s, (p, n, e) in by_set.items()}
             entry["models"] = dict(collections.Counter(r.get("model", "?") for r in recs))
         # compositions: complexity distribution (n_cells, n_objects)
         if "compositions" in fn:
