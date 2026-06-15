@@ -3567,3 +3567,15 @@ handoff, not the belt -> sensor never fires -> inst1 idles. MUST CONFIRM with sc
 not assume. NOT claiming L3 works (false-positive discipline: 0/4 relay != fixed). The honest next step (task #29):
 scene_eyes on the composed chain inst1 -> the real relay cause -> targeted fix. This is the dedicated multi-arm chain
 work, connects to reach_validate/geometric-understanding (Anton). Marathon session consolidation point.
+
+## 2026-06-15 (cont.82) — L3 relay diagnostic REFUTES sensor-gating: degenerate-handoff explosion; + verification_tier tags
+L3 relay diagnostic (CONFIRMED, not guessed): inst1 plan_calls=0 AND source cubes at z~-65000 (Cube @ [82.7,-0.95,
+-65590] etc) = EXPLODED/fell through the world. ROOT: the flat-handoff-via-size-override [0.5,0.5,0.02] made a
+DEGENERATE collider — create_bin builds floor+4 walls; a 2cm depth interpenetrates the 5cm cubes -> PhysX blowup ->
+-65km. So inst1 has no cubes to pick -> plan_calls=0. NOT sensor-gating (my hypothesis REFUTED by the diagnostic —
+diagnostic-first saved a wrong fix). LESSON: a flat handoff can't be a shrunk bin (walls + thin floor = explosion); it
+must be a real flat PLATFORM (create_prim slab, no walls, cubes rest on top) = composer-level injection (create platform
++ redirect upstream drop onto it), the precise L3 build. Also DONE (Anton: 'is the data verified?'): verification_tier
+on all records — gold_verified_core (70), gold_kit_delivery_verified (compose_and_verify, 1), candidate_heuristic
+(compose_reasoning, 49 = Gemini plans NOT delivery-verified). Proven: heuristic-pass != delivers. NEXT L3: composer
+flat-platform handoff injection (create_prim slab + redirect drop), then re-diagnose inst1 pick.
