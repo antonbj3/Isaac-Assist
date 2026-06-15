@@ -3828,3 +3828,9 @@ re parallel Kit: CONFIRMED it was an A100-80GB MIG 2g.20gb x3 (3 Kits) per docs/
 + scripts/deploy/brev/. BLOCKED: BREV out (card rejected), Modal flopping (Mullvad netns), local multi-Kit
 = 2.4-2.7x slowdown dead-end (X-01) -> that's why single-Kit serial all session. Scripts ready when a
 rented A100 is available.
+
+cont.107 (2026-06-15): scene_eyes-GOLD covers all 4 function types. 3 gold_scene_eyes_verified records,
+all auto-appended end-to-end via the corrected pipeline: CP-08+CP-01 (grid+bin), CP-13+CP-08 (column+grid),
+CP-03+CP-08 (sort+grid). Coverage: bin/sort/column/grid all scene_eyes-verified in composition. Gold = 13
+position-verified + 3 scene_eyes-verified. Pipeline proven self-running (build->scene_eyes/instance->fail-
+closed gate->dedup-append). Next: 3-cell scene_eyes-gold (complexity climb) CP-01+CP-13+CP-08.
