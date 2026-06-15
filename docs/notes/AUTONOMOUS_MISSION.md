@@ -3175,3 +3175,16 @@ bbox. BUG fixed: COMPOSE_DEBUG env didn't cross the Kit RPC boundary (set on cli
 baked as DBG literal. Debug run launched to localize the misses (never-picked@start vs tolerance-miss@target vs
 held-mid-air@timeout) -> that distinguishes GPU-contention/budget vs placement-precision vs stochastic-grip.
 NEXT: read miss positions -> if budget/contention, bump compose N per-cube; if precision, drop-tip; confirm fix N-of-M.
+
+## 2026-06-15 (cont.54) — composition miss = FLING, not budget/world-swap; testing if CP-09 is marginal STANDALONE first
+COMPOSE_MISS (per-cube diag now works): CP-09 Cube_4 ended at [4.811,0.458,0.525] — 2.1m PAST inst1's target
+(center ~2.5), below z. NOT budget (never-picked cube stays near robot start), NOT tolerance-miss (2.1m, not 5cm) =>
+a FLING (grasped then thrown). Ruled OUT world-swap: pick_place.py:5378 _world_sig ALREADY folds _base_sig
+(robot USD base pos+quat) -> inst0(origin) vs inst1(+2.5) get distinct sigs -> update_world fires correctly per robot.
+DIAGNOSTIC-FIRST PIVOT (gates lie / false-pos = progress-poison): the N-of-M was effectively 3 trials of each base
+template. CP-09 delivered all-5 only 1/3 (4/5,5/5,4/5) EVEN as inst1. Q: is CP-09 marginal STANDALONE too? If yes, the
+"5/5 verified" mark is a single-run false-positive and composition is INNOCENT — the base template is the marginal one.
+Must verify base reliability before blaming the composer. Launched CP-09 solo SIMRUNS=3 + scene_eyes (fling mechanism:
+EJECT/GRIP-SLIP/PICK-CONVERGENCE per-object). If CP-09 solo is also ~1/3 -> the verified-core marks need N-of-M re-audit
+(many may be single-run optimistic); if solo is 3/3 -> composition introduces the fling (serialization-lock interrupts
+mid-carry?). Either outcome is high-value. compose_gate per-cube-miss committed cont.53.
