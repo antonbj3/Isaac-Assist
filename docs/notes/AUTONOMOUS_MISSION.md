@@ -3799,3 +3799,12 @@ had shown empty tpl/unknown, though the verdict was correct). Gate logic confirm
 Trust basis for the 13 gold: all bases (CP-01/03/13/28/29) scene_eyes-genuine standalone + representative
 compositions scene_eyes-confirmed (CP-01 inst0, CP-29/CP-28, CP-13 inst0+in CP-01+CP-13); 6m offsets rule
 out cross-instance interference. Next: confirm CP-03 sorter in-composition (run_eyes_gold CP-03 CP-01).
+
+cont.103 (2026-06-15): ALL 5 GOLD BASES scene_eyes-confirmed in-composition. run_eyes_gold CP-03 CP-01
+-> GOLD: inst0 CP-03 sorter = both cubes CONVERGED+GRIPPED delivered to DISTINCT bins (min-pair-xy 0.78m =
+genuinely sorted red/blue, not piled); inst1 CP-01 4 gripped. Wrapper arg-via-file fix verified (correct
+class display now). Coverage complete: CP-01 (CP-01+CP-13, CP-03+CP-01), CP-03 (sorts to 2 bins), CP-13
+(2-level column), CP-28/CP-29 (CP-29+CP-28) — every gold base is scene_eyes-genuine in a composition
+context. The 13 gold records stand on a fully scene_eyes-verified base set (+6m offsets rule out cross-
+instance interference). FOUNDATION + PIPELINE CORRECTED: gold is scene_eyes-grounded (transport+grasp+
+structure), not bbox-position. The false-success Anton flagged is closed end-to-end.
