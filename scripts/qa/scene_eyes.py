@@ -31,11 +31,34 @@ sys.path.insert(0, REPO)
 
 ARGS = [a for a in sys.argv[1:] if not a.startswith("--")]
 OPTS = set(a for a in sys.argv[1:] if a.startswith("--"))
-TPL = ARGS[0] if ARGS else "CP-69"
-DUR = float(ARGS[1]) if len(ARGS) > 1 else 40.0
-NFRAMES = int(ARGS[2]) if len(ARGS) > 2 else 16
 FRAMES = "--noframes" not in OPTS
 ATTACH = "--attach" in OPTS
+# COMPOSE mode (2026-06-15, living-tools): observe a COMPOSED multi-instance scene
+# (built via compose_canonicals) instead of a single template — scene_eyes IS the
+# truth tool, so it must see composed scenes too (Anton). Invoke:
+#   scene_eyes.py --compose "CP-01@0,0,0" "CP-09@6,0,0" [--noframes]   (EYES_DUR=secs, EYES_FOCUS=inst1)
+COMPOSE = "--compose" in OPTS
+
+def _parse_compose(arg, idx):
+    """'CP-01' or 'CP-01@dx,dy,dz' -> (name, (dx,dy,dz)). Default offset +2.5*idx in x."""
+    if "@" in arg:
+        nm, off = arg.split("@", 1)
+        dx, dy, dz = (float(x) for x in off.split(","))
+        return nm, (dx, dy, dz)
+    return arg, (2.5 * idx, 0.0, 0.0)
+
+if COMPOSE:
+    COMPOSE_SPECS = ARGS                         # each non-flag arg = "CP-01@dx,dy,dz"
+    TPL = "compose_" + "_".join(s.split("@")[0] for s in COMPOSE_SPECS)
+    DUR = float(os.environ.get("EYES_DUR", "150"))
+    NFRAMES = 0
+else:
+    TPL = ARGS[0] if ARGS else "CP-69"
+    DUR = float(ARGS[1]) if len(ARGS) > 1 else 40.0
+    NFRAMES = int(ARGS[2]) if len(ARGS) > 2 else 16
+# In compose mode, focus the probe on ONE instance's robot (default inst1, the 2nd cell
+# that degrades). Empty for single-template -> auto-detect (byte-identical).
+FOCUS = ("/World/" + os.environ.get("EYES_FOCUS", "inst1")) if COMPOSE else ""
 OUT = f"/home/anton/.isaac_qa/run/eyes/{TPL}"
 
 # ---- Kit-side probe (token-replaced raw string; NO f-string so dict braces stay literal) ----
@@ -51,9 +74,16 @@ for _f in os.listdir(OUT):
         try: os.remove(os.path.join(OUT, _f))
         except Exception: pass
 
+FOCUS = "__FOCUS__"   # compose-mode: observe the robot UNDER this instance root (e.g. /World/inst1)
 ROBOT = None
-for cand in ("/World/UR10", "/World/UR10e", "/World/Franka", "/World/ur10", "/World/Robot"):
-    if stage.GetPrimAtPath(Sdf.Path(cand)).IsValid(): ROBOT = cand; break
+if FOCUS:
+    for pr in stage.Traverse():
+        _p = str(pr.GetPath())
+        if _p.startswith(FOCUS + "/") and pr.HasAPI(UsdPhysics.ArticulationRootAPI):
+            ROBOT = _p; break
+if ROBOT is None:
+    for cand in ("/World/UR10", "/World/UR10e", "/World/Franka", "/World/ur10", "/World/Robot"):
+        if stage.GetPrimAtPath(Sdf.Path(cand)).IsValid(): ROBOT = cand; break
 if ROBOT is None:
     for pr in stage.Traverse():
         if pr.HasAPI(UsdPhysics.ArticulationRootAPI): ROBOT = str(pr.GetPath()); break
@@ -858,7 +888,22 @@ def _contact_sheet(js):
 
 async def main():
     from service.isaac_assist_service.chat.tools import kit_tools
-    if not ATTACH:
+    if not ATTACH and COMPOSE:
+        # COMPOSED multi-instance scene: build via compose_canonicals, then the probe
+        # (focused on EYES_FOCUS, default inst1) observes that cell's robot + objects.
+        from service.isaac_assist_service.chat.canonical_instantiator import compose_canonicals
+        await kit_tools.exec_sync("import omni.usd\nomni.usd.get_context().new_stage()\n", timeout=20)
+        await kit_tools.exec_sync(
+            "import builtins\nbuiltins._eyes_plan_capture=True\nbuiltins._eyes_plan_log=[]\n"
+            "try:\n    del builtins._eyes_plan_fields\nexcept Exception:\n    pass\n", timeout=15)
+        compose_arg = []
+        for i, spec in enumerate(COMPOSE_SPECS):
+            _nm, _off = _parse_compose(spec, i)
+            _tpl_i = json.load(open(f"{REPO}/workspace/templates/{_nm}.json"))
+            compose_arg.append((_tpl_i, f"inst{i}", _off))
+        cb = await asyncio.wait_for(compose_canonicals(compose_arg), timeout=900)
+        print("COMPOSE_BUILT instances=%d focus=%s" % (cb.get("n_instances", 0), FOCUS))
+    elif not ATTACH:
         from service.isaac_assist_service.chat.canonical_instantiator import (
             execute_template_canonical, settle_after_canonical)
         tpl = json.load(open(f"{REPO}/workspace/templates/{TPL}.json"))
@@ -934,7 +979,7 @@ async def main():
     except Exception: pass
     raw = (_KIT.replace("__OUT__", OUT).replace("__DUR__", repr(DUR))
            .replace("__NFRAMES__", repr(NFRAMES)).replace("__FRAMES__", repr(FRAMES))
-           .replace("__TPL__", TPL))
+           .replace("__FOCUS__", FOCUS).replace("__TPL__", TPL))
     # Tolerate exec_sync timeout/RPC error: the loop dumps eyes.json INCREMENTALLY, so even a timed-out long
     # play leaves partial data on disk. Read whatever exists instead of a blind NO_EYES_JSON.
     try:
