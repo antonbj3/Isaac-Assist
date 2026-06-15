@@ -3428,3 +3428,19 @@ ceiling' effectively covers ~the whole core, so CHAIN is the primary robust mult
 deeper per-arm-planner work, #10). Architecture status: L0✓ L1✓ L2✓ + STEP2 metadata✓. NEXT: L3 chain handoff wiring
 (additive, enables 'cell A feeds cell B' — Anton's vision) — apply_source_override in compose_canonicals; defer the
 risky shared world.reset change for no-regression care.
+
+## 2026-06-15 (cont.72) — CONSOLIDATION: composition architecture decision-independent layers DONE; chain mapped
+chain_gate.py (task #27) ALREADY orchestrates SEQUENTIAL CHAINS via execute_template_canonical(source_override) +
+handoff-ALIGNMENT offsets (stage k's pick lands on stage k-1's delivery) — a DIFFERENT placement logic than layout_solver
+(which SPACES cells for parallel). So: PARALLEL -> layout_solver (L1); CHAIN -> alignment (chain_gate, exists). Known
+chain limit: deep-bin handoff blows up the next pick (grip-vs-wall); FLAT handoff works (geometry insight = my authority,
+chain templates should deliver to a flat handoff surface).
+DELIVERED this session (all decision-independent, offline, committed): L1 layout_solver (Kit-verified inst1 5/5x3),
+L2 precondition_check, STEP 2 derived hints cache (68/70 core=cuRobo, all footprint-known + namespacing-safe),
+scene_eyes --compose fix + solver-consume, compose_gate solver auto-spacing, collection_manifest, the static<Kit lesson
+(memory+cron). GATED on Anton's 6 decisions: L4 build_composed_scene (unified topology router) + L5 the two LLM tools
+(plan_scene_decomposition + build_composed_scene). Until then composition is reachable only from the offline harnesses.
+STRATEGIC: chains (serialized) = the primary robust multiplier for the cuRobo-heavy core; parallel-concurrent is
+contention-limited (needs the per-arm-planner+lock work, #10). NEXT when Anton steers: wire L4/L5 (interface per the
+design-review: LLM emits ids+topology+role->role edges, system owns all coordinates) OR advance the LLM-flow/Gemini
+sim-protocol (task #28, the compose-reasoning half is ChromaDB-free + Kit-free).
