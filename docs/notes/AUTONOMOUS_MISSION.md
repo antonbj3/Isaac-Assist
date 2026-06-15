@@ -2793,3 +2793,23 @@ FIXED the one unambiguous all-deliver case I measured: CP-NEW-vision-depalletize
 (surgical) -> gate now honestly reports 1/6 fail instead of false-passing. The remaining 50 need a per-template
 audit (is it all-to-one-bin vs sort/stream/route?) — flagged, not swept. NEXT: y-merge scene_eyes (tractable real
 win) + the completeness per-template audit. Memory: feedback_false_positives_progress.
+
+## 2026-06-15 (cont.30) — y-merge diagnosed (Cube_L2 belt-cadence miss); stagger tried+reverted
+scene_eyes on CP-NEW-y-merge-singulation: 5/6, Cube_L2 = THRASH-NO-CONVERGE (never-gripped, closest 121mm, dxy
+gap 62mm stuck; "target unreachable"). The other 5 CONVERGED+GRIPPED+delivered (the OFF-SURFACE flags are the
+heuristic mis-reading normal lift-high->drop-in-bin at [0.5,-0.5]). Pick order L3,L2,L1,R3,R1,R2: L3 is pre-staged
+on the merge belt -> picked at t0.8; while the arm is busy, Cube_L2 rides the belt INTO+PAST the sensor zone and is
+missed -> arm chases a moving/departed target -> rides off (gate run: ended off-belt [0.57,0.21]; post-stagger:
+[0.06,-0.04]).
+HYPOTHESIS TRIED: feed not staggered (L_x==R_x identical [-0.95,-0.65,-0.35]) -> simultaneous merge arrival/jam.
+Staggered R_x to [-0.80,-0.50,-0.20] (interleave, matches goal "alternate"). RE-GATE: still 5/6, still Cube_L2
+(failure POSITION moved but not outcome) -> the merge-collision was NOT the root. REVERTED the stagger (no
+unverified churn; wrong hypothesis). TRUE root = belt-cadence: while the arm services one cube, the next rides past
+the sensor and is missed. The clean fix is belt-pause-during-pick — but that is the SHARED load-bearing CP-52/65
+logic the directive forbids touching without multi-template no-regression. => y-merge characterized as deeper-work
+(belt-cadence), NOT a quick win; not verified.
+TIER-1 BATCH NET (cont.29-30): 0/3 clean verifies, but real value: caught+fixed a gate FALSE-PASS
+(vision-depalletize 1/6 was reading stable_ok via completeness default), flagged a 51-template completeness
+honesty-hole, characterized y-merge (belt-cadence) + vision-depalletize (1/6 grid arm-over-box) + dr-curriculum
+(introspection-only). SMOKE-pass != delivers. NEXT: per-template completeness audit (careful, false-negative risk)
+or a non-belt-cadence tier-1 candidate. Memory: feedback_false_positives_progress, feedback_diagnostic_first_then_fix.
