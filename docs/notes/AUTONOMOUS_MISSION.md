@@ -3146,3 +3146,19 @@ unverified pool now ~exhausted (8 deliver, 3 deep-broken, CP-76 reach-flagged). 
 serial measure-and-mark recovered many already-working blocks the markers had missed — the directive's "drive tier-1
 -> verified" via mät-först, not static guessing. NEXT: simple single-object CP-NEW (maniskill/robohive ports) +
 remaining clean CP-NEW. Memory: feedback_false_positives_progress.
+
+## 2026-06-15 (cont.52) — STRATEGIC RECONCILE: built collection_manifest.py; "the collection" = CP-NN verified core, not 439
+Anton asked: should older CP-NN even be run, isn't there a finished ~110 collection? ANSWER (with real numbers, not
+memory): there is NO clean "110" file — that was the master-plan "library 86->111" MAY SNAPSHOT. The directory has
+since accreted to 439 via drafting waves. Built scripts/qa/collection_manifest.py (zero-boot) ->
+docs/notes/CANONICAL_COLLECTION_MANIFEST.md, honest buckets:
+  VERIFIED_CORE 70 (66 CP-NN + 4 CP-NEW)  = THE deliverable, compose from this
+  DELIVERY_TODO 84 (8 CP-NN + 74 CP-NEW + 2 named) = work pool (mostly CP-NEW drafts)
+  BROKEN 8 (CP-60 0/14, CP-76 0/22 + 6 CP-NEW)  | NON_DELIVERY 65 | DRAFT 212 (all "named" scaffolding)
+KEY: the "klar kollektion" IS the CP-NN family (66/70 verified are CP-NN). Running CP-NN was RIGHT — measure-and-mark
+recovered +8 working blocks INTO the core. CP-NN pool now ~exhausted: 8 todo (the genuinely-hard: CP-05 flip,
+CP-48/59/67 dual-arm/pile, CP-80/84/85 UR10-envelope, CP-87), 2 BROKEN. The 212 DRAFT-named + deep CP-NEW tail are
+NOT the deliverable -> stop chasing breadth. CP-60 got NO false verified-stamp despite the 1/1 suspect run
+(motion_controllers=null; manifest keeps it BROKEN by 0/14 history — false-positive discipline held).
+DIRECTION FORWARD (north-star = composition): the 70 verified core is the base; each = a multiplier. Highest value now
+= verify core templates COMPOSE (chain end->start + parallel cells), single-tenant. Manifest committed (feat/foundation-build).
