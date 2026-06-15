@@ -3717,3 +3717,21 @@ SLID_INCIDENTAL / EXPLODED. Next: re-tier all 17 to candidate, re-validate each 
 only confirmed, DELETE false positives. Cross-instance leak already ruled out by numbers (offsets ~6.6m vs
 bbox ~0.3m). LESSON (sharpening feedback_static_vs_kit_scene_eyes): a measure I author is itself a suspect
 gate — scene_eyes is the gold authority, my position-measure is at most a pre-filter.
+
+cont.97 (2026-06-15): Anton 2nd correction — "time series är ju redan inne i scene eyes" / "validator är
+ju redan byggt" / "håller du på med statiska verktyg?". RIGHT again: I built eyes_transport_check.py as a
+separate eyes.json parser — REDUNDANT, scene_eyes already computes+prints per-object transport/grip/converge.
+REMOVED it. Instead UPGRADED scene_eyes itself (living Kit-connected tool): (1) EJECTION detector made
+OFFSET-INVARIANT — it false-flagged every offset instance "EXPLODED" because abs(x/y)>5m triggers on the
+compose offset (inst1~6.6m); now gates on SPEED (>8m/s) + Z (z<-1 / z>5), which is what real PhysX blowups
+show (CP-44 z=-39750), offset-free. (2) Added first-class STACK STRUCTURE line (final z-levels; flags
+"FLAT LAYER, not a column" when >=3 objects share one z). EMPIRICAL VERDICTS from scene_eyes' OWN Kit output:
+  CP-01 (inst0, bin pick-place): all 4 CONVERGED+GRIPPED, GRIP-SLIP rigid hold, object-object contacts =>
+    GENUINE delivery (bin needs no column). Position measure was HONEST here.
+  CP-09 (inst1, STACKER): all 5 CONVERGED+GRIPPED (genuine grasps+transport) BUT final z = 0.825 for ALL 5
+    (one level) = FLAT SCATTER, not a tower. CP-09's own faithfulness gate already FAILS 0/4. => SCATTER
+    FALSE-SUCCESS: the position-bbox measure counts 5 cubes in the 0.5x0.5m base pad as delivered=5/5
+    regardless of stacking. Gold records using CP-09 as a verified stacker are OVER-CLAIMING.
+Verifying CP-29 (audit smoking gun: template says "cube NEVER PICKED") + CP-13 (palletizer structure) via
+scene_eyes now. Then PURGE/retier the false-positive gold. RULE (reinforced): scene_eyes is the validator;
+read its OWN output; upgrade scene_eyes when a gap shows — never a static side-parser.

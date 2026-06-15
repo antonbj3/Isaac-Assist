@@ -680,11 +680,15 @@ def _analyse(js):
             _dt = max(1e-3, _bb[0] - _aa[0]); _v = math.dist(_aa[1], _bb[1]) / _dt
             if _v > _vmax: _vmax = _v; _vt = _bb[0]
         _fp = _ps[-1][1]
-        _exp = (abs(_fp[0]) > 5.0 or abs(_fp[1]) > 5.0 or abs(_fp[2]) > 5.0 or _vmax > 8.0)
+        # OFFSET-INVARIANT (2026-06-15 fix): in compose mode x/y carry the instance offset (inst1~6.6m,
+        # inst2~13m) so an abs-x/y>5 test FALSE-flagged every offset instance as "EXPLODED" (CP-09 inst1).
+        # A real PhysX over-penetration blowup shows huge SPEED or absurd Z (CP-44 sphere -> z=-39750); z is
+        # never the composition offset axis. So gate explosion on speed + z only, not on x/y world position.
+        _exp = (_vmax > 8.0 or _fp[2] < -1.0 or _fp[2] > 5.0)
         if _exp or _vmax > 2.0:
             _ej.append((_nm, _vmax, _vt, _fp, _exp))
     if _ej:
-        out.append("EJECTION / EXPLOSION (per-object max sample-speed + final pos; >8 m/s or |pos|>5m = PhysX blowup):")
+        out.append("EJECTION / EXPLOSION (per-object max sample-speed + final pos; >8 m/s or z<-1/z>5 = PhysX blowup; offset-invariant):")
         for _nm, _vmax, _vt, _fp, _exp in sorted(_ej, key=lambda x: -x[1]):
             out.append("    %-14s vmax=%7.1f m/s @%.1fs  final=[%.2f,%.2f,%.2f]  %s" % (
                 _nm, _vmax, _vt, _fp[0], _fp[1], _fp[2], "*** EXPLODED/EJECTED ***" if _exp else "(fast — watch)"))
@@ -700,7 +704,7 @@ def _analyse(js):
         if len(_zs) < 3: continue
         _zmax = max(p[2] for p in _zs); _fp = _zs[-1]
         _drop = _zmax - _fp[2]
-        if _drop > 0.10 and abs(_fp[0]) < 5 and abs(_fp[1]) < 5:  # fell >=10cm from peak, not an explosion
+        if _drop > 0.10 and _fp[2] > -1.0:  # fell >=10cm from peak, not a sub-floor explosion (offset-invariant)
             _off.append((_nm, _zmax, _fp, _drop))
     if _off:
         out.append("OFF-SURFACE / KNOCKED-OFF (final z fell >=0.10m below the object's own peak — rolled/knocked off a surface):")
@@ -711,6 +715,24 @@ def _analyse(js):
     _oo = sorted({k for k in _cf if "|" in k and all(p.strip() in _ej_objs for p in k.split("|"))})
     if _oo:
         out.append("OBJECT-OBJECT CONTACTS (place-time collisions — can knock neighbours off a surface): " + ", ".join(_oo[:12]))
+
+    # STACK STRUCTURE (2026-06-15, Anton false-success): a STACKER must end with objects at DISTINCT z-levels
+    # (a vertical column, ~0.05 apart per cube). Objects all sharing ONE z = a FLAT SCATTER on the base, which
+    # the position-bbox gate counts identically to a built column (CP-09: 5 cubes all final z~0.82 = scatter,
+    # NOT a tower; its own faithfulness gate fails 0/4). Names the column-vs-scatter the position gate is blind
+    # to. Offset-invariant (z is never the composition offset axis). Read for any stack/pallet template.
+    _finals = {}
+    for _nm in sorted(_ej_objs):
+        _ps2 = [(_r.get("cubes") or {}).get(_nm) for _r in rows if (_r.get("cubes") or {}).get(_nm)]
+        if _ps2: _finals[_nm] = _ps2[-1]
+    if len(_finals) >= 2:
+        _levels = []
+        for _z in sorted(p[2] for p in _finals.values()):
+            if not _levels or abs(_z - _levels[-1]) > 0.03: _levels.append(_z)
+        out.append("STACK STRUCTURE (%d tracked objects' final z): %d distinct level(s) %s" % (
+            len(_finals), len(_levels), [round(x, 3) for x in _levels]))
+        if len(_finals) >= 3 and len(_levels) == 1:
+            out.append("    ^ FLAT LAYER, not a column — a STACKER reading 'delivered' here is a SCATTER false-success")
 
     # BELT TIMELINE (2026-06-14): belt surface-velocity over the run — pins the PAUSE/RESUME behaviour
     # behind the conveyor-stall class. A belt that stays at 0 most of the run = boxes never advance to the
