@@ -3307,3 +3307,14 @@ but the PRIMARY fix is: increase the compose offset so instances' conveyors don'
 CP-09@+6 (belts clear) -> expect the ride-offs to vanish. (Light test CP-07+CP-28 @ default 2.5 running — those also
 have belts, may show the same ride-off.) Diagnostik-först WIN: read the actual coordinates -> the y=0.4 belt-match
 overturned the whole "fling" framing.
+
+## 2026-06-15 (cont.63) — belt-overlap CONFIRMED quantitatively (static footprints); fix = scene-extent-aware spacing
+Light test CP-07+CP-28 @ offset 2.5 = 0/2 deterministic (3/3 runs identical) -> a SCENE issue, not contention. inst1
+(CP-28) cube @ [4.25, 0.399, 0.525] = belt ride-off (y=0.4). Static x-footprint analysis (conveyor scale = full length):
+CP-01 [-1.5,1.5] w=3.0 ; CP-09 [-2.0,2.0] w=4.0 ; CP-28 [-1.7,1.5] ; CP-07 [-10,10] w=20 (!). At compose offset 2.5:
+inst0 CP-01 [-1.5,1.5] vs inst1 CP-09 [0.5,4.5] -> OVERLAP 1.0m (the belts merge); at offset 6.0 -> clear. CP-07's 20m
+footprint explains its deterministic 0/2 (can't fit at 2.5). => the default compose offset (2.5*idx) is too small vs
+authored scene footprints (esp. conveyors) -> instances' belts overlap -> unpicked cubes ride the merged belt off the
+end. FIX = a scene-extent-aware spacing helper (compute each template's axis footprint, lay instances out with a gap so
+footprints don't overlap), replacing the fixed 2.5. CONFIRMING NOW: CP-01@0 + CP-09@+6 (belts clear) N-of-M -> expect
+reliable 2/2. Then wire the spacing helper into compose_gate + expose for the production composer.
