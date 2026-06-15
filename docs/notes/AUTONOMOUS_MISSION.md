@@ -3415,3 +3415,16 @@ COMPOSITION ARCHITECTURE STATUS (design-review roadmap): L0 compose_canonicals (
 wiring + deferred single world.reset) — NEXT offline+minimal-Kit; L4 build_composed_scene (precond->solver->compose->gate);
 L5 the 2 LLM tools (plan_scene_decomposition + build_composed_scene) — wait on Anton's interface/promotion decisions.
 Two solid Kit-free layers delivered this push; the rest intersects the 6 decisions.
+
+## 2026-06-15 (cont.71) — STEP 2 done: derived composition-hints cache; KEY finding 68/70 core = cuRobo
+gen_composition_hints.py -> workspace/composition_hints.json (regenerable sidecar, no template mutation): footprint +
+input/output ports + exclusive_resources + namespacing_safe for the 70 VERIFIED_CORE delivery templates. FINDINGS:
+ALL 70 footprint-known + namespacing-safe (no run_usd_script absolute-path escape in the core -> refutes the
+CP-07/08/22 worry; all paths pass as re-rootable kwargs); 68/70 use cuRobo. => concurrent PARALLEL composition of any
+two core templates ALWAYS hits the process-global plan/move-lock contention (the residual own-belt ride-off, cont.69) —
+this is the NORM for the core, not an edge case. Robust composition modes for the core = CHAINS (serialized, one arm at
+a time) + spatially-separated cells (layout_solver spacing). This sharpens Anton's decision #1: 'serialize-only v1
+ceiling' effectively covers ~the whole core, so CHAIN is the primary robust multiplier (parallel-concurrent needs the
+deeper per-arm-planner work, #10). Architecture status: L0✓ L1✓ L2✓ + STEP2 metadata✓. NEXT: L3 chain handoff wiring
+(additive, enables 'cell A feeds cell B' — Anton's vision) — apply_source_override in compose_canonicals; defer the
+risky shared world.reset change for no-regression care.
