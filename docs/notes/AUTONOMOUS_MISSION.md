@@ -3025,3 +3025,24 @@ MOBILE-TRACK DIAGNOSTIC ARC COMPLETE: navigate_to stub -> closed-loop fix (CP-64
 hollow robot_wizard) -> multi-amr 3/3 spawn+drive verified -> nav_gate fleet-aware -> jetbot-nav root-caused
 (wheel position-drive). Remaining mobile work is now precisely actionable: the wheel-velocity-drive fix unblocks ALL
 non-carter wheeled templates (jetbot/forklift/etc). Memory: project_isaac_assist_nav_stub.
+
+## 2026-06-15 (cont.44) — jetbot-nav: cont.43 stiffness REFUTED; generic wheel-discovery fix (kept, no-regression); deeper blocker = WheeledRobot.initialize
+Diagnostic-first chain on the jetbot-nav gap (3 hypotheses tested + refuted):
+ 1) cont.43 "position-drive stiffness on wheels" -> REFUTED: probe zeroed wheel stiffness (WHEEL_JOINTS
+    /World/JB/chassis/{left,right}_wheel_joint) -> jetbot STILL disp=0. (navigate_to ALREADY zeros stiffness +
+    damping=1e4, lines 1765-68 — so stiffness was never the cause.)
+ 2) "carter-hardcoded wheel-name fallback" -> REAL brittleness FOUND + FIXED: navigate_to's _wheels discovery, when
+    SingleArticulation.initialize fails at setup-time, fell back to ['joint_wheel_left','joint_wheel_right'] (Carter
+    names) which never match jetbot's *_wheel_joint -> wrong wheel_dof_names. Fixed: discover wheel joints by stage
+    traversal (revolute *wheel* joints) before the Carter last-resort (robot.py ~1760). VERIFIED no-regression:
+    CP-64 carter reached 1/1 disp 2.852 (unchanged). BUT jetbot STILL disp=0 -> not the (sole) cause either.
+ 3) DEEPER BLOCKER (remaining): navigate_to's WheeledRobot.initialize() fails for jetbot's articulation (the
+    create_articulation_view NoneType seen in the standalone probe) -> _nav_step's try/except bails before
+    apply_wheel_actions -> no drive. This is a deep Isaac WheeledRobot/jetbot-articulation interaction, beyond an
+    autonomous quick-fix -> STOP the jetbot rabbit hole.
+KEPT the generic wheel-discovery fix (correct robustness improvement: any non-Carter wheeled robot whose dof_names
+discovery fails now gets its real wheel joints, not Carter's; CP-64 no-regression). NOT claimed to fix jetbot (it
+doesn't — deeper WheeledRobot blocker). NET mobile track: CARTER nav fully works (CP-64 + multi-amr 3/3 spawn+drive);
+jetbot/non-carter nav blocked on WheeledRobot.initialize (focused Isaac-internals investigation). The mobile spawn-fix
+pattern + nav_gate fleet tool + the generic wheel-discovery are the durable gains. Memory: project_isaac_assist_nav_stub,
+feedback_diagnostic_first_then_fix.

@@ -1758,7 +1758,17 @@ try:
 except Exception:
     _wheels = []
 if not _wheels:
-    _wheels = ['joint_wheel_left', 'joint_wheel_right']
+    # SingleArticulation.initialize can fail at setup-time (pre-physics); discover wheel
+    # joints by stage traversal (revolute *wheel* joints) so NON-Carter robots drive too
+    # (jetbot: left_wheel_joint/right_wheel_joint) — the old Carter-hardcoded fallback
+    # ['joint_wheel_left','joint_wheel_right'] never matched them -> wheel_dof_names wrong
+    # -> WheeledRobot couldn't drive -> disp=0 (root-caused 2026-06-15).
+    _wheels = [p.GetPath().name for p in _stage.Traverse()
+               if 'Joint' in str(p.GetTypeName())
+               and 'wheel' in p.GetPath().name.lower()
+               and 'caster' not in p.GetPath().name.lower()]
+if not _wheels:
+    _wheels = ['joint_wheel_left', 'joint_wheel_right']  # last-resort Carter default
 for _pr in _stage.Traverse():
     if _pr.GetPath().name in _wheels:
         _drv = UsdPhysics.DriveAPI.Get(_pr, "angular")
