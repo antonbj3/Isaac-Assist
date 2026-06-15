@@ -3821,3 +3821,10 @@ fixed a path-collision bug: run_eyes_gold used fixed /tmp/goldeyes_inst$i.txt fo
 in-flight CP-08+CP-01 run overwrote CP-01+CP-13's files; the FAIL-CLOSED gate correctly REFUSED to append
 the contaminated (mid-overwrite) data (gold stayed 13, no false record) — the fail-closed design paid off.
 Fixed: ifile paths now composition-specific (/tmp/goldeyes_<combo>_inst$i.txt). CP-08+CP-01 run finishing.
+
+cont.106 (2026-06-15): CP-08+CP-01 -> GOLD (CP-08 palletizer grid-verified 4 gripped; CP-01 bin 4 gripped),
+appended as first gold_scene_eyes_verified record (palletizer cell now in gold; new diversity). Anton asked
+re parallel Kit: CONFIRMED it was an A100-80GB MIG 2g.20gb x3 (3 Kits) per docs/deployment/brev-multi-kit.md
++ scripts/deploy/brev/. BLOCKED: BREV out (card rejected), Modal flopping (Mullvad netns), local multi-Kit
+= 2.4-2.7x slowdown dead-end (X-01) -> that's why single-Kit serial all session. Scripts ready when a
+rented A100 is available.
