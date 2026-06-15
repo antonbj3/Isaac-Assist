@@ -3082,3 +3082,18 @@ conveyor (stochastic), long-horizon (timeout), routing (need routing config) —
 single-run hardens. The clean tier-1 CP-NEW vein is now genuinely thinning. Hardened total = 12 (incl. brick-stacking
 verified + tray-stack honest-fail). NEXT: deeper classes (special-gripper handling, moving-pick stochastic N-of-M)
 or focused sessions. Memory: feedback_false_positives_progress.
+
+## 2026-06-15 (cont.48) — CP-NEW clean-win vein EXHAUSTED (kitting 0/6); remaining = per-template RCA (deeper)
+kitting-station-6sku 0/6 stable_fail (clean GPU, longer-timeout wrapper — not a timeout, a real fail). Combined
+CP-NEW measure tally this session: 1 CLEAN WIN (brick-stacking 3/3 verified) out of ~8 measured. The rest:
+broken 0/N (6dof-pose-estimate 0/3, adaptive-3finger 0/3, vacuum-sheet 0/3, kitting-6sku 0/6 — DIVERSE mechanisms:
+pose-estimate, 3-finger, vacuum/suction, multi-SKU kitting -> NO common one-fix-many), partial (y-merge 5/6 belt-
+cadence, tray-stack 1/5), timeout (planning-10step dur 700). => the tier-1 CP-NEW clean-win vein (standard-Franka
+pick/stack that just works + needs hardening) is EXHAUSTED; brick-stacking was the find. The remaining broken CP-NEW
+each need their own scene_eyes RCA (genuine per-template fixes, deeper) — not autonomous quick-hardens.
+SESSION-WIDE STATE: clean wins harvested across ALL tracks (composition centerpiece+tooling; gate-honesty 12
+templates hardened + verified-set sound + GPU-leak measurement bug fixed; mobile carter-nav working + multi-amr
+verified + nav_gate fleet + wheel-discovery fix + jetbot deep-blocker root-caused; 1 new verified block brick-
+stacking). Remaining = deeper/focused: per-template RCA of broken CP-NEW (special-grippers, pose-estimate, kitting),
+mobile jetbot WheeledRobot.initialize, fleet coordination, composition full-rate (timeouts), completeness N-of-M of
+stochastics, tier-1 redesigns. Best done with focused/fresh context. Memory: feedback_false_positives_progress.
