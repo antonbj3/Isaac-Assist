@@ -2855,3 +2855,17 @@ controller-bbox coupling). Needs careful redesign (single central drop like CP-0
 controller bin-bbox/drop-height handles walls), not a quick swap. Characterized as deeper-work, NOT verified.
 Stays at completeness="all" (committed earlier) so its gate honestly reports the 1/6 fail. Memory:
 feedback_diagnostic_first_then_fix.
+
+## 2026-06-15 (cont.34) — audit batch 3: CP-13 hardened; CP-41/CP-56 measure 0/4 (verified-set integrity flag)
+3-cell composition test (CP-73+CP-22+CP-09) TIMED OUT (560s wrapper) — 3 concurrent cuRobo cells × 18k steps is
+GPU-bound; no delivery data. Composition already proven (chain + 2-cell + tool); not re-running the heavy 3-cell.
+Completeness audit batch 3 (measure-then-harden, fresh Kit each): CP-13 2/2 -> hardened completeness="all".
+BUT CP-41 0/4 and CP-56 0/4 (both already completeness="all", min_req=4, function-gate-✓ verified). Diagnostic-first
+(NOT assuming): env healthy (CP-13 same batch = 2/2; Isaac warp 1.11.0 cache untouched today — the 1.13.0 churn is
+sibling-project red-herring per memory; each template got a fresh boot). Per-cube: CP-56 cubes sit at START (z=0.88,
+never picked); CP-41 cubes ride the belt off to x=1.7 and fall (never picked) -> both = robot never executes picks.
+=> NOT a measurement artifact across the batch; template-specific. This is a potential REAL verified-set regression
+(false-positive in the canonical library = Anton's #1 concern), surfaced because they now carry completeness="all".
+scene_eyes CP-56 launched to confirm: plan_calls=0/no-arm-motion (env/build) vs arm-moves-but-fails (real). Did NOT
+harden CP-41/CP-56 (0/4 != pass). Result -> cont.35. Memory: feedback_false_positives_progress,
+feedback_diagnostic_first_then_fix.

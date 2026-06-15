@@ -54,7 +54,8 @@
     "cube_paths": [
       "/World/Cube_1",
       "/World/Cube_2"
-    ]
+    ],
+    "completeness": "all"
   },
   "extends": "CP-09",
   "extension_notes": "CP-13 simplifies CP-09 from 5-cube tower to 2-cube — meaningful as the smallest stack. Validates that the drop_targets dict pattern works with z increasing per cube layer. PalletBase 15×15cm wider than CP-09's 10×10cm to give Cube_1 stable landing area before Cube_2 lands on it. Future variant: scale to N cubes via compute_stack_placement(column, n_items=N).",
