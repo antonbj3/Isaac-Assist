@@ -62,8 +62,18 @@ def build_catalog(limit=None):
         limit = int(os.environ.get("CATALOG_LIMIT", "999"))
     hints_path = os.path.join(REPO, "workspace", "composition_hints.json")
     hints = json.load(open(hints_path))["hints"] if os.path.exists(hints_path) else {}
+    # TRUSTED-ONLY (2026-06-15): the reasoning LLM must compose from scene_eyes-VERIFIED blocks, not the
+    # position-gate-trusted 70 (which included CP-09's scatter false-success + the partials). Filter by the
+    # composable-block registry: keep only verdicts starting GENUINE/TRUSTED. Set TRUSTED_ONLY=0 to disable.
+    trusted = None
+    reg_path = os.path.join(REPO, "workspace", "composable_blocks.json")
+    if os.environ.get("TRUSTED_ONLY", "1") == "1" and os.path.exists(reg_path):
+        allb = json.load(open(reg_path)).get("all", {})
+        trusted = {n for n, b in allb.items() if str(b.get("verdict", "")).startswith(("GENUINE", "TRUSTED"))}
     cat = []
     for name in sorted(hints):
+        if trusted is not None and name not in trusted:
+            continue   # exclude scene_eyes-false / partial / pending blocks from the LLM's choices
         try:
             t = json.load(open(os.path.join(TPL_DIR, name + ".json")))
         except Exception:

@@ -3808,3 +3808,9 @@ class display now). Coverage complete: CP-01 (CP-01+CP-13, CP-03+CP-01), CP-03 (
 context. The 13 gold records stand on a fully scene_eyes-verified base set (+6m offsets rule out cross-
 instance interference). FOUNDATION + PIPELINE CORRECTED: gold is scene_eyes-grounded (transport+grasp+
 structure), not bbox-position. The false-success Anton flagged is closed end-to-end.
+
+cont.104 (2026-06-15): Reasoning track now composes from the TRUSTED registry. compose_reasoning_eval
+build_catalog() filters by composable_blocks.json (TRUSTED_ONLY=1 default) -> excludes the 6 non-trusted
+(CP-09 scatter-false + CP-20/25/43/71 partial + CP-42 unclear), leaving 64 scene_eyes-verified blocks the
+LLM may choose from. Closes the loop: verification (scene_eyes) -> registry -> the reasoning LLM can no
+longer propose a known-false/partial block. (CP-08+CP-01 scene_eyes-gated gold run in flight.)
