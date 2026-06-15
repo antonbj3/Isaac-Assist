@@ -3618,3 +3618,11 @@ exclude the handoff from the grasp's collision obstacles) — focused handler wo
 session (#10/#29), NOT tail-of-marathon probe-hacks. Probe (/tmp/chain_flat_probe.py) + findings preserved. PIVOT to
 productive non-Kit work (the LLM-flow training-data track is shippable + parallel-safe). Genuine deep diagnosis of a
 hard problem; max diagnostic value extracted, robust fix scoped.
+
+## 2026-06-15 (cont.86) — 2nd verified GOLD composition (CP-01+CP-13 6/6); working-parallel gold pipeline confirmed
+After consolidating L3 (chain) to the dedicated session, pivoted to growing VERIFIED gold via the WORKING parallel mode.
+compose_and_verify CP-01+CP-13 -> inst0 4/4 + inst1 2/2 = verified=True -> appended (2nd gold record after CP-01+CP-09).
+The working-parallel gold pipeline is confirmed: each compose_and_verify on a robust parallel pair = a Kit-delivery-
+verified L2 training example (gold_kit_delivery_verified tier). This is Anton's step-2 collection in steady state.
+Growing it 1-by-1 (Kit-serial ~4min/record). Verified gold now: CP-01+CP-09 (9 obj), CP-01+CP-13 (6 obj). Continuing
+with more diverse pairs.
