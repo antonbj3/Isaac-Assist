@@ -3293,3 +3293,17 @@ COMPOSITION RCA — CONSOLIDATED HONEST STATE (this autonomous session, cont.52-
 DELIVERABLES this session: clock-freeze multi-arm fix (verified safe, partial); compose_gate per-cube MISS + TRAJECTORY
 capture; collection_manifest.py (439->70 verified-core). Honest partial win + precise remaining target, zero false-pos.
 COMPOSITION MULTIPLIER STATUS: ✓ 1-arm + chain + passive cells; ◐ concurrent-2-arm improved but marginal (mech #2 open).
+
+## 2026-06-15 (cont.62) — REFRAME: the "fling" is CONVEYOR RIDE-OFF from OVERLAPPING belts (compose offset too small)
+Static scene analysis cracked the x~4.8 attractor. CP-01/CP-09 both have a ConveyorBelt at position=[0,0.4,0.78]
+scale=[3-4, 0.4, 0.05] (long in x, at y=0.4); cubes START on the belt at [x,0.4,0.835]. The "flung" cubes ended at
+[4.8, 0.4, 0.525] — y=0.4 IS THE BELT y, x~4.8 is just past inst1's belt end, z~0.525 is below the belt (fell off).
+=> NOT a robot fling: cubes RIDE THE BELT to the far end and fall off. And compose_gate's default offset (2.5*idx) is
+TOO SMALL vs belt length (scale 3-4 in x): inst0 belt ~[-1.5,1.5], inst1 belt@+2.5 ~[0.5,4.5] -> the two belts OVERLAP
+(both y=0.4 z=0.78) -> a cube not picked promptly rides the merged belt to x~4.8. Explains why clock-freeze HELPED
+(less hold -> picked sooner -> fewer ride off) but didn't solve, AND why inst0's cube also reached 4.8 (belt overlap).
+=> SCENE-GEOMETRY bug (my authority), NOT a controller fling. The clock-freeze fix is still valid (reduces hold-delay)
+but the PRIMARY fix is: increase the compose offset so instances' conveyors don't overlap. TEST NEXT: CP-01@0 +
+CP-09@+6 (belts clear) -> expect the ride-offs to vanish. (Light test CP-07+CP-28 @ default 2.5 running — those also
+have belts, may show the same ride-off.) Diagnostik-först WIN: read the actual coordinates -> the y=0.4 belt-match
+overturned the whole "fling" framing.
