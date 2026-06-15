@@ -111,6 +111,32 @@ def namespace_and_offset_calls(
     return out
 
 
+SOURCE_KWARGS = ("source_paths", "cube_paths")
+
+
+def apply_source_override(captured, source_paths, dest_override=None):
+    """CHAIN wiring: make a composed stage SOURCE another stage's outputs (end-state
+    -> start-state handoff). Replaces the pick-place controller's source_paths (and
+    cube_paths) with `source_paths` (e.g. the prior instance's delivered cube paths,
+    already namespaced to that instance), so stage-B picks the cubes stage-A delivered
+    rather than its own. Optionally override destination_path too. Returns a new list.
+
+    This is the cross-instance reference the parallel namespacing deliberately does NOT
+    do (parallel keeps each instance self-contained); a CHAIN opts in per stage.
+    """
+    out = []
+    for tool, kwargs in captured:
+        nk = dict(kwargs)
+        if tool == "setup_pick_place_controller":
+            for sk in SOURCE_KWARGS:
+                if sk in nk:
+                    nk[sk] = list(source_paths)
+            if dest_override is not None and "destination_path" in nk:
+                nk["destination_path"] = dest_override
+        out.append((tool, nk))
+    return out
+
+
 def _selftest():
     cap = [
         ("robot_wizard", {"robot_name": "carter", "dest_path": "/World/Carter", "position": [0.0, 0.0, 0.3]}),
@@ -141,7 +167,16 @@ def _selftest():
     nav = out["export_nav2_map"]
     assert nav["output_path"] == "workspace/maps/x.pgm", nav  # filesystem path untouched
     assert out["set_attribute"]["prim_path"] == "/World/inst0/Foo", "idempotent re-root"
-    print("composer selftest OK")
+    # chain wiring: stage-B sources stage-A's delivered cubes
+    chained = dict((t, k) for t, k in apply_source_override(
+        namespace_and_offset_calls(cap, "inst1", (0.0, -0.9, 0.0)),
+        source_paths=["/World/inst0/Cube_1", "/World/inst0/Cube_2"],
+        dest_override="/World/inst1/FinalBin"))
+    spc2 = chained["setup_pick_place_controller"]
+    assert spc2["source_paths"] == ["/World/inst0/Cube_1", "/World/inst0/Cube_2"], spc2  # cross-instance source
+    assert spc2["destination_path"] == "/World/inst1/FinalBin", spc2
+    assert spc2["robot_path"] == "/World/inst1/Franka", spc2  # robot still namespaced to inst1
+    print("composer selftest OK (namespacing + offset + phase_id + chain source-override)")
 
 
 if __name__ == "__main__":

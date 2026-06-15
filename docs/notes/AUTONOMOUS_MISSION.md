@@ -2720,3 +2720,15 @@ COMPOSITION DIRECTION STATUS: foundation + toolchain (composer/compose_canonical
 heterogeneous composed scenarios. Minor refinement = full concurrent rate (the one-cube dip). Substantial NEXT phase
 = focus-2 chain (end-state->start-state handoff) + handoff-validator + grow robust-block set. Edge case = same-
 template-2x stuck (#26). Memory: project_isaac_assist_composition_direction.
+
+## 2026-06-15 (cont.26) — chain-wiring foundation (apply_source_override), offline-verified
+Pushing focus-2 (sequential CHAIN: end-state->start-state) incrementally. composer.apply_source_override(captured,
+source_paths, dest_override): rewrites a stage's setup_pick_place_controller source_paths/cube_paths to the PRIOR
+instance's delivered cubes (cross-instance handoff) + optional destination override, robot/dest stay namespaced.
+Offline selftest extended + passes. This is the source-wiring piece. REMAINING for a live chain (intricate, next
+increment): spatial alignment (stage-A's dest = stage-B's pick/sensor zone, since CP-01 is sensor-gated -> B only
+picks cubes in its sensor zone) + reachability (B positioned to reach the handoff) + sequencing (B waits for A).
+Considered + rejected for now: per-instance cuRobo planner for the parallel concurrent-dip — planner is shared
+(robot-cfg+scope keyed, confirmed line 4625) but used SEQUENTIALLY by the per-step callbacks so contention is an
+UNconfirmed cause; the fix is GPU-OOM-risky on load-bearing code -> won't blind-fix (diligence). Memory:
+project_isaac_assist_composition_direction.
