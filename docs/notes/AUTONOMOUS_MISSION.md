@@ -3753,3 +3753,20 @@ bin/place/sort ("in bin" needs real transport+grasp) but LIES for STRUCTURE (tow
 70 verified-core: 14 STACKER + 8 PALLETIZER = 22 STRUCTURE-SENSITIVE need scene_eyes re-verify; 42 bin/
 place/sort are position-honest. NEXT: diagnose+fix CP-09 tower (why scatter not column), then scene_eyes-
 sweep the 22 structure-sensitive blocks to build a TRUSTED composable-block registry before resuming gold.
+
+cont.99 (2026-06-15): STRUCTURE SWEEP COMPLETE + TRUSTED COMPOSABLE-BLOCK REGISTRY. scene_eyes-swept the
+structure-sensitive templates (position-gate is blind to scatter-vs-column). Verdicts:
+  COLUMN-genuine:  CP-07 CP-13 CP-14 CP-15 CP-31 CP-61
+  GRID-genuine:    CP-08 CP-10 CP-12 CP-46   (palletizer flat grid = correct, gaps for gripper clearance)
+  SCATTER-FALSE:   CP-09  (lone clean false-success; already purged from gold)
+  PARTIAL:         CP-20 CP-79 CP-NEW-palletizer-mixed-sku  (some cubes NEVER approached — reach/seq, not scatter)
+So CP-09 was the ONLY clean false-success; the rest of the swept stackers/palletizers genuinely build
+their structure. Collection reconciliation for Anton: ONE evolving library (439 files), gate-verified
+core=70 (59 Franka + 11 UR10); Franka core = 39 position-honest (bin/place/sort, delivery-gate HONEST) +
+20 structure-sensitive. NO true duplicates (0 goal-pairs Jaccard>0.75); the big clusters (17 Franka pick-
+place-bin) are a deliberate VARIATION matrix (belt-speed/gripper/obstacle/object-type...), = test coverage,
+not redundant blocks. New living tool scripts/qa/composable_registry.py -> workspace/composable_blocks.json:
+the TRUSTED block-set grouped by (robot x function-class) with a CANONICAL representative each (CP-01 pick-
+place, CP-03 sort, CP-13 stack-column, CP-08 palletize-grid, CP-73 UR10). Registry: 59 trusted / 1 false /
+9 pending. FOUNDATION SECURED -> compositions resume on canonical reps (a few distinct blocks), not all 70.
+Fixed a regex consuming-delimiter bug (lookahead) that had under-counted the sweep.
