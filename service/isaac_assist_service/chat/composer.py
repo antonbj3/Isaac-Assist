@@ -107,18 +107,12 @@ def namespace_and_offset_calls(
         # of the same template don't share subscription/state keys (2nd one stalls).
         if tool in PHASE_ID_TOOLS or "phase_id" in nk:
             nk["phase_id"] = instance_root
-        # 2026-06-15 COMPOSITION-FLING FIX: give each composed instance its OWN cuRobo
-        # MotionPlanner by assigning a distinct planner scope (arm_scope ->
-        # _PLANNER_SCOPE_TAG in the curobo handler). Two same-config Franka/UR10 arms
-        # otherwise SHARE one cached planner (keyed robot_cfg+scope, NOT robot_path); the
-        # 2nd instance's plans corrupt under the shared trajopt/world state -> it flings
-        # cubes (MEASURED CP-01+CP-09: inst0 4/4 clean, inst1 flings Cube_3+Cube_4 to
-        # x~4.8 @ step 7800, tower never stacks). A distinct scope = a separate planner =
-        # no cross-arm contamination (the same mechanism G1 bimanual uses for left/right).
-        # Only set when unset so explicit G1 left/right arm_scope is preserved. Single-
-        # template never calls this -> byte-identical; the 37 hold.
-        if tool == "setup_pick_place_controller" and not nk.get("arm_scope"):
-            nk["arm_scope"] = instance_root
+        # NOTE (2026-06-15): a per-instance planner-scope injection (arm_scope=instance_root
+        # -> separate cuRobo MotionPlanner per cell) was tried + REVERTED — MEASURED to give
+        # ZERO benefit (the 2nd-arm fling persisted identically with separate planners). The
+        # real (partial) fix was the move-token clock-freeze in pick_place.py (cont.59). Per-arm
+        # planners remain a CANDIDATE for the dedicated multi-arm session IF they enable
+        # relaxing the plan/move serialization lock (true concurrency) — not before that's tested.
         out.append((tool, nk))
     return out
 
