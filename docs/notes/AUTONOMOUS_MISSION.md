@@ -3538,3 +3538,20 @@ offsets per pair; to Kit-verify Gemini's flat-handoff chains (the deliverable on
 (compute the offset so stage2's pick lands on stage1's flat delivery) — the remaining chain-composer piece. SUMMARY of
 the LLM-flow track: reasoning error ~0% (good instructions), delivery error is the real axis (parallel ~33% contention;
 chain bin-handoff = 100% fail, flat-handoff = the fix), training data = verified-delivering only.
+
+## 2026-06-15 (cont.80) — DIRECTION (Anton gave authority): close the chain DELIVERY-error gap via L3 auto-handoff
+Anton handed direction + Kit/non-Kit resource allocation. Geometric-understanding assessment: the EARLY tools = Tier-4
+"Geometry & Spatial Analysis primitives" (commit 99569499): raycast/overlap_sphere/overlap_box/measure_distance/
+get_bounding_box/convex_hull + types/spatial.py. They are LIVE (handlers + dispatched + USED in real templates CP-75/81/
+85, bin-picking, sorter, paint-sprayer + honest_gate). But they are PRIMITIVES (query the scene), NOT an integrated
+geometric-reasoning system. Anton: scene_eyes + reach_validate/scene_validate/grasp_validate are SUPERIOR (far more
+test-time invested) — use the MATURE validators for geometric VERDICTS (reach/grasp/delivery); Tier-4 primitives only as
+low-level helpers (e.g. raycast a surface height). DECISION + ALLOCATION:
+ * PRIMARY (Kit): L3 auto-handoff — the system abstracts handoff GEOMETRY (Anton's 'point of abstracting USD behind
+   tools'). For a chain, OVERRIDE the upstream cell's delivery from its deep bin (CP-01 primary_destination size z=0.15
+   walls -> the measured 0/4 cont.79) to a FLAT/shallow handoff (size z~0.02 via role_bindings, which CP-01 supports as a
+   code_template role-based template) so the downstream can pick from it. Verify with the MATURE gate + reach_validate.
+ * NON-Kit (parallel): scale the Gemini reasoning eval for training data while Kit verifies.
+PROBE RUNNING: CP-01->CP-01 with upstream primary_destination overridden to flat size [0.5,0.5,0.02] -> expect stage-1
+delivery > 0/4 (vs the bin's 0/4) = the L3 flat-handoff concept proven. If it works, promote into the chain machinery +
+make it auto (the LLM never sees the handoff geometry).
