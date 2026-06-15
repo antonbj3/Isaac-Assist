@@ -3603,3 +3603,18 @@ collider explosion -> shallow handoff unblocks the relay (0/4->2/4, inst1 plans+
 (no-walls solid platform). NEXT: implement the composer solid-platform chain handoff (create_prim slab + redirect
 upstream drop onto it), verify 4/4, then make it automatic (the LLM emits 'chain A->B', the system builds the platform).
 Task #29 holds the precise build. Marathon-session L3 investigation at a strong, honest milestone.
+
+## 2026-06-15 (cont.85) — L3 DEEPLY DIAGNOSED: chain handoff = 5-way coupled cuRobo-geometry; needs handler work not probe-hacks
+slab-top=0.81 (raised to grasp height): 0/4, ALL cubes exploded (z~-430000) — cubes dropped INSIDE the slab (inst0
+drops at dpos_z=0.75 but the raised slab spans 0.71-0.81 -> interpenetration -> blowup). This exposes the FUNDAMENTAL
+5-WAY COUPLING that manual slab-geometry can't resolve: (1) inst0 drops at the destination position (fixed); (2) the
+handoff top must be <= the drop point (else cubes drop INSIDE -> explosion); (3) -> cubes rest LOW (~0.775); (4) inst1's
+grasp is tuned for conveyor height (~0.835); (5) the handoff slab acts as a cuRobo collision OBSTACLE for the grasp.
+So: slab low -> cubes too low for the grasp (plan_fail); slab high -> cubes drop inside (explosion). HONEST L3 MILESTONE
+(deeply diagnostic-first, ~9 iterations: refuted sensor-gating -> degenerate-collider explosion -> flat-handoff unblocks
+relay 0/4->2/4 -> cuRobo grasp-planning fail -> drop/height coupling). The ROBUST fix = handoff-geometry-AWARE chain
+MACHINERY (place the handoff at the source/grasp height, compute the downstream approach from the ACTUAL rest height,
+exclude the handoff from the grasp's collision obstacles) — focused handler work in the dedicated multi-arm/chain
+session (#10/#29), NOT tail-of-marathon probe-hacks. Probe (/tmp/chain_flat_probe.py) + findings preserved. PIVOT to
+productive non-Kit work (the LLM-flow training-data track is shippable + parallel-safe). Genuine deep diagnosis of a
+hard problem; max diagnostic value extracted, robust fix scoped.
