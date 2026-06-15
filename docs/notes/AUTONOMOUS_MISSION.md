@@ -3134,3 +3134,15 @@ ANTON DIRECTIVE: single-tenant (one Kit, serial) for the REST OF DAY+NIGHT. No m
 reliable serial truth-path: static_scene_check pre-filter -> Kit-measure (find hidden already-deliverers -> mark
 verified) / fix isolated-safe geometry bugs (double-offset) + verify. Memory: feedback_diagnostic_first_then_fix,
 feedback_false_positives_progress.
+
+## 2026-06-15 (cont.51) — CP-NN measure-and-mark campaign: +8 verified (reliable single-tenant path)
+Single-tenant night mode (Anton). static_scene_check pre-filter (built cont.49, FLAT refined cont.50) -> measure
+unverified CP-NN delivery templates on clean GPU -> MARK genuine full-deliverers. The CP-NN (older pick-place) pool is
+HIGH-YIELD vs CP-NEW (drafted): CP-37 4/4, CP-53 3/3, CP-57 5/5, CP-51 1/1, CP-52 4/4 (multi-robot SharedBin;
++completeness=all — a simulate_args edit, NOT the shared belt-pause handler), CP-60 1/1, CP-68 1/1 -> all marked
+motion_controllers.verified=curobo. Plus CP-46 (6/6 palletize, marking-fix). = +8 hidden-verified recovered. BROKEN
+(static-clean -> deep controller/dynamics, NOT marked): CP-05 0/1, CP-67 0/4 (rotary disc), CP-87 0/1. CP-NN
+unverified pool now ~exhausted (8 deliver, 3 deep-broken, CP-76 reach-flagged). NET this session: the reliable
+serial measure-and-mark recovered many already-working blocks the markers had missed — the directive's "drive tier-1
+-> verified" via mät-först, not static guessing. NEXT: simple single-object CP-NEW (maniskill/robohive ports) +
+remaining clean CP-NEW. Memory: feedback_false_positives_progress.
