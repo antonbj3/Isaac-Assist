@@ -3162,3 +3162,16 @@ NOT the deliverable -> stop chasing breadth. CP-60 got NO false verified-stamp d
 (motion_controllers=null; manifest keeps it BROKEN by 0/14 history — false-positive discipline held).
 DIRECTION FORWARD (north-star = composition): the 70 verified core is the base; each = a multiplier. Highest value now
 = verify core templates COMPOSE (chain end->start + parallel cells), single-tenant. Manifest committed (feat/foundation-build).
+
+## 2026-06-15 (cont.53) — COMPOSITION BASELINE is MARGINAL: CP-01+CP-09 = 1/3 full (NOT a clean multiplier)
+First compose() run of two ROCK-SOLID standalone stackers (CP-01 4/4, CP-09 5/5 verified) gave 3/4+4/5. Ran N-of-M
+(3x, leak-safe restart each, /tmp/run_compose_nofm.sh): RUN1 3/4+4/5=0/2full, RUN2 4/4+5/5=2/2full, RUN3 4/4+4/5=1/2full.
+=> CP-01 drops a cube 1/3, CP-09 drops 2/3. The 2/2 was the LUCKY DRAW, not the truth (false-positive discipline: do
+NOT mark composition verified on the one good run). HONEST VERDICT: composition of two verified single-robot stackers
+is MARGINAL — each cell loses ~1 cube under composition though both are full standalone. The multiplier does NOT hold
+cleanly => this is the real composition work (task #26), not a pass.
+Upgraded compose_gate.py (living-tools): per-cube COMPOSE_MISS (where the missed cube landed: xy-out/below-z) + target
+bbox. BUG fixed: COMPOSE_DEBUG env didn't cross the Kit RPC boundary (set on client, code runs in Kit process) -> now
+baked as DBG literal. Debug run launched to localize the misses (never-picked@start vs tolerance-miss@target vs
+held-mid-air@timeout) -> that distinguishes GPU-contention/budget vs placement-precision vs stochastic-grip.
+NEXT: read miss positions -> if budget/contention, bump compose N per-cube; if precision, drop-tip; confirm fix N-of-M.
