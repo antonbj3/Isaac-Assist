@@ -3005,3 +3005,23 @@ velocity-drive setup — the directive's "robot_wizard velocity-drive" + setup_w
 multi-amr (carter) stands as the verified mobile win. NEXT (deeper): jetbot/forklift nav support, OR switch
 jetbot-class AMR templates to carter (loses design fidelity + cart-on-deck geometry needs tuning). Memory:
 project_isaac_assist_nav_stub.
+
+## 2026-06-15 (cont.43) — ★ ROOT-CAUSE of jetbot-nav gap: robot_wizard position-drives the wheels
+Diagnostic-first probe (robot_wizard jetbot -> introspect): jetbot is STRUCTURALLY FINE — ArticulationRoot=/World/JB,
+2 wheel joints (left_wheel_joint, right_wheel_joint). The smoking gun in robot_wizard's own log: "Applied Kp=500,
+Kd=50 to 2 drives". robot_wizard applies _DRIVE_DEFAULTS["mobile"] = {stiffness:500, damping:50} = POSITION drive to
+ALL DriveAPI joints INCLUDING THE WHEELS (robot.py:475). A DifferentialController/WheelBasePoseController commands
+wheel VELOCITIES; a stiff Kp=500 POSITION drive overrides them -> wheels hold position -> robot doesn't move (jetbot
+cart-handoff disp=0). Carter drives (multi-amr 3/3) because its wheels aren't position-pinned the same way (asset/
+joint difference); jetbot's 2 wheels got Kp=500 -> frozen. THIS IS the directive's named "robot_wizard velocity-drive"
+remaining work, now ROOT-CAUSED.
+FIX DESIGN (actionable, focused — NOT done late-marathon because it touches SHARED robot_wizard used by every
+template): for mobile-class robots, the WHEEL joints (revolute *_wheel_joint) must be VELOCITY drive (stiffness=0,
+keep damping) so the DifferentialController can command them — NOT the mobile position-drive default. Either
+(a) robot_wizard skips/velocity-sets wheel joints for mobile class [one-fix-many; needs no-regression: jetbot drives
++ carter STILL drives + arms untouched], or (b) per-template set_attribute stiffness=0 on the wheel-joint drives
+after spawn [safer/targeted]. Verify via nav_gate (jetbot disp>0) + CP-64/multi-amr no-regression.
+MOBILE-TRACK DIAGNOSTIC ARC COMPLETE: navigate_to stub -> closed-loop fix (CP-64) -> spawn-fix pattern (missing/
+hollow robot_wizard) -> multi-amr 3/3 spawn+drive verified -> nav_gate fleet-aware -> jetbot-nav root-caused
+(wheel position-drive). Remaining mobile work is now precisely actionable: the wheel-velocity-drive fix unblocks ALL
+non-carter wheeled templates (jetbot/forklift/etc). Memory: project_isaac_assist_nav_stub.
