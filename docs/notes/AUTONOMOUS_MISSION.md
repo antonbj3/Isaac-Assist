@@ -3869,3 +3869,17 @@ passed 3-cell records (contention_class=3cell_stochastic, n_scene_eyes_runs=1, n
 composition tier = 2-CELL (low contention); 3-cell needs N-of-M confirmation. Position measure had passed
 CP-03+CP-28+CP-13 (stochastic 2/2 that run) — scene_eyes caught the drop on re-run = exactly why scene_eyes
 is the gate. Gold: 2-cell scene_eyes-verified core is solid; 3-cell flagged stochastic.
+
+cont.112 (2026-06-15): 3-CELL DROP RCA — MEASURED, not GPU (Anton: "mät latency, inte gissa GPU"). GPU
+during a 3-arm run = 35-51% util, 4GB/12GB VRAM, 50C, ZERO throttle -> NOT overloaded. Read the code:
+the move-token (_curobo_exec_motion_lock_v1, pick_place.py:4747) is PROCESS-GLOBAL — _try_acquire_move_token
+makes ANY 2+ live pick-place controllers contend for ONE token, regardless of zone overlap. Designed for
+arms SHARING a zone (CP-52 dual-arm/one conveyor); but composed parallel cells 6m apart (non-overlapping)
+still serialize on it -> arm B HOLDS while A traverses. Existing 2026-06-15 FLING-FIX freezes the wall-clock
+trajectory sampler during the hold (stops the snap-fling), but a gripped cube on PD-hold for a multi-second
+wait can SLIP — and at 3 arms the waits are LONGER (2 siblings ahead) -> higher slip prob -> the stochastic
+drop. GPU is idle (40%) BECAUSE the token serializes (arms take turns, never concurrent planning load).
+FIX (real lever): key the move-token PER-INSTANCE-ROOT so non-overlapping composed cells move CONCURRENTLY;
+only genuinely-overlapping zones (CP-52) serialize. Would fix 3-cell drops + speed parallel cells. RISK:
+protects CP-52/CP-65 -> needs multi-template no-regression (SCOPED session, not a hot edit). Latency is
+measurable: instrument move-token hold-duration per arm (or static-joint stretches from scene_eyes).
