@@ -28,9 +28,32 @@ MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.5-flash")
 SPACING_S = float(os.environ.get("EVAL_SPACING", "0"))
 
 
+_TERMINAL_SINKS = ("bin", "bowl", "tray", "crate", "bucket", "tote", "hopper")
+_FLAT_SURFACES = ("pallet", "tower", "base", "plate", "pad", "pedestal", "table", "marker")
+
+
+def _io_kinds(name, t, h):
+    """Make the IO explicit so the LLM can MATCH chain handoffs: where objects come FROM
+    (the input source) and what kind of place they go TO (terminal container vs flat pickable
+    surface). A chain needs to-cell.input compatible with from-cell.output."""
+    code = (t.get("code") or "")
+    src = "conveyor" if "create_conveyor" in code else ("known-positions/surface" if not h.get("input_ports") else "surface")
+    outs = [p["name"] for p in h.get("output_ports", [])]
+    sink = "-"
+    if outs:
+        nm = outs[0].lower()
+        if any(w in nm for w in _TERMINAL_SINKS):
+            sink = "%s (TERMINAL container — hard to pick back out)" % outs[0]
+        elif any(w in nm for w in _FLAT_SURFACES):
+            sink = "%s (FLAT pickable surface — good chain handoff)" % outs[0]
+        else:
+            sink = outs[0]
+    return src, sink
+
+
 def build_catalog(limit=40):
     """Compact catalog of VERIFIED_CORE delivery blocks the LLM chooses from: id + one-line goal
-    + in/out kind. Derived from template goals + the composition_hints cache."""
+    + EXPLICIT IO (consumes-from / delivers-to kind) so chain handoffs can be matched."""
     hints_path = os.path.join(REPO, "workspace", "composition_hints.json")
     hints = json.load(open(hints_path))["hints"] if os.path.exists(hints_path) else {}
     cat = []
@@ -40,12 +63,12 @@ def build_catalog(limit=40):
         except Exception:
             continue
         goal = (t.get("goal") or "").strip().replace("\n", " ")
-        if len(goal) > 130:
-            goal = goal[:127] + "..."
+        if len(goal) > 120:
+            goal = goal[:117] + "..."
         h = hints[name]
-        ins = ",".join(sorted({p["kind"] for p in h.get("input_ports", [])})) or "-"
-        outs = ",".join(p["name"] for p in h.get("output_ports", [])) or "-"
-        cat.append(f"{name}: {goal} [in:{ins} out:{outs} curobo:{bool(h.get('exclusive_resources'))}]")
+        src, sink = _io_kinds(name, t, h)
+        n = h.get("n_objects", 0)
+        cat.append(f"{name}: {goal} || CONSUMES: {n} objects from {src} -> DELIVERS to: {sink} | curobo={bool(h.get('exclusive_resources'))}")
         if len(cat) >= limit:
             break
     return cat
@@ -92,11 +115,21 @@ Emit ONLY a JSON object (no prose) for the tool build_composed_scene:
   "layout": "single" | "parallel" | "chain",
   "handoffs": [ {"from": "<cell id>", "to": "<cell id>"} ]   // only for chain; [] otherwise
 }
-Rules: use "single" + one cell when ONE block already does the whole task (do NOT over-compose).
-Use "parallel" for independent cells running at once. Use "chain" when one cell's OUTPUT feeds the
-next cell's INPUT (declare the handoff edges). Pick blocks whose goal matches each sub-task.
+Rules:
+- "single" + one cell when ONE block already does the whole task (do NOT over-compose).
+- "parallel" for independent cells running at once (no handoff).
+- "chain" when one cell's OUTPUT feeds the next cell's INPUT — declare the handoff edges.
 
-CATALOG (block: goal [in/out/curobo]):
+CHAIN MATCHING (critical — this is where most plans go wrong): in a chain, the downstream cell
+SOURCES the upstream cell's DELIVERED objects (its own normal input source is bypassed). So the
+upstream cell's DELIVERS-to must be a place the downstream cell can physically pick FROM:
+  * Deliver onto a FLAT pickable surface (pallet/table/plate) -> the next cell CAN pick from it. GOOD.
+  * Deliver into a TERMINAL container (bin/bowl/tray) -> objects are walled-in, the next cell CANNOT
+    cleanly pick them back out. BAD chain handoff — avoid chaining out of a terminal container.
+  * The object KIND and COUNT the upstream delivers must match what the downstream consumes.
+Pick each block so the chain's output->input is physically realizable, not just topologically a line.
+
+CATALOG (block: goal || CONSUMES n objects from <source> -> DELIVERS to: <sink kind> | curobo):
 %s
 """
 
@@ -106,12 +139,17 @@ def _hints():
     return json.load(open(p))["hints"] if os.path.exists(p) else {}
 
 
+_DEEP_CONTAINER = ("bin", "bowl", "tray", "crate", "bucket", "tote", "hopper")
+
+
 def io_semantic_check(plan):
-    """For a CHAIN: does each handoff's FROM-cell output plausibly feed the TO-cell's input?
-    Returns (ok, notes). Heuristic via the hints cache: gross mismatch = from delivers to a
-    PALLET/TOWER (a terminal sink) while to expects a CONVEYOR feed, or object-count mismatch.
-    This is a STRUCTURAL-SEMANTIC check (reasoning sanity), NOT proof — only compose_and_verify
-    (Kit delivery) proves a chain CORRECT. Catches the CP-30(pallet)->CP-09(conveyor) class."""
+    """For a CHAIN: is each handoff PHYSICALLY realizable? The downstream cell's own input source
+    (its conveyor) is BYPASSED — source_override rewires it to the upstream's DELIVERED objects. So
+    the real constraint is the HANDOFF GEOMETRY (chain_gate-proven): the upstream cell must deliver
+    onto a place the downstream arm can pick FROM. FLAT surfaces (pallet/tower/table/plate) = good;
+    DEEP walled containers (bin/bowl/tray) = bad (objects walled-in, grip-vs-wall blow-up). Returns
+    (ok, notes). HEURISTIC reasoning-sanity, NOT proof — only Kit delivery (chain_gate / compose_and_
+    verify) proves a chain CORRECT."""
     H = _hints()
     cells = {c.get("id"): c.get("template") for c in (plan.get("cells") or [])}
     notes = []
@@ -120,21 +158,13 @@ def io_semantic_check(plan):
         ft, tt = cells.get(ho.get("from")), cells.get(ho.get("to"))
         fh, th = H.get(ft) or {}, H.get(tt) or {}
         fout = " ".join(p.get("name", "") for p in fh.get("output_ports", [])).lower()
-        tn = (tt or "")
-        # to-cell sources from a conveyor (its goal/inputs imply a belt) but from-cell delivers to a terminal sink
-        terminal = any(w in fout for w in ("pallet", "tower", "bin", "tray"))
-        tcode = ""
-        try:
-            tcode = (json.load(open(os.path.join(REPO, "workspace", "templates", tn + ".json"))).get("code") or "").lower()
-        except Exception:
-            pass
-        to_needs_belt = ("create_conveyor" in tcode)
-        n_from = (fh.get("n_objects") or 0); n_to = (th.get("n_objects") or 0)
-        if terminal and to_needs_belt:
+        deep = any(w in fout for w in _DEEP_CONTAINER)
+        if deep:
             ok = False
-            notes.append("%s->%s: from delivers to a terminal sink (%s) but to expects a CONVEYOR feed" % (ft, tt, fout.strip()))
+            notes.append("%s->%s: from delivers into a DEEP container (%s) — walled, next cell can't pick back out (chain_gate: needs a FLAT handoff surface)" % (ft, tt, fout.strip()))
+        n_from = (fh.get("n_objects") or 0); n_to = (th.get("n_objects") or 0)
         if n_from and n_to and n_from != n_to:
-            notes.append("%s->%s: object-count %d->%d mismatch" % (ft, tt, n_from, n_to))
+            notes.append("%s->%s: object-count %d->%d (downstream consumes a different count)" % (ft, tt, n_from, n_to))
     return ok, notes
 
 
