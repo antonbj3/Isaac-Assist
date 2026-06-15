@@ -33,9 +33,23 @@ def _class(template):
 
 def verdict_for_instance(text, cls):
     """Return (genuine: bool, reason: str) from one instance's scene_eyes printed analysis."""
-    never = len(re.findall(r"NEVER approached", text))
+    # ANY ungripped cube = partial = reject. scene_eyes writes "never-gripped" for BOTH the far case
+    # ("NEVER approached") AND the close-but-no-grasp case ("approached but not gripped") — match the
+    # common token, not just "NEVER approached" (that hole passed a 3/4 CP-08 partial as GOLD, cont.108).
+    never = len(re.findall(r"never-gripped", text, re.I))
     gripped = len(re.findall(r"(?<!never-)CONVERGED \+ GRIPPED", text))
     real_explosion = "*** EXPLODED/EJECTED ***" in text   # offset-invariant in current scene_eyes
+    # FELL-TO-GROUND: a cube ending well below any target surface (<0.6m; targets sit ~0.75-0.90 on the
+    # table) = fell off / never placed. Do NOT use scene_eyes' OFF-SURFACE "fell from peak" signal — it
+    # false-fires on EVERY normal pick-place (lift to transit height then place lower). Use the final
+    # z-LEVELS from STACK STRUCTURE instead: a level <0.6 is on the ground, not a controlled placement.
+    zmatch0 = re.search(r"STACK STRUCTURE \([^)]*\): \d+ z-level\(s\) \[([^\]]*)\]", text)
+    low_z = False
+    if zmatch0:
+        try:
+            low_z = any(float(z) < 0.6 for z in zmatch0.group(1).split(","))
+        except Exception:
+            low_z = False
     zmatch = re.search(r"STACK STRUCTURE \([^)]*\): (\d+) z-level", text)
     zlevels = int(zmatch.group(1)) if zmatch else None
     if never:
@@ -44,6 +58,8 @@ def verdict_for_instance(text, cls):
         return False, "no CONVERGED+GRIPPED and no structure data (likely no grasp / no rows)"
     if real_explosion:
         return False, "real EJECTION/EXPLOSION detected"
+    if low_z:
+        return False, "a cube ended below 0.6m (fell to ground / never placed on the target surface)"
     if cls in ("unknown", ""):
         # FAIL-CLOSED: if we can't classify the template's intent we must NOT fall through to the
         # lenient bin/sort branch (that would pass a scattered stacker). Demand explicit re-run with

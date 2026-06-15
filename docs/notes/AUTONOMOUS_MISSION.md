@@ -3834,3 +3834,13 @@ all auto-appended end-to-end via the corrected pipeline: CP-08+CP-01 (grid+bin),
 CP-03+CP-08 (sort+grid). Coverage: bin/sort/column/grid all scene_eyes-verified in composition. Gold = 13
 position-verified + 3 scene_eyes-verified. Pipeline proven self-running (build->scene_eyes/instance->fail-
 closed gate->dedup-append). Next: 3-cell scene_eyes-gold (complexity climb) CP-01+CP-13+CP-08.
+
+cont.108 (2026-06-15): GATE BUG CAUGHT + FIXED + false gold PURGED — the diligence loop on my own gate.
+3-cell CP-01+CP-13+CP-08 auto-appended as GOLD, but reading the RAW scene_eyes output showed CP-08 inst2
+had Cube_4 "never-gripped / approached but not gripped" (3/4 = PARTIAL) + a cube at z=0.525 (fell). My gate
+PASSED it because verdict_for_instance only matched "NEVER approached" (far cubes), MISSING "never-gripped"
+(close-but-no-grasp). FIXED: match "never-gripped" (catches both far + close non-grasps); replaced the
+over-broad OFF-SURFACE check (it false-fires on EVERY normal pick-place lift-then-place) with a SPECIFIC
+final-z<0.6 fell-to-ground check. Re-verified all: 3-cell REJECT (correct), 2-cell CP-08+CP-01 / CP-13+CP-08
+/ CP-03+CP-08 stay GOLD. REMOVED the false 3-cell record. Gold = 13 position + 3 scene_eyes (all genuine).
+3-cell parallel drops a cube under 3-arm cuRobo contention (CP-08 3/4) — a real contention ceiling, NOT gold.
