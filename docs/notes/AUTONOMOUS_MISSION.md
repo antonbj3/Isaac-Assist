@@ -3390,3 +3390,15 @@ composability promotion-gate? ratify class-based validation? parallel-only miles
 BUILT STEP 1 (composer.compute_layout_offsets + template_footprint), wired into compose_gate, unit-tested static:
 CP-01+CP-09 -> CP-09@6.6 gap 3.1m CLEAR (old 2.5 = 1.0m overlap). NEXT: Kit-verify CP-01+CP-09 (no @, solver spacing)
 N-of-M -> expect reliable delivery; then extend scene_eyes --compose to consume solver offsets (STEP 6).
+
+## 2026-06-15 (cont.69) — layout_solver VERIFIED: fixes inst1 overlap (5/5 x3); residual = inst0 OWN-belt contention ride-off
+CP-01+CP-09 with layout_solver auto-spacing (no @, CP-09@6.6), N-of-M: inst1 (CP-09) = 5/5 in ALL 3 runs (was 3-4/5
+flinging at the overlapping 2.5). inst0 (CP-01) = 4/4,3/4,4/4 — full 2/2 = 2/3 (up from 1/3). The lone miss (RUN2): inst0
+Cube_4 @ [1.761,0.372,0.525] = past CP-01's OWN belt end (1.5), y0.37 belt-level -> inst0's OWN-belt ride-off, NOT an
+overlap (inst0 @ offset 0). Mechanism: move-lock serialization makes inst0's arm WAIT (inst1 holds token) while inst0's
+belt keeps feeding -> an unpicked cube rides its OWN belt off the end. => layout_solver RESOLVED the inter-instance
+overlap class (inst1 bulletproof); the residual is a NARROWER contention class (own-belt-feed-while-held) whose real fix
+is pause-belt-during-move-lock-hold — but that touches the shared belt-pause logic (CP-52/65) -> needs multi-template
+no-regression (dedicated, not rushed). STEP 6 done: scene_eyes --compose now consumes solver offsets (was reproducing
+the overlap bug). NEXT (offline, no decisions needed): STEP 2 derived_layout_hints onto VERIFIED_CORE + STEP 3
+precondition_check. STEP 7 (LLM tools) waits on Anton's interface/promotion decisions.
