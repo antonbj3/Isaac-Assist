@@ -2958,3 +2958,19 @@ Only (a) my ad-hoc /tmp wrappers and (b) stale scripts/review/*sweep*with_restar
 use nofm_validate.py (or its _all_kit_pids pattern, replicated in /tmp/run_measure_fixed.sh) for any restart-based
 measurement — never the bare pkill-launcher. The cont.38 result stands (CP-01 0/4 was a real GPU-starvation artifact
 from my wrapper's leak; CP-01 4/4 + CP-61 3/3 confirmed on clean GPU; verified set intact; 9 templates hardened).
+
+## 2026-06-15 (cont.40) — MOBILE TRACK: multi-amr-corridor spawn-fix lands (robot spawns + drives)
+Executed the #25 mobile track per directive. Diagnosed (cont, #25): broken AMR templates call create_wheeled_robot
+(controller-ONLY, no spawn; its `position` arg is even ignored by the handler) but never spawn the robot -> navigate_to
+drives nothing. CP-64 is the WORKING pattern (robot_wizard spawn + setup_nav_robot + navigate_to; setup_wheeled_drive
+does NOT exist). FIX (CP-NEW-multi-amr-corridor): added robot_wizard(carter) spawn inside the {{#each amr_fleet}}
+block (code_template) + the for-loop (code); corrected spawn z 0.1->0.30 (CP-64 Carter chassis height — z=0.1 sank
+the wheels below the z=0.0 ground); populated the null simulate_args (robot_path=Carter_1, nav_goal=[2.0,0]) so
+nav_gate can measure. VERIFIED (nav_gate, leak-safe Kit): robot_prim_valid=true, p0=[-2.0,0,0.3], displacement=0.664
+(was 0 — robot didn't exist), build_err=[]. So the SPAWN BUG IS FIXED + the robot DRIVES. reached_goal=False (stopped
+at x=-1.34, ~0.5m short of Carter_2 at -0.5): full corridor traversal is blocked by HEAD-ON FLEET coordination
+(Carter_1 +x meets Carter_2 -x in the 2m corridor) = the template's inherent multi-AMR challenge, deeper. Honest:
+disp 0.664/reached False is NOT a pass-claim; the committed fix is the correct, necessary spawn-fix (prerequisite for
+any nav). PATTERN for the other broken AMR templates (cart-handoff-amr, forklift-*, yrkesroll-forklift): same
+missing-spawn -> add robot_wizard spawn. setup_wheeled_drive handler still the clean long-term abstraction. Memory:
+project_isaac_assist_nav_stub.
