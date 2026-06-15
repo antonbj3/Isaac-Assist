@@ -3858,3 +3858,14 @@ not cube-count: CP-08 palletizer (precise grid placement = cuRobo-heavy) drops a
 CP-01 pick-place-to-bin (4 cubes) + CP-13 stack survive fine. Deduped both 3-cell position records ->
 scene_eyes versions. scene_eyes-gold now 5: CP-08+CP-01, CP-13+CP-08, CP-03+CP-08, CP-28+CP-29+CP-13,
 CP-28+CP-13+CP-01. Both 3-cell records confirmed genuine via scene_eyes (transport+grasp+structure per cell).
+
+cont.111 (2026-06-15): 3-CELL PARALLEL = CONTENTION-LIMITED + STOCHASTIC (key finding). CP-03+CP-28+CP-13
+-> NOT GOLD: CP-13 Cube_1 gripped (CONVERGED@1.4s) then DROPPED to [14.11,0.42,0.53] (z=0.53, back near
+conveyor, 1.71m from Cube_2 which placed at 0.82) = 1/2. Caught by both fixed detectors (OFF-SURFACE net-
+fell 0.30m + low-z<0.6). The cuRobo-heavy SORTER (CP-03) as a 3rd arm tips contention over the edge. But
+CP-28+CP-29+CP-13 and CP-28+CP-13+CP-01 PASSED (same 3-cell count) -> it's STOCHASTIC, not deterministic.
+So a single scene_eyes pass is NOT robust for 3-cell. ACTIONS: removed CP-03+CP-28+CP-13; caveated the 2
+passed 3-cell records (contention_class=3cell_stochastic, n_scene_eyes_runs=1, needs N-of-M). RELIABLE
+composition tier = 2-CELL (low contention); 3-cell needs N-of-M confirmation. Position measure had passed
+CP-03+CP-28+CP-13 (stochastic 2/2 that run) — scene_eyes caught the drop on re-run = exactly why scene_eyes
+is the gate. Gold: 2-cell scene_eyes-verified core is solid; 3-cell flagged stochastic.
