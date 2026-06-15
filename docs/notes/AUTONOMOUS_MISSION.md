@@ -3327,3 +3327,21 @@ ANTON CORRECTION (heeded): "scene_eyes can't see composed scenes" is a GAP TO CL
 UPGRADED scene_eyes with --compose mode (build via compose_canonicals, probe focuses EYES_FOCUS instance; single-template
 byte-identical). NEXT: run composed scene_eyes on CP-01+CP-09 @ offset 2.5 focus=inst1 to SEE the mechanism live
 (ride-off gradual vs fling sudden) — the question static analysis couldn't settle.
+
+## 2026-06-15 (cont.65) — composed scene_eyes WORKS + overturns my guesses: real mechanism = GRIP-SLIP during carry
+scene_eyes --compose (NEW, Anton's request) ran clean on CP-01+CP-09 focus inst1: COMPOSE_BUILT instances=2,
+robot=/World/inst1/Franka, 1500 rows. inst1 PICKED ALL 5 cubes (converged+gripped ~88mm each) -> NOT belt ride-off
+(cubes WERE picked). The miss = GRIP-SLIP: Cube_3 translation-slip 1990mm (~2m) + EE-self-rot 113°@45s during the
+grip-span -> the cube was gripped then SLIPPED/flung ~2m under a large wrist rotation in the carry phase. => BOTH my
+static reframes were WRONG (neither pure snap-fling nor belt ride-off): it's grip-slip during carry under 2-arm
+conditions. Anton's point fully vindicated — scene_eyes/Kit is the truth; static inference misled me 3x (shared-planner,
+offset, ride-off). Building + running the composed scene_eyes settled it immediately.
+Reconciles the data: clock-freeze helped (less hold-disturbance), spacing@+6 helped (inst1 5/5) — both reduce the
+2-arm carry disturbance, but the ROOT is a grip-destabilizing carry trajectory (large EE rotation) when two arms share
+the move-lock. The real fix lives in the carry-phase trajectory/grip stability under contention = the dedicated
+multi-arm session (#10/#26), now with the RIGHT tool (composed scene_eyes) to drive it.
+LLM-FLOW (Anton's new direction, parallel-safe/no-Kit): infra largely EXISTS — scripts/qa/retrieval_eval_harness.py
+(Kit-free, calls the REAL orchestrator retrieval: produce_layout_spec_from_text -> retrieve_with_intent_soft_filter ->
+confidence gate) + scripts/qa/retrieval_eval_set.json (33 cases: prompt/ground_truth/hard_negatives/intent_dims) +
+chat/llm_gemini.py (supports Gemini 3.x). GAPS for Anton's vision: composition (multi-template) eval cases;
+scene_eyes exposed as an LLM tool (currently NOT); Gemini model switch to 3.1/flash-2.5. Running the retrieval baseline next.
