@@ -3634,3 +3634,14 @@ Contention (~1/3 of concurrent parallel-pair runs drop a cube) means some runs w
 automated gold batch (/tmp/run_gold_batch.sh: 5 robust pairs CP-01/09/13 combos, leak-safe restart each, ~25min bg) —
 produces gold for the full-delivering pairs, rejects contention-dropped. Anton's step-2 collection automated + honest.
 Verified gold so far: CP-01+CP-09, CP-01+CP-13 (2 records); batch will add the delivering combos.
+
+## 2026-06-15 (cont.88) — gold batch: +3 verified compositions (5 total); diversity gated by the robust block set
+Gold batch (5 pairs): CP-13+CP-13 (2+2), CP-09+CP-01 (5+4), CP-13+CP-01 (2+4) = 3 NEW gold (full delivery). CP-01+CP-01
+(3/4+4/4) and CP-09+CP-09 (4/5+5/5) rejected (contention dropped 1 — residual stochasticity). VERIFIED GOLD SET = 5
+diverse parallel L2 compositions (CP-01+CP-09, CP-01+CP-13, CP-13+CP-13, CP-09+CP-01, CP-13+CP-01). The pipeline produces
+gold AND honestly rejects partials. KEY: gold diversity is gated by the robust block set (only CP-01/09/13 confirmed
+robust single-Franka). The MULTIPLIER for more diverse gold = verify MORE robust single-Franka blocks (measure-and-mark)
+so more combinations become composable — that expands the gold combinatorially. Lower-cube/lower-contention pairs deliver
+more reliably (CP-13 2-cube robust; high-cube self-pairs drop under contention). Session has built the full composition +
+training-data infrastructure (parallel works + gold pipeline; chain diagnosed for dedicated session; LLM-flow on Vertex;
+verification tiers). Steady-state gold collection can continue via the batch over time.
