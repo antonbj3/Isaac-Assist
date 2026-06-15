@@ -56,6 +56,22 @@ TASKS = [
      "prompt": "I want a line where a first cell picks cubes off a conveyor and delivers them onto a flat handoff surface, and a SECOND cell then picks those same cubes from the handoff and stacks them. The second cell consumes the first cell's output.",
      "expect_layout": "chain", "expect_n_cells": 2,
      "expect_kind": "a chain: cell A delivers -> cell B sources A's output"},
+    {"id": "T4-parallel-3station",
+     "prompt": "Stand up THREE identical pick-and-place cells running at the same time, each a Franka picking cubes off its own conveyor into its own bin — a small parallel line of three.",
+     "expect_layout": "parallel", "expect_n_cells": 3,
+     "expect_kind": "three independent pick-place cells in parallel"},
+    {"id": "T5-single-sort",
+     "prompt": "Build ONE cell that picks cubes off a conveyor and sorts them by color into different bins.",
+     "expect_layout": "single", "expect_n_cells": 1,
+     "expect_kind": "ONE color-sorting template — not a composition"},
+    {"id": "T6-chain-3stage",
+     "prompt": "A three-stage line: cell 1 picks off a conveyor onto a handoff, cell 2 takes from there onto a second handoff, cell 3 takes from there and stacks. Each stage feeds the next.",
+     "expect_layout": "chain", "expect_n_cells": 3,
+     "expect_kind": "a 3-stage chain, each stage feeding the next"},
+    {"id": "T7-single-palletize",
+     "prompt": "Build one cell where a Franka palletizes cubes into a 2x2 grid on a pallet.",
+     "expect_layout": "single", "expect_n_cells": 1,
+     "expect_kind": "ONE palletizing template"},
 ]
 
 SYS_PROMPT = """You are the scene-composition planner for a robotics system. You solve a user task by
@@ -106,15 +122,17 @@ def _save_record(rec):
 
 async def main():
     import time
+    start = int(os.environ.get("EVAL_START", "0"))
     n = int(sys.argv[1]) if len(sys.argv) > 1 else len(TASKS)
+    todo = TASKS[start:start + n]
     from service.isaac_assist_service.chat.llm_gemini import GeminiProvider
     key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
     catalog = build_catalog()
-    sys.stderr.write("catalog: %d blocks; model=%s; running %d tasks (spacing %.0fs)\n" % (len(catalog), MODEL, n, SPACING_S))
+    sys.stderr.write("catalog: %d blocks; model=%s; running %d tasks [%d:%d] (spacing %.0fs)\n" % (len(catalog), MODEL, len(todo), start, start + n, SPACING_S))
     prov = GeminiProvider(api_key=key, model=MODEL)
     sysmsg = SYS_PROMPT % "\n".join(catalog)
     npass = 0
-    for i, task in enumerate(TASKS[:n]):
+    for i, task in enumerate(todo):
         if i:
             await asyncio.sleep(SPACING_S)
         user_content = sysmsg + "\n\nUSER TASK: " + task["prompt"] + "\n\nJSON plan:"
@@ -141,7 +159,7 @@ async def main():
         chosen = [c.get("template") for c in (plan.get("cells") or [])] if isinstance(plan, dict) else None
         print("EVAL %s: %s | %s | chose=%s | expect=%s" % (
             task["id"], "PASS" if passed else "FAIL", detail, chosen, task["expect_kind"]))
-    print("COMPOSE_REASONING: %d/%d passed (model=%s) | data -> workspace/training_data/compose_reasoning.jsonl" % (npass, min(n, len(TASKS)), MODEL))
+    print("COMPOSE_REASONING: %d/%d passed (model=%s) | data -> workspace/training_data/compose_reasoning.jsonl" % (npass, len(todo), MODEL))
 
 
 if __name__ == "__main__":
