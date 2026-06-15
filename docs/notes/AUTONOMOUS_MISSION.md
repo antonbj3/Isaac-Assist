@@ -3653,3 +3653,12 @@ composable block set now = CP-01/09/13/28/29/03 (6 blocks) -> many more gold com
 1-cube, CP-03/13 2-cube) = minimal contention -> reliable gold. Launched gold batch 2 (7 pairs: CP-28+CP-29/13/01,
 CP-29+CP-13/09, CP-03+CP-28/13) — low-contention -> expect most to deliver full -> diverse verified gold. Steady-state
 collection: verify robust blocks (multiplier) -> compose low-contention pairs -> verified gold. ~35min bg.
+
+## 2026-06-15 (cont.90) — gold batch 2 producing (low-cube = reliable gold, 7+ records); steady-state self-perpetuating
+Gold batch 2: CP-28+CP-29 (1/1+1/1), CP-28+CP-13 (1/1+2/2) = GOLD (CP-29+CP-13 running). LOW-CONTENTION hypothesis
+CONFIRMED: 1-cube blocks deliver reliably (no contention drops) -> reliable gold. Steady-state collection self-
+perpetuates: verify robust low-cube blocks (multiplier) -> compose low-contention pairs -> verified gold -> verify more
+blocks. Queued verify-blocks-2 (CP-32/33/47 2-cube sorters) to keep the robust set + gold diversity growing. NOTE
+(honest): gold diversity is bounded by the single-Franka pick-place/stack/sort block types; the most DIVERSE training
+data needs chains (L3 dedicated session) or non-pick-place blocks. The parallel-low-cube gold pipeline is established +
+producing autonomously; higher-diversity directions are L3 (blocked) / L5 LLM-tool (decision-gated) / more block types.
