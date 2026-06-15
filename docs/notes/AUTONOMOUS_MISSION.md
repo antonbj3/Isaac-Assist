@@ -3097,3 +3097,26 @@ verified + nav_gate fleet + wheel-discovery fix + jetbot deep-blocker root-cause
 stacking). Remaining = deeper/focused: per-template RCA of broken CP-NEW (special-grippers, pose-estimate, kitting),
 mobile jetbot WheeledRobot.initialize, fleet coordination, composition full-rate (timeouts), completeness N-of-M of
 stochastics, tier-1 redesigns. Best done with focused/fresh context. Memory: feedback_false_positives_progress.
+
+## 2026-06-15 (cont.49) — STATIC validator built (Anton-directed) + workflow proposals mostly REFUTED (skepticism vindicated)
+Anton: "bygg den statiska versionen". BUILT scripts/qa/static_scene_check.py — ZERO-BOOT scene-geometry pre-validator
+(no Kit): DOUBLE_OFFSET (child local pos==parent -> compounds 2x), ROBOT_BURIAL (spawn-z vs ground-top w/ USD-Cube
+size=2 gotcha), CUBE_BURIED, FLAT_TARGET (flat create_prim plate vs walled create_bin), OUT_OF_REACH (gross xy bound;
+non-convex true reach -> reach_validate is live truth). VALIDATED clean on known-good (CP-01/CP-22/CP-64 = clean) +
+correct flags on known-bad (vision-depalletize/forklift FLAT_TARGET; kitting DOUBLE_OFFSET on all 6 carousel cubes —
+statically confirms the earlier hypothesis). Pairs with grasp_validate (static jaw-fit) as the static layer agents
+CAN run; reach_validate/scene_validate/scene_eyes stay Kit-only (single-tenant -> serial).
+WHICH validators CAN be static: grasp_validate (geometric=static, done), static_scene_check (authored-geometry=static,
+built). CANNOT: scene_eyes (runtime dynamics), exact reach (non-convex IK -> cuRobo). scene_validate's emergent
+post-settle checks need Kit.
+WORKFLOW (39-agent parallel static-diagnose, 2.6M tok): tally DEEP_CONTROLLER 11 / STOCHASTIC 13 / ALREADY_DELIVERS 4
+/ SCENE_GEOMETRY_FIXABLE 5 / DEEP_GRIPPER 4 / VISION 1 / ENV 1. BUT the FIXES are mostly UNRELIABLE (Anton's "statiska
+gissningar bedrar" vindicated, caught via known-good references):
+ * OBSTACLE_LISTED_TARGET fix (6dof, wire-harness: "remove dest from planning_obstacles") = REFUTED — CP-01 (verified
+   4/4) LISTS /World/Bin in planning_obstacles AND delivers, so the handler already excludes dest on the drop. NOT a bug.
+ * FLAT_TARGET->create_bin (vision-depalletize, forklift) = the bbox-coupling REGRESSOR I already tried+reverted (cont.33).
+ * ALREADY_DELIVERS included tray-stack-unstack which I MEASURED at 1/5 — static over-optimism.
+ * Only conveyor-merge-vision-priority (belt-discharge geometry, no robot) is a plausible untested fix.
+LESSON: static diagnosis is a HYPOTHESIS/classification engine, NOT a fix oracle — every proposal needs Kit/known-good
+verification (exactly Anton's point). The durable deliverable is the reliable static_scene_check DETECTOR. Memory:
+feedback_diagnostic_first_then_fix, feedback_false_positives_progress.
