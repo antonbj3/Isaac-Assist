@@ -23,7 +23,8 @@
       "/World/Brick_3"
     ],
     "target_path": "/World/Baseplate",
-    "duration_s": 180
+    "duration_s": 180,
+    "completeness": "all"
   },
   "diagnose_args": null,
   "extends": "phase10-yrkesroll-#20",
@@ -32,7 +33,7 @@
     "Numerical explosion in V1 6-brick variant \u2014 single-brick V0 avoids by uniform drop_target z=0.81",
     "Brick rolling off baseplate edge \u2014 baseplate widened to 0.20x0.10 (was 0.18x0.06)"
   ],
-  "verified_status": "build-spec-2026-05-10; build OK but stable_fail \u2014 persistent PhysX numerical explosion when gripper grasps brick (cube velocity blows to >200k m/s). 3 variants tried (drop_z, y-position, planning_obstacles). Needs gripper-force or collision-detection deeper fix.",
+  "verified_status": "build-spec-2026-05-10; build OK but stable_fail \u2014 persistent PhysX numerical explosion when gripper grasps brick (cube velocity blows to >200k m/s). 3 variants tried (drop_z, y-position, planning_obstacles). Needs gripper-force or collision-detection deeper fix. | VERIFIED 3/3 real 2026-06-15 (scene_eyes: all 3 bricks picked Table->Baseplate, RIGID HOLD grips, NO PhysX explosion -> earlier stable_fail no longer reproduces; gate 3/3 stable_ok).",
   "intent": {
     "pattern_hint": "pick_place"
   },
@@ -41,6 +42,6 @@
     "details": "Brick-stacking baseplate; reorient pattern partial but baseplate placement logic not yet in role schema; zero QA runs",
     "added_date": "2026-05-15"
   },
-  "motion_controllers": {"verified": [], "failed": {}, "untested": ["curobo"]},
+  "motion_controllers": {"verified": ["curobo"], "failed": {}, "untested": []},
   "verification": {"function_gate": {"status": "pass", "n": 6, "m": 6, "wilson_lower": 0.6097, "last_run_sha": "8a1118e6", "last_run_at": "2026-06-13T10:29:34+00:00", "legacy_claim": "fail"}, "faithfulness": {"status": "pass", "n": 3, "m": 3, "wilson_lower": 0.4385, "last_run_sha": "bdc3f698", "last_run_at": "2026-06-11T17:11:10+00:00"}}
 }

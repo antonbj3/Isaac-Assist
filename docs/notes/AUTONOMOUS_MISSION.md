@@ -3054,3 +3054,19 @@ all-deliverer. Hardened completeness="all". Completeness-audit hardened total = 
 all measured-FULL on clean GPU. Verified set remains SOUND (10/10 spot-checked deliver complete; the honesty-hole
 stays latent, never an active false-pass in the verified set). Remaining ~42 risk templates are stochastic/multi-robot/
 UR10/routing -> need N-of-M or per-template care (not single-run harden). Memory: feedback_false_positives_progress.
+
+## 2026-06-15 (cont.46) — ★ NEW verified block: CP-NEW-brick-stacking 3/3 REAL (stable_fail -> verified) + grow-the-set
+Measured 3 tier-1 CP-NEW single-arm candidates leak-safe (drive tier-1 -> verified = strategic goal):
+ * CP-NEW-brick-stacking: gate 3/3 stable_ok. SUSPECTED false-pass (goal says "place ONE, V0") -> diagnostic-first
+   scene_eyes: REFUTED the suspicion — all 3 bricks start on the TABLE (t=0, NOT pre-positioned at Baseplate) and
+   each is gripped + placed on Baseplate (Brick_2 7.5->21.4, Brick_3 33->45.4, Brick_1 55->70.3s), RIGID-HOLD grips
+   (0deg slip). REAL 3/3. The old verified_status ("stable_fail — PhysX explosion when gripper grasps brick, cube
+   vel >200k m/s") NO LONGER REPRODUCES (clean grips now). => NEW VERIFIED BLOCK. Marked motion_controllers.verified
+   =[curobo], completeness="all", verified_status note. Grows the composer block set (the strategic multiplier goal).
+ * CP-NEW-6dof-pose-estimate-pick: 0/3 stable_fail on clean GPU (real failure — pose-estimate/pick doesn't deliver);
+   needs scene_eyes RCA (deeper), NOT verified.
+ * CP-NEW-planning-10step-retry: NO_GATE_FULL = TIMEOUT (duration_s=700 long-horizon > 360s wrapper); inconclusive,
+   needs a 900s+ timeout to measure. NOT a failure.
+LESSON reinforced: the "stochastic" heuristic labels were unreliable — brick-stacking was flagged stochastic but is
+a clean deterministic 3/3. Measure-then-verify (with scene_eyes for suspicious passes) is the truth. Hardened total
+= 11 (10 prior + brick-stacking). Memory: feedback_false_positives_progress, feedback_diagnostic_first_then_fix.
