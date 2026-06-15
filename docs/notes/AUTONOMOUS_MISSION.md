@@ -3402,3 +3402,16 @@ is pause-belt-during-move-lock-hold — but that touches the shared belt-pause l
 no-regression (dedicated, not rushed). STEP 6 done: scene_eyes --compose now consumes solver offsets (was reproducing
 the overlap bug). NEXT (offline, no decisions needed): STEP 2 derived_layout_hints onto VERIFIED_CORE + STEP 3
 precondition_check. STEP 7 (LLM tools) waits on Anton's interface/promotion decisions.
+
+## 2026-06-15 (cont.70) — built precondition_check (LAYER 2); L1+L2 of the composition architecture done+tested
+composer.precondition_check (Kit-free): flags (a) namespacing_escape [run_usd_script-baked /World/ paths],
+(b) concurrent_curobo [>1 sharing the process-global plan/move lock in parallel], (c) uncovered position-kwarg.
+Tested: CP-01+CP-09 parallel -> concurrent_curobo REFUSE (correctly predicts the residual own-belt contention ride-off
+measured cont.69); chain -> clean (serializes by design); CP-07 -> clean (refutes the synthesis's 'CP-07 legacy-absolute'
+claim — CP-07's /World/ paths pass as kwargs = re-rootable; only run_usd_script BODIES escape). Detection only; the
+refuse-vs-serialize POLICY is Anton's decision #1.
+COMPOSITION ARCHITECTURE STATUS (design-review roadmap): L0 compose_canonicals (exists, untouched) ✓; L1 layout_solver
+(built+Kit-verified, inst1 5/5) ✓; L2 precondition_check (built+tested) ✓; L3 chain machinery (apply_source_override
+wiring + deferred single world.reset) — NEXT offline+minimal-Kit; L4 build_composed_scene (precond->solver->compose->gate);
+L5 the 2 LLM tools (plan_scene_decomposition + build_composed_scene) — wait on Anton's interface/promotion decisions.
+Two solid Kit-free layers delivered this push; the rest intersects the 6 decisions.
