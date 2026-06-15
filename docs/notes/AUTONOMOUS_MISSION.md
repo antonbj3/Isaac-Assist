@@ -3662,3 +3662,13 @@ blocks. Queued verify-blocks-2 (CP-32/33/47 2-cube sorters) to keep the robust s
 (honest): gold diversity is bounded by the single-Franka pick-place/stack/sort block types; the most DIVERSE training
 data needs chains (L3 dedicated session) or non-pick-place blocks. The parallel-low-cube gold pipeline is established +
 producing autonomously; higher-diversity directions are L3 (blocked) / L5 LLM-tool (decision-gated) / more block types.
+
+## 2026-06-15 (cont.91) — gold batch 2 = +5 gold (12 total); routing-aware measure fix (sorters were measure-false-neg)
+Gold batch 2 final: CP-28+CP-29, CP-28+CP-13, CP-29+CP-13, CP-28+CP-01, CP-29+CP-09 = 5 GOLD (all delivered; 1-cube
+CP-28/29 reliable, CP-09 5/5 this time). CP-03+CP-28 and CP-03+CP-13 read NOT_VERIFIED (CP-03 1/2) — but that's a MEASURE
+FALSE-NEGATIVE: CP-03 is a 2-color sorter (red->RedBin, blue->BlueBin) and compose_and_verify only checked target_path
+(RedBin), missing the blue cube in BlueBin. Per 'kontroll-fail=måttet trasigt->fixa först': FIXED compose_and_verify to
+be ROUTING-AWARE (count a cube delivered if it reached ANY destination bin from target_path + color_routing/drop_targets).
+Re-running CP-03+CP-13 with the fix (expect CP-03 2/2 -> gold). Verified gold now 12 records (single-dest 1-2-cube
+pick-place/stack); the routing fix unlocks SORTERS (CP-03/32/33/47) as valid gold blocks too -> more diversity. This is
+the diagnostic-first / fix-the-measure discipline applied to the gold pipeline itself.
