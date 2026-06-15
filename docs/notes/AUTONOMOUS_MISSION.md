@@ -3214,3 +3214,15 @@ setup_pick_place_controller -> each cell gets its OWN planner (the mechanism G1 
 Only when unset (preserves G1 left/right); single-template never calls composer -> byte-identical (37 hold). If it
 works it unlocks BOTH composition AND dual-Franka — a real multiplier. N-of-M (3x) verifying now. compose_gate
 trajectory-capture committed cont.55.
+
+## 2026-06-15 (cont.57) — per-instance-planner fix REFUTED by measurement; OFFSET is the real discriminator
+N-of-M WITH the per-instance-planner fix: inst1 = 3/5, 5/5, 4/5 — SAME marginal pattern as before (4/5,5/5,4/5). The
+shared-planner hypothesis is REFUTED (separate planners did NOT stop the fling). Mät-först discipline: plausible !=
+verified. BUT a stronger clue emerged: the flung cubes land CONSISTENTLY at x~4.8, z~0.525 (same spot every run) =
+DETERMINISTIC GEOMETRY, not random physics. And inst0 (offset 0) is ALWAYS 4/4; inst1 (offset +2.5 x) ALWAYS flings.
+=> the OFFSET is the discriminator, not the two-arm interaction. NEW HYPOTHESIS: the cuRobo handler mishandles a
+non-zero base/offset frame for grasp or release -> geometrically-wrong trajectory -> fling to a consistent wrong spot.
+TEST RUNNING: CP-09 as a SINGLE instance @ offset +2.5 (one arm, lock NOT engaged). If it flings -> OFFSET-handling bug
+(real, generalizes to ALL offset composition); if clean -> two-arm interaction. Per-instance-planner change left in
+place pending this result (gated/harmless; revert if the real cause makes it pure cost). compose changes committed
+cont.55/56.
