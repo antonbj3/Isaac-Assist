@@ -65,3 +65,23 @@ primary model is runtime composition (pre-creating all pairs doesn't scale or ge
 4. [Gemini, no Kit] compose-reasoning eval: feed Gemini a task + candidate blocks, score its decomposition/layout choice (gap #4, observability).
 5. [Kit, serial] end-to-end on a few cases with scene_eyes verification.
 Incorporate design-review workflow (wq0t4ee5i) findings into 1-2 (interface shape).
+
+## TRAINING DATA — save all LLM-flow data (Anton 2026-06-15)
+Goal: train our OWN model later on the (task -> tool-call plan / USD-code) abstraction(s). So SAVE
+ALL DATA from every LLM-flow interaction. Convention: append JSONL to `workspace/training_data/*.jsonl`
+(one JSON object per interaction: full system+user prompt, catalog, raw model response, parsed plan,
+score, model, ts). Any LLM-flow tool MUST write here.
+
+KEY INSIGHT — the canonical library is ALREADY a training dataset at TWO abstraction levels:
+  (1) tool-call level: each template's `code` = a (goal -> ordered tool-call sequence) example
+      (create_bin/robot_wizard/setup_pick_place_controller/...). 70 verified-core = 70 clean examples.
+  (2) USD-code level: the same code executed = the (goal -> USD scene mutation) example.
+Composition ADDS the next level: (composite task -> build_composed_scene plan = cells+topology+handoffs
+-> the composed tool-call sequence). compose_reasoning_eval.py captures (composite task -> plan) pairs.
+So the dataset to assemble: per template {goal, tool_calls(from code), usd_effect}; per composition
+{task, plan, composed_tool_calls}; per LLM-flow run {prompt, response, score} — all to training_data/.
+
+## First result (2026-06-15)
+compose_reasoning_eval.py T1 (gemini-2.5-flash): PASS — "two pick-place stations side by side" ->
+['CP-01','CP-01'] parallel (correct). Data saved. Gemini quota is TIGHT (free-tier per-minute 429) ->
+runs are spaced (asyncio.sleep) + small. Catalog = 40 verified-core blocks (goal + IO + curobo flag).
