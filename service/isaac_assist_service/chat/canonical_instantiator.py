@@ -1227,6 +1227,44 @@ async def compose_canonicals(
     return {"instances": results, "n_instances": len(results)}
 
 
+async def build_composed_scene(cells, layout="parallel", refuse_policy="serialize", new_stage=True):
+    """LAYER 4: the precondition-checked, auto-spaced builder that L5's LLM tool wraps.
+
+    The LLM names blocks (template-ids) + a topology; the SYSTEM owns every coordinate. This
+    routes: precondition_check (loud fusion-risk findings) -> layout_solver (collision-free
+    spacing) -> compose_canonicals. PARALLEL only here — CHAIN handoff-alignment is the separate
+    proven relay (scripts/qa/chain_gate.py); route chains there once promoted into this module.
+
+    cells: [{"id": str, "template": "CP-NN", "role_bindings"?: {...}, "param_overrides"?: {...}}].
+    refuse_policy: 'serialize' (default — proceed but FLAG concurrent-cuRobo contention; matches the
+      measured reality that 68/70 core templates are cuRobo) | 'refuse' (return without building on
+      any 'refuse' finding). namespacing_escape is ALWAYS hard-refused (it silently corrupts prims).
+    Returns {built, findings, offsets, instances?, n_instances?, refused_reason?}.
+    """
+    from .composer import compute_layout_offsets, precondition_check
+    import os as _os
+    _tdir = _os.path.join(_os.path.dirname(_os.path.dirname(_os.path.dirname(
+        _os.path.dirname(_os.path.abspath(__file__))))), "workspace", "templates")
+    tpls = []
+    for c in cells:
+        t = json.load(open(f"{_tdir}/{c['template']}.json")) if isinstance(c.get("template"), str) else c["template"]
+        tpls.append(t)
+    findings = precondition_check(tpls, layout=layout)
+    hard = [f for f in findings if f["kind"] == "namespacing_escape"]
+    if hard or (refuse_policy == "refuse" and any(f["severity"] == "refuse" for f in findings)):
+        return {"built": False, "findings": findings,
+                "refused_reason": "namespacing_escape (silent prim corruption)" if hard else "refuse_policy=refuse + a refuse-severity finding"}
+    if layout != "parallel":
+        return {"built": False, "findings": findings,
+                "refused_reason": "build_composed_scene handles 'parallel' here; route 'chain'/'grid' via the chain relay"}
+    offs = compute_layout_offsets(tpls, axis="x")
+    instances = [(tpls[i], cells[i].get("id") or f"inst{i}", offs[i]["offset"]) for i in range(len(cells))]
+    res = await compose_canonicals(instances, new_stage=new_stage)
+    return {"built": True, "findings": findings,
+            "offsets": [{"id": cells[i].get("id") or f"inst{i}", **offs[i]} for i in range(len(cells))],
+            **res}
+
+
 _PRIM_PATH_RE = __import__("re").compile(
     r"prim_path=['\"]([^'\"]+)['\"]|dest_path=['\"]([^'\"]+)['\"]|"
     r"sensor_path=['\"]([^'\"]+)['\"]|robot_path=['\"]([^'\"]+)['\"]"
