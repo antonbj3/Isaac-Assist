@@ -3262,3 +3262,17 @@ FIX (committed, GATED): freeze the trajectory clock during the hold — re-ancho
 holds at its pre-hold value; clear on token re-acquire. Single-robot fast-path never holds -> byte-identical (37 hold).
 This is the genuine multi-arm-exec fix and should unlock BOTH concurrent composition AND dual-Franka CP-51/52/53 (task #10).
 N-of-M (3x) verifying. If it holds: re-run CP-09 standalone SIMRUNS=3 for no-regression, then try a dual-Franka template.
+
+## 2026-06-15 (cont.60) — clock-freeze fix = PARTIAL (reduces 2nd-arm far-fling, NOT a full pass); 2nd mechanism = world x~4.8 attractor
+N-of-M WITH clock-freeze: inst0 4/4,4/4,3/4 ; inst1 4/5,5/5,5/5 ; full 2/2 = 1/3 (RUN2). HONEST: the fix HELPED — inst1
+(the arm that loses the move-token) far-fling is largely gone (was 3-4/5 flinging to x~4.8; now 4/5,5/5,5/5 and RUN1's
+miss is a NEAR-miss at the tower base [2.527,-0.753,0.525], not a far fling). BUT composition is STILL 1/3 — a far-fling
+now appears occasionally on inst0 (RUN3 Cube_3 @ x=4.854). NOT a pass (false-pos discipline: 1/3 != solved).
+NEW DECISIVE CLUE (missed before): BOTH arms' far-flings land at the SAME WORLD point x~4.8, z~0.525 (inst0 from base 0,
+inst1 from base 2.5) — a FIXED WORLD ATTRACTOR, not relative to each arm's base. => a 2nd fling mechanism independent of
+the move-lock hold (per-instance planners rule out shared-planner; so a shared world-frame pose/target both arms
+occasionally snap to). Needs composed-scene EE-trajectory instrumentation to localize (scene_eyes can't see composed
+scenes — the living-tools gap) -> dedicated session.
+DECISION: keep the clock-freeze fix IF no-regression passes (genuine improvement, gated, single-robot byte-identical).
+Running CP-09 standalone SIMRUNS=3 no-regression now (MUST be 3/3; mandatory for a shared-handler change). Composition
+multiplier status unchanged: works for 1-arm/chain; concurrent-2-arm still marginal pending the 2nd-mechanism fix (#10/#26).
