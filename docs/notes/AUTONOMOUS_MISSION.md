@@ -3626,3 +3626,11 @@ The working-parallel gold pipeline is confirmed: each compose_and_verify on a ro
 verified L2 training example (gold_kit_delivery_verified tier). This is Anton's step-2 collection in steady state.
 Growing it 1-by-1 (Kit-serial ~4min/record). Verified gold now: CP-01+CP-09 (9 obj), CP-01+CP-13 (6 obj). Continuing
 with more diverse pairs.
+
+## 2026-06-15 (cont.87) — gold pipeline correctly REJECTS partial (CP-09+CP-13 4/5+2/2 = not gold); gold batch launched
+CP-09+CP-13: inst0 CP-09 4/5 (contention dropped 1), inst1 2/2 -> NOT_VERIFIED, NOT appended. The gold pipeline
+correctly rejects partial deliveries (only full delivery = gold; delivered-count is the bar, false-positive discipline).
+Contention (~1/3 of concurrent parallel-pair runs drop a cube) means some runs won't produce gold — honest. Launched the
+automated gold batch (/tmp/run_gold_batch.sh: 5 robust pairs CP-01/09/13 combos, leak-safe restart each, ~25min bg) —
+produces gold for the full-delivering pairs, rejects contention-dropped. Anton's step-2 collection automated + honest.
+Verified gold so far: CP-01+CP-09, CP-01+CP-13 (2 records); batch will add the delivering combos.
