@@ -3555,3 +3555,15 @@ low-level helpers (e.g. raycast a surface height). DECISION + ALLOCATION:
 PROBE RUNNING: CP-01->CP-01 with upstream primary_destination overridden to flat size [0.5,0.5,0.02] -> expect stage-1
 delivery > 0/4 (vs the bin's 0/4) = the L3 flat-handoff concept proven. If it works, promote into the chain machinery +
 make it auto (the LLM never sees the handoff geometry).
+
+## 2026-06-15 (cont.81) — L3 flat-handoff: necessary NOT sufficient (inst0 4/4 onto flat, inst1 relay 0/4)
+L3 probe (CP-01->CP-01, upstream primary_destination overridden to flat size [0.5,0.5,0.02] via role_bindings):
+inst0 delivered 4/4 ONTO the flat handoff (the override mechanism WORKS — CP-01 delivers fine on a flat surface vs the
+deep bin). BUT inst1 (downstream relay) = 0/4 — still doesn't pick from the handoff. So flat-handoff is NECESSARY but
+NOT SUFFICIENT; L3 auto-handoff is the genuine hard multi-factor chain frontier (handoff geometry + alignment + reach +
+relay). DIAGNOSTIC-FIRST (NOT guessing — static guesses misled me 3x this session): leading hypothesis = the downstream
+cell's pick is SENSOR-GATED (waits for a cube at ITS conveyor proximity sensor), but the handoff cubes are on the
+handoff, not the belt -> sensor never fires -> inst1 idles. MUST CONFIRM with scene_eyes on inst1 (the true mechanism),
+not assume. NOT claiming L3 works (false-positive discipline: 0/4 relay != fixed). The honest next step (task #29):
+scene_eyes on the composed chain inst1 -> the real relay cause -> targeted fix. This is the dedicated multi-arm chain
+work, connects to reach_validate/geometric-understanding (Anton). Marathon session consolidation point.
