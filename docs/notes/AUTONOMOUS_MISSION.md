@@ -3249,3 +3249,16 @@ STRATEGIC BOUNDARY for the composition multiplier TODAY:
 Durable deliverables this session: compose_gate per-cube MISS + TRAJECTORY capture (the scene_eyes-equivalent for
 composed scenes); collection_manifest.py (the honest 439->70-verified-core picture). Tooling + honest boundary, no
 false-positive "fix".
+
+## 2026-06-15 (cont.59) — ROOT CAUSE NAILED (code-trace): wall-clock seg sampling + move-lock hold = snap-on-resume fling
+Refuted the earlier suspects by code-reading: S (per-cube state) is TAGGED/isolated (_SUB_ATTR=_curobo_pp_sub_<tag>_<phase_id>);
+_mc_carry_phase/_mc_delivered are UR10-ONLY (gated line 5152, ROBOT_FAMILY in ur10) so irrelevant to Franka; _PLAN/_MOVE
+locks are intentional+tagged-holder. THE BUG (pick_place.py ~7952): segments sampled by WALL-CLOCK
+elapsed=monotonic()-seg_start_t; idx=min(elapsed/mt,1)*(T-1). When the 2nd arm is DENIED the move-token it HOLDS in
+place (re-applies hold_q) but seg_start_t stays fixed while monotonic() runs -> on resume elapsed>>mt -> idx=T-1 -> arm
+SNAPS to segment END in one tick -> gripped cube FLUNG with snap velocity to a CONSISTENT x~4.8. Fits ALL evidence
+(deterministic spot; only 2nd concurrent arm; single-arm never; planner-fix irrelevant=it's the exec clock).
+FIX (committed, GATED): freeze the trajectory clock during the hold — re-anchor seg_start_t each held tick so elapsed
+holds at its pre-hold value; clear on token re-acquire. Single-robot fast-path never holds -> byte-identical (37 hold).
+This is the genuine multi-arm-exec fix and should unlock BOTH concurrent composition AND dual-Franka CP-51/52/53 (task #10).
+N-of-M (3x) verifying. If it holds: re-run CP-09 standalone SIMRUNS=3 for no-regression, then try a dual-Franka template.
