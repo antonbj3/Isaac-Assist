@@ -3070,3 +3070,15 @@ Measured 3 tier-1 CP-NEW single-arm candidates leak-safe (drive tier-1 -> verifi
 LESSON reinforced: the "stochastic" heuristic labels were unreliable — brick-stacking was flagged stochastic but is
 a clean deterministic 3/3. Measure-then-verify (with scene_eyes for suspicious passes) is the truth. Hardened total
 = 11 (10 prior + brick-stacking). Memory: feedback_false_positives_progress, feedback_diagnostic_first_then_fix.
+
+## 2026-06-15 (cont.47) — CP-NEW batch 2: 0 wins (special-grippers broken); yield thinning; tray-stack false-pass hardened
+Measured 3 more CP-NEW single-arm candidates leak-safe: adaptive-3finger-gripper 0/3 stable_fail, vacuum-gripper-
+sheet-pick 0/3 stable_fail (both SPECIAL-GRIPPER classes — broken, need gripper-specific work = deeper), tray-stack-
+unstack 1/5 (stable_ok = FALSE-PASS via min_req=1; real 1/5 partial stacking). Hardened tray-stack completeness="all"
+to stop the 1/5 false-pass (gate-honesty; correct bar; NOT verified — it's 1/5). CP-NEW measure-then-verify YIELD =
+1 win / 6 measured (brick-stacking the lone clean block; 6dof/adaptive/vacuum broken 0/N, tray-stack/y-merge partial,
+planning-10step timeout). REMAINING CP-NEW are dominated by special-grippers (vacuum/3finger/suction), moving-
+conveyor (stochastic), long-horizon (timeout), routing (need routing config) — all DEEPER/stochastic, not clean
+single-run hardens. The clean tier-1 CP-NEW vein is now genuinely thinning. Hardened total = 12 (incl. brick-stacking
+verified + tray-stack honest-fail). NEXT: deeper classes (special-gripper handling, moving-pick stochastic N-of-M)
+or focused sessions. Memory: feedback_false_positives_progress.

@@ -91,7 +91,8 @@
     "n_items_total": 5,
     "min_items_delivered": 3,
     "duration_s": 300,
-    "xy_tolerance": 0.1
+    "xy_tolerance": 0.1,
+    "completeness": "all"
   },
   "diagnose_args": {
     "robot_path": "/World/UR10",
