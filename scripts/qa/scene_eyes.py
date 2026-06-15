@@ -693,23 +693,24 @@ def _analyse(js):
             out.append("    %-14s vmax=%7.1f m/s @%.1fs  final=[%.2f,%.2f,%.2f]  %s" % (
                 _nm, _vmax, _vt, _fp[0], _fp[1], _fp[2], "*** EXPLODED/EJECTED ***" if _exp else "(fast — watch)"))
 
-    # OFF-SURFACE / KNOCK-OFF detector (2026-06-14, Anton: make the off-surface verdict first-class, not
-    # hand-derived). An object that reached a placed height then FALLS (final z >=0.10m below its own peak
-    # z) rolled/was-knocked OFF a surface — e.g. a box collided with a neighbour and fell off an OPEN pallet
-    # (CP-NEW-palletizer-mixed-sku Box_5: peak~0.84 -> final z=0.54 on the Ground). The position-only gate
-    # only sees "not delivered"; this NAMES the knock-off + the object-object collisions that caused it.
+    # OFF-SURFACE / KNOCK-OFF detector. A genuine knock-off ends NET-BELOW where the object STARTED (it fell
+    # off a surface to a lower level / the ground) — e.g. a box knocked off an OPEN pallet (Box_5 start~0.84
+    # -> final 0.54 on the Ground). FIX 2026-06-15: the old "fell >=0.10m from PEAK" false-fired on EVERY
+    # normal pick-place (the arm lifts the cube to transit height ~1.07 then places it lower = a 0.25m drop
+    # from peak on a perfectly good delivery). Use NET descent from START instead; a placed/stacked cube ends
+    # at ~start or higher (net <=0), only a real fall ends well below start.
     _off = []
     for _nm in sorted(_ej_objs):
         _zs = [(_r.get("cubes") or {}).get(_nm) for _r in rows if (_r.get("cubes") or {}).get(_nm)]
         if len(_zs) < 3: continue
-        _zmax = max(p[2] for p in _zs); _fp = _zs[-1]
-        _drop = _zmax - _fp[2]
-        if _drop > 0.10 and _fp[2] > -1.0:  # fell >=10cm from peak, not a sub-floor explosion (offset-invariant)
+        _zmax = max(p[2] for p in _zs); _fp = _zs[-1]; _z0 = _zs[0][2]
+        _drop = _z0 - _fp[2]   # NET descent from start, not from transit peak
+        if _drop > 0.15 and _fp[2] > -1.0:  # ended >=15cm below where it began = fell off / never seated
             _off.append((_nm, _zmax, _fp, _drop))
     if _off:
-        out.append("OFF-SURFACE / KNOCKED-OFF (final z fell >=0.10m below the object's own peak — rolled/knocked off a surface):")
+        out.append("OFF-SURFACE / KNOCKED-OFF (final z ended >=0.15m below the object's START — fell off / never seated; transit-lift excluded):")
         for _nm, _zmax, _fp, _drop in sorted(_off, key=lambda x: -x[3]):
-            out.append("    %-14s peak_z=%.2f -> final=[%.2f,%.2f,%.2f]  fell %.2fm" % (
+            out.append("    %-14s peak_z=%.2f -> final=[%.2f,%.2f,%.2f]  net-fell %.2fm from start" % (
                 _nm, _zmax, _fp[0], _fp[1], _fp[2], _drop))
     # object-object contacts = place-time collisions that can knock neighbours off (both actors are tracked workpieces)
     _oo = sorted({k for k in _cf if "|" in k and all(p.strip() in _ej_objs for p in k.split("|"))})

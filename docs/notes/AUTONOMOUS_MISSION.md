@@ -3844,3 +3844,10 @@ over-broad OFF-SURFACE check (it false-fires on EVERY normal pick-place lift-the
 final-z<0.6 fell-to-ground check. Re-verified all: 3-cell REJECT (correct), 2-cell CP-08+CP-01 / CP-13+CP-08
 / CP-03+CP-08 stay GOLD. REMOVED the false 3-cell record. Gold = 13 position + 3 scene_eyes (all genuine).
 3-cell parallel drops a cube under 3-arm cuRobo contention (CP-08 3/4) — a real contention ceiling, NOT gold.
+
+cont.109 (2026-06-15): scene_eyes OFF-SURFACE detector de-noised (living tools). It flagged "fell >=0.10m
+from PEAK" which false-fired on EVERY normal pick-place (arm lifts cube to transit ~1.07 then places lower
+= 0.25m from peak on a good delivery). Fixed to NET descent from START (>=0.15m below where it began =
+genuine fall/knock-off; transit-lift + stacking excluded). Header updated. Gate (eyes_gold_gate) uses
+never-gripped + final-z<0.6, NOT OFF-SURFACE, so re-verify unaffected. (CP-28+CP-29+CP-13 3-cell re-verify
+in flight to test low-cube contention ceiling.)
