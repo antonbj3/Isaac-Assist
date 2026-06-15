@@ -4744,9 +4744,25 @@ def _release_plan_token():
 # collision, held sibling static → planned avoidance accurate. GATED multi-robot:
 # single robot (<=1 live _curobo_pp_sub_) → True with no state touched → the 37
 # byte-identical. Round-robin (last_mover yields) + 8s stale-steal.
-_MOVE_LOCK_ATTR = "_curobo_exec_motion_lock_v1"
+# OVERLAP-AWARE v2 (2026-06-16): v1 was a SINGLE GLOBAL holder — ANY 2+ live curobo arms
+# serialized regardless of zone overlap. FATAL for COMPOSITION (parallel cells metres apart
+# needlessly took turns -> zero throughput multiplier + a gripped cube slips during the long
+# hold; measured, NOT GPU). v2 serializes ONLY arms whose workspaces actually OVERLAP (base-to-
+# base xy distance < 2.0m ~ two Franka reaches). Non-overlapping composed cells move CONCURRENTLY;
+# CP-52/CP-65 dual-arm sharing one conveyor (bases <2m apart) still serialize -> no collision.
+# Token = a SET of current movers (not one holder). Single-arm fast-path unchanged (byte-identical).
+# Unknown base -> treat as overlapping = serialize (safe, degrades to the old global behaviour).
+_MOVE_LOCK_ATTR = "_curobo_exec_motion_lock_v2"
+_MOVE_REACH_M = 2.0
 if getattr(builtins, _MOVE_LOCK_ATTR, None) is None:
-    setattr(builtins, _MOVE_LOCK_ATTR, {{"holder": None, "stamp": -1.0, "last_mover": None}})
+    setattr(builtins, _MOVE_LOCK_ATTR, {{"movers": {{}}, "bases": {{}}, "last_mover": None}})
+
+def _my_move_base():
+    try:
+        _b = _world_pos(ROBOT_PATH)
+        return (float(_b[0]), float(_b[1])) if _b is not None else None
+    except Exception:
+        return None
 
 def _try_acquire_move_token():
     _subs = _curobo_live_pp_subs()
@@ -4757,28 +4773,40 @@ def _try_acquire_move_token():
     _me = _SUB_ATTR
     import time as _mt
     _now = _mt.monotonic()
-    _holder = _lock.get("holder")
-    if _holder == _me:
-        _lock["stamp"] = _now
+    _movers = _lock.setdefault("movers", {{}})
+    _bases = _lock.setdefault("bases", {{}})
+    if _me not in _bases:                 # base is STATIC — register once
+        _mb = _my_move_base()
+        if _mb is not None: _bases[_me] = _mb
+    for _s in list(_movers.keys()):       # GC stale movers (dead sub or >8s held)
+        if (_s not in _subs) or (_now - float(_movers.get(_s, _now)) > 8.0):
+            _movers.pop(_s, None)
+    for _s in list(_bases.keys()):
+        if _s not in _subs: _bases.pop(_s, None)
+    if _me in _movers:                    # already moving -> refresh + continue
+        _movers[_me] = _now
         return True
-    if _holder is not None and _holder != _me:
-        if (_holder not in _subs) or (_now - float(_lock.get("stamp", _now)) > 8.0):
-            _lock["holder"] = None
-        else:
-            return False
-    if _lock.get("last_mover") == _me and len([s for s in _subs if s != _me]) > 0:
+    def _overlaps(_s):
+        if _s == _me: return False
+        _a = _bases.get(_me); _b = _bases.get(_s)
+        if _a is None or _b is None: return True   # unknown base -> serialize (safe)
+        return ((_a[0]-_b[0])**2 + (_a[1]-_b[1])**2) < (_MOVE_REACH_M * _MOVE_REACH_M)
+    if any(_overlaps(_s) for _s in _movers):       # an OVERLAPPING arm is moving -> WAIT
+        return False
+    # round-robin fairness among OVERLAPPING contenders only (non-overlapping never contend)
+    if _lock.get("last_mover") == _me and any((_overlaps(_s) and _s not in _movers) for _s in _subs):
         _lock["last_mover"] = None
         return False
-    _lock["holder"] = _me
-    _lock["stamp"] = _now
+    _movers[_me] = _now
     _lock["last_mover"] = _me
     return True
 
 def _release_move_token():
     _lock = getattr(builtins, _MOVE_LOCK_ATTR, None)
     if _lock is None: return
-    if _lock.get("holder") == _SUB_ATTR:
-        _lock["holder"] = None
+    _movers = _lock.get("movers")
+    if _movers is not None:
+        _movers.pop(_SUB_ATTR, None)
 
 _PLANNER_JOINT_NAMES = list(_planner.joint_names)
 
