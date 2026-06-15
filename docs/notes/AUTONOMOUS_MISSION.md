@@ -3358,3 +3358,19 @@ I CANNOT claim a grip-slip even happened (the tool was buggy + I over-read a cav
 confirmed with the FIXED tool, it would mean dynamic robustness (grip/contacts) does NOT compose — but NOT established.
 LESSONS (-> memory feedback_static_vs_kit_scene_eyes + cron): static < Kit scene_eyes; read RAW eyes.json not summary
 metrics; scope multi-instance probes by full path. NEXT: re-run the FIXED composed scene_eyes for the TRUE mechanism.
+
+## 2026-06-15 (cont.67) — FIXED scene_eyes raw data: NO systematic grip-slip; composition failure is stochastic+spacing
+Re-ran the FIXED composed scene_eyes (objects scoped to inst1) and READ THE RAW per-cube finals (not the summary):
+ALL 5 inst1 cubes delivered cleanly belt->tower (Cube_1..5 final x~2.45-2.50, y~-0.4, z~0.82-0.88; maxx=2.50 for all —
+none rode to 4.8). This run = a clean 5/5. The "GRIP-SLIP" metric flagged a DIFFERENT cube (Cube_2 1019mm) than the
+buggy run (Cube_3 1990mm) — it changes run-to-run = NOT a real mechanism; it conflates legitimate transport (~2m
+belt->tower) + ~90° intended placement rotation as "slip" (scene_eyes flags this as secondary).
+HONEST CONCLUSION (answers Anton's "what does grip-slip on combining 2 working templates mean?"): there is NO
+systematic grip-slip; when inst1 delivers, cubes land cleanly in the tower. The composition degradation is STOCHASTIC +
+SPACING (belt overlap at tight offset 2.5 lets an occasionally-unpicked cube ride off; offset 6 -> inst1 5/5 reliably) —
+NOT a grip/dynamic-robustness failure. => dynamic robustness MOSTLY DOES compose; the failures are stochastic contention
++ fixable by scene-extent-aware spacing. More positive for the composition strategy than the grip-slip worry.
+Composition RCA RESTS here (honest, mostly-positive): (1) scene-extent-aware spacing is the real composer fix (footprint
+overlap); (2) clock-freeze (cont.59) is a valid carry-stability aid; (3) remaining degradation is stochastic contention
+(the dedicated multi-arm session #10/#26 if we want concurrent-2-arm bulletproof). PIVOT to the LLM-flow/Gemini
+direction (task #28) per Anton's steer + the design-review workflow result.
