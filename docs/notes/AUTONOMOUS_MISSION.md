@@ -2898,3 +2898,30 @@ correct bar regardless of run-count), and scene_eyes/N-of-M any 0-or-partial BEF
 a single 0/N as a regression — cf CP-41/56). The 7 already hardened (CP-65/83/73/22/09/46/13) all measured FULL ->
 correct. Verified-set spot-checked SOUND (8 templates deliver full). Remaining ~43 = careful per-template campaign.
 Memory: project_isaac_assist_t4_stochastic, feedback_diagnostic_first_then_fix.
+
+## 2026-06-15 (cont.37) — heavy-run timeout finding + session consolidation
+3 consecutive HEAVY Kit runs timed out under autonomous wrapper timeouts: 3-cell compose (18k steps), N-of-M
+SIMRUNS=3 (3×180s), 2-cell-solid compose CP-22+CP-73 (12k steps). compose_gate's 6000*N step budget + N-of-M k×dur
+are too slow with concurrent cuRobo for ~520-800s wrappers. SINGLE-template gate_one (~180s) completes reliably.
+=> heavy multi-cell/N-of-M refinements need LONGER focused-session timeouts (or a reduced step budget); NOT
+re-gambling on them autonomously. Composition multiplier remains PROVEN (cont.23-24: heterogeneous 2-cell delivery
+CP-01+CP-04, CP-61+kit-prep) + chain proven (cont.27) + toolchain shipped (composer/compose_canonicals/compose_gate/
+chain_gate). The "full-rate on confirmed-solid blocks" refinement is DEFERRED to a focused run.
+
+SESSION STATE for Anton (2026-06-15 composition+gate-honesty marathon, all on anton/feat/foundation-build):
+ * COMPOSITION (centerpiece): sequential CHAIN end-state->start-state handoff PROVEN (source_override wired
+   d0894187, chain_gate.py tool 41675640); deep-bin relay = handoff-geometry limit (flat-buffer = future template
+   design, not a composer gap). Parallel + chain both proven; foundation+toolchain complete.
+ * GATE HONESTY (Anton #1 = no false-positives): found+fixed a real false-pass (vision-depalletize was stable_ok
+   at 1/6 via completeness default) + swept a 51-template completeness honesty-hole; spot-checked verified set
+   SOUND (CP-65/83/73/22/09/46/13 all deliver FULL) + hardened those 7 to completeness="all"; SIMRUNS N-of-M tool
+   added for stochastic blocks.
+ * DIAGNOSED (deeper-work, characterized, NOT quick-fixable): y-merge (belt-cadence; shared belt-pause CP-52/65 =
+   off-limits), vision-depalletize (depalletize-to-container; walled-bin swap regressed via controller-bbox
+   coupling, reverted), CP-41/CP-56 (STOCHASTIC rotary-disc/mixed-mass — single 0/4 was bad-luck, scene_eyes proved
+   arm works; verified-set INTACT, NOT a regression), mobile spawn bug (#25: create_wheeled_robot is controller-only,
+   robot_wizard CAN spawn carter — fix = template-side spawn or setup_wheeled_drive handler).
+ * DISCIPLINE: self-corrected a premature regression flag (cont.34->35) via diagnostic-first; every unverified fix
+   reverted (no churn); commit-per-fix; surgical text-edits (no json.dump em-dash churn).
+NEXT (deeper, focused): mobile track buildout (#25), full completeness audit of remaining ~43 (per-template
+measure-then-harden, scene_eyes/N-of-M the stochastic), composition full-rate on solid blocks (longer timeouts).
