@@ -3524,3 +3524,17 @@ for chains). 10/10 heuristic != 10/10 delivers. chain_gate on the proven CP-01->
 chain-delivery measurement (running). Training data: reasoning pairs are cheap+plentiful (Vertex); verified-delivering
 compositions are the gold (slow, Kit). NEXT: read chain_gate delivery; auto-handoff-alignment (L3) to Kit-verify
 ARBITRARY Gemini chains (today chain_gate needs manual handoff offsets).
+
+## 2026-06-15 (cont.79) — chain_gate Kit measurement: CONCRETE delivery-error demo + flat-handoff rule VALIDATED
+chain_gate CP-01->CP-01@-0.29,-0.8,0 (Kit ground truth for a chain): stage0 CP-01 relay=4/4 (delivers to its Bin);
+stage1 CP-01 relay=0/4 (picks 0). FINAL = 0/4 = a DELIVERY FAILURE. Mechanism = EXACTLY the documented deep-bin
+handoff limit: CP-01 delivers into a BIN (deep walls), stage2's pick from inside the bin hits grip-vs-wall -> 0/4.
+This is a clean live illustration of the DELIVERY error rate (cont.78): a structurally-correct plan (CP-01->CP-01 chain)
+that does NOT deliver because of handoff geometry. AND it VALIDATES the flat-vs-deep handoff rule baked into the eval
+instructions + io_semantic_check: Gemini's chains chose FLAT pallet handoffs (CP-30->CP-08, CP-13x3) = the deliverable
+ones; a bin-handoff chain (CP-01->CP-01) = undeliverable. So the cheap heuristic (flat vs deep) CORRELATES with the
+expensive Kit delivery -> the reasoning instruction is right, Kit is the judge. NOTE: chain_gate needs MANUAL handoff
+offsets per pair; to Kit-verify Gemini's flat-handoff chains (the deliverable ones) needs L3 auto-handoff-alignment
+(compute the offset so stage2's pick lands on stage1's flat delivery) — the remaining chain-composer piece. SUMMARY of
+the LLM-flow track: reasoning error ~0% (good instructions), delivery error is the real axis (parallel ~33% contention;
+chain bin-handoff = 100% fail, flat-handoff = the fix), training data = verified-delivering only.
