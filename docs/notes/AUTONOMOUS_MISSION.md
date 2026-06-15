@@ -2838,3 +2838,20 @@ not active). Hardened all 3 to completeness="all" (brace-matched surgical insert
 confirmed N/N). Completeness audit running total: 6 hardened (CP-65/83/73/22/09/46). Remaining risk templates need
 the same measure-then-harden (clear all-deliver) or stay any/routing (sorters/streamers). Memory:
 feedback_false_positives_progress.
+
+## 2026-06-15 (cont.33) — vision-depalletize 1/6 diagnosed (depalletize-to-container); walled-bin tried+reverted
+scene_eyes: all 6 boxes PICKED+CONVERGED+GRIPPED, but only the LAST-placed (Box_5/6) stays in OutfeedBin.
+ROOT: OutfeedBin is authored as a FLAT collision plate (create_prim Cube scale z=0.025 — NO walls), so each placed
+box slides off / is knocked by the next placement; only the final one remains. Compounded: OutfeedBin is in
+planning_obstacles, and the code computes SPREAD drop_targets (6 distinct xy) though the design intent (thoughts)
+says "single drop zone".
+FIX TRIED: OutfeedBin -> walled create_bin (CP-01 precedent: places into a 0.15-wall bin 4/4) + removed from
+planning_obstacles. RE-GATE: still 1/6, and WORSE — 4 boxes now stuck on the PALLET (never picked). create_bin makes
+/World/OutfeedBin an Xform-with-walls -> inflates the controller's bin-bbox (drop-height + _is_in_bin computed from
+it) and the arm clips the taller walls -> cycle stalls after box 1. REVERTED (no unverified churn; the swap has
+non-obvious interactions with the controller's bin-bbox logic).
+=> vision-depalletize is a genuinely hard depalletize-TO-CONTAINER scene (containment vs deep-bin-place trade-off +
+controller-bbox coupling). Needs careful redesign (single central drop like CP-01 + shallow walled bin + verify the
+controller bin-bbox/drop-height handles walls), not a quick swap. Characterized as deeper-work, NOT verified.
+Stays at completeness="all" (committed earlier) so its gate honestly reports the 1/6 fail. Memory:
+feedback_diagnostic_first_then_fix.
