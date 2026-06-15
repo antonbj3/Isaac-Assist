@@ -2947,3 +2947,14 @@ bare-"python" Kit child (exe+cwd match), not just the launcher, and verify GPU i
 repo-level restart-helper fix. LESSON: in long autonomous Kit sessions, monitor nvidia-smi + kill orphaned Kit on
 every restart; a single delivered_count is meaningless if the GPU is starved. Memory: feedback_diagnostic_first_then_fix,
 project_isaac_assist_warp_cache_planfail.
+
+## 2026-06-15 (cont.39) — correction to cont.38: repo's ACTIVE restart is already leak-safe
+Precision on the cont.38 GPU-leak: the orphan leak was in MY /tmp measurement wrappers (naive
+`pkill -f launch_isaac_sim_with_assist` = kills the bash launcher, orphans the detached bare-"python" Kit). The
+repo's ACTIVE validator scripts/qa/nofm_validate.py ALREADY solves this — `_all_kit_pids()` UNIONS three signals
+(:8001 listener + launcher cmdlines + detached python) with the explicit comment "killing the bash leaves the
+detached python" (prior wave-1b/1c/1d findings). So this is NOT a repo-wide bug; the canonical QA restart is correct.
+Only (a) my ad-hoc /tmp wrappers and (b) stale scripts/review/*sweep*with_restart.py use the naive pattern. TAKEAWAY:
+use nofm_validate.py (or its _all_kit_pids pattern, replicated in /tmp/run_measure_fixed.sh) for any restart-based
+measurement — never the bare pkill-launcher. The cont.38 result stands (CP-01 0/4 was a real GPU-starvation artifact
+from my wrapper's leak; CP-01 4/4 + CP-61 3/3 confirmed on clean GPU; verified set intact; 9 templates hardened).
