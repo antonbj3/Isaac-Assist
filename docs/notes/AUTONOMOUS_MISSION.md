@@ -2869,3 +2869,17 @@ never picked); CP-41 cubes ride the belt off to x=1.7 and fall (never picked) ->
 scene_eyes CP-56 launched to confirm: plan_calls=0/no-arm-motion (env/build) vs arm-moves-but-fails (real). Did NOT
 harden CP-41/CP-56 (0/4 != pass). Result -> cont.35. Memory: feedback_false_positives_progress,
 feedback_diagnostic_first_then_fix.
+
+## 2026-06-15 (cont.35) — CP-41/CP-56 0/4 REFUTED as regression (stochastic, arm verified working)
+Correction to cont.34's "potential verified-set regression" flag — diagnostic-first (scene_eyes CP-56) overturns it:
+arm is ALIVE — plan_calls=24, plan_fails=0, and it PICKS Cube_2/3/4 (valid drop plans to [0,-0.4]). CP-56 is a
+ROTARY-DISC scenario (Disc|Cube_1..4 contacts at t=0): cubes ride a turntable, so catching them is timing-dependent
+= STOCHASTIC. The single 0/4 measure run was BAD LUCK, not a dead/regressed controller. The gate lied; scene_eyes
+told the truth (Anton's "gates LJUGER" + diagnostic-first vindicated; my cont.34 regression flag was premature).
+=> verified-set is INTACT. CP-41 (mixed-mass: 0.1-2.0kg) + CP-56 (rotary-disc) are stochastic, not broken.
+MEASUREMENT NUANCE (the OTHER half of the false-positive principle): a STOCHASTIC template carrying
+completeness="all" graded on a SINGLE run yields FALSE-NEGATIVES (one bad draw -> 0/4 "fail" on a working template).
+Stochastic templates need N-of-M criteria, not single-run "all" (cf t4_stochastic memory). Did NOT change CP-41/56
+(not broken; not hardening further). Lesson reinforced: measure-then-harden must use scene_eyes/N-of-M for
+stochastic blocks, not a single delivered_count. Memory: feedback_diagnostic_first_then_fix,
+project_isaac_assist_t4_stochastic.
