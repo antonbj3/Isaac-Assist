@@ -2752,3 +2752,24 @@ COMPOSITION STATUS: foundation + toolchain + BOTH modes proven — parallel (CP-
 AND sequential chain (relay demonstrated). NEXT (rate, real path): a FLAT-staging handoff (cubes stay single-layer
 -> sane h1 -> clean picks) or a heterogeneous pick->downstream chain; that turns the chain into a robust composite
 (not yet a verified block at 1/4 — mechanism proven, rate is geometry-tuning). Memory: project_isaac_assist_composition_direction.
+
+## 2026-06-15 (cont.28) — chain rate: settle fixes h1 but deep-bin pick is the geometry wall + chain_gate.py
+Diagnostic-first on the cont.27 1/4 rate. Hypothesis: B's EE_INITIAL_HEIGHT (cuRobo approach) is computed at
+B-BUILD from source-cube z, and A's freshly-delivered cubes were momentarily STACKED (z->1.083) -> inflated
+approach 1.15 -> plan-fails. TEST (probe v3): add a SETTLE phase (stop inst0 belt + step 900) before building B so
+the handoff cubes flatten. RESULT: settle DID flatten them (BEFORE-B z~0.83 single layer, vs v2's stack) -> h1
+hypothesis CONFIRMED. BUT relay = 0/4 and 2 cubes EXPLODED (z=-25096, -10320). => fixing h1 exposed the DEEPER
+limiter: grip-vs-bin-wall BLOW-UP. Picking a cube OUT of a deep bin (0.15m walls) -> PhysX injects huge corrective
+forces as the grasp/lift fights the bin constraint -> explosion (or, with the high h1, plan-fail). The DEEP-BIN
+HANDOFF GEOMETRY is the wall, NOT the wiring and NOT h1.
+HONEST FRAMING: the composer MECHANISM (namespacing + offset + source_override) is DONE + PROVEN (v2 relayed 1 cube
+end-to-end). Robust MULTI-cube sequential relay needs a PICKABLE FLAT handoff (staging tray/conveyor, no deep
+walls) — a per-TEMPLATE design concern, not a composer gap. Not a false positive anywhere: 0/4 and 1/4 are NOT
+claimed as pass; the chain is mechanism-proven, geometry-limited.
+SHIPPED scripts/qa/chain_gate.py — sequential-chain measurement tool (build stage0 -> run -> SETTLE -> build
+stage k with source_override=stage0 cubes -> run -> measure per-stage relay; honest delivered/total, no
+partial-as-pass). Docstring carries the deep-bin caveat so a low count isn't misread as a broken gate.
+#27 status: mechanism proven + committed (d0894187) + measurement tool shipped; rate is a flat-handoff TEMPLATE
+build (future), not worth grinding on the deep-bin same-template case. NEXT: pivot to GROWING robust blocks
+(#24 arm tier-1) / mobile track (#25) — composition value now comes from more solid multipliers. Memory:
+project_isaac_assist_composition_direction.
