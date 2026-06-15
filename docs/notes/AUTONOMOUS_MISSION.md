@@ -2990,3 +2990,18 @@ Added simulate_args.fleet to multi-amr. Honest: 0/3 reached is NOT a pass-claim;
 done + fleet-verified. NOTE: CP-64 build_err shows generate_occupancy_map fails ('No module isaacsim.asset.gen') —
 benign for CP-64 (nav works without it) but it's the same env-block that gates occupancy-map-nav (#25). Memory:
 project_isaac_assist_nav_stub.
+
+## 2026-06-15 (cont.42) — cart-handoff-amr: jetbot SPAWNS but doesn't DRIVE (jetbot-nav gap); reverted
+Applied the spawn-fix pattern to CP-NEW-cart-handoff-amr (its /World/AMR was a HOLLOW Xform — create_prim Xform +
+ArticulationRootAPI + create_wheeled_robot, no real robot). Replaced with robot_wizard(jetbot) + passed jetbot wheel
+params (0.04/0.12) to navigate_to. nav_gate (leak-safe): AMR spawned=True (was hollow) BUT disp=0.0, stuck=True,
+reached=0/1. Tell-tale: _artroot resolved body=/World/AMR (NOT a chassis_link; multi-amr's Carters resolve to
+/World/Carter_N/chassis_link) -> the jetbot articulation/wheel-joint structure differs and navigate_to's WheeledRobot
+can't drive it. => navigate_to (closed-loop diff-drive) drives CARTER (proven CP-64 + multi-amr 3/3) but NOT jetbot
+out-of-box = a real robot-specific nav gap. REVERTED the patch (spawns-but-doesn't-drive = not a clean win, no
+unverified churn). FINDING: the mobile spawn-fix pattern is proven for CARTER templates; jetbot/forklift/other-AMR
+templates need per-robot nav validation (wheel-joint discovery for navigate_to's WheeledRobot, or robot_wizard
+velocity-drive setup — the directive's "robot_wizard velocity-drive" + setup_wheeled_drive-handler remaining work).
+multi-amr (carter) stands as the verified mobile win. NEXT (deeper): jetbot/forklift nav support, OR switch
+jetbot-class AMR templates to carter (loses design fidelity + cart-on-deck geometry needs tuning). Memory:
+project_isaac_assist_nav_stub.
