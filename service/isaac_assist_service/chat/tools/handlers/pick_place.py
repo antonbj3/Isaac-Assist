@@ -7808,6 +7808,21 @@ def _on_step(dt):
             # slump; keep grip closed if carrying) and DO NOT advance this tick.
             # Single-robot fast-path returns True untouched → byte-identical (37 hold).
             if not _try_acquire_move_token():
+                # 2026-06-15 COMPOSITION-FLING FIX: FREEZE the trajectory clock while
+                # the move-token is held by a sibling. The segment is sampled by
+                # wall-clock `elapsed = monotonic() - seg_start_t` (below); if the clock
+                # keeps running during a multi-second hold, on resume `elapsed >> mt`
+                # so idx jumps to T-1 and the arm SNAPS to the segment END in a single
+                # tick -> the carried cube is FLUNG (MEASURED: 2nd concurrent arm flings
+                # to a consistent x~4.8). Re-anchor seg_start_t each held tick so elapsed
+                # holds at its pre-hold value; resume continues smoothly. Single-robot
+                # never reaches here (_try_acquire_move_token fast-path) -> byte-identical.
+                if S.get("seg_start_t") is not None:
+                    _eh = S.get("_held_elapsed")
+                    if _eh is None:
+                        _eh = time.monotonic() - S["seg_start_t"]
+                        S["_held_elapsed"] = _eh
+                    S["seg_start_t"] = time.monotonic() - _eh
                 _hold_q = S.get("hold_q")
                 if _hold_q is not None:
                     _apply_arm_joints(_hold_q)
@@ -7815,6 +7830,7 @@ def _on_step(dt):
                 if _seg_hold is not None and _seg_hold.get("grip_done") and _seg_hold.get("action_after") == "close":
                     _grip_close()
                 return
+            S["_held_elapsed"] = None  # token acquired -> clock runs normally again
             segs = S["segments"]
             if segs is None or S["seg_idx"] >= len(segs):
                 # Done — verify cube actually reached the bin before marking
