@@ -2883,3 +2883,18 @@ Stochastic templates need N-of-M criteria, not single-run "all" (cf t4_stochasti
 (not broken; not hardening further). Lesson reinforced: measure-then-harden must use scene_eyes/N-of-M for
 stochastic blocks, not a single delivered_count. Memory: feedback_diagnostic_first_then_fix,
 project_isaac_assist_t4_stochastic.
+
+## 2026-06-15 (cont.36) — SIMRUNS N-of-M tool shipped; risk-list stochastic-classification inconclusive
+LIVING-TOOLS upgrade: gate_one.py SIMRUNS=k -> n_runs=k (N-of-M), so stochastic blocks aren't false-failed by one
+bad draw (the cont.35 gap). Verifier already supports n_runs/n_ok/success_rate; SIMRUNS exposes it (default 1 =
+byte-identical). Committed. Live kontroll (SIMRUNS=3 on CP-56) TIMED OUT — 3×180s sim > 800s wrapper; practical
+limit: use SIMRUNS=2 or shorter duration_s for N-of-M. Tool is low-risk (simple arg pass-through to a handler that
+already supports it; parse-clean).
+Tried a NON-Kit stochastic-classification of the 43 still-lenient risk templates to guide safe hardening —
+INCONCLUSIVE: the belt/conveyor marker flags 42/43 (CP-01 is belt-fed yet deterministically 4/4), so keyword
+heuristics can't discriminate stochastic from deterministic. Stochasticity is only knowable by measurement.
+REFINED AUDIT PATTERN (going forward): measure (single run ok), HARDEN the FULL ones (completeness="all" is the
+correct bar regardless of run-count), and scene_eyes/N-of-M any 0-or-partial BEFORE concluding "broken" (never read
+a single 0/N as a regression — cf CP-41/56). The 7 already hardened (CP-65/83/73/22/09/46/13) all measured FULL ->
+correct. Verified-set spot-checked SOUND (8 templates deliver full). Remaining ~43 = careful per-template campaign.
+Memory: project_isaac_assist_t4_stochastic, feedback_diagnostic_first_then_fix.
