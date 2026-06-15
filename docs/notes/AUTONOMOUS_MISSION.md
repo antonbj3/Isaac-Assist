@@ -3456,3 +3456,17 @@ naming, the 2-tool split, decomposition review-seam, promotion gate, rollout mil
 (#2/#4/#6). NEXT decision-independent + parallel-safe: the LLM-flow/Gemini COMPOSE-REASONING eval (task #28) — feed Gemini
 a task + the hints cache, score its proposed build_composed_scene plan (ChromaDB-free + Kit-free; tests the core product
 question 'can Gemini compose-reason' without wiring the tool).
+
+## 2026-06-15 (cont.74) — Anton: train own model + SAVE ALL DATA -> training-data store built
+Anton: "vi vill kunna träna egen modell senare på tool calls eller usd kod, olika abstraktioner" + "spara all data".
+ADDRESSED concretely:
+ * Gemini works (GEMINI_API_KEY set, gemini-2.5-flash 200 OK) but quota is TIGHT (free-tier per-minute 429) -> spaced calls.
+ * compose_reasoning_eval.py: tests can-Gemini-compose-reason (Kit-free + ChromaDB-free, catalog fed directly). T1 PASS:
+   "two pick-place stations" -> [CP-01,CP-01] parallel. SAVES every interaction (prompt/catalog/response/plan/score) to
+   workspace/training_data/compose_reasoning.jsonl.
+ * gen_training_dataset.py: the 70 verified-core templates dumped as workspace/training_data/canonical_templates.jsonl =
+   {goal, code(USD-level), tool_calls(parsed sequence), io, footprint, meta} -> BOTH training abstractions Anton named.
+CONVENTION: all LLM-flow + library data -> workspace/training_data/*.jsonl (documented in LLM_FLOW_SIMULATION_PROTOCOL.md).
+Two abstraction levels captured: per-template (goal->tool-calls->USD), per-composition (task->plan->composed tool-calls).
+NEXT: run more compose_reasoning tasks (spaced, quota-aware) for more (task->plan) pairs; eventually the full
+(task->plan->composed code) once L5 wires the tool. Composition architecture L0-L4 done; L5 + Gemini-3.1 switch = Anton's call.
