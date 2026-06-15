@@ -786,6 +786,7 @@ async def execute_template_canonical(
     role_bindings: Dict[str, Any] | None = None,
     instance_root: str | None = None,
     origin_offset=(0.0, 0.0, 0.0),
+    source_override=None,
 ) -> Dict[str, Any]:
     """Run a canonical template's `code` field as tool-call sequence.
 
@@ -1079,6 +1080,13 @@ async def execute_template_canonical(
     if instance_root:
         from .composer import namespace_and_offset_calls
         captured = namespace_and_offset_calls(captured, instance_root, origin_offset)
+
+    # CHAIN (2026-06-15): source this stage's picks from a prior stage's delivered
+    # outputs (end-state -> start-state handoff). Applied AFTER namespacing so the
+    # override points at the prior instance's prims, not this stage's.
+    if source_override is not None:
+        from .composer import apply_source_override
+        captured = apply_source_override(captured, source_override)
 
     # Execute phase — actually invoke each captured call via execute_tool_call
     executed: List[Dict[str, Any]] = []
