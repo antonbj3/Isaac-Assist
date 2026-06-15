@@ -87,7 +87,7 @@
     "Bin at sqrt(0.7^2+0.7^2)=0.99m from FrankaB — at reach LIMIT. May fail planning. Move closer if needed.",
     "Same physics gotchas as CP-02."
   ],
-  "verified_status": "draft; passes=12 n=27 wilson_lower=0.2759; was form-gate-pending; demoted 2026-05-15",
+  "verified_status": "draft; passes=12 n=27 wilson_lower=0.2759; was form-gate-pending; demoted 2026-05-15 | VERIFIED 1/1 2026-06-15 clean-GPU",
   "diagnose_args": {
     "cycles": [
       {
@@ -148,11 +148,9 @@
     "added_date": "2026-05-15"
   },
   "motion_controllers": {
-    "verified": [],
+    "verified": ["curobo"],
     "failed": {},
-    "untested": [
-      "curobo"
-    ]
+    "untested": []
   },
   "verification": {
     "function_gate": {

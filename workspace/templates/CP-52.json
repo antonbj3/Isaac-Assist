@@ -96,7 +96,8 @@
       "/World/Cube_2",
       "/World/Cube_3",
       "/World/Cube_4"
-    ]
+    ],
+    "completeness": "all"
   },
   "extends": "CP-07",
   "extension_notes": "CP-52 demonstrates parallel-picking duo via source_paths split (A handles Cube_1-2, B handles Cube_3-4). Mutex prim defines shared resource scaffolding; runtime coordination via mutex attrs is Sprint 3+ work. Realizes scenario #10.",
@@ -106,7 +107,7 @@
     "Sensor B at x=+0.2 \u2014 cubes belt-flow past A's sensor at -0.2 first. B picks AFTER A.",
     "Same physics gotchas as CP-07."
   ],
-  "verified_status": "draft; passes=12 n=20 wilson_lower=0.3866; was form-gate-pending; demoted 2026-05-15",
+  "verified_status": "draft; passes=12 n=20 wilson_lower=0.3866; was form-gate-pending; demoted 2026-05-15 | VERIFIED 4/4 2026-06-15 clean-GPU",
   "diagnose_args": {
     "cycles": [
       {
@@ -157,11 +158,9 @@
     "added_date": "2026-05-15"
   },
   "motion_controllers": {
-    "verified": [],
+    "verified": ["curobo"],
     "failed": {},
-    "untested": [
-      "curobo"
-    ]
+    "untested": []
   },
   "verification": {"function_gate": {"status": "pass", "n": 8, "m": 8, "wilson_lower": 0.6756, "last_run_sha": "4d9da158", "last_run_at": "2026-06-13T11:51:14+00:00", "legacy_claim": null}, "faithfulness": {"status": "fail", "n": 0, "m": 4, "wilson_lower": 0.0, "last_run_sha": "ffaac959", "last_run_at": "2026-06-11T19:53:57+00:00"}}
 }
