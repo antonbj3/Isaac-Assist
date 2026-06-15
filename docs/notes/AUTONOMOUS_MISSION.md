@@ -3512,3 +3512,15 @@ gemini-3.5-flash -> 7/7 with FLAT-handoff chains (better instructions -> better 
 heuristic tier-(a); Kit delivery (chain_gate) is the ground truth for chains — not yet run. NEXT: scale the task suite
 for a real per-class error rate; Kit-verify a chain; when L5 lands, fold the validated composition instructions into
 the production SYSTEM_PROMPT.
+
+## 2026-06-15 (cont.78) — TWO error rates: reasoning (LOW w/ good instructions) vs delivery (Kit ground truth)
+Harder tasks T8-T10 (5-station parallel, elaborate-single color-sort, deep-bin-chain-trap): gemini-3.5-flash 3/3 ->
+10/10 total reasoning-heuristic. The weak model scales (5 cells), resists over-composing an elaborate single, and
+AVOIDS the deep-bin chain trap (flat-handoff upstream). KEY INSIGHT — 'box in the error rate' has TWO tiers:
+(1) REASONING error rate (LLM picks right block+topology) = LOW with the good IO-explicit catalog + chain instructions
+(weak model + good system-message suffices). (2) DELIVERY error rate (does the picked composition actually DELIVER) =
+the REAL failures (contention, handoff geometry) and only Kit measures it (compose_and_verify for parallel, chain_gate
+for chains). 10/10 heuristic != 10/10 delivers. chain_gate on the proven CP-01->CP-01 chain is the first Kit
+chain-delivery measurement (running). Training data: reasoning pairs are cheap+plentiful (Vertex); verified-delivering
+compositions are the gold (slow, Kit). NEXT: read chain_gate delivery; auto-handoff-alignment (L3) to Kit-verify
+ARBITRARY Gemini chains (today chain_gate needs manual handoff offsets).
