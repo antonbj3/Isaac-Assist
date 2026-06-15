@@ -3120,3 +3120,17 @@ gissningar bedrar" vindicated, caught via known-good references):
 LESSON: static diagnosis is a HYPOTHESIS/classification engine, NOT a fix oracle — every proposal needs Kit/known-good
 verification (exactly Anton's point). The durable deliverable is the reliable static_scene_check DETECTOR. Memory:
 feedback_diagnostic_first_then_fix, feedback_false_positives_progress.
+
+## 2026-06-15 (cont.50) — ALREADY_DELIVERS verify = 0/2 clean (agent-classification UNRELIABLE confirmed); single-tenant mode rest of day+night
+Kit-verified the 2 clean ALREADY_DELIVERS workflow-candidates: isaaclab-arena-lego 2/4 (false-passed min_req=1 ->
+hardened completeness=all, honest), controller-shootout-cp NO_GATE_FULL (it's a 4-controller BENCHMARK, gate_class
+None -> not a standard delivery template). 0/2 actually deliver full. Combined with tray-stack (agent said ALREADY,
+measured 1/5): the static workflow's ALREADY_DELIVERS class is UNRELIABLE. NET of the 39-agent workflow + all
+verification: 0 new verified templates from its proposals/classifications; the durable deliverable is the RELIABLE
+static_scene_check detector + the honest finding that static-agent diagnosis is a hypothesis engine, not a fix/verify
+oracle (Anton's skepticism fully vindicated via known-good references: CP-01-lists-its-bin killed the planning_obstacles
+fix-class; tray-stack/isaaclab killed ALREADY_DELIVERS).
+ANTON DIRECTIVE: single-tenant (one Kit, serial) for the REST OF DAY+NIGHT. No more parallel workflows. Mode = the
+reliable serial truth-path: static_scene_check pre-filter -> Kit-measure (find hidden already-deliverers -> mark
+verified) / fix isolated-safe geometry bugs (double-offset) + verify. Memory: feedback_diagnostic_first_then_fix,
+feedback_false_positives_progress.
