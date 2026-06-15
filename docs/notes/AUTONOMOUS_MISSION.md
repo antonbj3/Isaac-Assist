@@ -3481,3 +3481,17 @@ system can BUILD what the LLM plans) and the training-data store, the only gap t
 build_composed_scene as an LLM tool) = Anton's interface decision. All interactions saved to
 workspace/training_data/compose_reasoning.jsonl (4 records). Gemini quota tight -> stop here on the eval; expand the task
 suite for more (task->plan) training pairs when quota allows.
+
+## 2026-06-15 (cont.76) — WEAK-model + STRONG-harness strategy (Anton); Vertex unblock; first verified L2 training record
+Anton: Vertex AI gemini-3.5-flash on his GCP CREDITS (no free-tier 429, high rate-limits; env GOOGLE_GENAI_USE_VERTEXAI
++ PROJECT + LOCATION=global, POP api keys; memory reference_gemini_vertex_credits). And the STRATEGY: a WEAK model
+(flash) + a STRONG HARNESS to BOX IN the error rate, then (step 2) collect training data from the verified successes.
+EMBODIED: (1) compose_reasoning_eval (Vertex) = the cheap tier-(a) harness — structural + IO-semantic handoff check.
+Tightened after Anton challenged "rimliga eller korrekta?": added io_semantic_check (chain from-sink vs to-conveyor +
+count mismatch). 5/7 on gemini-3.5-flash — the CHAINS fail (Gemini picks structurally-valid but IO-mismatched chain
+blocks: CP-08(pallet)->CP-27(conveyor)). So "7/7" was well-formed-plans, not correct. (2) compose_and_verify = tier-(b)
+ground truth (Kit delivery): CP-01+CP-09 -> 4/4+5/5 -> FIRST verified L2 record appended to verified_compositions.jsonl
+(complexity n_cells=2,parallel,9obj). Only verified-delivering compositions become training data. The ladder climbs as
+complexity grows (deeper chains, more cells). NEXT: scale the task suite (Vertex no-quota) -> a real error-rate
+distribution per complexity class; improve the catalog (explicit IO source/sink kinds) so the weak model can chain
+correctly; collect more verified L2 records.
