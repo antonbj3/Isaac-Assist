@@ -238,7 +238,8 @@
       "/World/Cube_2",
       "/World/Cube_3",
       "/World/Cube_4"
-    ]
+    ],
+    "completeness": "all"
   },
   "verified_status": "build-spec-2026-04-XX; form-gate ✓; function-gate ✓ (with 180s sim — duration_s=60 was too short for cuRobo + 4-cube conveyor cycle. cube_final=(-0.004, -0.46, 0.835) inside Bin)",
   "motion_controllers": {

@@ -2925,3 +2925,25 @@ SESSION STATE for Anton (2026-06-15 composition+gate-honesty marathon, all on an
    reverted (no churn); commit-per-fix; surgical text-edits (no json.dump em-dash churn).
 NEXT (deeper, focused): mobile track buildout (#25), full completeness audit of remaining ~43 (per-template
 measure-then-harden, scene_eyes/N-of-M the stochastic), composition full-rate on solid blocks (longer timeouts).
+
+## 2026-06-15 (cont.38) — ★ MEASUREMENT-INTEGRITY BUG: orphaned-Kit GPU leak caused 0/N artifacts
+Batch 4 returned CP-01 0/4 + CP-61 0/3 — IMPOSSIBLE for CP-01 (the canonical block; delivered 3-4 cubes in THIS
+session's chain probes). Diagnostic-first ("kontroll-fail = måttet trasigt"): NOT a regression -> measurement broken.
+ROOT (found via nvidia-smi): GPU at 9.6/12.2 GB with 5 leaked Isaac-Kit instances (bare "python", exe=isaac_lab_env,
+cwd=repo, ~1.9GB each). The restart wrapper's `pkill -f launch_isaac_sim_with_assist` kills the bash LAUNCHER but
+the launch script runs KitApp() in a bare-"python" child whose cmdline doesn't contain "launch_isaac..." -> ORPHANED
+every restart -> ~8GB leaked over ~26 boots -> cuRobo can't allocate -> plan-starve -> 0 delivered. (Isaac warp
+1.11.0 cache was untouched/clean — NOT the warp-cache red-herring.)
+FIX + CONFIRM: killed the 5 orphans (GPU 9.6GB->1.8GB), wrote leak-fixed restart (kills bare-"python" Isaac Kit by
+exe+cwd + final cleanup, /tmp/run_measure_fixed.sh). Re-measured on clean GPU (start ~4.2GB): CP-01 4/4, CP-61 3/3
+-> the 0/N WAS a GPU-starvation artifact; VERIFIED SET INTACT. Hardened CP-01 + CP-61 to completeness="all"
+(confirmed full). Hardening total = 9 (CP-65/83/73/22/09/46/13/01/61).
+RECOLORS cont.34/35: CP-41/CP-56 0/4 (batch 3, later in the session as GPU filled) was LIKELY the same GPU-starvation,
+not (only) rotary-disc stochasticity — scene_eyes CP-56 (24 plans/0 fails, arm works) ran on a cleaner moment.
+Verified set NOT compromised.
+⚠️ REPO IMPACT: scripts/review/*sweep*with_restart.py + any restart-based QA likely share this orphan-leak (same
+pkill-launcher pattern) -> long sweeps silently degrade into 0/N false-fails as GPU fills. The restart MUST kill the
+bare-"python" Kit child (exe+cwd match), not just the launcher, and verify GPU is low before measuring. FLAG for a
+repo-level restart-helper fix. LESSON: in long autonomous Kit sessions, monitor nvidia-smi + kill orphaned Kit on
+every restart; a single delivered_count is meaningless if the GPU is starved. Memory: feedback_diagnostic_first_then_fix,
+project_isaac_assist_warp_cache_planfail.
