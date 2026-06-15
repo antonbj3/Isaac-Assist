@@ -3444,3 +3444,15 @@ STRATEGIC: chains (serialized) = the primary robust multiplier for the cuRobo-he
 contention-limited (needs the per-arm-planner+lock work, #10). NEXT when Anton steers: wire L4/L5 (interface per the
 design-review: LLM emits ids+topology+role->role edges, system owns all coordinates) OR advance the LLM-flow/Gemini
 sim-protocol (task #28, the compose-reasoning half is ChromaDB-free + Kit-free).
+
+## 2026-06-15 (cont.73) — L4 build_composed_scene built + Kit-confirmed; decision-independent composition architecture COMPLETE
+build_composed_scene (canonical_instantiator) = the unified parallel builder: precondition_check -> layout_solver ->
+compose_canonicals, refuse_policy='serialize' default (cuRobo-core reality), namespacing_escape hard-refused. Kit
+build-confirm: CP-01+CP-09 -> built True, inst0 errors=0 / inst1 errors=0, offsets (0/6.6 = cont.69 inst1-5/5 geometry).
+=> the WHOLE decision-independent composition architecture is now built + verified: L0✓ L1(layout_solver, Kit-verified)
+L2(precondition_check) L4(build_composed_scene, Kit-confirmed) + STEP2(hints cache) + chain (chain_gate exists). The LLM
+STILL can't compose until L5 registers build_composed_scene + plan_scene_decomposition as tools — that exposure (tool
+naming, the 2-tool split, decomposition review-seam, promotion gate, rollout milestone) is Anton's interface decision
+(#2/#4/#6). NEXT decision-independent + parallel-safe: the LLM-flow/Gemini COMPOSE-REASONING eval (task #28) — feed Gemini
+a task + the hints cache, score its proposed build_composed_scene plan (ChromaDB-free + Kit-free; tests the core product
+question 'can Gemini compose-reason' without wiring the tool).
