@@ -3276,3 +3276,20 @@ scenes — the living-tools gap) -> dedicated session.
 DECISION: keep the clock-freeze fix IF no-regression passes (genuine improvement, gated, single-robot byte-identical).
 Running CP-09 standalone SIMRUNS=3 no-regression now (MUST be 3/3; mandatory for a shared-handler change). Composition
 multiplier status unchanged: works for 1-arm/chain; concurrent-2-arm still marginal pending the 2nd-mechanism fix (#10/#26).
+
+## 2026-06-15 (cont.61) — clock-freeze NO-REGRESSION PASS (CP-09 solo 3/3); fix KEPT; composition RCA consolidated
+CP-09 standalone SIMRUNS=3 WITH the clock-freeze fix = n_ok 3/3, success_rate 1.0, stable_ok -> the gating held
+(single-robot fast-path never enters the move-token hold branch -> byte-identical). Fix is SAFE + a genuine partial
+win (2nd-arm far-fling largely resolved). KEPT (committed cont.59).
+COMPOSITION RCA — CONSOLIDATED HONEST STATE (this autonomous session, cont.52-61):
+ * Verified-core marks are HONEST: CP-09 solo 3/3, CP-01 4/4, CP-09@+2.5 solo 5/5. NOT single-run-optimistic.
+ * Composition mechanically works (namespace/offset/both arms act); inst0 nearly always 4/4.
+ * Two concurrent cuRobo arms = the frontier. Mechanism #1 (FOUND+FIXED+VERIFIED): wall-clock seg sampling + move-lock
+   hold -> snap-to-segment-END on resume -> fling. Clock-freeze fix reduces it (2nd arm 4/5,5/5,5/5; no-reg clean).
+ * Mechanism #2 (REMAINING, characterized): an intermittent far-fling to a FIXED WORLD point x~4.8,z~0.525 (BOTH arms,
+   independent of base) -> needs composed-scene EE-trajectory instrumentation to localize (scene_eyes can't see composed
+   scenes = the living-tools gap). Composition still 1/3 full -> NOT a pass. Queued to the dedicated multi-arm session
+   (#10/#26) with the right tool to build.
+DELIVERABLES this session: clock-freeze multi-arm fix (verified safe, partial); compose_gate per-cube MISS + TRAJECTORY
+capture; collection_manifest.py (439->70 verified-core). Honest partial win + precise remaining target, zero false-pos.
+COMPOSITION MULTIPLIER STATUS: ✓ 1-arm + chain + passive cells; ◐ concurrent-2-arm improved but marginal (mech #2 open).
