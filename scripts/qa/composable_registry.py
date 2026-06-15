@@ -102,18 +102,20 @@ def main():
     for (robot, cls), names in sorted(by_cls.items()):
         gen = [n for n in names if trusted(blocks[n]["verdict"])]
         bad = [n for n in names if blocks[n]["verdict"].startswith("FALSE")]
-        pend = [n for n in names if "PENDING" in blocks[n]["verdict"] or blocks[n]["verdict"] in ("UNCLEAR", "NO-DATA", "PARTIAL(some never gripped)")]
+        part = [n for n in names if blocks[n]["verdict"].startswith("PARTIAL")]
+        pend = [n for n in names if blocks[n]["verdict"].startswith(("PENDING", "UNCLEAR", "NO-DATA"))]
         canon = CANON.get((robot, cls))
         if canon and canon not in gen:
             canon = gen[0] if gen else None
         registry["canonical_blocks"][f"{robot}:{cls}"] = canon
-        tcount["trusted"] += len(gen); tcount["false"] += len(bad); tcount["pending"] += len(pend)
+        tcount["trusted"] += len(gen); tcount["false"] += len(bad); tcount["partial"] += len(part); tcount["pending"] += len(pend)
         print(f"\n[{robot} / {cls}]  canonical={canon}")
         print(f"   trusted({len(gen)}): {' '.join(gen) if gen else '-'}")
         if bad: print(f"   FALSE({len(bad)}): {' '.join(bad)}")
+        if part: print(f"   PARTIAL({len(part)}): {' '.join(part)}")
         if pend: print(f"   pending({len(pend)}): {' '.join(pend)}")
-    registry["summary"] = {"trusted": tcount["trusted"], "false": tcount["false"], "pending": tcount["pending"], "total": len(blocks)}
-    print(f"\nSUMMARY: trusted={tcount['trusted']} false={tcount['false']} pending={tcount['pending']} total={len(blocks)}")
+    registry["summary"] = {"trusted": tcount["trusted"], "false": tcount["false"], "partial": tcount["partial"], "pending": tcount["pending"], "total": len(blocks)}
+    print(f"\nSUMMARY: trusted={tcount['trusted']} false={tcount['false']} partial={tcount['partial']} pending={tcount['pending']} total={len(blocks)}")
     out = os.path.join(REPO, "workspace", "composable_blocks.json")
     json.dump(registry, open(out, "w"), indent=2)
     print("->", out)

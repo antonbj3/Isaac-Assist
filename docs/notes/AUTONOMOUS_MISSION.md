@@ -3779,3 +3779,12 @@ CP-08 grid / CP-31 bin, REJECTS CP-20 (5 cubes never approached = partial). This
 only measure as the gold gate (the CP-09 lesson): a composition is gold only if scene_eyes confirms
 transport+grasp+structure per cell. Pairs with the orchestration wrapper (scene_eyes --compose per
 instance, restart-per-measurement). Pallet base-sweep running (CP-19/27/30 grid-genuine, CP-25 partial).
+
+cont.101 (2026-06-15): BASE ASSESSMENT COMPLETE. Palletizer sweep done: GRID-genuine CP-19/27/30/49/77;
+PARTIAL (cubes never approached) CP-25/43/71; UNCLEAR CP-42. Finalized registry (composable_registry.py,
+honest partial counts after fixing the pend-filter string-mismatch): of 70 verified-core -> 64 TRUSTED,
+1 FALSE (CP-09 scatter, purged), 4 PARTIAL (CP-20/25/43/71 — deliver SOME cubes, not all), 1 unclear
+(CP-42). Canonical reps: CP-01 pick-place, CP-03 sort, CP-13 stack-column, CP-08 palletize-grid, CP-50
+kit, CP-73 UR10. Base templates are now scene_eyes-structure-assessed (not just delivery-gated) = the
+"grundtemplates 100%" Anton asked for. Compositions resume scene_eyes-GATED (run_eyes_gold.sh + eyes_gold
+_gate.py) on the trusted canonical reps. Partials/false are KNOWN-limited and excluded from composition.
