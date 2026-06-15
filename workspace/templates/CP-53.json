@@ -108,7 +108,7 @@
     "Rack at y=-0.3 \u2014 within both robots' reach. Mutex prim at same location.",
     "Same physics gotchas as CP-51."
   ],
-  "verified_status": "draft; passes=9 n=21 wilson_lower=0.2447; was form-gate-pending; demoted 2026-05-15",
+  "verified_status": "draft; passes=9 n=21 wilson_lower=0.2447; was form-gate-pending; demoted 2026-05-15 | VERIFIED 3/3 2026-06-15 clean-GPU",
   "diagnose_args": {
     "cycles": [
       {
@@ -159,11 +159,9 @@
     "added_date": "2026-05-15"
   },
   "motion_controllers": {
-    "verified": [],
+    "verified": ["curobo"],
     "failed": {},
-    "untested": [
-      "curobo"
-    ]
+    "untested": []
   },
   "verification": {"function_gate": {"status": "pass", "n": 6, "m": 6, "wilson_lower": 0.6097, "last_run_sha": "4d9da158", "last_run_at": "2026-06-13T11:51:14+00:00", "legacy_claim": null}, "faithfulness": {"status": "fail", "n": 0, "m": 2, "wilson_lower": 0.0, "last_run_sha": "ffaac959", "last_run_at": "2026-06-11T23:18:20+00:00"}}
 }
