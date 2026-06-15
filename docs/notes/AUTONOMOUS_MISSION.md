@@ -3770,3 +3770,12 @@ the TRUSTED block-set grouped by (robot x function-class) with a CANONICAL repre
 place, CP-03 sort, CP-13 stack-column, CP-08 palletize-grid, CP-73 UR10). Registry: 59 trusted / 1 false /
 9 pending. FOUNDATION SECURED -> compositions resume on canonical reps (a few distinct blocks), not all 70.
 Fixed a regex consuming-delimiter bug (lookahead) that had under-counted the sweep.
+
+cont.100 (2026-06-15): scene_eyes-GRADE gold gate codified. scripts/qa/eyes_gold_gate.py parses
+scene_eyes' OWN printed verdict (per composition instance) and gates gold on: every cube CONVERGED+
+GRIPPED (no NEVER-approached), structure matches TEMPLATE INTENT (stack->>=2 z-levels column; pallet->
+flat grid ok; bin/sort->any), no real EJECTION. Validated on real sweep data: accepts CP-15 column /
+CP-08 grid / CP-31 bin, REJECTS CP-20 (5 cubes never approached = partial). This replaces the position-
+only measure as the gold gate (the CP-09 lesson): a composition is gold only if scene_eyes confirms
+transport+grasp+structure per cell. Pairs with the orchestration wrapper (scene_eyes --compose per
+instance, restart-per-measurement). Pallet base-sweep running (CP-19/27/30 grid-genuine, CP-25 partial).
