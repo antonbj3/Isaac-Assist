@@ -103,6 +103,19 @@ TASKS = [
      "prompt": "Build one cell where a Franka palletizes cubes into a 2x2 grid on a pallet.",
      "expect_layout": "single", "expect_n_cells": 1,
      "expect_kind": "ONE palletizing template"},
+    # ── harder / edge cases to box in the real error rate (the easy ones all pass) ──
+    {"id": "T8-parallel-5station",
+     "prompt": "Stand up a row of FIVE identical pick-and-place cells, all running at once, each a Franka picking cubes off its own conveyor into its own bin.",
+     "expect_layout": "parallel", "expect_n_cells": 5,
+     "expect_kind": "five independent pick-place cells in parallel"},
+    {"id": "T9-elaborate-single",
+     "prompt": "Build a cell that picks cubes off a conveyor, identifies each cube's color, and routes it into the matching colored bin — a single color-sorting station.",
+     "expect_layout": "single", "expect_n_cells": 1,
+     "expect_kind": "ONE color-sort station — elaborate but still a single block, do NOT over-compose"},
+    {"id": "T10-deepbin-chain-trap",
+     "prompt": "Make a two-stage line: the first cell delivers cubes, and a second cell then picks those delivered cubes and stacks them into a tower. The handoff between them must be physically pickable.",
+     "expect_layout": "chain", "expect_n_cells": 2,
+     "expect_kind": "chain whose FIRST cell delivers onto a FLAT pickable surface (NOT a deep bin) so stage 2 can pick"},
 ]
 
 SYS_PROMPT = """You are the scene-composition planner for a robotics system. You solve a user task by
