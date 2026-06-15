@@ -132,7 +132,16 @@ for d in INSTS:
 
 async def main():
     args = sys.argv[1:] or ["CP-01", "CP-04"]
-    specs = [_parse(a, i) for i, a in enumerate(args)]
+    if any("@" in a for a in args):
+        specs = [_parse(a, i) for i, a in enumerate(args)]   # explicit offsets override
+    else:
+        # AUTO scene-extent-aware spacing via the layout_solver — replaces the hardcoded
+        # 2.5*idx that overlapped authored conveyor footprints -> ride-off (cont.62-63).
+        from service.isaac_assist_service.chat.composer import compute_layout_offsets
+        tpls = [json.load(open(f"{REPO}/workspace/templates/{a}.json")) for a in args]
+        offs = compute_layout_offsets(tpls)
+        specs = [(a, o["offset"]) for a, o in zip(args, offs)]
+        print("LAYOUT_SOLVER: " + ", ".join("%s@%s foot%s known=%s" % (a, o["offset"], o["footprint"], o["known"]) for a, o in zip(args, offs)))
     await run(specs)
 
 if __name__ == "__main__":

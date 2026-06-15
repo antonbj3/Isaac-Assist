@@ -143,6 +143,81 @@ def apply_source_override(captured, source_paths, dest_override=None):
     return out
 
 
+# ── LAYER 1: layout solver (2026-06-15) ────────────────────────────────────
+# The primary composition fix. compose_canonicals takes a caller-supplied origin_offset;
+# the offline harnesses hardcoded offset = 2.5*idx — BELOW the authored conveyor footprints
+# (CP-01 belt x-span 3.0, CP-09 4.0, CP-07 20.0) -> instances' belts OVERLAP -> an
+# occasionally-unpicked cube rides the merged belt off the end (MEASURED cont.62-63, the 1/3
+# failure). This solver derives each template's axis footprint from its authored scene prims
+# and lays cells out so footprints + a throw/landing pad never overlap. Pure + offline (no Kit).
+import re as _re
+
+_GEOM_FNS = ("create_prim", "create_bin", "create_conveyor", "create_rotary_table", "robot_wizard")
+_DEFAULT_HALF = 0.3          # half-extent for a prim with no parseable scale/size
+_FALLBACK_FOOT = (-1.5, 1.5)  # conservative footprint for legacy/unparseable templates (flagged)
+
+
+def template_footprint(template, axis="x"):
+    """Axis (x|y) world extent (lo, hi, known) of a template's authored scene prims, parsed
+    from its `code`. Conveyor scale dominates. known=False (+ a conservative default) when no
+    geometry is parseable (legacy roles={} / absolute-path templates) so the caller can flag the
+    spacing as a guess rather than trust it."""
+    ai = {"x": 0, "y": 1, "z": 2}.get(axis, 0)
+    code = (template or {}).get("code") or ""
+    lo = hi = None
+    for fn in _GEOM_FNS:
+        for m in _re.finditer(_re.escape(fn) + r"\(([^)]*(?:\([^)]*\)[^)]*)*)\)", code):
+            args = m.group(1)
+            pm = _re.search(r"position\s*=\s*\[([^\]]+)\]", args)
+            sm = _re.search(r"(?:scale|size)\s*=\s*\[([^\]]+)\]", args)
+            if not pm:
+                continue
+            try:
+                pv = [float(x) for x in pm.group(1).split(",")]
+            except ValueError:
+                continue
+            if ai >= len(pv):
+                continue
+            half = _DEFAULT_HALF
+            if sm:
+                try:
+                    sv = [float(x) for x in sm.group(1).split(",")]
+                    if ai < len(sv):
+                        half = sv[ai] / 2.0
+                except ValueError:
+                    pass
+            l, h = pv[ai] - half, pv[ai] + half
+            lo = l if lo is None else min(lo, l)
+            hi = h if hi is None else max(hi, h)
+    if lo is None:
+        return (_FALLBACK_FOOT[0], _FALLBACK_FOOT[1], False)
+    return (lo, hi, True)
+
+
+def compute_layout_offsets(templates, axis="x", throw_pad=2.5, clearance=0.6):
+    """Per-instance origin_offset so authored footprints + a throw/landing pad never overlap.
+    Replaces the hardcoded 2.5*idx. `throw_pad` is the gap between adjacent footprints that
+    absorbs a thrown/rolled-off object (MEASURED: a ride-off cube landed ~2.3m past the belt end,
+    OUTSIDE the footprint bbox — so footprint alone is insufficient). Returns a list of
+    {offset:(dx,dy,dz), footprint:[lo,hi], known:bool} dicts, one per template, in order.
+    Lays cells out along `axis`; each cell's footprint-min is placed at the running cursor, then
+    the cursor advances past it by throw_pad+clearance."""
+    ai = {"x": 0, "y": 1, "z": 2}.get(axis, 0)
+    out = []
+    cursor = None   # world position where the NEXT cell's footprint-min must start
+    for t in templates:
+        lo, hi, known = template_footprint(t, axis)
+        if cursor is None:
+            off = 0.0                            # first cell: unshifted (natural authored pos)
+        else:
+            off = cursor - lo                    # shift this template's lo to the cursor
+        vec = [0.0, 0.0, 0.0]
+        vec[ai] = round(off, 3)
+        out.append({"offset": tuple(vec), "footprint": [round(lo, 2), round(hi, 2)], "known": known})
+        cursor = off + hi + throw_pad + clearance
+    return out
+
+
 def _selftest():
     cap = [
         ("robot_wizard", {"robot_name": "carter", "dest_path": "/World/Carter", "position": [0.0, 0.0, 0.3]}),
