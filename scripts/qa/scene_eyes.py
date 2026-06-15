@@ -905,11 +905,19 @@ async def main():
         await kit_tools.exec_sync(
             "import builtins\nbuiltins._eyes_plan_capture=True\nbuiltins._eyes_plan_log=[]\n"
             "try:\n    del builtins._eyes_plan_fields\nexcept Exception:\n    pass\n", timeout=15)
-        compose_arg = []
-        for i, spec in enumerate(COMPOSE_SPECS):
-            _nm, _off = _parse_compose(spec, i)
-            _tpl_i = json.load(open(f"{REPO}/workspace/templates/{_nm}.json"))
-            compose_arg.append((_tpl_i, f"inst{i}", _off))
+        _names = [s.split("@")[0] for s in COMPOSE_SPECS]
+        _tpls = [json.load(open(f"{REPO}/workspace/templates/{n}.json")) for n in _names]
+        if any("@" in s for s in COMPOSE_SPECS):
+            _offs = [_parse_compose(s, i)[1] for i, s in enumerate(COMPOSE_SPECS)]   # explicit override
+        else:
+            # AUTO scene-extent-aware spacing (layout_solver) — must match compose_gate so the
+            # eye observes the SAME geometry the gate measures; the hardcoded 2.5*idx reproduced
+            # the very belt-overlap bug this tool is meant to diagnose (cont.62-63/68).
+            from service.isaac_assist_service.chat.composer import compute_layout_offsets
+            _lo = compute_layout_offsets(_tpls)
+            _offs = [o["offset"] for o in _lo]
+            print("LAYOUT_SOLVER offsets: " + ", ".join("%s@%s" % (n, o) for n, o in zip(_names, _offs)))
+        compose_arg = [(_tpls[i], f"inst{i}", _offs[i]) for i in range(len(_names))]
         cb = await asyncio.wait_for(compose_canonicals(compose_arg), timeout=900)
         print("COMPOSE_BUILT instances=%d focus=%s" % (cb.get("n_instances", 0), FOCUS))
     elif not ATTACH:
