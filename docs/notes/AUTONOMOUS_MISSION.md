@@ -3851,3 +3851,10 @@ from PEAK" which false-fired on EVERY normal pick-place (arm lifts cube to trans
 genuine fall/knock-off; transit-lift + stacking excluded). Header updated. Gate (eyes_gold_gate) uses
 never-gripped + final-z<0.6, NOT OFF-SURFACE, so re-verify unaffected. (CP-28+CP-29+CP-13 3-cell re-verify
 in flight to test low-cube contention ceiling.)
+
+cont.110 (2026-06-15): 3-cell position-gold both scene_eyes-RESOLVED genuine. CP-28+CP-13+CP-01 -> GOLD
+(CP-01's 4 cubes ALL gripped under 3-arm contention). So the contention ceiling is PLANNING-COMPLEXITY,
+not cube-count: CP-08 palletizer (precise grid placement = cuRobo-heavy) drops a cube at 3 arms, but
+CP-01 pick-place-to-bin (4 cubes) + CP-13 stack survive fine. Deduped both 3-cell position records ->
+scene_eyes versions. scene_eyes-gold now 5: CP-08+CP-01, CP-13+CP-08, CP-03+CP-08, CP-28+CP-29+CP-13,
+CP-28+CP-13+CP-01. Both 3-cell records confirmed genuine via scene_eyes (transport+grasp+structure per cell).
