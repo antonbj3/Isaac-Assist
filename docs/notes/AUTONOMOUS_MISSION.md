@@ -3891,3 +3891,19 @@ consistently. This is consistent with the global-move-token RCA: heavier plannin
 higher slip prob. The per-root token fix (#31) makes ALL of this moot (non-overlapping cells never hold).
 Deferring full 3/3 N-of-M of the caveated records to AFTER the fix (they'll pass deterministically then).
 Multi-arm-concurrency DESIGN workflow (wgudoc4tu) running to harden the fix before implementation.
+
+cont.114 (2026-06-16 01:30): move-token v2 (overlap-aware) IMPLEMENTED + committed (24349b61) — token = SET
+of movers, serialize only if base-to-base xy < 2.0m; CP-52 arms 1.0m apart -> still serialize (no regress);
+single-arm byte-identical; worst-case (bases unknown) degrades to old global = SAFE. BUT no-regression test
+REFUTED it as the fix: CP-03+CP-28+CP-13 STILL dropped CP-13 Cube_1 (near-identical to v1). DIAGNOSTIC-FIRST
+(read RAW inst2 trajectory): the failure is an EARLY 6.6s arm-hold (t=6.3-12.9, BEFORE any pick) during
+which the CONVEYOR fed Cube_1 past the pickup (x 11.5->12.2, z=0.83) -> it rode off the belt end -> fell to
+z=0.53. So this is a PLANNING-PHASE delay + conveyor-feed MISS, NOT an execution carry-slip -> the MOVE-token
+(execution) was the WRONG lock for THIS failure. The dominant serializer is the PLAN-token (_curobo_plan_
+serial_lock, pick_place.py:4692): composed cells share ONE cached MotionPlanner (keyed on robot_cfg+arm_scope,
+NOT robot_path) -> concurrent plan_pose = CUDA 700 -> planning MUST serialize regardless of zone overlap.
+ROBOT_PATH *is* re-rooted (composer namespace_and_offset_calls), so v2 bases are fine; plan-token is the gap.
+FULL FIX (next session, more tokens): give each composed cell its OWN MotionPlanner instance (key the planner
+cache on robot_path/instance, not just config) so non-overlapping cells plan CONCURRENTLY (GPU has headroom,
+40% util / 33% VRAM -> ~3 planners fit). Then non-overlapping cells neither plan-serialize NOR move-serialize.
+move-token v2 stays (correct for execution collision; harmless worst-case). 3-cell gold remains caveated.
