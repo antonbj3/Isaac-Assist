@@ -16,8 +16,16 @@ import asyncio, json, os, sys, glob
 REPO = "/home/anton/projects/Omniverse_Nemotron_Ext"
 sys.path.insert(0, REPO)
 TPL_DIR = os.path.join(REPO, "workspace", "templates")
-MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
-SPACING_S = float(os.environ.get("EVAL_SPACING", "20"))
+# Vertex AI (Anton's GCP credits, high rate-limits, no free-tier 429). Set BEFORE genai.Client();
+# do NOT pass api_key= and POP the env keys (else the free Developer-API key is forced); LOCATION
+# must be 'global' (us-central1 -> 404 on 3.x).
+os.environ.setdefault("GOOGLE_GENAI_USE_VERTEXAI", "true")
+os.environ.setdefault("GOOGLE_CLOUD_PROJECT", "project-09efd25b-a906-474e-af1")
+os.environ.setdefault("GOOGLE_CLOUD_LOCATION", "global")
+os.environ.pop("GOOGLE_API_KEY", None)
+os.environ.pop("GEMINI_API_KEY", None)
+MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.5-flash")
+SPACING_S = float(os.environ.get("EVAL_SPACING", "0"))
 
 
 def build_catalog(limit=40):
@@ -125,11 +133,10 @@ async def main():
     start = int(os.environ.get("EVAL_START", "0"))
     n = int(sys.argv[1]) if len(sys.argv) > 1 else len(TASKS)
     todo = TASKS[start:start + n]
-    from service.isaac_assist_service.chat.llm_gemini import GeminiProvider
-    key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
+    from google import genai
+    client = genai.Client()   # Vertex (env set above)
     catalog = build_catalog()
-    sys.stderr.write("catalog: %d blocks; model=%s; running %d tasks [%d:%d] (spacing %.0fs)\n" % (len(catalog), MODEL, len(todo), start, start + n, SPACING_S))
-    prov = GeminiProvider(api_key=key, model=MODEL)
+    sys.stderr.write("catalog: %d blocks; model=%s (vertex); running %d tasks [%d:%d]\n" % (len(catalog), MODEL, len(todo), start, start + n))
     sysmsg = SYS_PROMPT % "\n".join(catalog)
     npass = 0
     for i, task in enumerate(todo):
@@ -140,8 +147,8 @@ async def main():
                "task_prompt": task["prompt"], "catalog": catalog, "system_prompt": SYS_PROMPT,
                "expected": {k: task[k] for k in ("expect_layout", "expect_n_cells", "expect_kind")}}
         try:
-            r = await prov.complete([{"role": "user", "content": user_content}], {})
-            txt = (r.text or "").strip()
+            resp = client.models.generate_content(model=MODEL, contents=user_content)
+            txt = (resp.text or "").strip()
             rec["raw_response"] = txt
             j0, j1 = txt.find("{"), txt.rfind("}")
             plan = json.loads(txt[j0:j1 + 1]) if j0 >= 0 and j1 > j0 else None
