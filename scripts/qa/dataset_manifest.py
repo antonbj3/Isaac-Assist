@@ -57,7 +57,7 @@ def main():
             entry["models"] = dict(collections.Counter(r.get("model", "?") for r in recs))
         # compositions: complexity distribution (n_cells, n_objects)
         if "compositions" in fn:
-            ncells = collections.Counter(r.get("complexity", {}).get("n_cells", "?") for r in recs)
+            ncells = collections.Counter(r.get("complexity", {}).get("n_cells") or len(r.get("plan", {}).get("cells", [])) or "?" for r in recs)
             entry["n_cells_dist"] = dict(sorted((str(k), v) for k, v in ncells.items()))
             entry["pairs"] = ["+".join(c["template"] for c in r.get("plan", {}).get("cells", [])) for r in recs]
         manifest["files"][fn] = entry
