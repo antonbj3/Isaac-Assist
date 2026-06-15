@@ -2732,3 +2732,23 @@ Considered + rejected for now: per-instance cuRobo planner for the parallel conc
 (robot-cfg+scope keyed, confirmed line 4625) but used SEQUENTIALLY by the per-step callbacks so contention is an
 UNconfirmed cause; the fix is GPU-OOM-risky on load-bearing code -> won't blind-fix (diligence). Memory:
 project_isaac_assist_composition_direction.
+
+## 2026-06-15 (cont.27) — ★ SEQUENTIAL CHAIN RELAY PROVEN (end-state->start-state handoff)
+focus-2 milestone. Live chain probe: CP-01 inst0 (offset 0) picks conveyor cubes -> inst0/Bin [0,-0.4];
+then CP-01 inst1 (offset -0.29,-0.8 so its PickSensor lands EXACTLY on the handoff cubes at [0.11,-0.4])
+built with source_override=[inst0 cubes] -> inst1/Bin [-0.29,-1.2]. RESULT: Cube_1 traveled the FULL chain
+conveyor -> inst0/Bin -> inst1/Bin (final [-0.222,-1.137,0.785], 0.09m from inst1/Bin center). RELAYED_TO_FINAL
+1/4. The end-state->start-state handoff WORKS: source_override correctly retargets B's controller to A's outputs,
+spatial alignment lands A's delivery in B's claim zone, and B physically relays it. NOT a false positive (a cube
+genuinely moved across two wired template instances). Committed source_override execute-integration (d0894187,
+additive/no-op default, now LIVE-validated).
+DIAGNOSTIC (ctrl:pick_reject = PASS_unexpected ×4 + `curobo: plan failed for goal […,1.15]`): cubes ARE claimable;
+the rate-limiter is cuRobo plan-fails on a z=1.15 approach. ROOT: EE_INITIAL_HEIGHT is computed at B-BUILD time,
+when A's freshly-delivered cubes were momentarily STACKED in the bin (z up to 1.083) -> inflated approach height
+1.15 -> plan-fails. (By B-run time they'd settled flat to z=0.83, but h1 was already locked high.) => deep-bin +
+stacked-source handoff geometry, NOT a wiring bug. The multi-robot handoff-sync settle gate (>1 pp-sub) is HELPING
+here (waits for cube to settle before claim) — the right gate for a handoff.
+COMPOSITION STATUS: foundation + toolchain + BOTH modes proven — parallel (CP-01+CP-04, CP-61+kit-prep concurrent)
+AND sequential chain (relay demonstrated). NEXT (rate, real path): a FLAT-staging handoff (cubes stay single-layer
+-> sane h1 -> clean picks) or a heterogeneous pick->downstream chain; that turns the chain into a robust composite
+(not yet a verified block at 1/4 — mechanism proven, rate is geometry-tuning). Memory: project_isaac_assist_composition_direction.
