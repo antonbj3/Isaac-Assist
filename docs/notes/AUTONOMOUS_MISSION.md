@@ -3226,3 +3226,26 @@ TEST RUNNING: CP-09 as a SINGLE instance @ offset +2.5 (one arm, lock NOT engage
 (real, generalizes to ALL offset composition); if clean -> two-arm interaction. Per-instance-planner change left in
 place pending this result (gated/harmless; revert if the real cause makes it pure cost). compose changes committed
 cont.55/56.
+
+## 2026-06-15 (cont.58) — COMPOSITION RCA CONCLUSION: multiplier works for 1-arm/chain; concurrent-2-cuRobo-arm = multi-arm-state frontier
+DECISIVE measurements this chain:
+ * CP-09 standalone (SIMRUNS=3) = 3/3 perfect tower -> verified-core marks are HONEST (not single-run-optimism). GOOD.
+ * CP-09 SINGLE instance @ offset +2.5 = 5/5 -> offset frame handled correctly; single arm in a composed/offset scene
+   is PERFECT.
+ * CP-01@0 + CP-09@+2.5 (TWO concurrent cuRobo arms) = inst0 ALWAYS 4/4, inst1 (2nd) flings cubes to a CONSISTENT
+   x~4.8,z~0.525 -> 1/3 full. The 2nd concurrent arm degrades.
+ * Per-instance planner scope (composer arm_scope=instance_root) = REFUTED as the fix (inst1 still 3/5,5/5,4/5).
+   So it's NOT the shared planner. Kept anyway (gated, correct, verified-neutral: CP-09@+2.5 WITH it = 5/5; part of
+   the eventual multi-arm fix).
+CONCLUSION: composition MECHANICALLY works (namespacing/offset/both arms act). The blocker is SHARED MUTABLE
+controller state between two CONCURRENT cuRobo arms (the _PLAN/_MOVE locks are intentional+correctly tagged; suspect =
+untagged per-cube exec/segment state). Same frontier as dual-Franka CP-51/52/53 (0/3) = task #10. Fixing it = a careful
+per-robot state-tagging refactor of the cuRobo handler with single-arm byte-identical fallback + multi-template
+no-regression -> a DEDICATED session, NOT a rushed autonomous-tick change against the verified core's shared handler.
+STRATEGIC BOUNDARY for the composition multiplier TODAY:
+ ✓ WORKS: sequential CHAINS (one arm active at a time, cont.27/task #27); single cuRobo arm + passive/non-cuRobo cells
+   (inst0 always 4/4; CP-09@+2.5 solo 5/5).
+ ✗ NOT YET: concurrent multiple cuRobo arms (2nd arm flings) -> gated on the multi-arm-state refactor (#10).
+Durable deliverables this session: compose_gate per-cube MISS + TRAJECTORY capture (the scene_eyes-equivalent for
+composed scenes); collection_manifest.py (the honest 439->70-verified-core picture). Tooling + honest boundary, no
+false-positive "fix".
