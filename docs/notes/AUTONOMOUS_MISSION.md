@@ -2829,3 +2829,12 @@ probes showed an occasional 3/4 under concurrent load — needs a clean solo N/N
 templates need per-template goal-reading (sorters/streamers/routers must stay "any"/routing or "all" false-negates)
 + a measured N/N before hardening — that's the careful per-template audit, done measure-first not swept.
 Memory: feedback_false_positives_progress.
+
+## 2026-06-15 (cont.32) — completeness audit batch 2: CP-22/09/46 measured N/N + hardened
+Continued the measure-then-harden completeness audit (cont.31). Measured 3 more all-deliver verified templates
+(fresh Kit each, delivered_count = truth): CP-22 4/4, CP-09 5/5 (5-tower stack), CP-46 6/6 (palletize). All FULL ->
+verified set remains SOUND (now 6/6 spot-checked templates all deliver complete; honesty-hole consistently latent,
+not active). Hardened all 3 to completeness="all" (brace-matched surgical insert; zero false-negative risk —
+confirmed N/N). Completeness audit running total: 6 hardened (CP-65/83/73/22/09/46). Remaining risk templates need
+the same measure-then-harden (clear all-deliver) or stay any/routing (sorters/streamers). Memory:
+feedback_false_positives_progress.

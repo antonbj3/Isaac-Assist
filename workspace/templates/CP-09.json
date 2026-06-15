@@ -74,7 +74,8 @@
       "/World/Cube_3",
       "/World/Cube_4",
       "/World/Cube_5"
-    ]
+    ],
+    "completeness": "all"
   },
   "extends": "CP-08",
   "extension_notes": "CP-09 reuses CP-08's pattern (compute_stack_placement + drop_targets dict + cuRobo) but switches pattern from grid_2x2 to column. Stress-tests vertical motion: tallest drop at z=1.025m, EE_INITIAL_HEIGHT clears at 1.225m. _compute_h1 in cuRobo handler must consider all DROP_TARGETS z (extended in this commit). Future variants: Graduated Tower with decreasing-size cubes (CP-N: needs per-cube cube_size), Pinwheel layer (CP-N: needs new pattern in compute_stack_placement).",
