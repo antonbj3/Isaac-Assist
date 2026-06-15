@@ -175,12 +175,19 @@ def check(name):
                               "parent_local": pinfo["pos"],
                               "detail": "%s local xy == parent %s xy -> compounds to ~2x" % (path, parent)})
 
-    # FLAT_TARGET: target is a flat create_prim Cube (no walls), not create_bin
+    # FLAT_TARGET: target is a flat create_prim Cube (no walls) AND is a CONTAINER
+    # (loose objects need walls). REFINED: palletize/stack targets (Pallet/Baseplate/
+    # Pad/Pedestal/Plate/Marker) are MEANT to be flat platforms you stack ON — flat is
+    # correct there (CP-46 delivers 6/6 onto a flat Pallet; brick-stacking 3/3 onto a
+    # flat Baseplate). Only flag when the target name implies a CONTAINER.
+    _CONTAINER = ("bin", "bowl", "tray", "crate", "bucket", "tote", "hopper")
     if target and target in prims and prims[target]["kind"] == "prim":
         sc = prims[target].get("scale")
-        if sc and len(sc) > 2 and sc[2] < 0.05:  # thin slab
+        tname = target.split("/")[-1].lower()
+        is_container = any(w in tname for w in _CONTAINER)
+        if sc and len(sc) > 2 and sc[2] < 0.05 and is_container:
             flags.append({"type": "FLAT_TARGET", "target": target, "scale": sc,
-                          "detail": "%s is a flat create_prim plate (no walls) -> placed objects slide off; use create_bin" % target})
+                          "detail": "%s is a flat create_prim plate (no walls) but a CONTAINER -> loose objects slide off; use walled create_bin" % target})
 
     # NOTE: a "destination in planning_obstacles" check was tried + REMOVED — REFUTED
     # by CP-01 (verified 4/4) which lists /World/Bin in planning_obstacles AND delivers,
