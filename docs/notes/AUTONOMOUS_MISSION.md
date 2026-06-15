@@ -3495,3 +3495,20 @@ ground truth (Kit delivery): CP-01+CP-09 -> 4/4+5/5 -> FIRST verified L2 record 
 complexity grows (deeper chains, more cells). NEXT: scale the task suite (Vertex no-quota) -> a real error-rate
 distribution per complexity class; improve the catalog (explicit IO source/sink kinds) so the weak model can chain
 correctly; collect more verified L2 records.
+
+## 2026-06-15 (cont.77) — production SYSTEM_PROMPT located; eval is the testbed for composition instructions
+Anton recalled an existing system message — CORRECT: orchestrator.py:276 SYSTEM_PROMPT (Isaac Sim 5.1 capabilities +
+API rules + anchoring + OmniGraph + response discipline; current/maintained) + format_instantiation_summary (per-
+canonical 'scene already built, verify-only' directive). It does NOT cover composition (L5 not wired -> the LLM can't
+compose yet). My compose_reasoning_eval SYS_PROMPT is a separate TESTBED. Anton's 'better explanations/instructions in
+the templates' system message' = the composition guidance I validated (IO-explicit catalog: CONSUMES-from/DELIVERS-to
+FLAT-vs-DEEP sink; + the CHAIN MATCHING rule: downstream sources upstream's DELIVERED objects, deliver onto a FLAT
+surface) belongs IN the production SYSTEM_PROMPT / instantiation directive when L5 wires composition. The eval proves
+WHAT the instructions should say; the production prompt is WHERE they land.
+Also fixed a bug in MY io_semantic_check (diagnostic-first on my own tool): it mis-classed pallet/tower as terminal
+sinks + flagged a conveyor-input mismatch that source_override bypasses. Correct rule: only DEEP containers (bin/bowl/
+tray) are bad chain handoffs (chain_gate-proven). After the IO-explicit catalog + chain instructions + the fix,
+gemini-3.5-flash -> 7/7 with FLAT-handoff chains (better instructions -> better chains = Anton's point). HONEST: still
+heuristic tier-(a); Kit delivery (chain_gate) is the ground truth for chains — not yet run. NEXT: scale the task suite
+for a real per-class error rate; Kit-verify a chain; when L5 lands, fold the validated composition instructions into
+the production SYSTEM_PROMPT.
