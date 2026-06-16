@@ -4508,3 +4508,18 @@ fails under composition at every arity.) Task #40. FIXES (post-5-cell): (a) GATE
 the signal scene_eyes already emits; (b) ROOT: composer grid-spread/drop_targets collapse; (c) re-verify/purge
 the 8 CP-08 golds. Caught one cell's audit-mixup first (read inst2=CP-13's column, not CP-08) then got the right
 per-instance text — the per-instance-eyes-overwrite (#39.3) actively obstructs this audit, raising its priority.
+
+cont.151 (2026-06-16): CP-08 grid-collapse ROOT CAUSE CONFIRMED (Kit-free code trace) — a GENERAL composer bug.
+CP-08's grid = drop_targets={"/World/Cube_1":[-0.07,-0.49,0.825], ...} (a DICT of cube-path->grid-slot). The
+composer's _transform_value dict branch (composer.py:90) `{k: _transform_value(k, v) ...}` keeps the KEY k
+UNCHANGED (cube-path NOT namespaced -> stays "/World/Cube_1") and transforms the VALUE with key=cube-path, which
+is NOT in POSITION_KWARGS -> the position is NOT offset (line 79 guard). Meanwhile source_paths ARE namespaced to
+/World/inst4/Cube_N. So the controller picks /World/inst4/Cube_1, looks up drop_targets["/World/inst4/Cube_1"] ->
+MISSING -> falls back to destination_path (/World/Pallet, correctly offset) center -> ALL 4 cubes to pallet
+center = PILE. Confirmed: 5-cell CP-08 cubes clustered at (12.4,-0.40) = offset pallet center. This is GENERAL:
+any {prim_path: position} dict kwarg (drop_targets and friends) breaks identically under composition — keys
+un-namespaced, values un-offset. FIX (composer, post-5-cell): the dict branch must reroot prim-path KEYS and
+offset position-vector VALUES. #40 has the precise spec. NOTE: this is WHY parallel-composition gold needs the
+gate to read the spread-vs-pile signal scene_eyes already emits — a delivered-count/position gate cannot see a
+grid that collapsed to a pile. Recorded; all 3 fixes (gate + composer + re-verify) gated on 5-cell RUN 3
+finishing (composer.py is in use by the running scene_eyes --compose).
