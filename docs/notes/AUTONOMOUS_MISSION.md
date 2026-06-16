@@ -4558,3 +4558,15 @@ closes it (detector fires on a real 92° topple + gate rejects). Also: completen
 records found 0 other CP-08-class structure/intent mismatches (corpus clean post-purge). NET: every gate the
 false-success cycle touched is now real-data-verified — topple (detect+reject), grid-collapse (composer+gate),
 grip-slip (distance gate), per-instance eyes.
+
+cont.155 (2026-06-16): ★ GENUINE 5-cell capstone GOLD — the parallel-composition tier genuinely extends to
+5 cells. Re-ran CP-03+CP-28+CP-13+CP-01+CP-08 with the fixed composer (#40b) + gate (#40a): inst4 CP-08 STACK
+STRUCTURE = 1 z-level [0.825], xy-extent 0.16x0.14m, min-pair-xy 138mm = "FLAT 1-tier spread grid" — CP-08 grids
+correctly even under FULL 5-ARM CONTENTION (matches standalone 131mm; was the false-pass 2-level 27mm pile under
+the broken composer). All 5 cells GENUINE (CP-03 sort, CP-28 bin, CP-13 column, CP-01 bin, CP-08 grid) ->
+EYES_GOLD_VERDICT GOLD, this time HONESTLY (the #40a gate verified the real spread grid, not a pile). So the
+reliable parallel tier is now genuinely 2/3/4/5-cell, and the 5-cell capstone's earlier "3/3 GOLD" (which was a
+CP-08-pile false-pass) is corrected to a real GOLD. Re-created a genuine 5-cell gold record (the purged false one
+deduped clear). #38 closed. The false-success cycle (Anton "vaksam") is COMPLETE: a real bug found, root-caused,
+fixed (gate+composer+grip-slip+per-instance-eyes+topple-reject), every fix real-data-verified, corpus cleaned,
+and the capstone re-earned honestly.
