@@ -4653,3 +4653,20 @@ Running the bounded base compose-reasoning eval to confirm reasoning health + ge
 cron/directive: like Modal, the Gemini/Vertex 'blocked' assumption was stale — VERIFY (gcloud-vpn-proxy active +
 a 1-case probe with HTTPS_PROXY) before assuming #28 is blocked. The FULL LLM-flow buildout (33-case + composition
 eval, reasoning observability, scene_eyes-as-LLM-tool) is fresh-session work, but the path is now confirmed open.
+
+cont.162 (2026-06-17): ★★ THE RUNTIME-LLM-COMPOSITION LOOP IS OPERATIONAL — the strategy's end goal, confirmed
+healthy. Base compose-reasoning eval via Vertex/Gemini (gemini-2.5-flash through Mullvad): 10/10 PASS. Gemini
+correctly: decomposes tasks; picks the right robust blocks; chooses parallel (T1/T4/T8) vs chain (T3/T6/T10) vs
+single (T2/T5/T7/T9); does NOT over-compose (T2/T9 = one block, not a composition); and handles the physical-
+realizability trap (T10 deep-bin -> chose a FLAT pickable surface CP-12+CP-15 so stage-2 can pick). It reasons
+over the composable set this session built — T6 used CP-30, T1/T3/T7 CP-08, T10 CP-12 = palletizers I unlocked
+TODAY via the #40b composer fix. So all three pieces of Anton's strategy now work end-to-end: (1) user task ->
+Gemini reasons + picks robust blocks (10/10), (2) composer (#40b-fixed) builds the namespaced+offset scene, (3)
+gold pipeline (local + Modal 6x, honest gate) verifies. Data -> compose_reasoning.jsonl (training-data convention).
+SESSION CAPSTONE: Anton's two questions ("vaksam på false success" + "snabba på det") drove: a MAJOR false-success
+bug fixed (CP-08, 40-template composer collapse) + corpus restored honest; 10 composable palletizers (the
+multiplier, from 0 working); Modal 6x speedup built+verified; BOTH infra paths (Modal + Gemini) confirmed open
+(stale 'blocked' assumptions overturned by diagnostic-first); and the runtime-LLM loop demonstrated operational.
+~28 commits, all regression-verified. REMAINING for the LLM-flow FULL buildout (fresh session, #28): the 33-case +
+composition retrieval eval (ChromaDB, watched-window), scene_eyes-as-an-LLM-tool, reasoning observability, model
+A/B (gemini-3.x). The path is open; the buildout is scoped.
