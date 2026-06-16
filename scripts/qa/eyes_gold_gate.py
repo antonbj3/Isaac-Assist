@@ -52,6 +52,12 @@ def verdict_for_instance(text, cls):
             low_z = False
     zmatch = re.search(r"STACK STRUCTURE \([^)]*\): (\d+) z-level", text)
     zlevels = int(zmatch.group(1)) if zmatch else None
+    # min-pair-xy (closest cube-pair in the plane) — distinguishes a SPREAD grid (gaps, gripper clearance)
+    # from a CLUSTERED/PILED heap. A 2x2 grid palletizer must end FLAT (1 z-level) AND spread; a composed
+    # CP-08 whose drop_targets dict didn't namespace/offset collapsed all cubes onto the pallet centre =
+    # 2 z-levels + min-pair << cube-width = a PILE the lenient gate used to false-pass (cont.150).
+    mpmatch = re.search(r"min-pair-xy=([\d.]+)m", text)
+    minpair = float(mpmatch.group(1)) if mpmatch else None
     # ORIENTATION/TOPPLE (2026-06-16, Anton false-success): a cube delivered to the right XY/Z but resting on
     # its SIDE is not correctly placed. scene_eyes now emits a settled-tilt ORIENTATION block; a >60° topple is
     # a hard reject (mirrors the Modal `vec` TOPPLED that the position gate is blind to — CP-09 lesson). TILTED
@@ -77,7 +83,16 @@ def verdict_for_instance(text, cls):
             return False, f"stacker but {zlevels} z-level(s) = FLAT SCATTER, not a column"
         return True, f"column verified ({zlevels} z-levels, {gripped} gripped)"
     if cls == "palletize/grid":
-        return True, f"grid verified ({gripped} gripped, {zlevels} z-level — flat grid is correct)"
+        # A 2x2/grid palletizer must end as a FLAT (1 z-level) SPREAD grid. cont.150: a composed CP-08 whose
+        # drop_targets collapsed to the pallet centre reads 2 z-levels + min-pair-xy 12-27mm (< the 50mm cube
+        # width = cubes overlapping/stacked) = a PILE, which the old branch false-passed as "grid verified".
+        # Reject a non-flat (>=2 z-level) OR clustered (min-pair < 0.045m) "grid". Uses the spread-vs-pile
+        # signal scene_eyes already emits (STACK STRUCTURE min-pair-xy). standalone CP-08 = 1 level/131mm = PASS.
+        if zlevels is not None and zlevels >= 2:
+            return False, f"palletizer but {zlevels} z-levels = PILE/STACK, not a flat grid (cubes collapsed onto each other)"
+        if minpair is not None and minpair < 0.045:
+            return False, f"palletizer grid CLUSTERED (min-pair-xy {minpair*1000:.0f}mm < cube-width) = piled, not a spread grid"
+        return True, f"grid verified ({gripped} gripped, {zlevels} z-level, min-pair {minpair*1000:.0f}mm spread)" if minpair is not None else f"grid verified ({gripped} gripped, {zlevels} z-level)"
     # bin/place/sort: transport+grasp is enough, no structure requirement
     return True, f"delivery verified ({gripped} gripped)"
 

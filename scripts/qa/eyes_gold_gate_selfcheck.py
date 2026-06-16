@@ -57,6 +57,22 @@ LOW_Z = """    Cube_1         closest= 104mm (dz= 103mm dxy=   8mm) @  4.2s  -> 
 STACK STRUCTURE (2 objs): 2 z-level(s) [0.530, 0.825] | xy-extent=0.00x0.00m | min-pair-xy=0.002m
 """
 
+# A genuine 2x2 flat spread grid palletizer (standalone CP-08): 1 z-level, cubes spaced with gaps.
+GRID_FLAT = """    Cube_1         closest= 104mm  -> CONVERGED + GRIPPED
+    Cube_2         closest= 104mm  -> CONVERGED + GRIPPED
+    Cube_3         closest= 104mm  -> CONVERGED + GRIPPED
+    Cube_4         closest= 104mm  -> CONVERGED + GRIPPED
+STACK STRUCTURE (4 objs): 1 z-level(s) [0.825] | xy-extent=0.16x0.15m | min-pair-xy=0.131m
+"""
+
+# A palletizer "grid" that COLLAPSED to a pile (composed CP-08, cont.150): 2 z-levels + cubes overlapping.
+GRID_PILE = """    Cube_1         closest= 104mm  -> CONVERGED + GRIPPED
+    Cube_2         closest= 104mm  -> CONVERGED + GRIPPED
+    Cube_3         closest= 104mm  -> CONVERGED + GRIPPED
+    Cube_4         closest= 104mm  -> CONVERGED + GRIPPED
+STACK STRUCTURE (4 objs): 2 z-level(s) [0.825, 0.875] | xy-extent=0.05x0.07m | min-pair-xy=0.027m
+"""
+
 CASES = [
     # (name, text, class, expect_genuine, reason_substr)
     ("clean column -> GOLD",            CLEAN_COLUMN,   "stack/column",   True,  "column verified"),
@@ -66,6 +82,8 @@ CASES = [
     ("non-box flat (scoped out) -> OK", NONBOX_FLAT,    "palletize/grid", True,  "grid verified"),
     ("never-gripped -> REJECT",         NEVER_GRIPPED,  "stack/column",   False, "NEVER approached"),
     ("fell to ground -> REJECT",        LOW_Z,          "stack/column",   False, "below 0.6m"),
+    ("flat spread grid -> GOLD",        GRID_FLAT,      "palletize/grid", True,  "grid verified"),
+    ("grid collapsed to pile -> REJECT",GRID_PILE,      "palletize/grid", False, "PILE/STACK"),
 ]
 
 
