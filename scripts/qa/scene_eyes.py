@@ -60,6 +60,12 @@ else:
 # that degrades). Empty for single-template -> auto-detect (byte-identical).
 FOCUS = ("/World/" + os.environ.get("EYES_FOCUS", "inst1")) if COMPOSE else ""
 OUT = f"/home/anton/.isaac_qa/run/eyes/{TPL}"
+# PER-INSTANCE eyes.json (cont.149/#39.3): a composed run observes each cell with a distinct EYES_FOCUS but all
+# instances wrote to the SAME compose_<cells>/eyes.json -> only the LAST instance's raw data survived, blocking
+# independent raw audit of earlier cells (the audit-obstruction that hid CP-08 behind CP-13 during cont.150).
+# Scope the OUT dir by the focus instance so every cell's eyes.json persists.
+if COMPOSE:
+    OUT = f"{OUT}/{os.environ.get('EYES_FOCUS', 'inst1')}"
 
 # ---- Kit-side probe (token-replaced raw string; NO f-string so dict braces stay literal) ----
 _KIT = r'''
@@ -606,6 +612,14 @@ def _analyse(js):
                 tp, tq = r.get("tool_p"), r.get("tool_q")
                 cp = (r.get("cubes") or {}).get(held); cq = (r.get("cubes_q") or {}).get(held)
                 if not (tp and cp and tq):
+                    continue
+                # GRIPPED-CARRY gate (cont.149, multi-case-validated 89-126°->2-14° RIGID across 24+ runs, 0 regr):
+                # count slip ONLY while the object is within grasp-distance of the tool (the ~104mm grasp offset +
+                # margin). The finger-contact span [i0,i1] over-extends past release — a STACKER's EE re-contacts
+                # the placed base cube when stacking the next, and a BIN cube sits world-fixed while the EE leaves;
+                # both make qrel drift from EE motion (not slip) -> false SLIPPING. The distance gate bounds the
+                # true carry (excludes pre-pick belt-transport [cube far] and post-release EE motion [tool gone]).
+                if math.dist(tp, cp) > 0.15:
                     continue
                 p_ee = _qrot_inv(tq, [cp[0] - tp[0], cp[1] - tp[1], cp[2] - tp[2]])
                 qrel = _rel_q(tq, cq)
