@@ -4670,3 +4670,17 @@ multiplier, from 0 working); Modal 6x speedup built+verified; BOTH infra paths (
 ~28 commits, all regression-verified. REMAINING for the LLM-flow FULL buildout (fresh session, #28): the 33-case +
 composition retrieval eval (ChromaDB, watched-window), scene_eyes-as-an-LLM-tool, reasoning observability, model
 A/B (gemini-3.x). The path is open; the buildout is scoped.
+
+cont.163 (2026-06-17): runtime-LLM reasoning ADVERSARIALLY stress-tested — 8/9 PASS, one HONEST gap found (the
+adversarial-audit discipline applied to the LLM, working as intended). EVAL_SET=adv (gemini-2.5-flash via Mullvad):
+PASS on the hard cases — heterogeneous parallel / picking DIFFERENT block kinds (A1 sort+stack, A3 sort+stack+
+palletize, A8 pickplace+sort), under-compose trap (A2 "full line" rhetorical -> 1 block), chain physical-
+realizability (A5 deliver-to-flat-then-stack, A7 avoid deep-bin->pick handoff), disguised single (A6), and FINE
+discrimination (A9 chose the graduated/mixed-SKU tower CP-15, not a generic uniform stacker). The ONE FAIL =
+A4-ambiguous-count: "a couple" should mean 2 parallel cells, but Gemini chose SINGLE 1 cell -> under-composed on
+ambiguous COUNT language. A real, specific reasoning weakness (not a false-success — the eval honestly flagged
+struct=False). Combined runtime-LLM validation this session: BASE 10/10 + ADV 8/9 = 18/19. CANDIDATE FIXES (NOT
+applied — prod-orchestrator prompt changes are Anton-gated, the L5 composition-tool gap): (a) a SYS_PROMPT
+ambiguous-count rule (a couple=2, a few=3); (b) model A/B — gemini-3.x (location=global) may parse ambiguous
+counts better than 2.5-flash. So the runtime-LLM reasoning is robust with one identified, honestly-characterized
+gap; data -> compose_reasoning.jsonl. The strategy's loop is operational AND its reasoning is adversarially vetted.
