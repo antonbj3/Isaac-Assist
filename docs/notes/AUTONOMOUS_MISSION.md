@@ -4608,3 +4608,19 @@ runs 6-wide on cloud while local Kit does CP-20+CP-13 = genuine local+cloud para
 auto-stop + modal app list verify after every run; NEVER UR10 on cloud (run_composition is Franka-only); credits
 finite (bounded batches). Bigger future lever (#43): scene_eyes build-once-observe-all = ~N× per composition on
 BOTH local+cloud (the per-instance 205s Kit reboot dominates).
+
+cont.159 (2026-06-16): ★ MODAL 6× SPEEDUP rolled out + characterized (Anton "snabba på det"). Ran 6 palletizer
+compositions on Modal IN PARALLEL (~13 min vs ~78 min local serial) while local Kit ran CP-20+CP-13 = genuine
+local+cloud parallelism. Results (cloud screen, written to cloud_results/modal_compose.jsonl — NOT the verified
+corpus, so cloud noise can't poison local-truth): GENUINE GOLD CP-27 (74mm), CP-49 (96mm), CP-77 (80mm) = 3 new
+palletizer composable blocks; CP-71 REJECT = REAL partial-delivery (4 cubes never approached, CP-13 co-cell
+GENUINE -> not container); CP-42/CP-25 REJECT = CONTAINER FAILURE (CP-13 co-cell ALSO "no rows" -> spot-T4
+degradation, false-NEGATIVE, re-running locally). DISCRIMINATOR (false-positive/negative vigilance applied to the
+CLOUD itself, per the new keepalive line): "did the known-robust co-cell CP-13 also fail?" yes=container-fail,
+no=real. So the cloud is a fast SCREEN, not blind-trust — golds AND rejects both need the co-cell check / local
+confirm. Local CP-20+CP-13 (parallel): CP-20 REJECT 1-cube-never-approached (CP-13 GENUINE -> REAL). So CP-20 +
+CP-71 are genuine composed-partial-delivery palletizers (likely reach OR the 180s sim too short for all picks
+under composition slowdown — diagnose with reach_validate + scene_eyes). NET composable palletizer set now:
+CP-08/10/12/19/30/27/49/77 (8 verified grids); CP-20/CP-71 need work; CP-42/25 re-confirming. Modal app
+auto-stopped clean (modal app list verified). #43 speedup DONE (live + validated + bounded). The bigger lever
+(scene_eyes build-once-observe-all, ~N× per composition) remains the next throughput step.
