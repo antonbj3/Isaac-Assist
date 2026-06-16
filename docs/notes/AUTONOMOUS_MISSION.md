@@ -4356,3 +4356,17 @@ the local gold-gate (the exact "vaksam för false success" hole). TOOLS-ARE-LIVI
  signal); only CP-09 ever read TOPPLED and it is in NONE of the 11. So no re-cert crisis; the gap was purely
  that the LOCAL gate could not independently SEE topple. Next: standalone topple-sweep of CP-03/08/28/29 to bank
  LOCAL scene_eyes evidence (CP-01/CP-13 already done by this run) for the rest of the gold building blocks.
+
+cont.141 (2026-06-16): topple-sweep result + gold-gate regression guard. (1) Standalone scene_eyes topple
+sweep of the gold-pipeline canonical reps CP-03/08/28/29 (CP-01/CP-13 already done by the cont.140 compose
+run): ALL upright — CP-03 8.3°/6.8°, CP-08 7.0-7.5° (the #33 palletizer redesign confirmed flat-grid +
+upright, not the knocked-off pile), CP-28 6.4°, CP-29 6.3°; 0 TOPPLED/TILTED, 8 CONVERGED+GRIPPED, 0
+never-gripped. So all 6 canonical reps backing the 11 gold_scene_eyes_verified compositions are now LOCALLY
+scene_eyes topple-verified (cloud `vec` had screened them; this banks the LOCAL evidence the gold-gate now
+parses). (2) scripts/qa/eyes_gold_gate_selfcheck.py — standalone regression guard (NOT pytest-collected;
+honours no-pytest-against-dirs) asserting 7 gold-trust invariants over synthetic fixtures: clean->GOLD,
+toppled->REJECT (class-independent), tilted-warn->GOLD, non-box-flat->OK (reject is box-scoped), never-
+gripped->REJECT, fell-to-ground->REJECT. 7/7 PASS. Locks the cont.140 branches against silent regression.
+Commits 640877a5 (topple gate), a104f0df (self-check). NEXT: 3-cell N-of-M robustness run (CP-03+CP-28+CP-13
+x3) — is the composition DETERMINISTICALLY gold post-SimClock+sim-floor, or does the memory's "3-cell
+contention-limited stochastic" caveat still hold?
