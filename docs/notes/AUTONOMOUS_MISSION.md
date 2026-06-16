@@ -4063,3 +4063,17 @@ cells that DID run (incl. both CP-13 stackers seating @103mm) are encouraging bu
 a complete run. LESSON: read the FULL per-cell verdict, never the summary; "all cells genuine" must MEAN all
 cells in the composition were evaluated, not just the survivors. Tools-are-living: the silent-drop hole is now
 closed in the gate itself.
+
+cont.124 (2026-06-16): ★ 5-CELL TWO-STACKER GOLD — EARNED (clean, complete). Re-ran CP-03+CP-08+CP-13+CP-13+
+CP-28 with the hardened pipeline (--expect 5 + boot-retry). inst1/CP-08 booted fine (the earlier KIT_BOOT_FAIL
+was a transient one-off, NOT a CP-08 problem). ALL 5 cells evaluated + GENUINE: CP-03 (2 gripped), CP-08 (4
+gripped grid), CP-13 (column 2), CP-13 (column 2), CP-28 (1) -> EYES_GOLD_VERDICT: GOLD; gold record correctly
+labeled compose CP-03+CP-08+CP-13+CP-13+CP-28. THE DEFINITIVE PROOF: the two CP-13 stackers' FIRST cubes both
+seated at 104mm (dz=104 dxy=6) with near-SIMULTANEOUS first-grasps @3.3s and @3.5s — i.e. two timing-sensitive
+stackers doing their premature-close-prone first grasp at the SAME moment under 5-cell planning contention =
+the absolute worst case for the wall-clock/sim skew. Both seated clean + stacked. So the cont.120 sim-floor
+fix is now proven robust from 2 to 5 cells INCLUDING the two-concurrent-stacker worst case. Composition gold
+corpus: 2-cell, 3-cell (×2 incl. new rep CP-01), 4-cell, 5-cell-two-stacker — all scene_eyes-GOLD with the
+HONEST (lift-required) GRIPPED label and the cell-count-complete (--expect) gate. Net of this session's
+composition arc: the multi-cell composition drop is SOLVED, proven at scale, and both the controller and the
+verification tools are now honest + hardened.
