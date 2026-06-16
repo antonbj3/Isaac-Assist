@@ -971,6 +971,11 @@ async def main():
         compose_arg = [(_tpls[i], f"inst{i}", _offs[i]) for i in range(len(_names))]
         cb = await asyncio.wait_for(compose_canonicals(compose_arg), timeout=900)
         print("COMPOSE_BUILT instances=%d focus=%s" % (cb.get("n_instances", 0), FOCUS))
+        if os.environ.get("SIMCLOCK") == "1":
+            # SimClock gate-ON (compose path): the gate is checked LIVE in the controller, so injecting
+            # after the build still takes effect. Trajectory playback then times by SIM-time (_clock_now).
+            await kit_tools.exec_sync("import builtins\nbuiltins._use_sim_clock=True\n", timeout=10)
+            print("FLAG_SET _use_sim_clock=True")
     elif not ATTACH:
         from service.isaac_assist_service.chat.canonical_instantiator import (
             execute_template_canonical, settle_after_canonical)

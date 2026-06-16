@@ -4858,17 +4858,13 @@ def _sim_clock_advance(dt):
     if _own is None or _own not in _subs:
         _c["owner"] = _SUB_ATTR; _own = _SUB_ATTR
     if _own != _SUB_ATTR: return
-    _nt = None
-    try:
-        from isaacsim.core.api import SimulationContext as _SimCtx
-        _sc = _SimCtx.instance()
-        if _sc is not None: _nt = float(_sc.current_time)
-    except Exception:
-        _nt = None
-    if _nt is not None:
-        _c["t"] = _nt; _c["native"] = True
-    else:
-        _c["t"] = float(_c.get("t", 0.0)) + float(dt); _c["native"] = False
+    # dt-ACCUMULATOR (the PROVEN sim-time source — the sim-floor's seg_sim_t += dt validated it). The Kit-
+    # native SimulationContext.current_time was tried first but returns a NON-advancing value in the
+    # exec_sync/RPC context (cf. the SimulationContext caveat near the top of this handler) -> froze the
+    # clock -> arm frozen at trajectory start under gate-ON (MEASURED 2026-06-16: standalone CP-13 belt 0%,
+    # arm 0deg range). dt is the physics step, always valid here. ROS /clock alignment can publish THIS
+    # accumulated t later (a separate, validated enhancement) rather than read an unreliable native clock.
+    _c["t"] = float(_c.get("t", 0.0)) + float(dt); _c["native"] = False
 def _clock_now():
     if not getattr(builtins, "_use_sim_clock", False):
         return time.monotonic()

@@ -4145,3 +4145,20 @@ runtime-toggleable) + added a SIMCLOCK=1 hook to scene_eyes. VERIFIED byte-ident
 preserving. Committed (default OFF). NEXT: gate-ON validation (SIMCLOCK=1 on a composition gold + standalone)
 -> if sim-time playback holds, flip default + retire the sim-floor/fling-fix band-aids. The migration is the
 real #32 substance (the seam alone was scaffolding); now it's gate-flippable + verification-pending-ON.
+
+cont.129 (2026-06-16, ULTRACODE): gate-ON validation found + fixed a REAL bug (native clock froze the arm),
+then sim-time playback DELIVERS. First gate-ON run: standalone CP-13 belt 0%, arm FROZEN 0deg, cubes never
+approached. DIAGNOSTIC-FIRST: the `tail -20` in the standalone wrapper HID the FLAG_SET print -> looked like
+the gate didn't engage, but it did. ROOT: _sim_clock_advance tried the Kit-native SimulationContext.current_
+time FIRST, which returns a NON-ADVANCING value in the exec_sync/RPC context (the SimulationContext caveat) ->
+_clock_now() frozen -> elapsed=0 -> arm stuck at trajectory start. FIX: use the PROVEN dt-accumulator (_c["t"]
++= dt) — drop the native query. VERIFIED (full-output re-test, SIMCLOCK=1, FLAG_SET confirmed fired): CP-13
+gate-ON delivers BOTH cubes @104mm, real 2-level column [0.825,0.875] perfectly stacked (xy 0.002m), RIGID
+HOLD, belt 92%. BONUS confirmation that sim-time is the CORRECT reference: the picks finished FASTER (@2.9s/
+@11.3s) than gate-OFF wall-clock (@17.6s/@37.7s) — in headless fast-sim wall-clock > sim-time, so wall-clock
+made the arm dwell extra; sim-time times the trajectory in its designed mt sim-seconds. Also fixed a tooling
+bug: the SIMCLOCK hook was only in the standalone branch (compose path never reached it) -> added it to the
+compose branch too (works via the LIVE gate even post-build). NEXT: composition gate-ON (CP-03+CP-28+CP-13,
+SIMCLOCK=1) — does sim-time playback HOLD the gold under contention (and subsume the sim-floor)? Then flip the
+default + retire the band-aids. ROS /clock alignment becomes "publish THIS accumulated t" later, not a native
+read.
