@@ -128,7 +128,13 @@ def xform(p):
     return ([round(float(t[0]), 4), round(float(t[1]), 4), round(float(t[2]), 4)],
             [round(float(q.GetReal()), 4), round(float(im[0]), 4), round(float(im[1]), 4), round(float(im[2]), 4)])
 
-CUBES = [str(pr.GetPath()) for pr in stage.Traverse() if pr.GetName().startswith("Cube") or pr.GetName().startswith("Item")]  # 2026-06-06: track dispenser Item_* (CP-71) too, not just Cube_*
+# 2026-06-06: track dispenser Item_* (CP-71) too, not just Cube_*. 2026-06-17 (#45): also box-like DELIVERY
+# objects — a "rectangular-brick palletizer" (CP-42) names its items Brick_* not Cube_*, so scene_eyes saw NO
+# ROWS -> the gate false-NEGATIVE'd a working palletizer. Add unambiguous delivery-item prefixes (Brick/Carton/
+# Crate/Package/Parcel); deliberately EXCLUDE "Box"/"Block" (ambiguous with Bin/container/scene-block -> would
+# risk tracking a non-delivery prim into the structure verdict = a false-positive). Add those case-by-case.
+_DELIV_PREFIX = ("Cube", "Item", "Brick", "Carton", "Crate", "Package", "Parcel")
+CUBES = [str(pr.GetPath()) for pr in stage.Traverse() if pr.GetName().startswith(_DELIV_PREFIX)]
 # 2026-06-13: also track non-cube MANIPULABLE objects (broom handle, faucet handle, drawer knob, blanks) so
 # GRIP-SLIP can measure them. Additive (cubes already matched above) -> cube cases unaffected. A rigid-body
 # prim whose name carries a graspable token; exclude the robot subtree and obvious scene-floor.

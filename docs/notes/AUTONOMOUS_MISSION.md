@@ -4624,3 +4624,17 @@ under composition slowdown — diagnose with reach_validate + scene_eyes). NET c
 CP-08/10/12/19/30/27/49/77 (8 verified grids); CP-20/CP-71 need work; CP-42/25 re-confirming. Modal app
 auto-stopped clean (modal app list verified). #43 speedup DONE (live + validated + bounded). The bigger lever
 (scene_eyes build-once-observe-all, ~N× per composition) remains the next throughput step.
+
+cont.160 (2026-06-17): #45 scene_eyes false-NEGATIVE fix — track box-like DELIVERY objects, not just Cube*/Item*.
+The Modal batch's CP-42 REJECT ("no rows") reproduced LOCALLY (CP-13 co-cell GENUINE) -> NOT a container-fail.
+Diagnostic-first: CP-42 is a "rectangular-brick palletizer" whose items are named Brick_*, and scene_eyes' CUBES
+only tracked Cube*/Item* -> it saw NO ROWS -> the gate false-NEGATIVE'd a working palletizer. This is the INVERSE
+of the CP-08 false-POSITIVE — the tool can lie EITHER way; read the raw. FIX (scene_eyes.py:131): broaden CUBES
+to unambiguous delivery-item prefixes (Cube/Item/Brick/Carton/Crate/Package/Parcel); deliberately EXCLUDE
+"Box"/"Block" (ambiguous with Bin/container/scene-block -> tracking a non-delivery prim would risk a structure
+false-POSITIVE; no-regression discipline). Re-verifying CP-42 now. ALSO resolved the cloud batch's other "container
+failure": CP-25 (16-cube palletizer) re-ran LOCALLY = GENUINE GOLD (16 gripped, 1 z-level, 57mm spread) -> its
+cloud REJECT WAS a spot-T4 container-fail. Lesson: the cloud co-cell discriminator is NOT foolproof — a cloud run
+can carry BOTH a real issue AND a container-fail (CP-42 had brick-blindness + CP-13 container-fail in one run);
+LOCAL confirm is the arbiter. Composable palletizers now: 9 verified (CP-08/10/12/19/30/27/49/77/25) + CP-42
+pending the #45 re-verify (likely 10th). CP-20/71 = throughput/belt-stall (#44, deferred).
