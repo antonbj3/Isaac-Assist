@@ -4453,3 +4453,17 @@ the gate one-liner). OUTCOME: my GOLD claims HELD; the audit's own refutations w
  - 5-cell RUN 1 = GOLD (5 cells, max contention, no TOPPLED) — tier may extend to 5; RUN 2/3 running.
  This is the build->adversarial-audit->fix cycle: the audit vindicated delivery, unmasked the threshold artifact,
  and caught my own memory overclaim. Audit cost ~413k subagent tokens (ultracode on; Anton-prompted).
+
+cont.147 (2026-06-16): root-cause CORRECTION on the cont.146 GRIP-SLIP finding (audit-the-audit, diagnostic-
+first disproved my OWN first guess). cont.146 attributed CP-13's false SLIPPING to a "cube-symmetry 90° quat-
+jump". I then read the RAW per-tick WORLD quaternion (not just qrel): Cube_1's world-orientation is STABLE
+(tilt 0°, world-drift 0.6°) from t=7 on — the cube never rotates 90°, so symmetry-jump is WRONG. The true
+cause: the grip-span [first..last finger-contact] OVER-EXTENDS past release for a STACKER — the EE re-contacts
+the placed base cube when stacking the next one on top, so the span includes the interval where the base cube
+is placed/world-fixed while the EE moves freely -> qrel drifts 91° from EE motion, NOT grasp slip. The cube is
+genuinely rigid+flat the whole real carry. FIX (#39): bound the grip-span by the controller GRIPPED-SET (grp) or
+"cube off rest surface", not finger-contact span. A wrong root-cause (symmetry) would have produced a wrong fix
+(symmetry-quat handling) instead of the span-boundary fix. Lesson: even an audit FINDING needs raw-data
+verification before its CAUSE is trusted — read the world-quaternion, not just the derived qrel. GOLD verdict
+unchanged (delivery genuine; this only sharpens the deferred GRIP-SLIP tool fix). Memory grip_slip_deconflated
+updated with the corrected cause. 5-cell RUN 2/3 still running.
