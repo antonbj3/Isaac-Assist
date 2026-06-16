@@ -4638,3 +4638,18 @@ cloud REJECT WAS a spot-T4 container-fail. Lesson: the cloud co-cell discriminat
 can carry BOTH a real issue AND a container-fail (CP-42 had brick-blindness + CP-13 container-fail in one run);
 LOCAL confirm is the arbiter. Composable palletizers now: 9 verified (CP-08/10/12/19/30/27/49/77/25) + CP-42
 pending the #45 re-verify (likely 10th). CP-20/71 = throughput/belt-stall (#44, deferred).
+
+cont.161 (2026-06-17): ★ BOTH assumed-blocked infra paths VERIFIED OPEN — the runtime-LLM-composition loop is
+operational. Applying the same diagnostic-first the Modal verification used (Anton "säker att mullvad inte
+fungerar?"): I'd ALSO assumed Gemini/Vertex (LLM-flow #28) was blocked. VERIFIED it works: gcloud-vpn-proxy.service
+active; aiplatform.googleapis.com reachable via the proxy (HTTP 404 = server responded; egress IP 45.130.200.133
+= Mullvad); and compose_reasoning_eval ran 1 case END-TO-END via Vertex (gemini-2.5-flash through HTTPS_PROXY ->
+Mullvad): T1-parallel-2station PASS — Gemini correctly chose ['CP-01','CP-01'] parallel. So #28 is NOT blocked
+(the runtime-LLM track is parallel-safe: Vertex, no ChromaDB, no Kit). NET: the strategy's END-TO-END loop now
+works — (1) user task -> Gemini reasons + picks robust blocks (verified), (2) composer (#40b-fixed) builds the
+composition, (3) gold pipeline (local + Modal 6x) verifies. All three pieces operational. The composable set the
+LLM reasons over = 10 palletizers + core blocks (CP-01/03/13/28/29), all honest-gate-verified this session.
+Running the bounded base compose-reasoning eval to confirm reasoning health + generate training data. NOTE for the
+cron/directive: like Modal, the Gemini/Vertex 'blocked' assumption was stale — VERIFY (gcloud-vpn-proxy active +
+a 1-case probe with HTTPS_PROXY) before assuming #28 is blocked. The FULL LLM-flow buildout (33-case + composition
+eval, reasoning observability, scene_eyes-as-LLM-tool) is fresh-session work, but the path is now confirmed open.
