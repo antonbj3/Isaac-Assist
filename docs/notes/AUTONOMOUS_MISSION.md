@@ -3953,3 +3953,18 @@ Read the raw per-object + controller signals BEFORE theorizing. NEXT (correct): 
 composed inst2 pick (cube paused x=11.81, ~0.6m from base) — why does the grasp miss a reachable stationary
 cube in the 3-cell layout but not standalone/2-cell? (possible: cube pauses at a slightly different
 position via composed belt/sensor-gating -> approach/jaw misalignment). 2-cell gold solid; 3-cell open.
+
+cont.118 (2026-06-16): 3-cell drop LOCALIZED (measured) — cube grasped at the REACH EDGE, ~1m short of the
+sensor. CP-13 PickSensor is at rel +0.4 (abs 12.8 for inst2@12.4); the cube was claimed+frozen at abs 11.81
+= rel -0.59 = ~0.72m from base (Franka reach edge) and ~1m SHORT of the sensor. _cube_to_pick() claims the
+on-belt cube closest to the sensor that is within 70cm of base; the cube riding IN from far becomes "barely
+reachable" at the far edge FIRST, gets claimed there, _pause_belt() freezes it, and the grasp seats ~137mm
+short (EE got 137mm above vs 104mm for successful grips) -> never lifts -> gives up -> belt resumes -> cube
+rides off -> falls. sensor_path IS an arg (composer re-roots it) so the sensor is found (NOT a None-fallback).
+OPEN delta: does STANDALONE/2-cell CP-13 claim the cube CLOSER to the sensor (so the grasp seats), and why
+does compose claim at the edge? -> needs the controller's _log_event claim/plan-call logs OR a standalone
+CP-13 pause-position comparison. CANDIDATE FIX (once confirmed): _cube_to_pick should require the cube be
+NEAR the sensor (not merely within 70cm reach) before claiming + pausing -> the cube rides to the optimal
+pickup -> grasp seats. STATE: thorough measured RCA; serialization theory (cont.112-116) was WRONG + closed;
+move-token v2 + per-instance planner kept (harmless, no regression); 2-cell gold solid; 3-cell open with a
+precise, actionable next step. Lesson banked: read raw controller+belt signals before theorizing.
