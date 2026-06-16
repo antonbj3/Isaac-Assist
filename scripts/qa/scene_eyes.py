@@ -799,7 +799,7 @@ def _analyse(js):
         # no-graze / no-false-negative discipline. Compositions are cubes, so this is belt-and-suspenders.
         def _boxlike(_n):
             _l = _n.lower()
-            return _l.startswith(("cube", "item")) or any(_k in _l for _k in ("box", "crate", "package", "block", "carton", "parcel"))
+            return _l.startswith(("cube", "item", "brick")) or any(_k in _l for _k in ("box", "crate", "package", "block", "carton", "parcel", "brick"))
         _topp = [(n, t) for n, t in _ori if t > 60 and _boxlike(n)]
         out.append("ORIENTATION (settled cube tilt from world-up; >60°=TOPPLED, 30-60°=TILTED; round items skipped; reject scoped to box-like):")
         for _nm, _t in sorted(_ori, key=lambda x: -x[1]):
