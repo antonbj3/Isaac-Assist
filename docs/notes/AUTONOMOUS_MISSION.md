@@ -3907,3 +3907,18 @@ FULL FIX (next session, more tokens): give each composed cell its OWN MotionPlan
 cache on robot_path/instance, not just config) so non-overlapping cells plan CONCURRENTLY (GPU has headroom,
 40% util / 33% VRAM -> ~3 planners fit). Then non-overlapping cells neither plan-serialize NOR move-serialize.
 move-token v2 stays (correct for execution collision; harmless worst-case). 3-cell gold remains caveated.
+
+cont.115 (2026-06-16 morning): BOTH serialization fixes FAILED — and I was hypothesis-driven (the anti-
+pattern). move-token v2 (24349b61) AND per-instance planner + per-planner plan-lock (7ed4029e) each left
+CP-03+CP-28+CP-13 dropping CP-13 Cube_1 NEAR-IDENTICALLY (z=0.525). The early ~8s arm-hold (t=6.3-14.3)
+PERSISTS unchanged across all 3 runs, AND VRAM stayed flat ~4GB (no obvious 3-planner build). So either the
+edits aren't reaching the executed controller (caching/build-path) OR the hold is NOT a serialization lock.
+KEY un-checked fact: the arm un-froze at t=14.3 but Cube_1 rode the belt until t=37 then fell — so the arm
+had ~23s of FREE time and STILL missed it. That 8s freeze may be a NORMAL wait_sensor (arm waiting for the
+conveyor cube to arrive), not a lock. I IMPLEMENTED FIXES BEFORE CONFIRMING THE MECHANISM = exactly the
+guess-don't-measure trap. CORRECT NEXT STEP (focused, instrumented): log the controller's MODE over time
+(wait_sensor / settling / executing / plan-token-wait / move-token-wait) for inst2 to see WHAT it's doing
+during 6.3-14.3 AND 14.3-37, + confirm whether my edits are even in the emitted controller (dump it). Only
+then fix the CONFIRMED cause. move-token v2 + per-instance planner are committed + SAFE (byte-identical for
+standalone/CP-52) but UNVERIFIED-for-benefit. 2-cell composition gold solid; 3-cell stays caveated.
+Pausing the composition-concurrency push — it needs instrumented diagnosis, not more hypotheses (+ tokens).
