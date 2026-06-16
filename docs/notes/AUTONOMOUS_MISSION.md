@@ -4077,3 +4077,19 @@ corpus: 2-cell, 3-cell (×2 incl. new rep CP-01), 4-cell, 5-cell-two-stacker —
 HONEST (lift-required) GRIPPED label and the cell-count-complete (--expect) gate. Net of this session's
 composition arc: the multi-cell composition drop is SOLVED, proven at scale, and both the controller and the
 verification tools are now honest + hardened.
+
+cont.125 (2026-06-16): exploratory stress surfaced a REAL edge finding (#33). Ran CP-08+CP-08+CP-13 (two
+concurrent 4-cube palletizers + a stacker — densest scene tested) = NOT GOLD. DIAGNOSTIC-FIRST (raw verdict,
+not theory): inst0/CP-08 (FIRST palletizer) PILED its 2x2 grid — ALL 6 cube-pairs collided (OBJECT-OBJECT)
+vs only 4 grid-neighbor touches in the clean inst1 — and Cube_2 was KNOCKED OFF to the floor (peak_z=1.08 ->
+final=[0.00,-0.63,0.53] net-fell 0.30m; Cube_2|Ground @51.1s). The gate CORRECTLY rejected via low_z (a cube
+<0.6m). inst1/CP-08 placed all 4 clean (1 z-level grid); inst2/CP-13 column clean. CRUCIAL: all 4 cubes WERE
+gripped -> this is a PLACE/grid-spacing failure, NOT a grasp failure (so NOT the cont.120 grasp-timing
+mechanism). Hypotheses (UNCONFIRMED, measure-first): (a) CP-08's 2x2 grid cells are too tight / place
+residual-velocity knocks neighbors -> a STABILITY MARGIN that only surfaces with 8 placements across 2 grids;
+(b) the first/most-contended palletizer's early placements degrade. Re-run LAUNCHED for reproducibility
+(stochastic vs systematic). IMPORTANT FRAMING: this is an EDGE stress (two identical heavy palletizers — an
+unusual composition); the CORE patterns stand — single CP-08 placed clean in the 4-cell + 5-cell golds, and
+2/3/4/5-cell single-cell-type compositions are all GOLD. So NOT a regression of the proven work; a niche
+CP-08-grid-stability lead tracked as #33. The gate's honesty (low_z + --expect) is what surfaced it cleanly
+rather than false-passing.
