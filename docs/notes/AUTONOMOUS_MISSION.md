@@ -3922,3 +3922,16 @@ during 6.3-14.3 AND 14.3-37, + confirm whether my edits are even in the emitted 
 then fix the CONFIRMED cause. move-token v2 + per-instance planner are committed + SAFE (byte-identical for
 standalone/CP-52) but UNVERIFIED-for-benefit. 2-cell composition gold solid; 3-cell stays caveated.
 Pausing the composition-concurrency push — it needs instrumented diagnosis, not more hypotheses (+ tokens).
+
+cont.116 (2026-06-16): NO-REGRESSION VERIFIED — the committed changes are SAFE. CP-13+CP-08 (known 2-cell
+gold) = GOLD with move-token v2 + per-instance planner active (CP-13 2-level column, CP-08 grid, all
+gripped). So the shared-serialization changes don't break the working 2-cell tier (and are byte-identical
+for standalone/CP-52 by construction). CLEAN CONCLUSION of the composition-concurrency push: the changes
+STAY (safe + arguably correct for parallel execution), but they did NOT fix the 3-cell drop, whose true
+cause is UNCONFIRMED (I was hypothesis-driven). 3-cell remains a documented OPEN problem requiring
+INSTRUMENTED diagnosis (log controller mode timeline for the failing arm: is the ~8s early freeze a lock-
+wait or a normal wait_sensor? then fix the confirmed cause). STATE: 2-cell composition gold SOLID (5 scene_
+eyes-gold across bin/sort/column/grid); 3-cell caveated; the move-token + planner architecture is in place
+and verified-safe for when the instrumented 3-cell diagnosis identifies the real lever. Lesson reinforced:
+measure the mechanism BEFORE implementing the fix (I burned 2 fixes guessing; the no-regression check is
+the honest close).
