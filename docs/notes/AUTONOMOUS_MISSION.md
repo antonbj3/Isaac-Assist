@@ -4306,3 +4306,22 @@ playback (elapsed and seg_sim_t are both executing-sim-time -> equivalent) — a
 redundancy, so the "optional cleanup" is JUST the sim-floor, low-value, deferred. Net: keep the fling-fix; the
 sim-floor can be removed someday but needn't be. Lesson: think through the SHARED-clock semantics before
 declaring a band-aid redundant.
+
+cont.139 (2026-06-16): ★ FALSE-SUCCESS AUDIT (Anton flagged "scene_eyes active on the Modal work? vaksam för
+false success") — vindicated, + I caught my OWN audit's false-flag. FINDINGS: (1) scene_eyes IS active on
+Modal (--eyes -> every result has `vec` per-cube verdict + `eyes_tail` raw) and locally (eyes_gold_gate.py).
+(2) BUT I reported Modal's `"gate"` field = the POSITION gate (gate_one: in_target_xy/above_floor/at_rest),
+which LIES. The REAL scene_eyes signal is `vec`. Cross-checking vec: CP-09 posGate=True but vec=Cube_1
+TOPPLED+NON_RIGID_GRIP+LOOSE_GRIP = genuine false-success (the known scatter); CP-46/CP-13/CP-01/CP-22/CP-48/
+CP-15/CP-04 = grip-quality flags (NON_RIGID_GRIP/STACK_DRIFT on single cubes — delivered per position, grip not
+rigid); vec-CLEAN = CP-08/CP-29/CP-37/CP-12/CP-10. (3) I caught my OWN quick-audit false-positive: its regex
+flagged "EJECTION!" on CP-10/CP-46 but that matched the scene_eyes section-HEADER "EJECTION/EXPLOSION" (always
+printed), NOT a real >8m/s event — CP-10 vec = all-9-OK. Nearly swapped one false-signal for another. (4) THE
+REAL GAP: both gates (Modal position + local eyes_gold_gate) verify DELIVERY (position/structure/lift) but NOT
+grip-QUALITY (the vec NON_RIGID_GRIP/TOPPLED signal). "Delivered" is honest; "rigidly gripped" is ungated.
+(5) SimClock UNAFFECTED: all single-robot gate-OFF = byte-identical to pre-migration -> these are TEMPLATE
+BASELINES, not regressions; the #32 conclusion holds, but the "8/8 deliver" wording was position-gate-
+optimistic (honest: 8/8 delivered, grip-quality flags on several baselines). FIX (tools-are-living): make
+eyes_gold_gate.py gate on the scene_eyes vec TOPPLED signal (a toppled cube = not properly placed = reject),
+closing the grip-quality gap. LOCAL composition golds stand (delivery-verified), but the TOPPLED gate makes
+them stricter. Lesson banked: report the scene_eyes signal (vec), not the position gate; and audit the audit.
