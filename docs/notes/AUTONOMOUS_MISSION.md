@@ -4225,3 +4225,20 @@ opt-in (builtins._use_sim_clock / SIMCLOCK=1); default OFF with the proven sim-f
 The default-flip + sim-floor/fling-fix retirement is deferred behind (a) fixing CP-08 #33 so CP-08 comps are
 robust regardless of gate, and (b) a gate-ON-vs-OFF rate comparison. 16 commits. SimClock is Anton's elevated
 core fix — done, proven, exportable (engine-agnostic dt-accumulator, ROS-/clock-alignable), shipped opt-in.
+
+cont.134 (2026-06-16, ULTRACODE): CP-08 #33 FIXED via scene-geometry redesign — validated standalone + under
+contention. ROOT (cont.122-126): CP-08's Y-space (robot base ~-0.1 to table back-edge -0.5) is too tight for a
+2x2 grid with margins > the 0.08 place-release tolerance, AND the 0.30 pallet @ y=-0.4 extended to y=-0.55 PAST
+the table edge -> imprecise place under contention knocked a back-row cube off. FIX (pure scene-geometry, my
+authority, no controller risk): enlarge the TABLE (table_size [2.0,1.0]->[2.0,1.4]) so the pallet fits behind
+the robot with margin; enlarge the PALLET (0.30->0.40, scale 0.15->0.20 @ y=-0.42); widen the GRID (spacing
+0.08->0.14, drop_targets ±0.07 / y -0.49,-0.35) -> all slot-to-pallet-edge + inter-cube margins ~0.10 > the
+0.08 tolerance. Robot still reaches (slots near the originals). VALIDATED: (a) standalone CP-08 = all 4
+CONVERGED+GRIPPED, FLAT 1-z-level grid (0.14 extent), no fall; (b) 4-cell CP-03+CP-28+CP-08+CP-13 = GOLD,
+CP-08 flat grid no fall (the exact 4-cell that DROPPED with old CP-08, cont.133) -> #33-fix holds under 4-cell
+contention AND re-confirms the 4-cell gold with the new CP-08 (no regression); (c) two-palletizer
+CP-08+CP-08+CP-13 = GOLD, BOTH CP-08s flat-grid clean (the original #33 scenario where one stochastically
+dropped -> now both clean). So #33 RESOLVED. UNBLOCKS the SimClock #32 multi-robot-default (CP-08 comps are now
+robust regardless of gate). Stale doc-comments in CP-08.json ("0.30x0.30", "spacing 0.08", "0.03m gap") not
+updated (cosmetic). NEXT: commit; re-verify the 2-cell CP-13+CP-08 + 5-cell CP-08-containing golds with the
+new CP-08 (no-regression); then the SimClock multi-robot-default is clear to flip.
