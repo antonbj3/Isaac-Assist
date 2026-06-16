@@ -4841,10 +4841,11 @@ def _release_move_token():
 # _clock_now(). The dt-accumulator is the engine-agnostic fallback (proven via the sim-floor's
 # seg_sim_t += dt); the Kit-native clock (SimulationContext.current_time) is preferred when queryable
 # (= the SAME time Isaac's ROS2 /clock publisher emits -> internal controllers + external ROS share one
-# clock). GATED _use_sim_clock (default OFF) -> _clock_now() == time.monotonic(), BYTE-IDENTICAL, and the
-# per-frame advance is skipped (no SimulationContext query). Playback sites migrate to _clock_now() in a
-# later ATOMIC pass (playback only; the plan-budget watchdogs keep time.monotonic() by design).
-_USE_SIM_CLOCK = bool(getattr(builtins, "_use_sim_clock", False))
+# clock). GATED builtins._use_sim_clock — checked LIVE (toggleable at runtime for tests); default OFF ->
+# _clock_now() == time.monotonic(), BYTE-IDENTICAL, and the per-frame advance is skipped (no
+# SimulationContext query). The 8 curobo PLAYBACK sites (seg_start_t set/read) now call _clock_now(); the
+# plan-budget + token stale-steal WATCHDOGS keep time.monotonic() by design (a frozen sim must still trip
+# them). Migration map adversarially verified (workflow simclock-migration-map, 2026-06-16).
 _SIMCLK_ATTR = "_sim_clock_v1"
 if getattr(builtins, _SIMCLK_ATTR, None) is None:
     setattr(builtins, _SIMCLK_ATTR, {{"t": 0.0, "owner": None, "native": None}})
@@ -4869,7 +4870,7 @@ def _sim_clock_advance(dt):
     else:
         _c["t"] = float(_c.get("t", 0.0)) + float(dt); _c["native"] = False
 def _clock_now():
-    if not _USE_SIM_CLOCK:
+    if not getattr(builtins, "_use_sim_clock", False):
         return time.monotonic()
     _c = getattr(builtins, _SIMCLK_ATTR, None)
     return float(_c.get("t", 0.0)) if _c is not None else time.monotonic()
@@ -7566,7 +7567,7 @@ def _on_step(dt):
                             _ma_rs.Set("")
                 except Exception: pass
         _a_tick.Set(S["ticks"]); _a_phase.Set(S["mode"])
-        if _USE_SIM_CLOCK: _sim_clock_advance(dt)  # SimClock seam: advance sim-time (no-op + no query when gated OFF)
+        if getattr(builtins, "_use_sim_clock", False): _sim_clock_advance(dt)  # SimClock seam: advance sim-time (live gate; no-op + no query when OFF)
         _fixup_asset_gripper_joint()  # asset gripper: re-author its wrist_3 FixedJoint from correct runtime poses (once)
         _track_suction_follower()  # suction: keep the FJ'd cone on the live ee so the SG can grip (no-op for Franka)
         _clamp_gripped_velocity()  # fling guard: cap the gripped cube's velocity (kills the kinematic-follower NaN-fling)
@@ -7870,7 +7871,7 @@ def _on_step(dt):
                 return
             S["segments"] = segs
             S["seg_idx"] = 0
-            S["seg_start_t"] = time.monotonic()
+            S["seg_start_t"] = _clock_now()
             S["seg_sim_t"] = 0.0
             S["mode"] = "executing"
             _release_plan_token()
@@ -7916,9 +7917,9 @@ def _on_step(dt):
                 if S.get("seg_start_t") is not None:
                     _eh = S.get("_held_elapsed")
                     if _eh is None:
-                        _eh = time.monotonic() - S["seg_start_t"]
+                        _eh = _clock_now() - S["seg_start_t"]
                         S["_held_elapsed"] = _eh
-                    S["seg_start_t"] = time.monotonic() - _eh
+                    S["seg_start_t"] = _clock_now() - _eh
                 _hold_q = S.get("hold_q")
                 if _hold_q is not None:
                     _apply_arm_joints(_hold_q)
@@ -8072,11 +8073,11 @@ def _on_step(dt):
                             cur_seg["traj"] = _rl_rr[0]; cur_seg["traj_src"] = "relive"
                             cur_seg["motion_time"] = max(float(_rl_rr[1]), 0.25)
                             cur_seg["grip_done"] = False
-                            S["seg_start_t"] = time.monotonic()
+                            S["seg_start_t"] = _clock_now()
                             with open("/tmp/cupframe_dbg.log", "a") as _cfd: _cfd.write("S5 relive seed_pan=%.1f goal=%s\\n" % (float(np.degrees(_rl_seed[0])), [round(float(_x), 3) for _x in _rl_goal]))
                             return
                 except Exception: pass
-            elapsed = time.monotonic() - S["seg_start_t"]
+            elapsed = _clock_now() - S["seg_start_t"]
             traj = cur_seg["traj"]
             mt = cur_seg["motion_time"]
             T = traj.shape[0]
@@ -8250,7 +8251,7 @@ def _on_step(dt):
                                         _rr = _plan_to_world_point(_cg, np.asarray(_jl)[:_ARM_DOF], exclude_obs=_excl, yaw_deg=0.0, vhold_mode=0, branch_pin=_pdp)
                                         if _rr is not None:
                                             cur_seg["traj"] = _rr[0]; cur_seg["motion_time"] = max(float(_rr[1]), 0.25); cur_seg["grip_done"] = False; cur_seg["traj_src"] = "clnudge"
-                                            S["seg_start_t"] = time.monotonic()
+                                            S["seg_start_t"] = _clock_now()
                                             cur_seg["_nv_nudges"] = cur_seg.get("_nv_nudges", 0) + 1
                                             with open("/tmp/cupframe_dbg.log", "a") as _cfd: _cfd.write("CL nudge d=%.3f cup=%s -> goal=%s\\n" % (_ddn, [round(float(_cupw[_i]), 3) for _i in range(3)], [round(float(_x), 3) for _x in _cg]))
                                             return
@@ -8356,7 +8357,7 @@ def _on_step(dt):
                                         _rr = _plan_to_world_point(_cg, _pl_seed, exclude_obs=([S["picked_path"], DEST_PATH] if DEST_PATH else S["picked_path"]), yaw_deg=0.0, vhold_mode=0, branch_pin=_pl_bp)
                                         if _rr is not None:
                                             cur_seg["traj"] = _rr[0]; cur_seg["motion_time"] = max(float(_rr[1]), 0.2); cur_seg["grip_done"] = False; cur_seg["traj_src"] = "plnudge"
-                                            S["seg_start_t"] = time.monotonic(); cur_seg["_pl_nudges"] = cur_seg.get("_pl_nudges", 0) + 1
+                                            S["seg_start_t"] = _clock_now(); cur_seg["_pl_nudges"] = cur_seg.get("_pl_nudges", 0) + 1
                                             with open("/tmp/cupframe_dbg.log", "a") as _cfd: _cfd.write("PL nudge dxy=%.3f cube=%s -> goal=%s\\n" % (_dxy, [round(float(_cubp_cl[_i]), 3) for _i in range(3)], [round(float(_x), 3) for _x in _cg]))
                                             return
                             except Exception as _ple:
@@ -8386,7 +8387,7 @@ def _on_step(dt):
                             (0.3 if cur_seg["action_after"] == "open" else 0.0)
                 if elapsed >= mt + pre_grip_settle + post_grip and ((not _sim_floor) or S.get("seg_sim_t", 0.0) >= mt + pre_grip_settle + post_grip):
                     S["seg_idx"] += 1
-                    S["seg_start_t"] = time.monotonic()
+                    S["seg_start_t"] = _clock_now()
                     S["seg_sim_t"] = 0.0
             return
     except Exception as e:

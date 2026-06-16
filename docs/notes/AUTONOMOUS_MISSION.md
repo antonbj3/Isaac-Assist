@@ -4127,3 +4127,21 @@ functional benefit): the ATOMIC playback-site migration (seg_start_t/elapsed/sta
 playback sites; plan-budget WATCHDOGS stay monotonic by design) + flip the gate + no-regression sweep on the
 stable 37+8 -> then the sim-floor + the move-token fling-fix become redundant and retire. Did the seam now (low
 edit surface, gated, verified) rather than the fiddly 12-site migration unwatched. #32 advanced, not closed.
+
+cont.128 (2026-06-16, ULTRACODE): SimClock PLAYBACK MIGRATION done — workflow-verified, byte-identical OFF.
+"kör på" + ultracode -> orchestrated the RISKIEST part (the playback-vs-watchdog CLASSIFICATION, where one
+wrong site = a mixed-clock landmine) as a workflow (simclock-migration-map): 3 diverse-lens mappers
+(line-scan / playback-consistency / watchdog) -> synthesis -> 3 adversarial critics (missed-playback /
+wrong-watchdog / line-integrity). Verdict GO, atomicity_ok. It found things I'd have missed: the token
+stale-steals use `import time as _lt/_mt` ALIASES (a naive grep-replace would skip them — SAFE, they're
+watchdogs); the file has SIX variants (builtin/native/spline/curobo/diffik/osc) not 4; the keystone is the
+SINGLE `elapsed =` read at 8079 that every grip/advance gate reuses; and there is NO S["start_t"] timing var
+in curobo (those are diffik/osc, out of scope). Authoritative set = 8 curobo playback sites (6 seg_start_t
+setters + 2 reads), all migrated time.monotonic()->_clock_now() via 2 precise replace_all (counts pre-verified
+6+2). WATCHDOGS preserved: plan-deadline 5370/5631, plan-budget 7014/7055, token stale-steals _lt/_mt
+4728/4794+. Also made the gate LIVE (getattr(builtins,"_use_sim_clock") instead of a build-time snapshot ->
+runtime-toggleable) + added a SIMCLOCK=1 hook to scene_eyes. VERIFIED byte-identical OFF: standalone CP-13
+(gate OFF) delivers both cubes @102mm, real column, identical forces = the 8-site edit BUILDS + is behavior-
+preserving. Committed (default OFF). NEXT: gate-ON validation (SIMCLOCK=1 on a composition gold + standalone)
+-> if sim-time playback holds, flip default + retire the sim-floor/fling-fix band-aids. The migration is the
+real #32 substance (the seam alone was scaffolding); now it's gate-flippable + verification-pending-ON.

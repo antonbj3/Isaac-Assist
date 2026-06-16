@@ -1024,6 +1024,10 @@ async def main():
         if os.environ.get("TELEDESCEND") == "1":
             await kit_tools.exec_sync("import builtins\nbuiltins._ur10_telescope_descend=True\n", timeout=10)
             print("FLAG_SET _ur10_telescope_descend=True")
+        if os.environ.get("SIMCLOCK") == "1":
+            # SimClock gate-ON: trajectory playback times by SIM-time (_clock_now) instead of wall-clock.
+            await kit_tools.exec_sync("import builtins\nbuiltins._use_sim_clock=True\n", timeout=10)
+            print("FLAG_SET _use_sim_clock=True")
         _rp = os.environ.get("REPOINT")
         if _rp:
             await kit_tools.exec_sync("import builtins\nbuiltins._sg_descend_repoint_deg=%s\n" % _rp, timeout=10)
