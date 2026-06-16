@@ -4178,3 +4178,16 @@ GLOBAL default). Once flipped, the sim-floor (cont.120) + the move-token fling-f
 sim-time playback, elapsed and seg_sim_t are both sim-time -> the floor is a no-op) and retire. Did NOT flip
 on partial validation. SimClock is the substance of Anton's elevated core fix — implemented, engine-agnostic
 (dt-accumulator), ROS-/clock-alignable, and now proven to work; the default-flip sweep is the clean finish.
+
+cont.131 (2026-06-16, ULTRACODE): SimClock gate-ON SMOKE sweep — Franka categories HOLD, UR10-suction flagged.
+Ran 3 timing-sensitive single-robot templates with SIMCLOCK=1 (FLAG_SET confirmed on all): CP-08 (Franka 2x2
+grid) = all 4 cubes CONVERGED+GRIPPED, proper grid (1 z-level, 0.08 spacing); CP-03 (Franka sort) = both cubes
+gripped, sorted to 2 bins (xy-extent 0.79). So Franka grid + sort + (earlier) stacker + the 3-cell composition
+ALL hold under sim-time playback. BUT CP-69 (UR10 suction, which exercises the migrated cupframe nudge sites
+8253/8359) = NEVER-GRIPPED gate-ON (closest 25mm, "moving-pick? cube moved during approach"). DIAGNOSTIC-FIRST
+(not concluding regression from 1 stochastic UR10 run): launched CP-69 gate-OFF x2 + gate-ON x1 to classify
+regression-vs-stochastic (UR10 suction is known-finicky/stochastic per memory). DECISION GATE for the default-
+flip: the Franka bulk is validated gate-ON; the flip waits on (a) resolving CP-69 (if a real UR10-suction
+regression, the migrated nudge re-time under sim-time needs a fix or a per-family gate) + (b) the full stable
+sweep. Did NOT flip — measuring the UR10-suction category first. Franka-side sim-time playback is solidly
+proven across grid/sort/stack/composition.
