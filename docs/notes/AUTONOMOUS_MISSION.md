@@ -4428,3 +4428,28 @@ instance + the cont.140 topple gate guarding the handoff rest; bar = relay N/N (
 identical for parallel (don't regress the 2/3/4-cell tier), don't touch shared belt-pause. This is the SEQUENTIAL
 axis; PARALLEL is done. Kept Kit-free while the 5-cell capstone (#38) runs. Session commits: 640877a5/a104f0df/
 5fc61fad/d5d85570/b5bc0e75/7d822e92 + this. Branch feat/foundation-build.
+
+cont.146 (2026-06-16): ★ FALSE-SUCCESS AUDIT (Anton "du är vaksam på false success va?") — adversarial, 10-agent
+workflow tried to REFUTE every GOLD composition claim this session against the RAW scene_eyes detectors (not
+the gate one-liner). OUTCOME: my GOLD claims HELD; the audit's own refutations were the false-negatives.
+ - The 6 cells the skeptics marked false were ALL refuted on "PICK CONVERGENCE closest-approach=104mm > 60mm" —
+   which is a REFERENCE-FRAME ARTIFACT, not a near-miss: the panda_hand frame origin sits ~103mm above the
+   grasp point, so a perfect Franka grasp reads ~104mm. INDEPENDENTLY VERIFIED from raw eyes.json (not just the
+   synthesis agent): during the airborne carry (cube_z up to 1.08m, ~250mm above rest) the tool->cube distance
+   is LOCKED at 103.8-104.0mm (stdev 0.0mm over 8 frames). A near-miss cannot carry a cube high in the air at a
+   locked distance. The 60mm threshold I fed the auditors is mis-calibrated for panda_hand -> fires on 100% of
+   clean grasps = zero signal. Physical delivery GENUINE: 3-cell 5/5, 4-cell 9/9, topple-val 6/6.
+ - REAL tool flaws found (NONE are false-successes — eyes_gold_gate gates on none of them): (1) GRIP-SLIP
+   max-over-span FALSE-POSITIVES on a recoverable transient — CP-13 raw qrel = 0.6°->91°(t7-14)->0.9°(t21+,
+   stays) = rigid hold mis-called SLIPPING (cube-symmetry 90° quat-jump); the qrel computation IS EE-relative
+   (de-conflated, code line 611) but the verdict should use SUSTAINED drift not peak. Corrected my own
+   same-session memory grip_slip_deconflated (it overclaimed robustness). (2) PICK-CONVERGENCE reported from the
+   tool frame (103mm offset) -> cosmetic noise (verdict gates on lift>30mm, not this). (3) per-instance eyes.json
+   OVERWRITE -> only the last instance persists, blocking independent raw audit of earlier cells. All -> task #39,
+   fixed post-5-cell (can't edit scene_eyes mid-measurement). 
+ - KNOWN GAP STANDS: topple-gate REJECT side is SYNTHETIC-proven only; CP-09 (real toppler) through the new local
+   gate is deferred to post-5-cell (the verified-measurement-path discipline — a gate validated only on its own
+   synthetic data is a tautolog-gate until it has rejected real Kit physics).
+ - 5-cell RUN 1 = GOLD (5 cells, max contention, no TOPPLED) — tier may extend to 5; RUN 2/3 running.
+ This is the build->adversarial-audit->fix cycle: the audit vindicated delivery, unmasked the threshold artifact,
+ and caught my own memory overclaim. Audit cost ~413k subagent tokens (ultracode on; Anton-prompted).
