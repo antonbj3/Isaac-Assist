@@ -4093,3 +4093,22 @@ unusual composition); the CORE patterns stand — single CP-08 placed clean in t
 2/3/4/5-cell single-cell-type compositions are all GOLD. So NOT a regression of the proven work; a niche
 CP-08-grid-stability lead tracked as #33. The gate's honesty (low_z + --expect) is what surfaced it cleanly
 rather than false-passing.
+
+cont.126 (2026-06-16): #33 FULLY DIAGNOSED (reproducibility + geometry) — and a naive fix CAUGHT before it
+backfired. Re-ran CP-08+CP-08+CP-13: NOT GOLD again, but STOCHASTIC-which — run1 inst0 dropped + inst1 clean;
+run2 inst1 dropped + inst0 soft-stacked (2 z-levels). So two concurrent grid palletizers -> contention
+degrades ONE palletizer's place precision (random which) per run. ROOT (3 factors): (a) concurrent-place
+contention -> approach imprecision; (b) CP-08 grid spacing 0.08 ≈ the Franka place-release tolerance
+_xy_err<0.08 -> an imprecise release lands a full cell off -> collide/stack; (c) the pallet (0.30 @ y=-0.4)
+extends to y=-0.55, PAST the table back edge (table y∈[-0.5,0.5]); back-row slots (y=-0.44) sit at the edge,
+so an imprecise place pushes a cube OFF the back (the original Cube_2 ended y=-0.63 on the floor). KEY
+DISCIPLINE WIN: I was about to widen the grid to ±0.075 — but CHECKED the pallet/table geometry first and saw
+that pushing cells outward moves the back row to y=-0.475 (edge -0.50 = AT the table edge) -> would make
+EDGE-drops WORSE while only helping inter-cube gaps. The naive fix backfires; aborted it. PROPER FIX (tracked
+#33, deliberate): redesign CP-08 geometry — reposition the pallet forward + enlarge (~0.34-0.40 sq, fully on
+table) so BOTH inter-cube gaps AND pallet-edge margins exceed the place tolerance; optionally tighten the grid
+place-release tolerance (controller, gated + no-regression). Perturbs the 4/5-cell CP-08 golds -> re-verify;
+so deliberate, not rushed. FRAMING: niche (two concurrent grid palletizers); single CP-08 placed clean in the
+4/5-cell golds and 2/3/4/5-cell compositions are all GOLD — core unaffected. Net: exploratory stress + an
+honest gate surfaced a real latent CP-08 place-margin, diagnosed to root, fix-direction specified, and a
+backfiring quick-fix avoided by checking geometry before editing (measure-before-fix).
