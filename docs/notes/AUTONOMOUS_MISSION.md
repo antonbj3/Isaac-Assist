@@ -4276,3 +4276,19 @@ Anton's elevated core fix — is now the PRODUCTION timing model for multi-robot
 alignable, with single-robot untouched. PLUS: using Modal in parallel (Anton's ask) for the single-robot
 no-regression sweep — Modal IS usable this session (3 parallel Franka containers ran, no floppar so far),
 running alongside this local verify = the parallel unlock.
+
+cont.137 (2026-06-16, ULTRACODE): SimClock multi-robot-default FULLY VALIDATED (local + cloud) — #32 DONE.
+(1) FLIP confirmatory on a CP-08-CONTAINING composition: local 2-cell CP-13+CP-08 (no flag -> gate auto-ON-
+default) = GOLD (CP-13 column + CP-08 flat grid both GENUINE). So the flip holds on BOTH a CP-08-free (3-cell)
+AND a CP-08-containing (2-cell) composition under the production default. (2) MODAL parallel single-robot
+no-regression sweep (the ~4h-serial-local bottleneck -> parallel cloud minutes, Anton's parallel-unlock ask):
+8/8 STABLE Franka single-robot templates deliver gate-OFF-default (CP-13 column, CP-08 redesigned-flat-grid,
+CP-01, CP-22, CP-29, CP-37, CP-46, CP-48 — all gate=True, status stable_ok). The lone gate=False was CP-57 —
+DIAGNOSED as its own flaky-DRAFT baseline (verified_status "draft; passes=4 n=16 ~25%"; verification_ledger
+shows CP-57 passed:false repeatedly PRE-migration 2026-06-11/13; hard 5-cube heap-singulation), NOT a SimClock
+regression (single-robot = gate-OFF = byte-identical code path). So the migration does NOT regress the Franka
+single-robot library. MODAL VERDICT (answers Anton "use Modal"): Modal IS usable + resilient this session —
+the cron's "floppar" was actually normal SPOT-PREEMPTION (Modal auto-restarts the same input; boots were
+169-217s = fresh faithful containers, NOT the <60s warm-degrade), not the Mullvad-flap tear. Both ephemeral
+apps auto-stopped clean (verified modal app list: 0 tasks). #32 SUBSTANCE + VALIDATION COMPLETE. Only optional
+cleanup remains: retire the now-redundant sim-floor + move-token fling-fix (own no-regression pass). 19 commits.
