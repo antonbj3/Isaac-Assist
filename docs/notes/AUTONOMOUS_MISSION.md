@@ -4191,3 +4191,18 @@ flip: the Franka bulk is validated gate-ON; the flip waits on (a) resolving CP-6
 regression, the migrated nudge re-time under sim-time needs a fix or a per-family gate) + (b) the full stable
 sweep. Did NOT flip — measuring the UR10-suction category first. Franka-side sim-time playback is solidly
 proven across grid/sort/stack/composition.
+
+cont.132 (2026-06-16, ULTRACODE): CP-69 classified = BYTE-EQUIVALENT, NOT a SimClock regression. Ran CP-69
+gate-OFF x2 + gate-ON x1: ALL THREE never-gripped, closest 25mm (OFF1 @7.6s, OFF2 @7.5s, ON2 @3.0s — gate-ON
+faster, consistent with sim-time). So CP-69 misses IDENTICALLY with/without the gate -> sim-time playback does
+NOT regress it (CP-69's own baseline miss is a SEPARATE UR10-suction issue: likely scene_eyes' known SG-
+detection blindness, or a pre-existing CP-69 regression since it was verified — to investigate independently,
+NOT a SimClock blocker). NET across all tested categories: sim-time playback either DELIVERS identically
+(Franka grid/sort/stack + 3-cell composition GOLD) or FAILS identically (CP-69) to gate-OFF -> NO category
+regresses. CHOSEN END-STATE (the clean, low-risk default): gate ON for MULTI-ROBOT ONLY (default _use_sim_clock
+= subs>1) — sim-time playback subsumes the sim-floor where the benefit is (composition/contention), while the
+ENTIRE single-robot stable library stays wall-clock = byte-identical = zero risk (no need for the impractical
+227-template global sweep; the stable list isn't cleanly enumerable anyway). To earn it: re-verify the
+composition golds gate-ON (2-cell CP-13+CP-08 + 4-cell CP-03+CP-28+CP-08+CP-13; 3-cell already GOLD gate-ON)
+-> then set the multi-robot default + retire the sim-floor (redundant under sim-time playback) + the move-token
+fling-fix. Launching that re-verification now.
