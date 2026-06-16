@@ -4415,3 +4415,16 @@ verified_status surgically (1-line, JSON-valid, no churn) to state the truth: fa
 zone fix WITH the (hands-off, shared CP-52/65) belt-pause fix, since the zone grading can't be validated until
 boxes actually deliver. NET: no ACTIVE multi-dest false-pass remains in the corpus; the lone bbox-less template
 honestly fails. #21 resolved (the remaining mixed-sku work is the hands-off belt-pause-stall, not a false-pass).
+
+cont.145 (2026-06-16): prep for #29 (sequential chain handoff), the highest-value remaining item — scoped by
+cont.85 as "dedicated session, NOT tail-of-marathon", so I did the READY-prep not the work. Wrote
+docs/notes/L3_CHAIN_HANDOFF_PLAN.md: consolidates the measured 5-way coupling (drop-height vs handoff-top vs
+rest-height vs grasp-height vs slab-as-collision-obstacle) into 3 concrete coupled fixes mapped to actual code —
+P1 handoff-at-grasp-height (extend composer.apply_source_override:123 to emit inst0 drop-Z override + author the
+handoff prim at a shared handoff_z, threaded from a compose_chain() wrapper; parallel path untouched), P2
+downstream-approach-from-actual-rest-height (verify/override the pick z from the live source cube z, not a
+conveyor const), P3 exclude-handoff-from-inst1-grasp-collision-world. Validation = scene_eyes --compose per
+instance + the cont.140 topple gate guarding the handoff rest; bar = relay N/N (today 2/4). Guardrails: byte-
+identical for parallel (don't regress the 2/3/4-cell tier), don't touch shared belt-pause. This is the SEQUENTIAL
+axis; PARALLEL is done. Kept Kit-free while the 5-cell capstone (#38) runs. Session commits: 640877a5/a104f0df/
+5fc61fad/d5d85570/b5bc0e75/7d822e92 + this. Branch feat/foundation-build.
