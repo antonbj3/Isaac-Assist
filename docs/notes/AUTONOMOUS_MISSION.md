@@ -4370,3 +4370,16 @@ gripped->REJECT, fell-to-ground->REJECT. 7/7 PASS. Locks the cont.140 branches a
 Commits 640877a5 (topple gate), a104f0df (self-check). NEXT: 3-cell N-of-M robustness run (CP-03+CP-28+CP-13
 x3) — is the composition DETERMINISTICALLY gold post-SimClock+sim-floor, or does the memory's "3-cell
 contention-limited stochastic" caveat still hold?
+
+cont.142 (2026-06-16): ★ 3-CELL DETERMINISM CONFIRMED — the "3-cell stochastic" caveat is RETIRED. N-of-M
+N=3 on CP-03+CP-28+CP-13 through the full scene_eyes gold-gate (restart-before-each-instance, topple-checked):
+3/3 GOLD, IDENTICAL every run — CP-03 color-sort 2 gripped, CP-28 bin 1 gripped, CP-13 column 2 z-levels 2
+gripped (5 CONVERGED+GRIPPED/run); 0 REJECT, 0 boot-fail, 0 ORIENTATION FAIL, 0 cell-count mismatch. The old
+stochastic drop (CP-13 Cube_1 -> z=0.53 on one run, the memory's contention caveat) is GONE: CP-13 stacks BOTH
+cubes cleanly every run. This is MECHANISTIC + empirical, not a lucky draw — the wall-clock premature-grip race
+(RCA cont.112-120) was REMOVED by SimClock(#32, grip-timing on sim-time) + sim-floor(#31); N=3 confirms the fix
+holds deterministically. So: 2-cell reliable AND 3-cell now deterministic-gold for this composition; a future
+rare failure (if any) would be a DIFFERENT mechanism. Updated memory composition_gold_verification (caveat ->
+resolved). Task #34 done. NEXT frontier: 4-/5-cell parallel (does contention scale, or is there a new wall at
+4 arms?), gated behind Anton's steer + a stable-network window for the LLM-flow track. Commits this session:
+640877a5 (topple gate), a104f0df (gold-gate self-check), 5fc61fad (cont.141 log). Branch feat/foundation-build.
