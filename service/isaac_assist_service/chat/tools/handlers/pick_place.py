@@ -4622,8 +4622,21 @@ _PLANNER_SCOPE_TAG = (ARM_SCOPE or "all")
 _UR_IK_SEEDS = int(getattr(builtins, "_ur10_ik_seeds", 16))
 _UR_TRAJ_SEEDS = int(getattr(builtins, "_ur10_trajopt_seeds", 2))
 _UR_ORI_TOL = float(getattr(builtins, "_ur10_ori_tol", 0.05))  # 2026-06-04 EXPERIMENT: loosen tool-down lock to test if the forced IK-branch flip (the swing) relaxes
-_PLANNER_ATTR = "_curobo_pp_planner_v22_{{}}_{{}}_s{{}}_{{}}_o{{}}".format(
-    _CUROBO_ROBOT_CFG.replace(".yml", "").replace(".", "_"), _PLANNER_SCOPE_TAG, _UR_IK_SEEDS, _UR_TRAJ_SEEDS, _UR_ORI_TOL)
+# 2026-06-16 COMPOSITION FIX: composed cells (/World/instN/...) get a SEPARATE planner so they PLAN
+# CONCURRENTLY. The shared planner forced plan-serialization (the plan-token) — composition's fatal
+# bottleneck (cont.114: a ~6.6s plan-wait let the conveyor feed the cube past the pickup -> drop).
+# Standalone (/World/Franka, no instN) -> empty suffix -> byte-identical shared planner; CP-52's 2 arms
+# (same /World, same cfg) keep the same key -> still share -> still serialize (no regression).
+_INST_ROOT = ""
+try:
+    _rp = ROBOT_PATH.split("/")
+    if len(_rp) > 2 and _rp[1] == "World" and _rp[2].startswith("inst"):
+        _INST_ROOT = _rp[2]
+except Exception:
+    _INST_ROOT = ""
+_PLANNER_ATTR = "_curobo_pp_planner_v22_{{}}_{{}}_s{{}}_{{}}_o{{}}{{}}".format(
+    _CUROBO_ROBOT_CFG.replace(".yml", "").replace(".", "_"), _PLANNER_SCOPE_TAG, _UR_IK_SEEDS, _UR_TRAJ_SEEDS, _UR_ORI_TOL,
+    ("_" + _INST_ROOT) if _INST_ROOT else "")
 _planner = getattr(builtins, _PLANNER_ATTR, None)
 if _planner is None:
     # Old global planner names — keep cleanup for backwards-compat with
@@ -4689,7 +4702,11 @@ else:
 # GATED: single-robot template has exactly one live `_curobo_pp_sub_*`
 # attr → _try_acquire_plan_token returns True with NO shared state touched
 # → byte-identical control flow to the un-locked handler (the 37 hold).
-_PLAN_LOCK_ATTR = "_curobo_plan_serial_lock_v1"
+# PER-PLANNER plan-lock (2026-06-16): keyed on _PLANNER_ATTR so composed cells with SEPARATE planners
+# get SEPARATE locks -> each lock has one arm -> no contention -> CONCURRENT planning. Same-planner arms
+# (CP-52 dual-Franka) share the lock -> still serialize (CUDA-700 protection preserved). Single-arm
+# fast-path (len(_subs)<=1) unchanged -> byte-identical.
+_PLAN_LOCK_ATTR = "_curobo_plan_serial_lock_v1_" + _PLANNER_ATTR
 if getattr(builtins, _PLAN_LOCK_ATTR, None) is None:
     setattr(builtins, _PLAN_LOCK_ATTR,
             {{"holder": None, "round": 0, "last_planner": None, "stamp": -1.0}})
