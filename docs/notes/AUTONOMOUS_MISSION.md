@@ -4536,3 +4536,13 @@ gate) — like the CP-09 scatter purge; genuine CP-08 golds re-create as the pip
 composer+gate (CP-13+CP-08 already re-verified genuine). NET on the false-success hunt (Anton "vaksam"): found a
 real bug hiding in the gold corpus + the 5-cell capstone, root-caused it (Kit-free), fixed gate+composer, and
 Kit-verified the fix produces a real grid. Commits: bf509e66 (#40a gate), 6d2048fa (#40b composer).
+
+cont.153 (2026-06-16): #39.1 + #39.3 Kit-VERIFIED on a fresh CP-13+CP-08 run. (1) GRIP-SLIP distance-gate:
+CP-13 Cube_1 rotation-slip=1° (EE-self-rot=44°) -> RIGID HOLD; Cube_4 2° (EE-self-rot=46°) -> RIGID HOLD. The
+false 89° SLIPPING is GONE even under large wrist rotation — the gripped-carry distance window correctly excludes
+the post-release EE-vs-placed-cube drift. (2) per-instance eyes.json: compose_CP-13_CP-08/inst0/eyes.json
+(robot inst0/Franka=CP-13) AND inst1/eyes.json (inst1/Franka=CP-08) both persist separately -> every cell raw-
+auditable (the overwrite that hid CP-08 behind CP-13 in cont.150 is fixed). Also re-confirmed: CP-08 grids
+(1-level 137mm), CP-13 columns, verdict GENUINE GOLD. All post-5-cell fixes (#40a gate, #40b composer, #39.1
+grip-slip, #39.3 per-instance-eyes) now Kit-verified. Remaining: CP-09 topple-REJECT (close the synthetic-only
+gap), #39.2 pick-conv offset (cosmetic), genuine 5-cell re-run + CP-08 gold re-creation (steady-state).
