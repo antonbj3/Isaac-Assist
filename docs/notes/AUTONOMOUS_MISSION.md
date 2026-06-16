@@ -4013,3 +4013,21 @@ theorized a serialization mechanism through 6 commits instead of reading the RAW
 grp signals that immediately show descend-then-rise-without-grip. Diagnostic-first = RAW per-object/per-tick
 rows, NOT summary metrics, NOT theory. GENERAL fix: wall-clock trajectory/grip timing is unsound whenever
 per-tick wall-clock varies — which composition GUARANTEES. (Commit after no-regression confirms.)
+
+cont.121 (2026-06-16): ★ sim-floor SCALES — 4-CELL GOLD (generalization confirmed). Ran CP-03+CP-28+CP-08+
+CP-13 (sort+bin+grid+column mini-line, 9 cubes across cells) to test the cont.120 fix under MORE contention
+(3 siblings planning vs 2). The decisive cell inst3 CP-13 (stacker, far end @18.5m): Cube_1 seated at 103mm
+CONVERGED+GRIPPED @3.7s (the SAME first-cube that seated 137mm + slipped in the un-fixed 3-cell) + Cube_2
+88mm GRIPPED -> real 2-level column. ALL cells GENUINE: CP-03 2 gripped, CP-28 1, CP-08 ALL 4 grid, CP-13
+column. EYES_GOLD_VERDICT: GOLD; appended verified_compositions.jsonl. So the fix doesn't just patch the
+specific 3-cell — it holds as contention INCREASES (4 cells), which is the real test (more cells -> more
+simultaneous planning -> more wall-clock/sim skew -> the sim-floor must hold). It does. Composition gold
+corpus now spans 2-cell + 3-cell + 4-cell. NEXT: SimClock core migration (task #32) — Anton elevated the
+wall-clock dependency to a core fix ("löses i kärnan, exporterbar; kompatibelt med andra fysikmotorer; ROS
+ska kunna användas med projektet"). Design: docs/notes/SIM_CLOCK_CONTRACT.md — one-method SimClock.now()
+contract (Kit-native SimulationContext.current_time / dt-accumulator fallback), engine-agnostic
+(Kit/MuJoCo/PyBullet/Newton/custom), AND the same clock Isaac's ROS2 /clock publisher emits -> internal
+controllers + external nav2/MoveIt/PLC bridges (use_sim_time) share ONE clock, zero skew. The dt-accumulator
+approach is already PROVEN here (the sim-floor's seg_sim_t += dt). Migration = gated _use_sim_clock (default
+OFF -> byte-identical) + no-regression sweep on the stable 37+8 before flipping. Sequenced after this 4-cell
+bank.
