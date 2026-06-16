@@ -4570,3 +4570,16 @@ CP-08-pile false-pass) is corrected to a real GOLD. Re-created a genuine 5-cell 
 deduped clear). #38 closed. The false-success cycle (Anton "vaksam") is COMPLETE: a real bug found, root-caused,
 fixed (gate+composer+grip-slip+per-instance-eyes+topple-reject), every fix real-data-verified, corpus cleaned,
 and the capstone re-earned honestly.
+
+cont.156 (2026-06-16): CP-08 gold corpus fully RESTORED + honest. Re-ran all 8 compositions that contained the
+purged false CP-08 records (cont.152) with the fixed composer (#40b) + honest gate (#40a): CP-13+CP-08,
+CP-08+CP-01, CP-03+CP-08, CP-08+CP-08+CP-13, CP-01+CP-13+CP-08, CP-03+CP-28+CP-08+CP-13, CP-03+CP-08+CP-13+CP-13+
+CP-28, and the 5-cell — ALL re-earned GENUINE GOLD, every CP-08 cell now "grid verified ... min-pair 137-138mm
+spread" (a real flat spread grid, not the 12-27mm pile the broken composer produced). So the 8 false golds are
+replaced by 8 honest ones; the gold corpus is back to full coverage AND truthful. The whole false-success arc
+(Anton "vaksam"): bug found -> root-caused (40-template composer drop_targets-dict collapse, manifests only for
+spread layouts) -> fixed (composer + gate) -> Kit-verified (CP-08 grids 138mm even under 5-arm contention) ->
+corpus purged of false golds -> corpus re-earned genuine -> durable memory (composer_dict_kwarg_bug) -> latent
+gap logged (#41 POSITION_KWARGS) -> strategic unlock identified (#42: ~12 palletizer blocks now composable).
+NEXT: #42 verify the newly-unlocked grid/palletizer blocks (CP-10/19/12/30) compose to real grids -> expand the
+composable block set with palletizer-type blocks (composition multiplier).
