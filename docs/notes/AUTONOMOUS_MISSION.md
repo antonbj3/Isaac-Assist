@@ -3935,3 +3935,21 @@ eyes-gold across bin/sort/column/grid); 3-cell caveated; the move-token + planne
 and verified-safe for when the instrumented 3-cell diagnosis identifies the real lever. Lesson reinforced:
 measure the mechanism BEFORE implementing the fix (I burned 2 fixes guessing; the no-regression check is
 the honest close).
+
+cont.117 (2026-06-16): ★ SERIALIZATION RCA WAS WRONG — read the raw controller/belt data, it's a GRASP/
+PICK failure. Anton asked "är det VRAM?" -> NO (VRAM flat 4GB/12GB, no OOM/CUDA). And NOT serialization
+either. RAW eyes.json for the failing inst2 (CP-13) proves it: (1) belt PAUSED correctly at t=0.5 (0.2->0.0)
+and Cube_1 stood STILL at x=11.81 z=0.83 for the full 15s — it did NOT ride away during the pick; (2) the
+arm PLANNED immediately + successfully (t=0.6 pc=8 plan_calls, pf=0 fails — no lock-wait, no plan-miss);
+(3) yet it NEVER grasped+lifted the stationary cube (stayed z=0.83), gave up at t=15.5, the belt resumed
+(t=15.1), and ONLY THEN did Cube_1 ride off the belt end and fall (z=0.53). So: a GRASP-EXECUTION failure
+on a stationary, cuRobo-REACHABLE cube (it planned to it) — a scene/grasp-alignment issue, NOT timing/
+serialization/memory. => My entire serialization RCA (cont.112-116: GPU->move-token->planner) addressed a
+NON-PROBLEM. The move-token v2 + per-instance planner changes are HARMLESS (no regression, 2-cell gold
+intact) but irrelevant to this drop. THE LESSON (severe, reinforces feedback_static_vs_kit + diagnostic-
+first): I theorized a serialization mechanism through THREE commits instead of reading the raw controller
+(pc/pf/pick) + belt (bsv) signals FIRST — which immediately show belt-paused + planned-ok + grasp-failed.
+Read the raw per-object + controller signals BEFORE theorizing. NEXT (correct): grasp_validate.py on the
+composed inst2 pick (cube paused x=11.81, ~0.6m from base) — why does the grasp miss a reachable stationary
+cube in the 3-cell layout but not standalone/2-cell? (possible: cube pauses at a slightly different
+position via composed belt/sensor-gating -> approach/jaw misalignment). 2-cell gold solid; 3-cell open.
