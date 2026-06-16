@@ -36,6 +36,13 @@ primary model is runtime composition (pre-creating all pairs doesn't scale or ge
    (e.g. "two pick-place stations side by side" → ground_truth [CP-01, CP-01] composed;
    "pick from a conveyor then stack on a pallet" → chain CP-07→CP-13). Tests whether the
    LLM DECOMPOSES + composes, not just single-template retrieval.
+   → **STARTED 2026-06-16**: added 4 composition cases (C-01..C-04) to retrieval_eval_set.json,
+   ground_truth GROUNDED IN VERIFIED scene_eyes GOLDS: C-01 [CP-08,CP-13], C-02 [CP-03,CP-28,CP-13],
+   C-03 [CP-03,CP-28,CP-08,CP-13], C-04 [CP-01,CP-03,CP-13]. The harness scores these via recall@k
+   over the GT set (line 207/225 — multi-template already supported), so they measure "does retrieval
+   surface ALL blocks a multi-station prompt needs". Harness run DEFERRED until the timing-sensitive
+   Kit gold-batch finishes (avoid GPU/CPU contention confounding the batch — the cont.120 lesson).
+   Still TODO: decomposition-specific scoring (per-subtask retrieval) + more diverse combos.
 2. **scene_eyes as an LLM tool**: expose a `observe_scene`/`scene_eyes` tool in
    chat/tools/tool_schemas.py so Gemini can call it to verify its own scene (currently only
    referenced in a diagnostics tool description, NOT a callable tool).
