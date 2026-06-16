@@ -102,8 +102,19 @@ SimClock work doesn't change that; it just makes the internal side honor the sam
    stage reset. **Probe first**: verify the native clock is queryable in the controller's
    `exec_sync`/RPC context (cf. the `SimulationContext._physics_context` caveat at pick_place.py:870)
    — fall back to the accumulator if not.
-2. **Replace the 22 sites** with `_sim_now()`, by category: playback → settle/dwell → token
-   timeouts → belt timing.
+2. **Replace the sites by CATEGORY — and NOT all of them** (correctness subtlety found 2026-06-16
+   while classifying the curobo-variant sites):
+   - **MIGRATE → sim-time (control timing):** the trajectory playback / dwell sites —
+     `S["seg_start_t"]` set+read (7833, 7879/7881 held-reanchor, 8035, 8039 `elapsed`, 8213/8319
+     nudge resets, 8349 seg-advance) and the `S["start_t"]` dwell sites (8914/8923, 9435/9442,
+     pending mode-confirm). These advance with the motion and MUST track the integrator.
+   - **KEEP → wall-clock (WATCHDOG semantics):** the cuRobo plan-loop deadlines / plan-budget
+     (5331, 5592, 6975 `_bs_start`, 7016) guard against a *planning call hanging the physics tick*
+     in real time. If these became sim-time, a frozen sim (sim-time not advancing) would never trip
+     them → hang. They are protecting wall-clock, by design. Leave them.
+   This watchdog-vs-control split is the trap: a blind "replace every `time.monotonic()`" would
+   convert a real-time hang-guard into a never-firing one. `_clock_now()` is for control timing;
+   watchdogs keep `time.monotonic()` explicitly.
 3. **Simplify the band-aids**: once playback is sim-time, the cont.120 sim-floor AND the
    move-token "fling-fix" (re-anchoring `seg_start_t` during holds) become **redundant** —
    sim-time playback cannot race. Remove them in the same pass.
