@@ -4242,3 +4242,20 @@ dropped -> now both clean). So #33 RESOLVED. UNBLOCKS the SimClock #32 multi-rob
 robust regardless of gate). Stale doc-comments in CP-08.json ("0.30x0.30", "spacing 0.08", "0.03m gap") not
 updated (cosmetic). NEXT: commit; re-verify the 2-cell CP-13+CP-08 + 5-cell CP-08-containing golds with the
 new CP-08 (no-regression); then the SimClock multi-robot-default is clear to flip.
+
+cont.135 (2026-06-16, ULTRACODE): CP-08 redesign NO-REGRESSION confirmed — gold corpus consistent. Re-ran the
+remaining CP-08-containing golds with the redesigned CP-08: 2-cell CP-13+CP-08 = GOLD (CP-08 flat 1-z grid);
+5-cell CP-03+CP-08+CP-13+CP-13+CP-28 = GOLD (all 5 cells genuine). With the earlier 4-cell + two-palletizer,
+the CP-08 fix holds across 2/4/5-cell + two-palletizer (all GOLD) -> the geometry change broke none of the
+CP-08 golds. HONEST NUANCE: in the 5-cell (max contention) CP-08 showed 2 z-levels [0.825,0.875] — one cube
+landed ON a neighbor (a soft 2-stack) rather than falling off the pallet. So the wider-grid+bigger-table fix
+ELIMINATED the hard #33 FALL (no cube <0.6m in ANY test — the actual failure) but a residual soft-stack
+persists under the highest contention (the gate accepts it: grid, no fall). The place-precision-under-max-
+contention root (the deeper place-release-tolerance lever) is a FUTURE refinement; the geometry fix achieved
+the goal (no falls, GOLD across all CP-08 compositions). #33 = done. SimClock #32 multi-robot-default now
+fully UNBLOCKED (CP-08 robust regardless of gate). The default-flip remains a DELIBERATE final step: flip
+default _use_sim_clock=subs>1, re-verify compositions gate-ON-DEFAULT (incl. the 5-cell with new CP-08, since
+flipping makes gate-ON the production path), single-robot gate-OFF-default byte-identical, then retire the
+sim-floor + fling-fix. SESSION ARC (18 commits): composition drop SOLVED (sim-floor, 2->5-cell golds) ·
+SimClock migration DELIVERED (workflow-verified, gate-ON validated, opt-in) · 2 tool false-positives fixed
+(scene_eyes GRIPPED-lift, gate --expect) · CP-08 #33 grid-fragility RESOLVED (scene-geometry redesign).
