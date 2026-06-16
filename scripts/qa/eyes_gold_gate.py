@@ -52,12 +52,19 @@ def verdict_for_instance(text, cls):
             low_z = False
     zmatch = re.search(r"STACK STRUCTURE \([^)]*\): (\d+) z-level", text)
     zlevels = int(zmatch.group(1)) if zmatch else None
+    # ORIENTATION/TOPPLE (2026-06-16, Anton false-success): a cube delivered to the right XY/Z but resting on
+    # its SIDE is not correctly placed. scene_eyes now emits a settled-tilt ORIENTATION block; a >60° topple is
+    # a hard reject (mirrors the Modal `vec` TOPPLED that the position gate is blind to — CP-09 lesson). TILTED
+    # (30-60°) is a soft warning only — NOT a reject (avoids false-negatives per Anton's no-graze principle).
+    toppled = re.search(r"\*\*\* ORIENTATION FAIL: \d+ object\(s\) TOPPLED[^:]*: ([^*]+?) \*\*\*", text)
     if never:
         return False, f"{never} cube(s) NEVER approached (not transported/grasped)"
     if gripped == 0 and zlevels is None:
         return False, "no CONVERGED+GRIPPED and no structure data (likely no grasp / no rows)"
     if real_explosion:
         return False, "real EJECTION/EXPLOSION detected"
+    if toppled:
+        return False, f"object(s) TOPPLED — delivered but tipped >60° from upright (not correctly placed): {toppled.group(1).strip()}"
     if low_z:
         return False, "a cube ended below 0.6m (fell to ground / never placed on the target surface)"
     if cls in ("unknown", ""):

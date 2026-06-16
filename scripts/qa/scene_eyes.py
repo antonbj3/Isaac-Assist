@@ -747,6 +747,48 @@ def _analyse(js):
             _kind = "spread grid (gaps present, gripper-clearance ok)" if _minpair > 0.045 else "clustered/piled (overlapping, no clean gaps)"
             out.append("    -> FLAT 1-tier %s. OK for a PALLETIZER; a SCATTER FALSE-SUCCESS for a TOWER/column stacker — judge by template intent." % _kind)
 
+    # ORIENTATION / TOPPLE (2026-06-16, Anton "vaksamma för false success"): a cube delivered to the right XY/Z
+    # but resting ON ITS SIDE is NOT correctly placed — the position/bbox gate AND the CONVERGED+GRIPPED count
+    # are both blind to it. scene_timeseries already flags this via settled-tilt and it surfaces in the Modal
+    # `vec` (TOPPLED), but the LOCAL gold-gate parses scene_eyes' OWN text, which had no upright signal — so a
+    # toppled-but-delivered cube passed the local gold-gate. Mirror scene_timeseries exactly: up_z = m22 =
+    # 1-2(qx²+qy²) for q=[w,x,y,z]; tilt = acos(up_z). Measure on the SETTLED tail (per-cube speed <0.05 m/s)
+    # so transit carry-swing isn't mistaken for a topple; fall back to the final frame. Round items (sphere/
+    # ball) roll and have no meaningful up-axis -> skipped. >60° = TOPPLED (a real reject), 30-60° = TILTED (warn).
+    def _tilt_of(_q):
+        _uz = max(-1.0, min(1.0, 1.0 - 2.0 * (_q[1] ** 2 + _q[2] ** 2)))
+        return math.degrees(math.acos(_uz))
+    _ori = []
+    for _nm in sorted(_ej_objs):
+        if any(_k in _nm.lower() for _k in ("sphere", "ball", "round")):
+            continue
+        _seq = []; _pp = None; _pt = None
+        for _r in rows:
+            _cp = (_r.get("cubes") or {}).get(_nm); _cq = (_r.get("cubes_q") or {}).get(_nm)
+            if not _cp or not _cq: continue
+            _sp = (math.dist(_cp, _pp) / (_r["t"] - _pt)) if (_pp is not None and _r["t"] > _pt) else 0.0
+            _seq.append((_cq, _sp)); _pp = _cp; _pt = _r["t"]
+        if not _seq: continue
+        _settled = [_tilt_of(_q) for _q, _sp in _seq if _sp < 0.05]
+        _ori.append((_nm, max(_settled) if _settled else _tilt_of(_seq[-1][0])))
+    if _ori:
+        # The TOPPLED *reject* fires only for box-like objects with an unambiguous canonical upright (cubes/
+        # items/boxes/crates/packages/blocks). Elongated graspables (broom/handle/lever/valve/bottle) that
+        # scene_eyes also tracks can legitimately rest non-upright -> reporting their tilt is fine, but they
+        # must NOT trigger a gold-gate reject (that would be a false-negative on a good composition). Anton's
+        # no-graze / no-false-negative discipline. Compositions are cubes, so this is belt-and-suspenders.
+        def _boxlike(_n):
+            _l = _n.lower()
+            return _l.startswith(("cube", "item")) or any(_k in _l for _k in ("box", "crate", "package", "block", "carton", "parcel"))
+        _topp = [(n, t) for n, t in _ori if t > 60 and _boxlike(n)]
+        out.append("ORIENTATION (settled cube tilt from world-up; >60°=TOPPLED, 30-60°=TILTED; round items skipped; reject scoped to box-like):")
+        for _nm, _t in sorted(_ori, key=lambda x: -x[1]):
+            _tag = "TOPPLED" if _t > 60 else "TILTED" if _t > 30 else "upright"
+            out.append("    %-14s tilt=%5.1f°  %s%s" % (_nm, _t, _tag, "" if (_boxlike(_nm) or _t <= 60) else " (non-box; not a reject)"))
+        if _topp:
+            out.append("*** ORIENTATION FAIL: %d object(s) TOPPLED (delivered but tipped >60° from upright = not correctly placed): %s ***" % (
+                len(_topp), ", ".join(n for n, _ in _topp)))
+
     # BELT TIMELINE (2026-06-14): belt surface-velocity over the run — pins the PAUSE/RESUME behaviour
     # behind the conveyor-stall class. A belt that stays at 0 most of the run = boxes never advance to the
     # pick zone (the controller pauses the belt during pick phases / while a cube is "imminent"; if it

@@ -4325,3 +4325,34 @@ optimistic (honest: 8/8 delivered, grip-quality flags on several baselines). FIX
 eyes_gold_gate.py gate on the scene_eyes vec TOPPLED signal (a toppled cube = not properly placed = reject),
 closing the grip-quality gap. LOCAL composition golds stand (delivery-verified), but the TOPPLED gate makes
 them stricter. Lesson banked: report the scene_eyes signal (vec), not the position gate; and audit the audit.
+
+cont.140 (2026-06-16): ★ TOPPLE GATE — closed the grip-/placement-quality false-success gap cont.139 named.
+The cloud `vec` already carried a TOPPLED verdict (scene_timeseries settled-tilt), but the LOCAL gold pipeline
+parses scene_eyes' OWN printed analysis, which had NO upright signal — so a delivered-but-tipped cube passed
+the local gold-gate (the exact "vaksam för false success" hole). TOOLS-ARE-LIVING fix, two files:
+ (1) scene_eyes.py: new first-class ORIENTATION detector. Mirrors scene_timeseries EXACTLY — up_z = m22 =
+     1-2(qx²+qy²) for the cube's quaternion q=[w,x,y,z] (already captured as cubes_q); tilt=acos(up_z); measured
+     on the SETTLED tail (per-cube speed <0.05 m/s) so transit carry-swing isn't mistaken for a topple; round
+     items (sphere/ball) skipped. >60°=TOPPLED, 30-60°=TILTED. Emits a parseable "*** ORIENTATION FAIL: N
+     object(s) TOPPLED ...: <names> ***". REJECT scoped to BOX-LIKE objects (cube/item/box/crate/package/block)
+     — elongated graspables (broom/handle/lever/valve/bottle) can legitimately rest non-upright, so they are
+     REPORTED but never trigger a reject (Anton no-false-negative discipline). Threshold byte-matches
+     scene_timeseries (line 518) -> LOCAL and CLOUD topple detection now agree by construction.
+ (2) eyes_gold_gate.py: hard-reject branch on the ORIENTATION FAIL line (regex), placed among the universal
+     rejects (never-gripped / explosion / topple / low-z) — class-independent, since a toppled cube is mis-placed
+     regardless of stack/grid/bin intent.
+ SCOPE DISCIPLINE: I gate ONLY TOPPLED (objective mis-placement). The softer grip-quality vec flags
+ (NON_RIGID_GRIP / LOOSE_GRIP / STACK_DRIFT) stay OBSERVATION-ONLY — whether to require a rigid grip is task #9
+ [ANTON] grip-physics architecture, his decision, NOT mine to hard-gate unilaterally.
+ VERIFICATION (offline + live, both sides):
+  - offline through the ACTUAL gate: toppled-cube cell -> REJECT (exit 1); all-upright -> GOLD (exit 0); tilt
+    math unit-checked (90°->TOPPLED, 45°->TILTED-warn, yaw-only->upright); _boxlike() unit-checked.
+  - LIVE Kit (restart-before-each, multi-robot -> SimClock auto-ON): CP-01+CP-13 composition. inst0 CP-01 4
+    cubes all tilt 6.6° = upright (real 4-level column); inst1 CP-13 Cube_1 6.6°/Cube_2 6.4° = upright. NO
+    spurious ORIENTATION FAIL on either clean cell -> EYES_GOLD_VERDICT: GOLD, both cells GENUINE. The
+    no-false-negative side is proven on real quaternion data: a properly-built column reads upright.
+ DILIGENCE on the 11 pre-existing gold_scene_eyes_verified records (certified before today): their cells are
+ CP-01/03/08/13/28/29 — all already topple-SCREENED by the cloud `vec` this session (same scene_timeseries
+ signal); only CP-09 ever read TOPPLED and it is in NONE of the 11. So no re-cert crisis; the gap was purely
+ that the LOCAL gate could not independently SEE topple. Next: standalone topple-sweep of CP-03/08/28/29 to bank
+ LOCAL scene_eyes evidence (CP-01/CP-13 already done by this run) for the rest of the gold building blocks.
