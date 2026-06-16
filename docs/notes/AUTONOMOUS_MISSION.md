@@ -4546,3 +4546,15 @@ auditable (the overwrite that hid CP-08 behind CP-13 in cont.150 is fixed). Also
 (1-level 137mm), CP-13 columns, verdict GENUINE GOLD. All post-5-cell fixes (#40a gate, #40b composer, #39.1
 grip-slip, #39.3 per-instance-eyes) now Kit-verified. Remaining: CP-09 topple-REJECT (close the synthetic-only
 gap), #39.2 pick-conv offset (cosmetic), genuine 5-cell re-run + CP-08 gold re-creation (steady-state).
+
+cont.154 (2026-06-16): ★ topple-gate REJECT side now PROVEN ON REAL KIT PHYSICS — the synthetic-only gap (flagged
+honestly cont.139/146) is CLOSED. Ran CP-09 (known toppler) standalone through the upgraded scene_eyes: it
+produced a REAL toppled cube — ORIENTATION: Cube_1 tilt=92.3° TOPPLED (others upright 8-9°) -> emitted
+"*** ORIENTATION FAIL: 1 object(s) TOPPLED ... Cube_1 ***". Fed that real output to eyes_gold_gate -> REJECT on
+the topple. So the full chain "real >60° toppled cube -> scene_eyes ORIENTATION detector emits TOPPLED -> gate
+rejects" is verified on REAL physics, not just the synthetic fixture. The cont.140 topple gate's detector
+(positive/firing side) was only proven to READ real UPRIGHT cubes (6-8°) + the reject was synthetic-only; CP-09
+closes it (detector fires on a real 92° topple + gate rejects). Also: completeness audit of the 17 remaining gold
+records found 0 other CP-08-class structure/intent mismatches (corpus clean post-purge). NET: every gate the
+false-success cycle touched is now real-data-verified — topple (detect+reject), grid-collapse (composer+gate),
+grip-slip (distance gate), per-instance eyes.
