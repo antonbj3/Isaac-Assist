@@ -4595,3 +4595,16 @@ gold-recorded). MODAL SPEEDUP (Anton "säker att mullvad inte fungerar?" + "snab
 this session (boot_test kit_ok=true 205s T4 via VPN; modal app list ok; IP-set refresh ok) — the directive's
 "Modal floppar, använd EJ" is OUTDATED. Built run_composition + compose entrypoint in the pool (6x parallel
 composition gold pipeline on cloud + frees local Kit); parity check (CP-13,CP-08 on cloud) in flight.
+
+cont.158 (2026-06-16): ★ MODAL 6× SPEEDUP LIVE — composition parity HOLDS on cloud. run_composition parity check
+(CP-13,CP-08 on Modal T4): gold=True, CP-08 "grid verified ... min-pair 138mm spread" — IDENTICAL to local
+(137-138mm). So the #40b composer fix + the whole composition gold pipeline reproduce faithfully on the cloud,
+and run_composition works. The app auto-stopped clean (modal app list verified 0 running). This delivers Anton's
+"snabba på det": the gold pipeline can now run 6 compositions in PARALLEL on Modal (max_containers=6) + frees
+local Kit -> ~6x throughput. Diagnostic-first vindicated: the directive's "Modal floppar, använd EJ" was a STALE
+assumption; measurement (boot_test kit_ok + this parity) superseded it (Anton pushed: "säker att mullvad inte
+fungerar?"). Rolling out: a Modal batch of the remaining unlocked palletizers (CP-25/27/42/49/71/77 + CP-13)
+runs 6-wide on cloud while local Kit does CP-20+CP-13 = genuine local+cloud parallelism. SAFETY honoured: app
+auto-stop + modal app list verify after every run; NEVER UR10 on cloud (run_composition is Franka-only); credits
+finite (bounded batches). Bigger future lever (#43): scene_eyes build-once-observe-all = ~N× per composition on
+BOTH local+cloud (the per-instance 205s Kit reboot dominates).
