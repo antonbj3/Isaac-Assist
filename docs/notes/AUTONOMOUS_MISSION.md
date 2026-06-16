@@ -4045,3 +4045,21 @@ a message + an all-zero guard). Re-verified CP-03+CP-28+CP-13 with the honest la
 successes still read GRIPPED (no false-negative), counts unchanged. So: removed a tool false-positive without
 perturbing the verification authority. Banked the cont.120 lesson into the tool itself (hand-derived signal ->
 first-class).
+
+cont.123 (2026-06-16): steady-state gold-batch (#30) — caught + fixed a GATE FALSE-POSITIVE (silent cell-
+drop). Built /tmp/gold_batch_driver.sh (loops run_eyes_gold.sh over a composition list -> GOLD/FAIL summary)
+and ran 2 NEW compositions to grow the corpus + stress the sim-floor fix harder. RESULTS: (1) CP-01+CP-03+
+CP-13 = GOLD (legit, all 3 evaluated — new rep CP-01 verified in a composition, delivers 4 cubes). (2) CP-03+
+CP-08+CP-13+CP-13+CP-28 (5-cell, TWO stackers) printed "GOLD" — BUT reading the FULL verdict (not the
+truncated summary) showed only 4 cells: inst1/CP-08 hit KIT_BOOT_FAIL (Kit didn't bind :8001 in the boot
+window — an INFRA failure, not the controller) -> was skipped -> the gate declared "GOLD (all cells)" over the
+surviving 4 + APPENDED a mislabeled 4-cell record "CP-03+CP-13+CP-13+CP-28". That is partial-as-pass — the
+exact false-positive the discipline forbids. FIX (eyes_gold_gate.py): added `--expect N`; if evaluated cells
+!= N -> NOT GOLD ("incomplete — M/N cells; re-run"). Verified Kit-free: comp2's 4/5 with --expect 5 -> NOT
+GOLD; comp1's 3/3 with --expect 3 -> still GOLD. Orchestrator hardened: pass --expect ${#CELLS[@]} + retry a
+transient boot once. PURGED the mislabeled record from verified_compositions.jsonl (18 kept, comp1 legit gold
+intact). So the 5-cell two-stacker claim is NOT yet earned — re-running with the hardened pipeline. The 4
+cells that DID run (incl. both CP-13 stackers seating @103mm) are encouraging but the 5-cell verdict waits on
+a complete run. LESSON: read the FULL per-cell verdict, never the summary; "all cells genuine" must MEAN all
+cells in the composition were evaluated, not just the survivors. Tools-are-living: the silent-drop hole is now
+closed in the gate itself.

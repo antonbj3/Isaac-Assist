@@ -76,9 +76,23 @@ def verdict_for_instance(text, cls):
 
 
 def main():
-    pairs = [a.split(":", 1) for a in sys.argv[1:] if ":" in a]
+    argv = list(sys.argv[1:])
+    expect = None
+    if "--expect" in argv:
+        try: expect = int(argv[argv.index("--expect") + 1])
+        except Exception: expect = None
+    pairs = [a.split(":", 1) for a in argv if ":" in a]
     if not pairs:
-        print("usage: eyes_gold_gate.py [--append] CP-01:inst0.txt CP-09:inst1.txt ..."); return 2
+        print("usage: eyes_gold_gate.py [--append] [--expect N] CP-01:inst0.txt CP-09:inst1.txt ..."); return 2
+    # 2026-06-16: GUARD against silent cell-DROP — a KIT_BOOT_FAIL / skipped instance must NOT pass as
+    # "all cells genuine". If the caller declares the composition's cell count (--expect N) and fewer
+    # instances were evaluated, FAIL: a partial evaluation is INVALID, not GOLD. (cont.123: a 5-cell run
+    # where inst1/CP-08 boot-failed still printed GOLD over the surviving 4 cells + appended a mislabeled
+    # 4-cell record. partial-as-pass is the exact false-positive that must never pass.)
+    if expect is not None and len(pairs) != expect:
+        print("  CELL-COUNT MISMATCH: evaluated %d of %d cells (boot-fail / skipped instance)" % (len(pairs), expect))
+        print("EYES_GOLD_VERDICT: NOT GOLD (incomplete — %d/%d cells evaluated; re-run)" % (len(pairs), expect))
+        return 1
     all_ok = True
     cells, verdicts = [], []
     for tpl, path in pairs:
