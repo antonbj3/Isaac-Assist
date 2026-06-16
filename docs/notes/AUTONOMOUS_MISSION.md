@@ -3984,3 +3984,32 @@ registered (or None->global-degrade), (3) the controller MODE during 6.3-14.3 (e
 That triad definitively says whether v2 works + what freezes the arm. STATE: 2-cell composition gold SOLID;
 3-cell open; serialization v2 + per-instance planner committed + verified-SAFE (no 2-cell regression) but
 effectiveness UNCONFIRMED. Stopping the thrash; this needs deliberate instrumentation with fresh budget.
+
+cont.120 (2026-06-16): ★★ 3-CELL DROP CRACKED — root cause = PREMATURE GRIP-CLOSE from WALL-CLOCK timing,
+NOT serialization/VRAM/freeze (every cont.112-119 reading was WRONG; the answer was in the RAW per-tick
+eyes.json rows the whole time). MEASURED (inst2 CP-13 in compose_CP-03_CP-28_CP-13, eyes.json 1800 rows):
+the arm DESCENDS to EE z=0.967 over Cube_1 @t1.5, dwells only 0.2s SIM-time, then RISES @t1.7 WITHOUT
+gripping (grp=None throughout) -> Cube_1 never lifts -> belt resumes -> rides off -> falls. The 2nd pick
+(Cube_2 @t23, cells now DESYNCED) seats 34mm LOWER (103 vs 137mm) -> SYMMETRIC grip (finger force 0.71/0.66
+vs Cube_1's 2.88/0.75 = off-center top-edge pinch) -> delivered. ROOT CAUSE: the grip-close + seg-advance
+gates (pick_place.py curobo variant ~8077/8347) sample WALL-CLOCK elapsed = monotonic()-seg_start_t. In a
+multi-cell scene the sibling cells' concurrent cuRobo plan_pose calls STALL the single-threaded Kit physics
+tick, so wall-clock RACES AHEAD of sim-time -> close fires while the arm is still PHYSICALLY descending (PD
+lag, ~2 sim-ticks in) -> grips the cube TOP EDGE -> asymmetric -> no grasp. Explains EVERYTHING: standalone
+works (no contention), 2-cell works (less), 3-cell's FIRST pick fails (max synchronized first-pick
+contention; by the 2nd pick the cells have desynced). FIX (4 surgical edits, curobo variant ONLY): accumulate
+sim-time S["seg_sim_t"] += dt (the physics-step delta, reset where seg_start_t resets) and require it ALSO
+reach the gate -> "... and ((not _sim_floor) or seg_sim_t >= mt+settle)". Gated _sim_floor = (live curobo
+subs > 1) -> single-robot (the whole stable 37+8 library) SKIPS it -> BYTE-IDENTICAL; the AND-gate can only
+DELAY (never advance) firing, and only when sim LAGS wall-clock -> light/standalone scenes unaffected by
+construction. VERIFIED (scene_eyes gold gate): 3-cell CP-03+CP-28+CP-13 = GOLD — CP-13 Cube_1 137->104mm
+CONVERGED+GRIPPED, Cube_2 88mm GRIPPED, REAL 2-level column [0.825,0.875]; CP-03 + CP-28 both genuine;
+appended verified_compositions.jsonl. NO-REGRESSION PASSED (both measured): (a) CP-13+CP-08 2-cell gold
+[sim_floor ACTIVE] = STILL GOLD (CP-13 column Cube_1 104mm + Cube_2 88mm gripped; CP-08 grid all 4 gripped);
+(b) standalone CP-13 [single-robot, sim_floor SKIPPED] = both cubes delivered (102mm, RIGID HOLD, symmetric
+forces 0.72/0.71), real column -> byte-identical confirmed. So the fix CRACKS 3-cell + no-regress 2-cell-gold
++ byte-identical standalone = all three axes measured. Committed. LESSON (banked, severe + reinforces diagnostic-first): I
+theorized a serialization mechanism through 6 commits instead of reading the RAW per-tick EE-z + dwell +
+grp signals that immediately show descend-then-rise-without-grip. Diagnostic-first = RAW per-object/per-tick
+rows, NOT summary metrics, NOT theory. GENERAL fix: wall-clock trajectory/grip timing is unsound whenever
+per-tick wall-clock varies — which composition GUARANTEES. (Commit after no-regression confirms.)

@@ -3612,6 +3612,8 @@ def _log_event(info=""):
     try:
         _MODE_LOG.append((S["ticks"], S["mode"], str(info)[:80]))
         if len(_MODE_LOG) > 50: _MODE_LOG.pop(0)
+        try: open("/tmp/mt_diag.txt", "a").write("EVENT %s tick=%s mode=%s %s\\n" % (ROBOT_PATH, S["ticks"], S["mode"], str(info)[:80]))  # 2026-06-16 DIAG: full event timeline
+        except Exception: pass
         # Write tail (last 8 events) to USD attr — readable from outside
         tail = _MODE_LOG[-8:]
         log_str = " || ".join([f"t{{m[0]}}:{{m[1]}}={{m[2]}}" for m in tail])
@@ -4808,10 +4810,18 @@ def _try_acquire_move_token():
         _a = _bases.get(_me); _b = _bases.get(_s)
         if _a is None or _b is None: return True   # unknown base -> serialize (safe)
         return ((_a[0]-_b[0])**2 + (_a[1]-_b[1])**2) < (_MOVE_REACH_M * _MOVE_REACH_M)
-    if any(_overlaps(_s) for _s in _movers):       # an OVERLAPPING arm is moving -> WAIT
+    _ovl = [_s for _s in _movers if _overlaps(_s)]
+    _rr = (not _ovl) and (_lock.get("last_mover") == _me) and any((_overlaps(_s) and _s not in _movers) for _s in _subs)
+    _dec = "HOLD" if _ovl else ("RR" if _rr else "MOVE")
+    _dl = _lock.setdefault("_diaglast", {{}})   # 2026-06-16 DIAG: log decision transitions to /tmp/mt_diag.txt
+    if _dl.get(_me) != _dec:
+        _dl[_me] = _dec
+        try:
+            open("/tmp/mt_diag.txt", "a").write("MOVETOK %s me=%s basereg=%s nbase=%d nmov=%d ovl=%d subs=%d\\n" % (_dec, _me, (_me in _bases), len(_bases), len(_movers), len(_ovl), len(_subs)))
+        except Exception: pass
+    if _ovl:                                        # an OVERLAPPING arm is moving -> WAIT
         return False
-    # round-robin fairness among OVERLAPPING contenders only (non-overlapping never contend)
-    if _lock.get("last_mover") == _me and any((_overlaps(_s) and _s not in _movers) for _s in _subs):
+    if _rr:                                         # round-robin fairness among OVERLAPPING contenders only
         _lock["last_mover"] = None
         return False
     _movers[_me] = _now
@@ -7821,6 +7831,7 @@ def _on_step(dt):
             S["segments"] = segs
             S["seg_idx"] = 0
             S["seg_start_t"] = time.monotonic()
+            S["seg_sim_t"] = 0.0
             S["mode"] = "executing"
             _release_plan_token()
             return
@@ -7876,6 +7887,21 @@ def _on_step(dt):
                     _grip_close()
                 return
             S["_held_elapsed"] = None  # token acquired -> clock runs normally again
+            # 2026-06-16 SIM-TIME FLOOR (multi-robot composition grasp-seat fix): the grip-close + seg-advance
+            # gates below use WALL-CLOCK `elapsed = monotonic()-seg_start_t`. In a multi-cell scene the sibling
+            # cells' concurrent cuRobo plan_pose calls stall the single Kit physics thread, so wall-clock RACES
+            # AHEAD of SIM-time -> the close fires while the arm is still PHYSICALLY descending (PD lag, ~2 sim-
+            # ticks in) -> it grips the cube TOP EDGE at ~137mm (vs the seated ~103mm) -> asymmetric (force 2.88
+            # vs 0.75) -> NO grasp -> lifts away -> cube rides off + falls. MEASURED (inst2 CP-13, compose_CP-03_
+            # CP-28_CP-13 eyes.json): EE bottomed z=0.967 @t1.5 then ROSE @t1.7 (0.2s sim dwell, grp=None); the
+            # SECOND pick @t23 (cells desynced -> less contention) seated 103mm + delivered. FIX: accumulate the
+            # physics step dt and require SIM-time ALSO reach the gate. The AND-gate can only DELAY (never advance)
+            # firing, and only when sim LAGS wall-clock (the contention case) -> light/standalone scenes (sim>=
+            # real-time) are unaffected. GATED multi-robot -> the whole single-robot stable library skips it ->
+            # byte-identical. seg_sim_t resets wherever seg_start_t resets (enter-executing + seg-advance).
+            _sim_floor = len(_curobo_live_pp_subs()) > 1
+            if _sim_floor:
+                S["seg_sim_t"] = S.get("seg_sim_t", 0.0) + float(dt)
             segs = S["segments"]
             if segs is None or S["seg_idx"] >= len(segs):
                 # Done — verify cube actually reached the bin before marking
@@ -8048,7 +8074,7 @@ def _on_step(dt):
                 # straight below the cone (xy_err<0.08 already passes), so a settle is all that's needed.
                 if cur_seg["action_after"] == "open" and _SG_IS_SUCTION:
                     pre_grip_settle = 1.2
-                if not cur_seg["grip_done"] and elapsed >= mt + pre_grip_settle:
+                if not cur_seg["grip_done"] and elapsed >= mt + pre_grip_settle and ((not _sim_floor) or S.get("seg_sim_t", 0.0) >= mt + pre_grip_settle):
                     if cur_seg["action_after"] == "close":
                         # 2026-06-02 CP-83 grasp-completion gate (suction/UR10): cp83_obs3 showed the
                         # cone grips the cube at ~0.30m (the maxGripDistance EDGE) -> weak grip -> drop
@@ -8318,9 +8344,10 @@ def _on_step(dt):
                 #  post-place idle Anton flagged. Grasp/close path UNCHANGED to protect the 37 friction passes.)
                 post_grip = 1.5 if cur_seg["action_after"] == "close" else \\
                             (0.3 if cur_seg["action_after"] == "open" else 0.0)
-                if elapsed >= mt + pre_grip_settle + post_grip:
+                if elapsed >= mt + pre_grip_settle + post_grip and ((not _sim_floor) or S.get("seg_sim_t", 0.0) >= mt + pre_grip_settle + post_grip):
                     S["seg_idx"] += 1
                     S["seg_start_t"] = time.monotonic()
+                    S["seg_sim_t"] = 0.0
             return
     except Exception as e:
         _record_err(e)
