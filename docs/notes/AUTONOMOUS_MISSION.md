@@ -4292,3 +4292,17 @@ the cron's "floppar" was actually normal SPOT-PREEMPTION (Modal auto-restarts th
 169-217s = fresh faithful containers, NOT the <60s warm-degrade), not the Mullvad-flap tear. Both ephemeral
 apps auto-stopped clean (verified modal app list: 0 tasks). #32 SUBSTANCE + VALIDATION COMPLETE. Only optional
 cleanup remains: retire the now-redundant sim-floor + move-token fling-fix (own no-regression pass). 19 commits.
+
+cont.138 (2026-06-16): ★ CORRECTION (diagnostic-first caught my own error) — the move-token FLING-FIX is NOT
+redundant under sim-time playback; KEEP it. cont.136/137 said "retire sim-floor + fling-fix (redundant)". WRONG
+for the fling-fix: under the multi-robot-default the SHARED sim-clock (builtins._sim_clock_v1) is advanced by
+the OWNER sub EVERY frame, regardless of which instances are move-token-HELD. So during an overlapping-arm
+hold (CP-52/65, bases <2m), a held instance's elapsed = _clock_now()-seg_start_t would STILL advance during
+the hold -> idx jumps on resume -> FLING — UNLESS the fling-fix re-anchors seg_start_t (freezes elapsed at its
+pre-hold value). The shared-clock-advances-during-hold is exactly the same failure mode as wall-clock had, so
+the fling-fix is STILL REQUIRED. Removing it per the wrong claim would re-introduce the composition-fling bug.
+Only the SIM-FLOOR (the cont.120 seg_sim_t>=mt+settle AND-condition) is genuinely redundant under sim-time
+playback (elapsed and seg_sim_t are both executing-sim-time -> equivalent) — and even that is harmless
+redundancy, so the "optional cleanup" is JUST the sim-floor, low-value, deferred. Net: keep the fling-fix; the
+sim-floor can be removed someday but needn't be. Lesson: think through the SHARED-clock semantics before
+declaring a band-aid redundant.
