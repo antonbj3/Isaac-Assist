@@ -4397,3 +4397,21 @@ zones -> sized Cubes, honest 1/6) and bin-based sorters grade correctly (routing
 reduces to CP-48: check (diagnostic-first) whether its routing destinations are bbox-less (false-pass risk) or
 real bins (leave it). Task #35 done. Other safe Kit-free work this session also done: training dataset refreshed
 (canonical_templates.jsonl, CP-08 redesign now current; gitignored, no commit). Branch feat/foundation-build.
+
+cont.144 (2026-06-16): #21 multi-dest false-pass vein — CLOSED systematically. (1) Built a first-class static
+PRE-FILTER scripts/qa/sorter_dest_bbox_scan.py that scans the whole corpus for the false-pass SIGNATURE
+(multi-dest routing whose destinations are bbox-less Xform anchors -> the gate degrades to UNION -> misrouted
+counts as delivered). Corpus result: only ONE hit, CP-NEW-palletizer-mixed-sku (PalletZoneA/B = Xform). All
+other multi-dest sorters (CP-19/36/47/48/59/barcode-divert/sorter-3lane/inspector-reject, CP-50 trays via
+asset) have REAL bbox destinations (create_bin or sized Cube). (2) CP-48 Kit-verified GENUINE (the task's
+"green-pile" suspect): gate_one success=True with cubes_ever_in_target_xy g1/g2/g3/g4=true (greens->GoodBin),
+Cube_bad=false (red correctly EXCLUDED from GoodBin -> RejectBin). Correct routing, NOT a false-pass. Measured,
+not assumed (the false-positive discipline cuts both ways). (3) mixed-sku: its active false-pass is ALREADY
+neutralized (per-SKU targets + completeness=all -> honest fail via the belt-pause-stall, only 1-5/6 deliver).
+BUT found a code-vs-claim inconsistency: c461821b's message + verified_status claimed "zone-bboxes (Xform->
+Cube+scale)" yet the git DIFF only added the targets map — the zones are STILL bbox-less Xform. Corrected the
+verified_status surgically (1-line, JSON-valid, no churn) to state the truth: false-pass killed by completeness
+=all NOT zone-bboxes; LATENT union-degrade if belt-pause is ever fixed -> bundle a sized-collisionless-Cube
+zone fix WITH the (hands-off, shared CP-52/65) belt-pause fix, since the zone grading can't be validated until
+boxes actually deliver. NET: no ACTIVE multi-dest false-pass remains in the corpus; the lone bbox-less template
+honestly fails. #21 resolved (the remaining mixed-sku work is the hands-off belt-pause-stall, not a false-pass).
