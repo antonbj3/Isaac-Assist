@@ -4162,3 +4162,19 @@ compose branch too (works via the LIVE gate even post-build). NEXT: composition 
 SIMCLOCK=1) — does sim-time playback HOLD the gold under contention (and subsume the sim-floor)? Then flip the
 default + retire the band-aids. ROS /clock alignment becomes "publish THIS accumulated t" later, not a native
 read.
+
+cont.130 (2026-06-16, ULTRACODE): SimClock gate-ON VALIDATED on COMPOSITION — sim-time playback holds the
+gold under contention. Ran CP-03+CP-28+CP-13 with SIMCLOCK=1; confirmed (via per-instance goldeyes files, not
+the grep-filtered nohup) that FLAG_SET _use_sim_clock=True fired on ALL 3 cells (inst0/1/2, right after
+COMPOSE_BUILT). Verdict: GOLD — CP-03 2 gripped, CP-28 1, CP-13 column 2 z-levels, all picks clean @103-104mm.
+Fast pick times (@3.4/3.9/5.0s) corroborate sim-time engaged. So sim-time-based trajectory playback holds the
+3-cell composition gold under concurrent-planning contention — the exact regime that broke under wall-clock
+(cont.120). STATE OF #32: migration DONE + workflow-verified + gate-ON VALIDATED for single-robot (CP-13
+delivers, faster) AND composition (3-cell GOLD). The 8 playback sites read _clock_now(); watchdogs keep
+monotonic; gate is live + default OFF (the proven byte-identical state). REMAINING (deliberate, final step):
+flip the default ON, which changes single-robot timing wall-clock->sim-time for the WHOLE stable 37+8 library
+-> needs the full no-regression sweep before flipping (NOT a sample — that would be a partial-as-pass on a
+GLOBAL default). Once flipped, the sim-floor (cont.120) + the move-token fling-fix become redundant (with
+sim-time playback, elapsed and seg_sim_t are both sim-time -> the floor is a no-op) and retire. Did NOT flip
+on partial validation. SimClock is the substance of Anton's elevated core fix — implemented, engine-agnostic
+(dt-accumulator), ROS-/clock-alignable, and now proven to work; the default-flip sweep is the clean finish.
