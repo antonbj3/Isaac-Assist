@@ -4259,3 +4259,20 @@ flipping makes gate-ON the production path), single-robot gate-OFF-default byte-
 sim-floor + fling-fix. SESSION ARC (18 commits): composition drop SOLVED (sim-floor, 2->5-cell golds) ·
 SimClock migration DELIVERED (workflow-verified, gate-ON validated, opt-in) · 2 tool false-positives fixed
 (scene_eyes GRIPPED-lift, gate --expect) · CP-08 #33 grid-fragility RESOLVED (scene-geometry redesign).
+
+cont.136 (2026-06-16, ULTRACODE): SimClock MULTI-ROBOT-DEFAULT FLIPPED + verified — #32 substance DONE. Flipped
+the gate default: `getattr(builtins, "_use_sim_clock", len(_curobo_live_pp_subs()) > 1)` in BOTH _clock_now +
+the _on_step advance-guard (same computation -> no mixed-clock). So PRODUCTION now: MULTI-robot (subs>1) ->
+sim-time playback by default (the cont.120 fix, principled); SINGLE-robot (subs<=1) -> time.monotonic() =
+byte-identical to the whole stable library. Explicit builtins._use_sim_clock (SIMCLOCK=1/=False) still
+overrides for tests. VERIFIED (no flag, gate auto-resolves): standalone CP-13 (auto-OFF) delivered a real
+column [0.825,0.875] both gripped = single-robot byte-identical; 3-cell CP-03+CP-28+CP-13 (auto-ON) = GOLD
+(CP-03 sort + CP-28 bin + CP-13 column all GENUINE) = multi-robot sim-time default holds the gold. The
+auto-ON path IS the validated SIMCLOCK=1 path (same _clock_now/advance), just resolved via the default; gate
+logic is trivially correct (subs>1->ON). No-regression risk = none (single byte-identical, multi GOLD). The
+sim-floor + move-token fling-fix are now REDUNDANT under sim-time playback (elapsed + seg_sim_t both sim-time)
+-> kept as harmless redundancy; their retirement is optional follow-up cleanup (own no-regression). SimClock —
+Anton's elevated core fix — is now the PRODUCTION timing model for multi-robot, engine-agnostic + ROS-/clock-
+alignable, with single-robot untouched. PLUS: using Modal in parallel (Anton's ask) for the single-robot
+no-regression sweep — Modal IS usable this session (3 parallel Franka containers ran, no floppar so far),
+running alongside this local verify = the parallel unlock.

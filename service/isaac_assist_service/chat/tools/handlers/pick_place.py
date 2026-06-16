@@ -4866,7 +4866,12 @@ def _sim_clock_advance(dt):
     # accumulated t later (a separate, validated enhancement) rather than read an unreliable native clock.
     _c["t"] = float(_c.get("t", 0.0)) + float(dt); _c["native"] = False
 def _clock_now():
-    if not getattr(builtins, "_use_sim_clock", False):
+    # 2026-06-16 MULTI-ROBOT DEFAULT: gate defaults to (live curobo subs > 1) -> sim-time playback is the
+    # production path for COMPOSITION/multi-robot (where wall-clock/sim skew bit, cont.120), while
+    # SINGLE-robot defaults OFF -> time.monotonic() = BYTE-IDENTICAL to the whole stable library. An
+    # explicit builtins._use_sim_clock (SIMCLOCK=1 / =False) still overrides for tests. Both _clock_now and
+    # the _on_step advance-guard compute the SAME default -> no set/read mixed-clock.
+    if not getattr(builtins, "_use_sim_clock", len(_curobo_live_pp_subs()) > 1):
         return time.monotonic()
     _c = getattr(builtins, _SIMCLK_ATTR, None)
     return float(_c.get("t", 0.0)) if _c is not None else time.monotonic()
@@ -7563,7 +7568,7 @@ def _on_step(dt):
                             _ma_rs.Set("")
                 except Exception: pass
         _a_tick.Set(S["ticks"]); _a_phase.Set(S["mode"])
-        if getattr(builtins, "_use_sim_clock", False): _sim_clock_advance(dt)  # SimClock seam: advance sim-time (live gate; no-op + no query when OFF)
+        if getattr(builtins, "_use_sim_clock", len(_curobo_live_pp_subs()) > 1): _sim_clock_advance(dt)  # SimClock seam: multi-robot DEFAULT-ON (subs>1), single-robot OFF; explicit flag overrides
         _fixup_asset_gripper_joint()  # asset gripper: re-author its wrist_3 FixedJoint from correct runtime poses (once)
         _track_suction_follower()  # suction: keep the FJ'd cone on the live ee so the SG can grip (no-op for Franka)
         _clamp_gripped_velocity()  # fling guard: cap the gripped cube's velocity (kills the kinematic-follower NaN-fling)
