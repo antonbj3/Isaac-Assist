@@ -4467,3 +4467,13 @@ genuinely rigid+flat the whole real carry. FIX (#39): bound the grip-span by the
 verification before its CAUSE is trusted — read the world-quaternion, not just the derived qrel. GOLD verdict
 unchanged (delivery genuine; this only sharpens the deferred GRIP-SLIP tool fix). Memory grip_slip_deconflated
 updated with the corrected cause. 5-cell RUN 2/3 still running.
+
+cont.148 (2026-06-16): GRIP-SLIP fix PRE-VALIDATED on raw data (before implementation, Kit-free). Recomputed
+CP-13 Cube_1 rotation-slip from raw eyes.json with the proposed span fix: bounding the slip-window to the LIFTED
+carry (cube z > z_min+0.05, off its rest surface) drops max rotation-slip 89° -> 1° = RIGID HOLD. Confirmed the
+89° peak sits at t=9.4 / cube_z=0.825 = AT REST (placed), the post-release region the finger-contact span wrongly
+includes. (The ideal bound = controller gripped-set `grp`, but that field is EMPTY for Franka parallel-jaw this
+run, so the lift-based window is the robust definition.) So #39's GRIP-SLIP fix is proven correct before I touch
+scene_eyes (post-5-cell). Full diagnostic-first arc for one audit finding: audit flags it -> raw qrel (transient)
+-> raw WORLD-q (disproves symmetry guess, finds span over-extension) -> raw recompute (fix gives 89->1). GOLD
+unchanged throughout (delivery genuine; grip-slip never gates the gold-gate).
