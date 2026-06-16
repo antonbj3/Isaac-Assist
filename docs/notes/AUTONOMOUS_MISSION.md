@@ -4583,3 +4583,15 @@ corpus purged of false golds -> corpus re-earned genuine -> durable memory (comp
 gap logged (#41 POSITION_KWARGS) -> strategic unlock identified (#42: ~12 palletizer blocks now composable).
 NEXT: #42 verify the newly-unlocked grid/palletizer blocks (CP-10/19/12/30) compose to real grids -> expand the
 composable block set with palletizer-type blocks (composition multiplier).
+
+cont.157 (2026-06-16): #42 DONE — the #40b composer fix's strategic payoff: 4 new PALLETIZER composable blocks
+verified. Composed each newly-unlocked grid template with CP-13 (stacker): CP-10+CP-13 (9-cube grid, 60mm
+spread), CP-19+CP-13 (6-cube, 70mm), CP-12+CP-13 (3-cube, 141mm), CP-30+CP-13 (4-cube, 155mm) — ALL GENUINE
+GOLD, every palletizer grids correctly composed (1 z-level, spread > cube-width), the honest gate (#40a) verifies
+the real grid. Before #40b these ALL collapsed to piles under composition. So the composable block set expands
+from {cube-stack/sort/bin: CP-01/03/13/28/29} to ALSO include PALLETIZERS — a genuine composition multiplier
+(Anton's strategy). ~8 more palletizers (CP-20/25/27/42/49/71/77 etc.) are now composable too (not yet
+gold-recorded). MODAL SPEEDUP (Anton "säker att mullvad inte fungerar?" + "snabba på det"): VERIFIED Modal works
+this session (boot_test kit_ok=true 205s T4 via VPN; modal app list ok; IP-set refresh ok) — the directive's
+"Modal floppar, använd EJ" is OUTDATED. Built run_composition + compose entrypoint in the pool (6x parallel
+composition gold pipeline on cloud + frees local Kit); parity check (CP-13,CP-08 on cloud) in flight.

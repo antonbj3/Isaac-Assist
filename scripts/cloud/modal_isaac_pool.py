@@ -518,6 +518,97 @@ def run_template(template_id: str, skip_ts: bool = False,
     return res
 
 
+@app.function(image=image, gpu=GPU, cpu=6.0, memory=12288, timeout=5400,
+              volumes=_VOLUMES, max_containers=6, single_use_containers=True)
+def run_composition(cells: str, dur: int = 180) -> dict:
+    """Fresh-Kit COMPOSITION measurement on cloud (the 6x speedup lever, 2026-06-16): mirrors local
+    run_eyes_gold.sh — restart Kit before EACH instance (measurement integrity), run scene_eyes --compose
+    per focus, then eyes_gold_gate. cells = comma-separated template ids, e.g. 'CP-13,CP-08'. Each container
+    does ONE composition; the pool runs up to 6 in PARALLEL -> ~6x the local serial gold pipeline + frees the
+    local Kit. The container's local edits (#40b composer fix etc.) are copied via add_local_dir."""
+    import subprocess
+    import os
+    import re as _re
+
+    names = [c.strip() for c in cells.split(",") if c.strip()]
+    res: dict = {"cells": names}
+    try:
+        import sys as _sys
+        _sys.path.insert(0, REPO)
+        from service.isaac_assist_service.chat.composer import compute_layout_offsets
+        tpls = [json.load(open(f"{REPO}/workspace/templates/{n}.json")) for n in names]
+        offs = compute_layout_offsets(tpls, axis="x")
+        spec = [f"{n}@{o['offset'][0]},0,0" for n, o in zip(names, offs)]
+        res["spec"] = " ".join(spec)
+    except Exception as e:  # noqa: BLE001
+        res["error"] = "layout: " + str(e)[-1500:]
+        return res
+    genv = {**os.environ}
+    genv.setdefault("ASSETS_ROOT_PATH", "/root/.cache/qa_assets")
+    genv.setdefault("ASSETS_ROBOTS_SUBDIR", "Collected_Robots")
+    genv["EYES_DUR"] = str(dur)
+    inst_files = []
+    try:
+        for i, n in enumerate(names):
+            proc, boot_s = _boot_kit()
+            try:
+                ev = {**genv, "EYES_FOCUS": f"inst{i}"}
+                pe = subprocess.run([sys_exe(), f"{REPO}/scripts/qa/scene_eyes.py",
+                                     "--compose", *spec, "--noframes"],
+                                    capture_output=True, text=True,
+                                    timeout=dur + 600, env=ev)
+                fpath = f"/tmp/comp_inst{i}.txt"
+                with open(fpath, "w") as _fh:
+                    _fh.write(pe.stdout + pe.stderr)
+                inst_files.append((n, fpath))
+            finally:
+                _kill_kit(proc)
+        args = [f"{n}:{fp}" for n, fp in inst_files]
+        gp = subprocess.run([sys_exe(), f"{REPO}/scripts/qa/eyes_gold_gate.py",
+                             "--expect", str(len(names)), *args],
+                            capture_output=True, text=True, timeout=180)
+        out = gp.stdout + gp.stderr
+        res["gold"] = "EYES_GOLD_VERDICT: GOLD" in out
+        res["per_cell"] = [ln.strip() for ln in out.splitlines()
+                           if "GENUINE" in ln or "REJECT" in ln]
+        res["structure"] = _re.findall(r"STACK STRUCTURE \([^\n]*", "\n".join(
+            open(fp).read() for _, fp in inst_files))[:20]
+        res["gate_tail"] = out[-2000:]
+    except Exception as e:  # noqa: BLE001
+        res["error"] = str(e)[-3000:]
+    cache_vol.commit()
+    return res
+
+
+@app.local_entrypoint()
+def compose(comps: str = "", dur: int = 180):
+    """Run COMPOSITIONS in parallel on Modal (6x the local gold pipeline). comps = semicolon-separated
+    compositions, each comma-separated cells. e.g.:
+      modal run scripts/cloud/modal_isaac_pool.py::compose --comps 'CP-13,CP-08; CP-03,CP-08; CP-10,CP-13'
+    """
+    if not comps:
+        print("usage: ...::compose --comps 'CP-13,CP-08; CP-03,CP-08'")
+        return
+    items = [c.strip() for c in comps.split(";") if c.strip()]
+    outdir = REPO_LOCAL / "workspace" / "qa_runs" / "cloud_results"
+    outdir.mkdir(parents=True, exist_ok=True)
+    outfile = outdir / "modal_compose.jsonl"
+    n = 0
+    with open(outfile, "a") as fh:
+        for res in run_composition.map(items, kwargs={"dur": dur},
+                                       order_outputs=False, return_exceptions=True):
+            if isinstance(res, BaseException):
+                print("MAP-EXC:", repr(res)[:300])
+                continue
+            n += 1
+            fh.write(json.dumps(res) + "\n")
+            fh.flush()
+            print(f"[{n}/{len(items)}] {'+'.join(res.get('cells', []))}: "
+                  f"gold={res.get('gold')} | {res.get('per_cell')} "
+                  f"{('ERR ' + res['error'][:250]) if res.get('error') else ''}", flush=True)
+    print(f"results -> {outfile}")
+
+
 @app.function(image=image, gpu=GPU, cpu=6.0, memory=12288, timeout=1500,
               volumes=_VOLUMES)
 def curobo_fingerprint() -> str:
