@@ -87,7 +87,20 @@ def _transform_value(key: str, value: Any, instance_root: str, offset) -> Any:
     if isinstance(value, tuple):
         return tuple(_transform_value(key, v, instance_root, offset) for v in value)
     if isinstance(value, dict):
-        return {k: _transform_value(k, v, instance_root, offset) for k, v in value.items()}
+        out_d = {}
+        for k, v in value.items():
+            # namespace a /World/ prim-path KEY (controllers look entries up by the namespaced path)
+            nk = reroot_prim_path(k, instance_root) if isinstance(k, str) and k.startswith("/World/") else k
+            # a {prim_path: position-vector} entry (e.g. drop_targets) — the value is THAT prim's target
+            # position, so OFFSET it. The prim-path key isn't a POSITION_KWARG, so the generic recursion
+            # below would leave it un-offset -> the cont.150 grid-collapse-to-pile (composed CP-08 cubes
+            # all fell back to the pallet centre because their grid slots stayed un-namespaced + un-offset).
+            if isinstance(k, str) and k.startswith("/World/") and isinstance(v, (list, tuple)) and v \
+                    and all(isinstance(n, (int, float)) for n in v) and len(v) in (2, 3):
+                out_d[nk] = [v[i] + (offset[i] if i < len(offset) else 0.0) for i in range(len(v))]
+            else:
+                out_d[nk] = _transform_value(k, v, instance_root, offset)
+        return out_d
     return value
 
 
