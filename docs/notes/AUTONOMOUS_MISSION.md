@@ -4477,3 +4477,16 @@ run, so the lift-based window is the robust definition.) So #39's GRIP-SLIP fix 
 scene_eyes (post-5-cell). Full diagnostic-first arc for one audit finding: audit flags it -> raw qrel (transient)
 -> raw WORLD-q (disproves symmetry guess, finds span over-extension) -> raw recompute (fix gives 89->1). GOLD
 unchanged throughout (delivery genuine; grip-slip never gates the gold-gate).
+
+cont.149 (2026-06-16): GRIP-SLIP fix COMPLETED + multi-case-validated (correcting cont.148's incomplete lifted-z).
+Built a standalone prototype (/tmp/grip_slip_fix_proto.py) and ran the proposed span fix across 7 saved
+compositions (stacker/bin/palletizer/sorter). cont.148's "lifted-z" window (89->1° on CP-13) was INCOMPLETE: the
+broad sweep showed it BREAKS bin tasks (CP-01: cube rests HIGH in the bin pile, above z_min+0.05, so placed
+frames still counted -> 89° persists). Second attempt "cube-moving" fixed bins but BROKE stackers (pre-pick
+belt-transport is moving-but-not-gripped -> false 91°). CORRECT FIX (uniform across ALL cases): bound the slip-
+window to GRIPPED-CARRY = dist(tool_p,cube_p) < ~0.15m — the unique ~104mm grasp-offset signature (tool is far
+before pick and after release). Result: EVERY cube 89-126° -> 2-14° RIGID HOLD, zero regression, zero residual
+false-SLIPPING; a real in-grasp slip still shows (cube stays near the tool while rotating). The broad multi-case
+validation CAUGHT two of my own half-fixes before they shipped — exactly the value of testing across object
+classes, not one case. #39 updated with the final validated spec; memory grip_slip_deconflated corrected.
+Implementation (scene_eyes ~line 598-625) deferred post-5-cell. 5-cell RUN 2 = GOLD (2/2), RUN 3 running.
