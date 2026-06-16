@@ -4523,3 +4523,16 @@ offset position-vector VALUES. #40 has the precise spec. NOTE: this is WHY paral
 gate to read the spread-vs-pile signal scene_eyes already emits — a delivered-count/position gate cannot see a
 grid that collapsed to a pile. Recorded; all 3 fixes (gate + composer + re-verify) gated on 5-cell RUN 3
 finishing (composer.py is in use by the running scene_eyes --compose).
+
+cont.152 (2026-06-16): ★ CP-08 grid-collapse FIXED + Kit-VERIFIED end-to-end. With the #40b composer fix +
+#40a gate fix, ran CP-13+CP-08 fresh (restart-before-each): inst1 CP-08 STACK STRUCTURE = 1 z-level [0.825],
+xy-extent 0.16x0.14m, min-pair-xy 137mm = "FLAT 1-tier spread grid" — IDENTICAL to standalone CP-08 (131mm).
+BEFORE: 2 z-levels, 27mm pile. AFTER: 1 level, 137mm spread. The gate now PASSES the genuine grid ("grid verified
+... min-pair 137mm spread") AND inst0 CP-13 still columns (GENUINE, no regression) -> EYES_GOLD_VERDICT GOLD,
+this time GENUINE. So the composer drop_targets-dict bug (40 templates latent; manifested only for spread layouts
+like CP-08's grid, while column stackers survived via physics-stacking) is RESOLVED. PURGED the 8 false CP-08
+gold_scene_eyes_verified records (they recorded piles as "grid verified" under the broken composer + lenient
+gate) — like the CP-09 scatter purge; genuine CP-08 golds re-create as the pipeline re-runs with the fixed
+composer+gate (CP-13+CP-08 already re-verified genuine). NET on the false-success hunt (Anton "vaksam"): found a
+real bug hiding in the gold corpus + the 5-cell capstone, root-caused it (Kit-free), fixed gate+composer, and
+Kit-verified the fix produces a real grid. Commits: bf509e66 (#40a gate), 6d2048fa (#40b composer).
