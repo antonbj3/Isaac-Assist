@@ -849,8 +849,24 @@ def _analyse(js):
                 out.append("    %-14s CLAIMED but no tool/pos data" % _bn); continue
             _dd, _tt, _dz, _dxy = _best
             _grp = _bn in _grip_objs
-            if _grp or _dd < 0.03:
-                _verd = "CONVERGED" + (" + GRIPPED" if _grp else "")
+            # 2026-06-16: "GRIPPED" must mean the grasp actually PICKED THE OBJECT UP, not a momentary
+            # finger-touch. A grasp that contacts then SLIPS never lifts the object (cont.120: a 0.3s
+            # contact at the cube TOP EDGE dz=137mm read "CONVERGED + GRIPPED" while the cube never rose
+            # off the belt + fell — a false-positive that masked the premature-close failure). Require the
+            # object to have been LIFTED above its start height. Uses LIFT (not net-fall), so a normal
+            # low-bin place (object lifted, then set DOWN low) still reads as held — no false GRIP-SLIP.
+            _ozs = [p[2] for p in ((_rr.get("cubes") or {}).get(_bn) for _rr in rows) if p]
+            _lifted = bool(_ozs) and (max(_ozs) - _ozs[0]) > 0.03
+            _held = _grp and _lifted
+            if _held or _dd < 0.03:
+                if _held:
+                    _verd = "CONVERGED + GRIPPED"
+                elif _grp:   # finger-contact + converged but the object never came off the surface = slip
+                    _verd = "CONVERGED + GRIP-SLIP (seat dz=%.0fmm — finger-contact, object NEVER LIFTED, not held)" % (_dz * 1000)
+                else:
+                    _verd = "CONVERGED"
+            elif _grp:       # contacted but never converged-close AND never lifted = marginal-contact slip
+                _verd = "GRIP-SLIP (seat dz=%.0fmm — contact, never lifted)" % (_dz * 1000)
             elif _dd < 0.10:
                 _verd = "NEAR-MISS (just short — grip/target-z tuning)"
             elif _arm_rng > 60:

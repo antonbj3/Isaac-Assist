@@ -4031,3 +4031,17 @@ controllers + external nav2/MoveIt/PLC bridges (use_sim_time) share ONE clock, z
 approach is already PROVEN here (the sim-floor's seg_sim_t += dt). Migration = gated _use_sim_clock (default
 OFF -> byte-identical) + no-regression sweep on the stable 37+8 before flipping. Sequenced after this 4-cell
 bank.
+
+cont.122 (2026-06-16): TOOLS-ARE-LIVING — scene_eyes' own GRIPPED label was a false-positive that misled
+ME in cont.120. PICK CONVERGENCE set "CONVERGED + GRIPPED" from `_bn in _grip_objs` = EVER finger-contacted,
+so a 0.3s momentary touch at the cube TOP EDGE (dz=137mm) that SLIPPED + fell read "GRIPPED" — exactly the
+label that sent me down the wrong RCA. Fix (scripts/qa/scene_eyes.py PICK CONVERGENCE): "GRIPPED" now requires
+the object to have been LIFTED (max-z over the run > start-z + 3cm). Uses LIFT, not net-fall, so a normal
+low-bin place (lifted then set down low) still reads held -> no false GRIP-SLIP. A contacted-but-never-lifted
+cube now reads "CONVERGED + GRIP-SLIP (seat dz=Xmm — NEVER LIFTED, not held)" = instantly diagnostic of the
+premature-close signature. SAFE for the gold gate: audited eyes_gold_gate.py — it gates PASS/FAIL on structure
+(z-levels), never-gripped (from GRIP-ATTEMPT, untouched), low_z(<0.6), explosion — NOT the gripped COUNT (only
+a message + an all-zero guard). Re-verified CP-03+CP-28+CP-13 with the honest label = STILL GOLD, all real
+successes still read GRIPPED (no false-negative), counts unchanged. So: removed a tool false-positive without
+perturbing the verification authority. Banked the cont.120 lesson into the tool itself (hand-derived signal ->
+first-class).
