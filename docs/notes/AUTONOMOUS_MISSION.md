@@ -4684,3 +4684,15 @@ applied — prod-orchestrator prompt changes are Anton-gated, the L5 composition
 ambiguous-count rule (a couple=2, a few=3); (b) model A/B — gemini-3.x (location=global) may parse ambiguous
 counts better than 2.5-flash. So the runtime-LLM reasoning is robust with one identified, honestly-characterized
 gap; data -> compose_reasoning.jsonl. The strategy's loop is operational AND its reasoning is adversarially vetted.
+
+cont.164 (2026-06-17): A4 ambiguous-count gap CLOSED (eval SYS_PROMPT) — runtime-LLM reasoning now 19/19. The
+cont.163 adv FAIL (A4 "a couple" -> chose 1, expected parallel-2) was a missing COUNT rule in the eval's
+SYS_PROMPT. Added a count-word rule (mirroring the existing physical-realizability rule): "a couple/pair=2, a
+few/several=3, a handful=4-5; 'each <robot> its OWN', 'running together', plural = MULTIPLE parallel cells; don't
+collapse 'a couple' to 1." Re-ran A4 -> PASS (parallel, 2 cells, CP-01+CP-01). So base 10/10 + adv 9/9 = 19/19;
+the runtime-LLM reasoning is now robust across normal + adversarial cases incl. ambiguous counts. SCOPE: this is
+the EVAL's SYS_PROMPT (the doc's allowed "improve the eval, validate" pattern, like the physical-realizability
+rule before it). PROMOTING the count rule to the PRODUCTION orchestrator SYSTEM_PROMPT is the Anton-gated L5
+composition-tool step — a clear, validated, ready-to-promote improvement (do NOT wire into prod unilaterally).
+Full diagnostic-first arc on the LLM gap: adversarial eval found it -> diagnosed (missing rule) -> fixed (eval
+prompt) -> validated (A4 PASS) -> prod-promotion scoped + gated. data -> compose_reasoning.jsonl.

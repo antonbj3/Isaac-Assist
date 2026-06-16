@@ -191,6 +191,12 @@ Rules:
 - "parallel" for independent cells running at once (no handoff).
 - "chain" when one cell's OUTPUT feeds the next cell's INPUT — declare the handoff edges.
 
+COUNT FROM THE WORDING: map vague quantity words to integers and emit that many cells — "a couple"/"a pair" = 2,
+"a few"/"several" = 3, "a handful" = 4-5. Cues like "each <robot> feeding its OWN <thing>", "running together",
+or a plural ("cells"/"stations") mean MULTIPLE cells in parallel, not one. Do NOT collapse "a couple of cells"
+to a single cell — read the count from the strongest signal (an explicit number, an "each ... its own" phrase,
+or a count word).
+
 CHAIN MATCHING (critical — this is where most plans go wrong): in a chain, the downstream cell
 SOURCES the upstream cell's DELIVERED objects (its own normal input source is bypassed). So the
 upstream cell's DELIVERS-to must be a place the downstream cell can physically pick FROM:
