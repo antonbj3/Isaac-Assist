@@ -3968,3 +3968,19 @@ NEAR the sensor (not merely within 70cm reach) before claiming + pausing -> the 
 pickup -> grasp seats. STATE: thorough measured RCA; serialization theory (cont.112-116) was WRONG + closed;
 move-token v2 + per-instance planner kept (harmless, no regression); 2-cell gold solid; 3-cell open with a
 precise, actionable next step. Lesson banked: read raw controller+belt signals before theorizing.
+
+cont.119 (2026-06-16): STANDALONE BASELINE re-opens it — and I've been THRASHING (honest). Standalone CP-13
+delivers BOTH cubes (Cube_1 z=0.82, Cube_2 z=0.88 stacked); its cube also pauses at x=-0.88 (SAME far pos as
+3-cell). So cont.118's "claimed too far from sensor" was ALSO wrong — the cube position is normal. The REAL
+difference: in 3-cell the arm FREEZES ~8s mid-execution AT THE APPROACH (137mm above the cube) and never
+descends to grasp; standalone descends + grasps. => re-implicates EXECUTION serialization (the move-token),
+i.e. back toward cont.112. The unresolved crux: is move-token v2 EFFECTIVE? If _world_pos(ROBOT_PATH) fails
+to register per-arm bases at first call, v2 degrades to GLOBAL serialize -> identical freeze (exactly what's
+observed). I have now cycled serialization->grasp-pos->serialization across MANY runs + 6 commits without a
+clean fix = THRASHING, which per "falska positiver=progressgift" is the signal to STOP. WHAT'S NEEDED (fresh
+focused session, NOT more guessing): ONE instrumented run that prints, for inst2 during the freeze: (1) is
+move-token v2 emitted/active (telltale print), (2) what _try_acquire_move_token returns + are _bases
+registered (or None->global-degrade), (3) the controller MODE during 6.3-14.3 (executing-hold vs other).
+That triad definitively says whether v2 works + what freezes the arm. STATE: 2-cell composition gold SOLID;
+3-cell open; serialization v2 + per-instance planner committed + verified-SAFE (no 2-cell regression) but
+effectiveness UNCONFIRMED. Stopping the thrash; this needs deliberate instrumentation with fresh budget.
