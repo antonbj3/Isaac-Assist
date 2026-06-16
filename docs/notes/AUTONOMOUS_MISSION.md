@@ -4383,3 +4383,17 @@ rare failure (if any) would be a DIFFERENT mechanism. Updated memory composition
 resolved). Task #34 done. NEXT frontier: 4-/5-cell parallel (does contention scale, or is there a new wall at
 4 arms?), gated behind Anton's steer + a stable-network window for the LLM-flow track. Commits this session:
 640877a5 (topple gate), a104f0df (gold-gate self-check), 5fc61fad (cont.141 log). Branch feat/foundation-build.
+
+cont.143 (2026-06-16): ★ 4-CELL also DETERMINISTIC — the parallel-composition reliable tier is now 2/3/4-cell.
+N-of-M N=3 on CP-03+CP-28+CP-13+CP-01 (proven deterministic 3-cell + a 4th simple pick-place arm to isolate the
+3->4 effect): 3/3 GOLD, IDENTICAL every run — 4 GENUINE cells/run, 9 CONVERGED+GRIPPED (CP-03 2, CP-28 1, CP-13
+column 2 z-levels 2, CP-01 4); 0 REJECT/boot-fail/ORIENTATION-FAIL/cell-count-mismatch. So adding a 4th
+concurrent cuRobo arm did NOT introduce a new contention wall — the SimClock(#32)+sim-floor(#31) sim-time
+playback scales past the 3-arm case. Reliable parallel tier: 2/3/4-cell deterministic-gold (post topple-gate).
+DECISION (value-ordering, not ladder-climbing): cap the parallel-SCALING sweep here (4-cell deterministic is a
+strong tier; 5-cell has a single-pass gold already, its determinism is a lower-value confirm) and PIVOT Kit to
+the gate-false-pass vein #21 — but the prep already showed mixed-sku was FIXED (commit c461821b: bbox-less Xform
+zones -> sized Cubes, honest 1/6) and bin-based sorters grade correctly (routing-aware gate, leave them), so #21
+reduces to CP-48: check (diagnostic-first) whether its routing destinations are bbox-less (false-pass risk) or
+real bins (leave it). Task #35 done. Other safe Kit-free work this session also done: training dataset refreshed
+(canonical_templates.jsonl, CP-08 redesign now current; gitignored, no commit). Branch feat/foundation-build.
