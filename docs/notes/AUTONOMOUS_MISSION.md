@@ -4112,3 +4112,18 @@ so deliberate, not rushed. FRAMING: niche (two concurrent grid palletizers); sin
 4/5-cell golds and 2/3/4/5-cell compositions are all GOLD — core unaffected. Net: exploratory stress + an
 honest gate surfaced a real latent CP-08 place-margin, diagnosed to root, fix-direction specified, and a
 backfiring quick-fix avoided by checking geometry before editing (measure-before-fix).
+
+cont.127 (2026-06-16): SimClock SEAM LANDED (#32 Stage 1 — safe, byte-identical). Added the engine-agnostic
+sim-time seam to the curobo controller (pick_place.py ~4847): _USE_SIM_CLOCK gate (default OFF), a shared
+builtins._sim_clock_v1 accumulator advanced once per physics frame by the owner sub (Kit-native
+SimulationContext.current_time preferred, dt-accumulator fallback — the SAME clock Isaac's ROS2 /clock
+publisher emits), and _clock_now() which returns time.monotonic() when gated OFF -> BYTE-IDENTICAL. The
+per-frame advance is `if _USE_SIM_CLOCK: _sim_clock_advance(dt)` -> skipped (no SimulationContext query) when
+OFF. VERIFIED: standalone CP-13 (single-robot, gate OFF) = both cubes CONVERGED+GRIPPED @102mm, real 2-level
+column, RIGID HOLD, symmetric forces 0.72/0.71 — IDENTICAL to the pre-seam baseline -> the controller still
+BUILDS (no template syntax error) and single-robot is byte-identical. So the exportable SimClock contract now
+lives in the controller, testable by flipping builtins._use_sim_clock=True. NEXT (deliberate, the actual
+functional benefit): the ATOMIC playback-site migration (seg_start_t/elapsed/start_t -> _clock_now(), the ~12
+playback sites; plan-budget WATCHDOGS stay monotonic by design) + flip the gate + no-regression sweep on the
+stable 37+8 -> then the sim-floor + the move-token fling-fix become redundant and retire. Did the seam now (low
+edit surface, gated, verified) rather than the fiddly 12-site migration unwatched. #32 advanced, not closed.

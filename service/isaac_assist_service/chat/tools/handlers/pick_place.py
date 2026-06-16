@@ -4835,6 +4835,45 @@ def _release_move_token():
     if _movers is not None:
         _movers.pop(_SUB_ATTR, None)
 
+# ── SimClock (2026-06-16): engine-agnostic sim-time SEAM. See docs/notes/SIM_CLOCK_CONTRACT.md ──
+# Anton's core fix for the wall-clock/sim-time skew (cont.120): control timing must advance with the
+# INTEGRATOR, not the host wall-clock. This installs the SEAM — one authoritative sim-time exposed by
+# _clock_now(). The dt-accumulator is the engine-agnostic fallback (proven via the sim-floor's
+# seg_sim_t += dt); the Kit-native clock (SimulationContext.current_time) is preferred when queryable
+# (= the SAME time Isaac's ROS2 /clock publisher emits -> internal controllers + external ROS share one
+# clock). GATED _use_sim_clock (default OFF) -> _clock_now() == time.monotonic(), BYTE-IDENTICAL, and the
+# per-frame advance is skipped (no SimulationContext query). Playback sites migrate to _clock_now() in a
+# later ATOMIC pass (playback only; the plan-budget watchdogs keep time.monotonic() by design).
+_USE_SIM_CLOCK = bool(getattr(builtins, "_use_sim_clock", False))
+_SIMCLK_ATTR = "_sim_clock_v1"
+if getattr(builtins, _SIMCLK_ATTR, None) is None:
+    setattr(builtins, _SIMCLK_ATTR, {{"t": 0.0, "owner": None, "native": None}})
+def _sim_clock_advance(dt):
+    # advance the shared sim-time ONCE per physics frame (owner sub only -> no N-fold over-count)
+    _c = getattr(builtins, _SIMCLK_ATTR, None)
+    if _c is None: return
+    _subs = _curobo_live_pp_subs()
+    _own = _c.get("owner")
+    if _own is None or _own not in _subs:
+        _c["owner"] = _SUB_ATTR; _own = _SUB_ATTR
+    if _own != _SUB_ATTR: return
+    _nt = None
+    try:
+        from isaacsim.core.api import SimulationContext as _SimCtx
+        _sc = _SimCtx.instance()
+        if _sc is not None: _nt = float(_sc.current_time)
+    except Exception:
+        _nt = None
+    if _nt is not None:
+        _c["t"] = _nt; _c["native"] = True
+    else:
+        _c["t"] = float(_c.get("t", 0.0)) + float(dt); _c["native"] = False
+def _clock_now():
+    if not _USE_SIM_CLOCK:
+        return time.monotonic()
+    _c = getattr(builtins, _SIMCLK_ATTR, None)
+    return float(_c.get("t", 0.0)) if _c is not None else time.monotonic()
+
 _PLANNER_JOINT_NAMES = list(_planner.joint_names)
 
 # ── Helpers ──────────────────────────────────────────────────────────
@@ -7527,6 +7566,7 @@ def _on_step(dt):
                             _ma_rs.Set("")
                 except Exception: pass
         _a_tick.Set(S["ticks"]); _a_phase.Set(S["mode"])
+        if _USE_SIM_CLOCK: _sim_clock_advance(dt)  # SimClock seam: advance sim-time (no-op + no query when gated OFF)
         _fixup_asset_gripper_joint()  # asset gripper: re-author its wrist_3 FixedJoint from correct runtime poses (once)
         _track_suction_follower()  # suction: keep the FJ'd cone on the live ee so the SG can grip (no-op for Franka)
         _clamp_gripped_velocity()  # fling guard: cap the gripped cube's velocity (kills the kinematic-follower NaN-fling)
