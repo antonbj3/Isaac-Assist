@@ -4206,3 +4206,22 @@ ENTIRE single-robot stable library stays wall-clock = byte-identical = zero risk
 composition golds gate-ON (2-cell CP-13+CP-08 + 4-cell CP-03+CP-28+CP-08+CP-13; 3-cell already GOLD gate-ON)
 -> then set the multi-robot default + retire the sim-floor (redundant under sim-time playback) + the move-token
 fling-fix. Launching that re-verification now.
+
+cont.133 (2026-06-16, ULTRACODE): composition gate-ON re-verify — 2-cell GOLD; 4-cell fail is CP-08 #33, NOT
+a SimClock regression. Both runs had FLAG_SET on every cell (gate genuinely engaged). 2-cell CP-13+CP-08 =
+GOLD gate-ON (CP-13 column + CP-08 grid both genuine). 4-cell CP-03+CP-28+CP-08+CP-13 = NOT GOLD — but the
+failing cell is CP-08 ("a cube ended below 0.6m"), the EXACT #33 stochastic grid-pile/knock-off (place-
+tolerance 0.08 ~ grid-spacing 0.08 + pallet back-edge past the table edge, fragile under contention). The
+OTHER 3 cells (CP-03 sort, CP-28 bin, CP-13 stacker) are all GENUINE gate-ON, AND CP-08 STANDALONE gate-ON
+placed all 4 clean (cont.131) -> so this is CP-08's contention-fragility (#33) surfacing, not sim-time playback
+breaking anything (CP-08 fails this way gate-OFF too; the cont.121 4-cell GOLD gate-OFF was a lucky pass of the
+stochastic knock-off). Caveat (honest): I did NOT directly compare CP-08-in-4-cell gate-OFF vs gate-ON
+knock-off RATE, so a marginal gate-ON rate-increase is unconfirmed — but the standalone+2-cell clean gate-ON
+make a SimClock-specific cause unlikely. NET DECISION: the multi-robot-default flip is ENTANGLED with #33 (a
+CP-08-heavy composition can fail either way) -> do NOT flip on a #33-confounded result. SimClock #32 reaches a
+clean honest end-state: IMPLEMENTED + workflow-verified + gate-ON VALIDATED (Franka stacker/grid/sort
+standalone, 2-cell + 3-cell compositions GOLD, UR10 byte-equivalent, native-clock freeze fixed) + AVAILABLE
+opt-in (builtins._use_sim_clock / SIMCLOCK=1); default OFF with the proven sim-floor as the production path.
+The default-flip + sim-floor/fling-fix retirement is deferred behind (a) fixing CP-08 #33 so CP-08 comps are
+robust regardless of gate, and (b) a gate-ON-vs-OFF rate comparison. 16 commits. SimClock is Anton's elevated
+core fix — done, proven, exportable (engine-agnostic dt-accumulator, ROS-/clock-alignable), shipped opt-in.
