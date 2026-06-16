@@ -4490,3 +4490,21 @@ false-SLIPPING; a real in-grasp slip still shows (cube stays near the tool while
 validation CAUGHT two of my own half-fixes before they shipped — exactly the value of testing across object
 classes, not one case. #39 updated with the final validated spec; memory grip_slip_deconflated corrected.
 Implementation (scene_eyes ~line 598-625) deferred post-5-cell. 5-cell RUN 2 = GOLD (2/2), RUN 3 running.
+
+cont.150 (2026-06-16): ★★ MAJOR FALSE-SUCCESS — CP-08 grid COLLAPSES to a PILE under composition; the lenient
+palletize/grid gate passed 8 gold records (incl. the 5-cell capstone). Found by continuing to read RAW data
+(Anton "vaksam på false success" + keepalive): the 5-cell GOLD line said "CP-08 grid verified (2 z-level)" —
+but a 2x2 FLAT grid should be 1 z-level. Checked CP-08's final cube positions across contexts: STANDALONE CP-08
+= 1 z-level, min-pair-xy 131mm = genuine spread grid; but EVERY composition (compose_CP-03_CP-08 12mm,
+CP-13_CP-08 17mm, CP-01_CP-13_CP-08 16mm, 5-cell 27mm) = 2 z-levels, min-pair-xy 12-27mm << 50mm cube-width =
+cubes OVERLAPPING/stacked = a PILE, not a grid. So CP-08 grids standalone but PILES whenever composed (happens
+in 2-cell too -> a COMPOSITION bug, not contention). scene_eyes' STACK STRUCTURE ALREADY computes "spread grid
+(min-pair>0.045) vs clustered/piled" (scene_eyes.py:747) — but eyes_gold_gate.py's palletize/grid branch
+IGNORES it and returns "grid verified" for ANY structure -> false-passed all composed CP-08. 8 gold_scene_eyes_
+verified records contain CP-08 -> all SUSPECT (4 confirmed-pile). The 5-cell capstone GOLD is COMPROMISED: 5-cell
+does NOT cleanly extend the reliable tier (the CP-08 cell fails its grid). (Honest correction to cont.143-style
+optimism — the parallel tier is verified 2/3/4-cell for the cube-stack/sort/bin cells; the CP-08 PALLETIZER cell
+fails under composition at every arity.) Task #40. FIXES (post-5-cell): (a) GATE reject clustered/piled using
+the signal scene_eyes already emits; (b) ROOT: composer grid-spread/drop_targets collapse; (c) re-verify/purge
+the 8 CP-08 golds. Caught one cell's audit-mixup first (read inst2=CP-13's column, not CP-08) then got the right
+per-instance text — the per-instance-eyes-overwrite (#39.3) actively obstructs this audit, raising its priority.
