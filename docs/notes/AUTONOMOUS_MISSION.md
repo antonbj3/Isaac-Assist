@@ -5361,3 +5361,19 @@ multiplier's real gate) via two FRESH angles; both confirmed genuinely blocked (
   flagged for rabbit-holing). Both fresh angles dead-ended at the same real gates. The "serialize"-policy
   misnomer is the one actionable clarification for Anton's #47 call: choosing "serialize" today is a no-op
   (it must be built first).
+
+cont.207 (2026-06-17): went DEEP into the #47 contention code (pick_place.py:5454-5497) to narrow the fix —
+diagnostik-först on the bottleneck, not avoiding it. FINDING: the obvious base-frame fix is ALREADY DONE —
+_world_sig folds _base_sig (_usd_pos+_usd_quat, line 5474/5495) so each distinct base rebuilds its world.
+So #47's remaining contention is NOT the base-sig bug. The actual mechanism: the two cuRobo controllers
+ALTERNATELY rebuild the SHARED cached planner's world (planner has ONE world; robot A's base then robot B's
+base, every other plan) -> update_world THRASH -> churning Warp struct hashes -> kernel recompile/cache
+corruption (the line-5459 failure mode) -> starvation (inst0=0/1 inst1=0/2). plan_pose calls are already
+SEQUENTIAL (physics-step callbacks, same thread) -> NOT a concurrent-call lock problem; per-instance
+planner scope was already MEASURED ineffective (each planner recompiles + GPU-level contention). So the
+concrete #47 FIX APPROACH (for the dedicated session) is PICK-LEVEL TURN-TAKING: a process-global token so
+one robot completes a full pick cycle (world stays on its base) before the other acquires + rebuilds — this
+avoids the per-plan world-thrash that plan-level/base-sig fixes can't (the world is singular). Gated
+default-OFF + measured against CP-73+CP-01 would be the byte-identical experiment; NOT done now (deep change
+to the generated shared controller, regression-sensitive, the dedicated-session warning is accurate). This
+TURN narrowed #47 from "serialize somehow" to a specific mechanism + approach — real progress on the gate.
