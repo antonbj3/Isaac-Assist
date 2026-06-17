@@ -5284,3 +5284,15 @@ FOUNDATION (the breadth half of the multiplier) is verified at its anchors acros
 families. Method throughout: eyes-first RAW per-object containment/grip/trajectory, control-before-trust,
 false-success-vakt (incl. on my own tools). Remaining frontier unchanged: robot-diversity EXECUTION
 (#29 grasp-pose deep-fix, #47 Anton-gated), #28 harness (watched-window).
+
+cont.202 (2026-06-17): COMPOSITION-LAYER verification of the kit/assembly canonical (the strategy's core
+claim: robust blocks compose into robust scenes — tested on the MOST COMPLEX block, untested under
+composition before). Composed CP-50 (kit, vision+trays) + CP-01, focus inst0, RAW per-instance: 4/4
+CORRECT — inst0/RedTray namespaced to [-0.3,-0.4] + inst0/BlueTray to [0.3,-0.4] (NO cross-instance tray
+path leak, unlike the cont.166 ShortGripper bug), vision classified per-instance, Cube_1/3(Red)->inst0/
+RedTray + Cube_2/4(Blue)->inst0/BlueTray all in-tray. So vision+tray namespacing survives composition — no
+cont.40-style grid->pile namespacing bug for the kit class. The composition LAYER is now RAW-verified for
+the three structured-placement classes that carry composition-bug risk: grid (CP-08, cont.193), stack
+(CP-13, cont.193), kit/vision+trays (CP-50, cont.202). Composition of robust blocks = robust scenes,
+confirmed on the hardest class. (Franka-only multi-cell parallel was already N-of-M gold, cont.34/38;
+robot-diversity composition stays the lone blocked axis.)
