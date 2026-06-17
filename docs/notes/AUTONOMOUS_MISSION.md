@@ -5634,3 +5634,20 @@ ALSO flagged: the A/B/A EXPLOSION signature vs #29b's GRIP-SIDE signature may be
 NEXT (dedicated): T2 = trigger UR10 cuRobo planner build (warp codegen) w/o play → CP-01 (isolate warp); +
 asset-only → CP-01. Mitigation unchanged: kit_restart.sh after any UR10. #29b/#47 stay blocked pending the
 deep warp/cuRobo fix or a cross-Kit declarative chain.
+
+cont.225 (2026-06-17): ★ ROBOT-DIVERSITY UNBLOCKED via cross-Kit declarative chain. Since the UR10
+corruption is process-level (no in-process reset clears it), I chose (Anton: "du får göra det valet") the
+cross-Kit path: run EACH stage in its OWN fresh Kit, hand off at the STATE level. Built + verified
+scripts/qa/chain_xkit_gate.py: `chain_xkit_gate.py CP-CHAIN-UR10-SRC CP-CHAIN-FLAT` =>
+  stage0 CP-CHAIN-UR10-SRC (UR10) delivered 1/1 -> Tray (handoff pos [0.51,-0.39,0.775])
+  [kit_restart -> fresh Kit, clears the UR10 corruption]
+  stage1 CP-CHAIN-FLAT (Franka) delivered 1/1 -> Bin
+  => "2 stage(s), 1/1 + 1/1 — ALL DELIVERED". vs single-Kit chain_gate (same pair) = 1/1 + 0/1 (corruption).
+So the months-blocked UR10->Franka robot-diversity relay DELIVERS end-to-end when each robot runs in a clean
+Kit. This is the #29 L3 auto-handoff direction realized + the LLM-flow declarative-composition model (chain
+at plan/state level, not one PhysX scene). HONEST CAVEAT (false-success-vakt on my own positive): this proves
+the cross-Kit MECHANISM (corruption sidestepped + each stage gold in its own Kit) + RECORDS the handoff state;
+the geometric guarantee that stage(k-1)'s delivery == stage k's pick location is the template-pair DESIGN
+responsibility (same as single-Kit chain_gate's @offset) — the gate reports the handoff pos for that check but
+doesn't yet auto-verify pick-zone containment. NEXT: add handoff pick-zone containment verification + N-of-M.
+Tool committed. UR10 deep-fix (#47) no longer blocks robot-diversity — it's a perf/elegance optimization now.
