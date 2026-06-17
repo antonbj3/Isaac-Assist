@@ -5402,3 +5402,17 @@ tighten the grasp orientation tolerance / seed the IK from a top-down config / p
 cuRobo can't fall to the -X side solution. Controller-level (orientation constraint), regression-sensitive
 (shared Franka path) -> not at session-tail, but now PRECISELY specified: it's a side-vs-topdown IK-branch
 selection, measured, with chain_gate + this grasp_geom probe (/tmp/grasp_geom.py) as the harness.
+
+cont.209 (2026-06-17): ANTON FLAGGED the 90deg-gripper recurrence — ran the CONTROL I'd skipped: the
+WORKING CP-01 grasp hand_q vs the failing chain-relay. CP-01 (top-down, delivers): hand_q~[0,0,1,0],
+approach (local +Z) -> world -Z (DOWN). Chain relay: hand_q=[0.707,0,0.707,0], approach -> world +X
+(HORIZONTAL). They differ by exactly 90deg about Y -> the chain-relay grasp IS a genuine 90deg SIDE grasp
+(cont.208 confirmed, not an AABB artifact). SCOPE (the key reassurance): NOT corpus-wide — CP-01 (canonical
+pick-place) AND standalone CP-CHAIN-FLAT both grip TOP-DOWN + deliver. The 90deg appears ONLY in the
+source_override chain-RELAY grasp (the unfinished #29(b) path, NOT in production). So the recurring
+90deg-gripper bug has NOT re-entered the corpus; it's isolated to the experimental relay. ROOT-CAUSE LEAD:
+the identical standalone is top-down, so the chain stage1 Franka likely reads a STALE/WRONG base-frame for
+_DOWN_Q_BASE (computed from the base quat) — plausibly stage0 (CP-84, also cuRobo) leaves planner/base
+state that the stage1 Franka inherits, flipping the down-quat 90deg. NEXT (#29(b) dedicated): dump the
+_DOWN_Q_BASE + _usd_quat the stage1 controller actually uses for the relay grasp vs standalone; if the
+base quat differs, that's the bug. Harness: chain_gate + /tmp/grasp_geom.py + /tmp/cp01_graspquat.py.
