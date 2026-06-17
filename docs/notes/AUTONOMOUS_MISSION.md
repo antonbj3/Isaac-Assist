@@ -5672,3 +5672,16 @@ composition #47 stochastic). This is a KEY structural advantage: robot-diversity
 THAN parallel composition, not less. ROBOT-DIVERSITY CHAIN = GOLD (this pair). Remaining = breadth (more
 template pairs) + optional scene_eyes RAW per-stage structural verify. The months-blocked multiplier axis
 (robot-diversity) is now an achieved, deterministic, reusable capability.
+
+cont.228 (2026-06-17): BREADTH probe — built CP-CHAIN-UR10-RECV (UR10 flat-handoff RECEIVER, counterpart to
+the UR10 SOURCE) to extend robot-diversity to UR10-as-receiver. Standalone gate_one = 0/1, DIAGNOSED (fresh
+Kit, ctrl:* dump, diagnostic-first): UR10 NEVER picks the flat cube — straight-down-grasp REACH res_None at
+the pick goal [0.51,-0.40,0.929] (pf=27/54), cube stays at [0.5,-0.4,0.775]. This is the known-hard UR10
+non-convex down-grasp reach class (project_isaac_assist_reachability_validator: "9 CP-NEW picks UNREACHABLE
+straight-down"), NOT the controller or the cross-Kit chain. Tried planning_obstacles=[Bin] (dropped
+Table/Tray per the table-collision pattern) -> still res_None, so not the obstacle set. Marked DESIGN-ONLY /
+NOT-VERIFIED; NOT chained/golded (false-success-vakt). NEXT (dedicated reach-tuning): reach_validate.py to
+find a reachable UR10 flat down-grasp pose, iterate one-per-fresh-Kit. KEY takeaway: the cross-Kit MECHANISM
+is robot-agnostic + proven (UR10->Franka GOLD); robot-diversity BREADTH is gated per-template by each
+robot's PICK REACHABILITY at the handoff (a geometry concern), not by the chain. So breadth = author
+handoff-compatible templates whose pick poses are reach-validated — a per-template design task.
