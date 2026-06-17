@@ -4867,3 +4867,10 @@ cuRobo UR10 template that delivers onto a FLAT surface (tray/conveyor), then cha
 MECHANISM + robot-agnosticism are confirmed; the blocker is controller-execution-path + handoff-geometry, both
 per-template/infra design = NOT tail-of-session. (The Kit /health-at-2s vs app-ready-at-8s race bit twice more;
 a real exec_sync readiness-ping before builds is the reliable guard — candidate for baking into restart_kit.sh.)
+
+cont.173b (2026-06-17): ★ FIXED the Kit boot-race (the gap cont.170/173 hit ~4x this session) — ~/.isaac_qa/
+restart_kit.sh now gates "FRESH UP" on BOTH /health ok AND a real exec_sync round-trip (POST /exec_sync
+print(1) -> "success":true), not bare /health (which answers at ~2s while the app can't accept RPC until ~8s).
+VERIFIED: reports "KIT FRESH UP ~6s (exec-ready)" and exec_sync works immediately after = honest readiness gate,
+no more "Cannot connect :8001" mid-build. (restart_kit.sh is outside the repo; this log is the durable record.)
+This is the standard restart-before-each-measurement wrapper -> every future measurement benefits.
