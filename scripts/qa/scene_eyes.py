@@ -737,10 +737,17 @@ def _analyse(js):
         if len(_zs) < 3: continue
         _zmax = max(p[2] for p in _zs); _fp = _zs[-1]; _z0 = _zs[0][2]
         _drop = _z0 - _fp[2]   # NET descent from start, not from transit peak
-        if _drop > 0.15 and _fp[2] > -1.0:  # ended >=15cm below where it began = fell off / never seated
+        # FIX 2026-06-17 (cont.232): ALSO require the cube to end BELOW working-surface height (~0.70m) to
+        # flag. A genuine knock-off falls to a LOWER LEVEL / the ground (e.g. off a pallet -> 0.54, or floor
+        # ~0.03). A pick-HIGH/deliver-LOW delivery (pedestal 0.975 -> tray 0.775, or de-palletize) ends DOWN
+        # vs start but STILL on a working surface (>=~0.75) -> was a false-positive (CP-CHAIN-UR10-SRC,
+        # cont.231: net-fell 0.20m flagged though the cube was CONVERGED+GRIPPED + delivered upright to the
+        # tray). Canonical tables are 0.75; 0.70 gives a small margin. Grid->pile (cubes pile at ~table
+        # height) is unaffected — that is caught by the z-levels/min-pair detector, not this one.
+        if _drop > 0.15 and -1.0 < _fp[2] < 0.70:  # fell >=15cm AND ended below working height = real knock-off
             _off.append((_nm, _zmax, _fp, _drop))
     if _off:
-        out.append("OFF-SURFACE / KNOCKED-OFF (final z ended >=0.15m below the object's START — fell off / never seated; transit-lift excluded):")
+        out.append("OFF-SURFACE / KNOCKED-OFF (fell >=0.15m from START *and* ended below working height ~0.70m = fell to a lower level/floor; intended pick-high/deliver-low drops to a surface are excluded):")
         for _nm, _zmax, _fp, _drop in sorted(_off, key=lambda x: -x[3]):
             out.append("    %-14s peak_z=%.2f -> final=[%.2f,%.2f,%.2f]  net-fell %.2fm from start" % (
                 _nm, _zmax, _fp[0], _fp[1], _fp[2], _drop))
