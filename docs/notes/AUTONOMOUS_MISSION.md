@@ -5296,3 +5296,17 @@ the three structured-placement classes that carry composition-bug risk: grid (CP
 (CP-13, cont.193), kit/vision+trays (CP-50, cont.202). Composition of robust blocks = robust scenes,
 confirmed on the hardest class. (Franka-only multi-cell parallel was already N-of-M gold, cont.34/38;
 robot-diversity composition stays the lone blocked axis.)
+
+cont.203 (2026-06-17): MOBILE/NAV track probed (the one untouched axis). nav_gate CP-64 (Carter) =
+reached 1/1, disp 2.852 — nav FOUNDATION re-confirmed solid (control). Audited CP-NEW-occupancy-map-nav
+(occupancy-map+A* Carter nav, not in verified set): BROKEN + ENVIRONMENT-BLOCKED — (1) its core feature
+needs `isaacsim.asset.gen` which is NOT installed (generate_occupancy_map + export_nav2_map both error;
+non-fatal for CP-64, which navigates without the map); (2) Carter never spawns (WORLD_CHILDREN has no
+Carter); (3) navigate_to handler has a minor log_error(*args) bug on its error path (only fires when nav
+already fails). Tried create_wheeled_robot->robot_wizard in `code` — INEFFECTIVE because the instantiator
+runs `code_template` (role-resolved) OVER `code` when both exist (canonical_instantiator.py:776-778); the
+edit was reverted (new memory reference_code_template_overrides_code — a real edit gotcha: CP-NEW-* have
+code_template, hand-authored CP-CHAIN-FLAT doesn't). NET: CP-NEW-occupancy-map-nav is NOT autonomously
+fixable (env module missing for its core feature); Carter nav itself (CP-64) is solid. Stopped (avoided
+rabbit-holing an env-blocked AI-generated template). ENV GAP logged: isaacsim.asset.gen absent ->
+occupancy-map/Nav2-export nav templates can't run their map step (Anton: an Isaac asset-gen pip/ext).
