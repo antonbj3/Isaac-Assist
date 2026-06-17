@@ -5600,3 +5600,22 @@ best). NET: UR10 robot-diversity is blocked on BOTH axes — sequential CHAIN (#
 parallel composition (#47 cuRobo contention, compounded by PhysX corruption). Both need the dedicated Isaac-
 internals fix (surface-gripper teardown + cuRobo-lock serialization). Pure-Franka composition (no UR10) is
 unaffected and remains the reliable breadth lever.
+
+cont.222 (2026-06-17): Anton asked "är det DU som skapat felet?" → ran the definitive control: CP-84 (a UR10
+template authored long before me) A/B/A = IDENTICAL corruption (A: CP-01 4/4; POISON CP-84 [UR10 delivered
+its cube fine]; B: CP-01 0/4, exploded to the SAME deterministic coord z=-28829.48 as my CP-CHAIN-UR10-SRC).
+So it is PRE-EXISTING UR10/surface-gripper INFRASTRUCTURE, NOT a template I authored — I discovered the bug,
+didn't create it. "Root-caused" = found the cause, not caused it. Also: CP-01's BELT cubes explode BEFORE
+any grasp → it's a PhysX-SOLVER blowup (surface-gripper FixedJoint/suction-joint corrupting the solver/
+articulation graph), not cuRobo (plan-fail is secondary).
+
+cont.223 (2026-06-17): cheap-fix avenue CONCLUSIVELY CLOSED — the corruption is PROCESS-LEVEL (PhysX C++ /
+CUDA / warp), no Python reset clears it. Tested+FAILED: reset_simulation()+release_physics_objects()+force_
+load (cont.220) AND SimulationManager._clear()+drop _physics_sim_view/__warp/_simulation_view_created
+(cont.223) — B's CP-01 still explodes (z≈-29000..-30000) each time. KEY tell: _physics_sim_view is ALREADY
+None between runs (tl.stop drops it), yet the FRESHLY-recreated view on the next play is STILL corrupted →
+the bad state is inherited from PROCESS-level PhysX/CUDA/warp, not any Python object. ONLY a Kit PROCESS
+restart clears it. CONSEQUENCE: UR10+Franka in ONE PhysX scene is FUNDAMENTALLY blocked (can't restart the
+process mid-scene). Robot-diversity needs either (a) a deep surface-gripper PREVENTION fix, or (b) a cross-
+Kit DECLARATIVE chain (each robot its own fresh Kit, chain at the plan/state level — the LLM-flow direction).
+[An adversarial-audit Workflow is running to separate proven/inferred + design the mechanism-isolation test.]
