@@ -4887,3 +4887,22 @@ suspect (init binds the physics handle; if the chain build path leaves it stale,
 is controller-execution instrumentation = a focused session, not tail-of-session. Robot-diversity-via-chain
 remains the strategically-correct path (bypasses #47); the single remaining blocker is now this one callback/init
 question + a flat-handoff stage0.
+
+cont.174 (2026-06-17): ★ CORRECTS cont.173c (false-success-vakt on my OWN hypothesis) + concludes the chain
+investigation for this session. Tried CP-70 (cuRobo UR10 + suction) -> CP-54 (cuRobo Franka + suction) — the
+combo meant to bypass BOTH known blockers (cuRobo so chain_gate drives it; suction so the bin handoff is
+pickable). RESULT both stages relay=0/1. RAW diagnosis: inst0/Cube_1 UNTOUCHED at its pick [-0.5,0.4,0.83] (the
+UR10 never moved to it), and the gripper IS namespaced (/World/inst0/ee_link_ShortGripper — cont.166 fix
+confirmed). So CP-70 (cuRobo) fails as chain-stage0 EXACTLY like CP-84 (builtin) -> cont.173c's "builtin-specific
+callback" hypothesis is REFUTED. The real pattern: UR10-as-chain-stage0 doesn't plan/move regardless of
+controller type, while CP-01 (Franka cuRobo) WORKS as chain-stage0 (proven). UR10-SPECIFIC. Both build via the
+same execute_template_canonical (compose_canonicals:1226 calls it too) + run via play+app.update(); UR10
+templates DELIVER via compose_canonicals+_KIT-probe (CP-84 at inst0 = Cube_1 0.825) but NOT via chain_gate's
+execute_template_canonical(inst0)+_run_steps. So the UR10 controller needs something the _KIT-probe run does
+that chain_gate's bare _run_steps doesn't (UR10-specific arming: articulation.initialize()/world.reset() timing,
+or a builtins flag the UR10 asset-gripper+cuRobo path needs) — Franka tolerates the bare run, UR10 doesn't.
+NEXT-SESSION (precise, focused): diff the UR10 controller-arming between scene_eyes' compose run-path and
+chain_gate's _run_steps (the UR10 cube is UNTOUCHED = no cuRobo plan issued = controller never armed under
+chain_gate). HARD STOP on the chain vein this session — 4 wakes of diagnosis; it's a focused controller-arming
+debug, not tail-of-session. Robot-diversity-via-chain remains strategically correct (bypasses #47); the lone
+blocker is now precisely: UR10 controller-arming under chain_gate's run-path (Franka already works there).
