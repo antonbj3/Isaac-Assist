@@ -4759,3 +4759,21 @@ C never-SG-gripped→REJECT(never approached). +2 selfcheck invariants (now 11/1
 deliveries now correctly gold-gradeable AND floor-drops still rejected — a pure tightening, no false-pos/neg
 trade. All edits host-side _analyse + gate (Kit-side data collection untouched); verified by exec'ing the
 real _analyse on real rows (faithful). Standalone CP-69 + Franka multi-cube selfcheck = zero regression.
+
+cont.168 (2026-06-17): grip-recognition fix (cont.167) CONFIRMED END-TO-END across the UR10 family + golds
+adversarially audited. Real-tool runs (not exec-harness): CP-69 (asset short_gripper RAYCAST suction, bin
+class) -> scene_eyes CONVERGED+GRIPPED + SETTLED-Z=0.785 -> eyes_gold_gate GOLD; CP-84 (procedural CONE grip,
+stack-on-cube) -> CONVERGED+GRIPPED + SETTLED-Z=0.825 -> GOLD. So _sg_held (defer to the SurfaceGripper's own
+`grp` list) generalizes across BOTH grip mechanisms (asset + cone) AND both classes (bin + stack). ADVERSARIAL
+audit of the CP-84 gold (raw live stage): Cube_1 [0.51,-0.39,0.825] sits ON BaseCube [0.5,-0.4,0.775] = xy
+within 14mm, z +50mm (one cube-height) = GENUINE stack, GOLD correct. Determinism: CP-69 Cube_1=0.785 again
+(3rd consistent run). NET: UR10/suction deliveries are now first-class gold-gradeable via the LOCAL scene_eyes
++ eyes_gold_gate pipeline (they were ALWAYS false-rejected as "never-gripped" before cont.167) -> the local
+gate now covers the UR10 family, not just Franka.
+   2 latent PRE-EXISTING gate gaps surfaced (now visible because UR10 templates reach the classifier instead
+of dying at never-gripped) -> task #48 (LOW, coupled): (1) eyes_gold_gate _class() misses "stacking"/"stack on
+top of" -> a stack task runs the lenient BIN path (CP-84 was correct since its 1 moved cube stacked, but a
+SCATTERED multi-stacker mislabeled bin would false-pass the structure check); (2) the stack BASE cube
+(/World/BaseCube) isn't tracked by scene_eyes (no Cube*/Item* prefix) -> the 2-level column is invisible, so
+naively adding the stack keyword would FALSE-REJECT CP-84 (base untracked -> <2 z-levels). Coupled fix = add
+keywords + track the base anchor; deferred (not a clean tail-of-sweep partial).
