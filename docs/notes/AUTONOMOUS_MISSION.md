@@ -5551,3 +5551,15 @@ PhysX/CUDA) that kills the subsequent Franka GRIP (plan_fails=0, cube 0-jiggle =
 NEXT (dedicated): clean fresh-cube-BEFORE-stage1-build test; inspect global cuRobo `_lock`/PhysX state post-
 stage0; build-time contact report on the REAL chain grasp. (Memory project_isaac_assist_chain_relay_crossns
 updated; the file name is now legacy — finding is "UR10-stage0-activity", not cross-namespace.)
+
+cont.218 (2026-06-17): #29(b) global-poison CONFIRMED, stale-ref RULED OUT. Clean test (fresh Kit via the
+new kit_restart.sh): full UR10 stage0 (delivered 1/1 — internal health control), then delete UR10 + delivered
+cube, create a FRESH inst0/Cube_1, and ONLY THEN build the Franka stage1 (controller captures the fresh cube,
+no stale reference) → the fresh cube STILL fails to deliver. So freshcube_chain's fail was NOT a stale-ref
+artifact: the UR10's active stage0 genuinely poisons a GLOBAL state that kills the subsequent Franka grip.
+RULED OUT as the poison: cuRobo plan-lock (per-planner key + self-heals + Franka plans fine), PhysX scene
+config (CPU/MBP both). Remaining prime suspect: a global PhysX state the UR10 SURFACE-GRIPPER touches.
+#29(b) PARKED here as a well-scoped dedicated-session task (10+ hypotheses refuted on a trustworthy
+instrument). Per directive (don't grind one issue), pivoting; the contact-report/surface-gripper deep-dive
+is the documented entry point. Session NET: instrument-trust guard built+committed (kit_restart.sh/
+kit_health.py); CP-CHAIN-FLAT confirmed real gold; #29(b) precisely landed.
