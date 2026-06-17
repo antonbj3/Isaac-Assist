@@ -5685,3 +5685,18 @@ find a reachable UR10 flat down-grasp pose, iterate one-per-fresh-Kit. KEY takea
 is robot-agnostic + proven (UR10->Franka GOLD); robot-diversity BREADTH is gated per-template by each
 robot's PICK REACHABILITY at the handoff (a geometry concern), not by the chain. So breadth = author
 handoff-compatible templates whose pick poses are reach-validated — a per-template design task.
+
+cont.229 (2026-06-17): ★ BREADTH design CONSTRAINT found (worth more than one more gold pair) — robot-
+diversity chains are shaped by HANDOFF-HEIGHT COMPATIBILITY. Iterated CP-CHAIN-UR10-RECV (flat-pick at
+[0.5,-0.4] -> relocate to [-0.5,0.4] -> raise to a 0.975 stand), gate 0/1 every time, each diagnosed:
+the UR10 DELIVERS flat (~0.775) but can't reliably PICK flat at 0.775 (multi-segment descend res_None at
+BOTH quadrants; IK-reachable != gate-pass); it needs the pick RAISED to ~0.975; AND a UR10 receiver must
+deliver to a FLAT surface not a deep bin (the raised-pick+deep-bin variant still 0/1 — deep-bin drop
+res_None's the whole pick+drop plan, cube never moved). Franka PICKS flat. => UR10->Franka is GOLD precisely
+because UR10's flat delivery matches Franka's flat pick; UR10->UR10 / Franka->UR10 need a RAISED handoff
+(deliver onto a 0.975 stand). The viable UR10-receiver pattern = pick-raised + deliver-flat (= the
+CP-CHAIN-UR10-SRC pattern itself). CP-CHAIN-UR10-RECV marked DESIGN-ONLY (not chained/golded; false-success-
+vakt). This CONSTRAINT is the deliverable: the composition/LLM-flow layer must match a stage's delivery height
+to the next stage's robot pick-envelope. NEXT: author height-matched pairs (+ reach_validate the receiver
+pick) for more diversity; or a raised-handoff source for ?->UR10. Memory project_isaac_assist_chain_relay_
+crossns updated.
