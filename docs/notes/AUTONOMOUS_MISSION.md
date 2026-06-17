@@ -4696,3 +4696,20 @@ rule before it). PROMOTING the count rule to the PRODUCTION orchestrator SYSTEM_
 composition-tool step — a clear, validated, ready-to-promote improvement (do NOT wire into prod unilaterally).
 Full diagnostic-first arc on the LLM gap: adversarial eval found it -> diagnosed (missing rule) -> fixed (eval
 prompt) -> validated (A4 PASS) -> prod-promotion scoped + gated. data -> compose_reasoning.jsonl.
+
+cont.165 (2026-06-17): ROBOT-DIVERSITY probe (strategy's other multiplier half) — UR10+Franka composition probed,
+specific blocker FOUND via diagnostic-first. Composed CP-69 (robust UR10 cuRobo+conveyor, function-gate ✓) +
+CP-13 (Franka) LOCALLY (never UR10 on cloud). BOTH cells REJECT. Diagnostic-first also caught a self-error first
+(initially picked CP-73 which is function-gate ✗ -> switched to robust CP-69 before launching). ROOT CAUSE (read
+raw inst1 eyes.json): the tracked tool for inst1 was "/World/ee_link_ShortGripper/suction_cup" = the UR10's
+suction cup, UN-NAMESPACED (at /World root, NOT /World/inst0/...). CP-13's cubes ARE offset correctly (x~7.0 =
+5.25 offset + ~1.7), so the composer position-offset works — but the UR10's ShortGripper suction PRIM is created
+at /World root (not under its instance root), so the composer doesn't namespace it -> it leaks across instances
+-> scene_eyes focusing inst1 finds that root-level cup as the tool (the "3.7m never approached" = wrong-tool
+artifact) AND it likely breaks the UR10's own grip in composition. Plus the UR10 showed a suction near-miss
+(25mm, didn't engage on a moving conveyor cube). NET: robot-diversity (heterogeneous-robot composition) is blocked
+by (1) the UR10 ShortGripper prim not being namespaced under its instance root (composer/handler fix), and (2)
+UR10 suction-under-composition timing. A DEDICATED UR10-composition session, not tail-of-marathon. The probe
+answered the strategic question + pinned the specific blocker. Franka-only composition (parallel 2-5, 12 blocks)
+remains the solid tier. (NOTE: never mix a kill of the Kit :8001 pid into a compound bash command -> exit 144;
+clean up Kit in a separate step.)
