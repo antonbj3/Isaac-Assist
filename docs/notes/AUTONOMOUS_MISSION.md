@@ -5020,3 +5020,18 @@ stage-k's SENSOR onto stage-(k-1)'s delivery"); my offset aligned CP-54's BASE (
 offset that puts CP-54's pick-sensor (~[0.0-0.4, 0.4] in its frame) ONTO the relayed cube [0.51,-0.39] ->
 offset ~[0.3,-0.79,0]. NET: robot-diversity-via-chain stage0 SOLVED (re-arm, both controller types); stage1 =
 per-template offset-alignment tuning (geometry, my authority), no longer a controller/arming mystery.
+
+cont.182 (2026-06-17): robot-diversity chain — stage1 FULLY characterized = handoff-geometry DESIGN, not a bug.
+With the sensor-aligned offset [0.3,-0.79,0], CP-54's PickSensor landed at [0.7,-0.39,0.835] (close to the
+relayed cube's BaseCube landing [0.51,-0.39] -> alignment nearly right, no GEOMETRIC_OVERLAP this time). But the
+relayed cube ended at [2.081,-0.39,0.525] = CP-54's OWN CONVEYOR swept through the handoff zone and carried it
+away (+x to the belt's far end) before CP-54 could pick -> wait_sensor forever. So a robust UR10->Franka chain
+needs a handoff where stage0's delivery lands in stage1's pick-zone WITHOUT stage1's belt interfering = the
+chain_gate doc's "needs a PICKABLE-FLAT handoff (staging tray/conveyor, no deep walls)" caveat = #29 L3
+auto-handoff DESIGN territory (find/author a clean handoff-tray template pair). NOT a controller/arming bug.
+SESSION SUMMARY (robot-diversity, ~6 wakes): #46 namespacing DONE; UR10 gold-gradeability DONE (grip-recognition);
+★ the HARD blocker SOLVED = re-arm fix (settle_after_canonical stage0 -> UR10 controller's articulation handle
+re-validated -> UR10 chain-stage0 delivers 1/1 for BOTH cuRobo CP-70 AND builtin CP-84); my own cube-reset bug
+in that fix found+fixed (scope to stage0); stage1 = handoff-geometry design (sensor-align + belt-clearance),
+per-template, the documented caveat. Robot-diversity-via-chain is mechanically WORKING for the robot side; the
+remaining gold blocker is handoff-geometry design (#29), not the controllers.
