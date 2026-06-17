@@ -5619,3 +5619,18 @@ restart clears it. CONSEQUENCE: UR10+Franka in ONE PhysX scene is FUNDAMENTALLY 
 process mid-scene). Robot-diversity needs either (a) a deep surface-gripper PREVENTION fix, or (b) a cross-
 Kit DECLARATIVE chain (each robot its own fresh Kit, chain at the plan/state level — the LLM-flow direction).
 [An adversarial-audit Workflow is running to separate proven/inferred + design the mechanism-isolation test.]
+
+cont.224 (2026-06-17): adversarial-audit Workflow (5 agents) + its decisive test T1 → my surface-gripper
+hypothesis is REFUTED (2nd overclaim caught this session; false-success-vakt working). (1) The audit refuted
+"OgnSurfaceGripper OmniGraph node" AT SOURCE: UR10 uses the ASSET-gripper path (_USE_ASSET_GRIPPER=True,
+robot.py:6512); the OmniGraph create_gripper node is never invoked by CP-84/CP-CHAIN-UR10-SRC. It also called
+out my "cuRobo innocent (multi-Franka golds)" as UNSOUND — multi-Franka golds only exercise the FRANKA
+planner key, not the UR10 6-DOF planner/warp-codegen path. (2) T1 (decisive): ran CP-84 with grip activation
+SUPPRESSED via a gated builtins._sg_suppress_close (verified: Cube_1 stayed at the pedestal = never gripped,
+cuRobo plan_calls=14, arm moved, ur10.usd loaded). Subsequent CP-01 STILL exploded 0/4 → the GRIP is
+EXONERATED; the poison is the UR10 arm/cuRobo/warp-codegen/asset-load path. LEADING = H-warp (UR10 cuRobo
+warp-kernel-cache/NVRTC corruption — codebase's OWN RCA pick_place.py:5459). Diagnostic edit reverted (clean).
+ALSO flagged: the A/B/A EXPLOSION signature vs #29b's GRIP-SIDE signature may be TWO distinct phenomena.
+NEXT (dedicated): T2 = trigger UR10 cuRobo planner build (warp codegen) w/o play → CP-01 (isolate warp); +
+asset-only → CP-01. Mitigation unchanged: kit_restart.sh after any UR10. #29b/#47 stay blocked pending the
+deep warp/cuRobo fix or a cross-Kit declarative chain.
