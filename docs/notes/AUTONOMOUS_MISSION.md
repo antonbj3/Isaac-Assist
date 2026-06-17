@@ -4826,3 +4826,22 @@ focus=inst1 -> robot /World/inst1/Franka, Cube_1 x=4.75 = correctly scoped to ea
 (different x despite the colliding 'Cube_1' leaf = genuine, not auto-detect). #28 gap-2 now covers composed
 scenes. Remaining #28: the direct_eval LLM-calls-it run (Kit-bound, fresh session) + ChromaDB retrieval scoring
 (watched window).
+
+cont.172 (2026-06-17): ★ STRATEGIC REFRAME (diagnostic-first, no Kit needed) — robot-diversity has a path that
+BYPASSES #47's parallel-cuRobo contention: the SEQUENTIAL CHAIN. chain_gate.py runs stages ONE AT A TIME (stage
+0 = robot A builds+runs+delivers+SETTLES, THEN stage k = robot B builds+runs+relays the same physical cube
+prims via source_override). So only ONE arm plans cuRobo at any instant -> ZERO concurrent-cuRobo contention ->
+a UR10->Franka chain does NOT hit the #47 wall. The chain IS serialization, and is PROVEN single-cube
+(CP-01->CP-01, conveyor->inst0/Bin->inst1/Bin). This aligns exactly with Anton's strategy ("multiplikatorn =
+BREDD x robot-diversitet, INTE större-N parallell-celler") — robot-diversity should be a CHAIN (sequential),
+not parallel cells. The real limiter for a robust chain is HANDOFF GEOMETRY (chain_gate.py caveat): stage (k-1)
+delivering into a DEEP bin (0.15m walls) makes stage k's pick plan-fail (cuRobo) or grip-explode (PhysX
+wall-fight); a robust chain needs a PICKABLE-FLAT handoff (staging tray/conveyor/flat surface) = a per-template
+DESIGN concern, NOT a composer/contention gap. CONCRETE NEXT (scoped fresh session, NOT tail-of-this): build a
+UR10->Franka chain with a flat handoff — e.g. a UR10 stage that delivers onto a flat tray/surface (CP-84
+stacks onto a flat BaseCube), then a Franka stage whose pick-sensor aligns there; run chain_gate.py + audit
+both stages deliver. NB build_composed_scene already defaults refuse_policy="serialize" for PARALLEL, but the
+process-global plan/move lock makes parallel-serialize wall-clock-contended (the #47 depth); the chain sidesteps
+that by construction (temporal separation, not lock-sharing). Also confirmed this wake: the observe_scene
+LLM-USES-IT validation needs the FULL service stack (direct_eval POSTs to uvicorn :8000 + LLM backend + Kit +
+likely a tool-description tuning loop) = genuinely a fresh focused session, not a tail-of-session measurement.
