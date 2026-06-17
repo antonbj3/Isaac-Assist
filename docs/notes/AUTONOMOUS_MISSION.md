@@ -5377,3 +5377,13 @@ avoids the per-plan world-thrash that plan-level/base-sig fixes can't (the world
 default-OFF + measured against CP-73+CP-01 would be the byte-identical experiment; NOT done now (deep change
 to the generated shared controller, regression-sensitive, the dedicated-session warning is accurate). This
 TURN narrowed #47 from "serialize somehow" to a specific mechanism + approach — real progress on the gate.
+★ SYNTHESIS (reprioritization): the CHAIN ALREADY IS serialized robot-diversity. chain_gate runs stages
+one-at-a-time = pick-level serialization by construction, and the UR10 stage0 PROVABLY delivers in it
+(re-arm fix) with ZERO concurrent-cuRobo (one arm plans at a time = exactly what #47 pick-level turn-taking
+would add to the parallel path). So implementing #47 parallel-serialize is LARGELY REDUNDANT with the chain
+for reaching robot-diversity GOLD: the chain delivers serialized 2-robot-family TODAY; its ONLY missing
+piece is #29(b) (the Franka relay grasp-pose offset on the source_override cube). => The single
+highest-leverage robot-diversity lever is #29(b) grasp-pose (chain supplies everything else), NOT #47.
+Both deep, but #29(b) is NEARER (chain mechanism + UR10 stage0 + re-arm + handoff geometry all already
+work). The dedicated robot-diversity-GOLD session should target #29(b), measuring the ACTUAL EE/TCP pose at
+the relay grasp (not the finger-prim AABB) to localize the offset, with chain_gate as the harness.
