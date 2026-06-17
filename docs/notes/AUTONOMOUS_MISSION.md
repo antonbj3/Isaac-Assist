@@ -5429,3 +5429,18 @@ standalone CP-CHAIN-FLAT grip clean top-down + deliver). So: same visual CLASS (
 cause, NOT a corpus regression. #29(b) is precisely a relay-grasp-orientation problem; root-cause next step
 unchanged (dump _DOWN_Q_BASE/_usd_quat + the goal quat the stage1 controller uses for the relay vs the
 top-down standalone). Sent grasp1.png to Anton.
+
+cont.211 (2026-06-17): ★ SELF-CORRECTION (false-success-vakt on my OWN cont.208 claim) — the 'side
+grasp / 90deg' was WRONG. Ran the SAME-TEMPLATE control I'd skipped: the STANDALONE CP-CHAIN-FLAT grasp
+(which DELIVERS) has hand_q=[0.707,0,0.707,0] + EE_down_axis=[-1,0,0] — IDENTICAL to the chain relay. So
+[0.707,0,0.707,0] is the NORMAL/correct grasp orientation for this Franka (+90deg base); my
+EE_down_axis=-X 'side grasp' read (cont.208/209/210) was a mis-interpretation of the gripper's axis
+convention, NOT a real 90deg rotation. (cont.209's CP-01 [0,0,1,0] control was INVALID — CP-01 has a
+different base orientation than CP-CHAIN-FLAT, so its quat isn't the right reference; the same-template
+standalone is.) => NOT the recurring 90deg-gripper bug. The REAL chain failure is a grasp-POSITION/descend
+offset (cont.192 was right): chain finger_mid [0.571,-0.387,0.93] vs relay cube [0.512,-0.387,0.825] =
+~0.06m beside + 0.10m ABOVE -> the gripper hovers off the relay cube and never descends onto it (it sits
+higher on CP-84's BaseCube). SAME orientation as the working standalone; only the descend/position differs.
+#29(b) = relay-cube descend/position (the descend stops ~0.1m short of the BaseCube-elevated cube), NOT
+orientation. LESSON (again): always run the SAME-TEMPLATE working control before claiming a mechanism;
+a quat that 'looks' rotated may be the normal convention (the working twin proves it).
