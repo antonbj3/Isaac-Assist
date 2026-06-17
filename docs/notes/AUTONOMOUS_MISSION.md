@@ -5236,3 +5236,20 @@ METHOD is now hand-derived + proven (parse color_routing + bin xy -> per-cube co
 Promoting it to a first-class detector (a routing_validate.py / eyes_gold_gate hook) is the #36 follow-up;
 the per-template parser (CP-16 uses a bin_specs loop; others vary) is the only fiddly part. Color-sort
 class now anchored by CP-03 (canonical GENUINE) + CP-16 (GENUINE routed).
+
+cont.199 (2026-06-17): routing_validate.py promoted to a FIRST-CLASS detector + used to sweep the
+color-sort class (the #36 follow-through). CONTROL: CP-16 = ROUTED-OK 4/4 (matches cont.198 manual). The
+CP-17 control then caught a TOOL BUG — CP-17's cubes are SIZE-named (Cube_s1/m1/l1), so the tool returned
+UNMAPPED, but the verdict logic wrongly collapsed UNMAPPED -> ROUTING-FALSE. FIXED (control-fail = fix the
+measure first): verdict now distinguishes real MIS-ROUTE (ROUTING-FALSE) from UNASSESSABLE (size/attr-
+named, out of scope) from INCOMPLETE (undelivered -> re-run fresh) from ROUTED-OK. SWEEP (mappable
+color-named sorters): CP-32 ROUTED-OK 2/2, CP-33 ROUTED-OK 2/2, CP-34 INCOMPLETE -> RE-RUN FRESH -> blue
+UNDELIVERED again. GENUINE CATCH: CP-34 (was TRUSTED position-honest) is STOCHASTIC on the blue cube ->
+BlueBin(x+0.4): in-bin 1 run (scene_eyes, all 3 routed correctly) / floor 2 runs (routing_validate). When
+delivered it routes correctly; it just often drops at the far bin (controller place-stochasticity, not a
+scene/reach fix — blue is never-gripped-then-placed flaky). Downgraded CP-34 -> PARTIAL(stochastic blue
+place); registry trusted 65->64, partial 4->5. CP-35 (r1/b1 naming) + CP-38/47/57 (no color_routing) are
+UNASSESSABLE by this tool's exact-suffix mapping (honest out-of-scope; prefix-mapping = a future tool
+enhancement). NET: color-sort routing is broadly CORRECT (CP-03/16/32/33 clean, CP-34 routes-correct-but-
+flaky-delivery) — no MIS-ROUTING false-gold found; the one issue is a stochastic DELIVERY, now honestly
+marked. routing_validate.py = reusable #36 detector (control-validated + bug-fixed in the same session).

@@ -99,8 +99,25 @@ print("ROUTING_RESULT "+_j.dumps(res))
     out = (rr.get("output") or rr.get("error") or "")
     line = [l for l in out.splitlines() if l.startswith("ROUTING_RESULT")]
     rows = json.loads(line[-1].replace("ROUTING_RESULT ", "")) if line else []
+    # Verdict logic (cont.199 fix — the CP-17 control showed UNMAPPED must NOT collapse to ROUTING-FALSE:
+    # a size-named/attr-routed sorter the tool can't map is UNASSESSABLE here, not a mis-route). Priority:
+    # real mis-route > unassessable-by-tool > incomplete-delivery > all-correct.
     n_ok = sum(1 for r in rows if r.get("verdict") == "CORRECT")
-    verdict = "ROUTED-OK" if (rows and n_ok == len(rows)) else ("ROUTING-FALSE" if rows else "NO_DATA")
+    has_misroute = any(("MIS-ROUTED" in r.get("verdict", "")) or r.get("verdict") == "NOT-IN-ANY-BIN" for r in rows)
+    has_unmapped = any(r.get("verdict", "").startswith("UNMAPPED") or r.get("verdict") == "MISSING" for r in rows)
+    has_undeliv = any("UNDELIVERED" in r.get("verdict", "") for r in rows)
+    if not rows:
+        verdict = "NO_DATA"
+    elif has_misroute:
+        verdict = "ROUTING-FALSE"                # real mis-route -> false-gold caught
+    elif has_unmapped:
+        verdict = "UNASSESSABLE(non-color-named/attr-routed — out of this tool's scope)"
+    elif has_undeliv:
+        verdict = "INCOMPLETE(some undelivered — re-run on a fresh Kit to rule out planner staleness)"
+    elif n_ok == len(rows):
+        verdict = "ROUTED-OK"
+    else:
+        verdict = "REVIEW"
     return {"template": name, "status": "OK", "verdict": verdict,
             "n_correct": n_ok, "n_cubes": len(rows), "rows": rows}
 
