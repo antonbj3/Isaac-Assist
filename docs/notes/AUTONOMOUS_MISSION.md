@@ -5711,3 +5711,15 @@ and Franka->Franka (2-station line), proving the tool works for both a UR10 sour
 confirming the flat-deliver(0.775)<->flat-pick(0.775) height-match rule. (Franka->Franka shown 1/1+1/1, n=1
 for this pair; the cross-Kit mechanism is already 3/3-deterministic + both components are gold standalone.)
 Composition-breadth via cross-Kit is now a working, general capability.
+
+cont.231 (2026-06-17): ★ ADVERSARIAL AUDIT of the cross-Kit GOLD claims via RAW scene_eyes (false-success-
+vakt — chain_xkit_gate's MEASURE is bare bbox; the directive demands RAW per-object). BOTH stages of the
+UR10->Franka diversity GOLD CONFIRMED GENUINE: (stage0 UR10) PICKED -> CONVERGED+GRIPPED (closest 25mm),
+gripped until release t=32.4s, cube on Tray z=0.775 tilt 0.3° UPRIGHT; (stage1 Franka) finger contact force
+~0.68, GRIP-SLIP rot=2° -> RIGID HOLD (no pendulum/pinch), CONVERGED+GRIPPED, cube in bin z=0.785 tilt 4.2°
+UPRIGHT. So the GOLD survives RAW audit (not bbox-fooled). TOOL NUANCE found (scene_eyes OFF-SURFACE detector):
+it flagged stage0's cube 'net-fell 0.20m from start' — a FALSE-POSITIVE for pick-HIGH/deliver-LOW templates
+(pedestal 0.975 -> tray 0.775 is the INTENDED delivery drop, not a knock-off; the CONVERGED+GRIPPED+upright+
+settled signals confirm genuine). Detector compares final-z to START, should compare to the DELIVERY height.
+Minor (human-readable as false-pos given the other signals); logged for a future scene_eyes fix. Also noted:
+CP-CHAIN-FLAT's transit swing brushes the Table (panda fingers|Table t=4.1/6.5s) — cosmetic, delivery clean.
