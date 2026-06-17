@@ -5177,3 +5177,11 @@ against RAW per-object eyes.json (not the scene_eyes summary), trying to REFUTE 
   Verdict: the composable-block foundation's riskiest canonical reps are trustworthy under composition.
   Method = the locked-in eyes-first discipline: read RAW per-object trajectories + compute spread/z-levels
   myself, never the summary metric.
+
+cont.194 (2026-06-17): CP-42 UNCLEAR -> RESOLVED GENUINE(grid). The lone UNCLEAR/pending block in the
+composable registry was a STALE verdict from before the #45 brick-tracking fix (scene_eyes was blind to
+non-Cube objects, so the 4 Bricks read as untracked -> UNCLEAR). Re-ran scene_eyes (now brick-aware), read
+RAW: 4 bricks end in a clean 2x2 grid (min-pair-xy 0.118m ~= the authored 0.12 spacing, max 0.170m
+diagonal, 1 z-level, none on floor) = GENUINE grid. composable_blocks.json: CP-42 verdict + basis updated
+(surgical edit), summary trusted 64->65, pending 1->0. The registry now has ZERO unknowns (65 trusted,
+4 partial=throughput/belt-limited, 1 false=CP-09 scatter). +1 robust block to the breadth foundation.
