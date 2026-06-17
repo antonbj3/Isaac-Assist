@@ -31,6 +31,14 @@ def _pick_xy(tpl):
     if m:
         v = [float(x) for x in m.group(1).split(",")]
         return [v[0], v[1]]
+    # no proximity sensor (e.g. a source_paths-driven UR10 source serving as a receiver): fall back to the
+    # first source cube's create_prim xy so the auto-offset still lands the pick (pedestal) on the handoff.
+    cubes, _ = _src_target_cubes(tpl)
+    for cp in cubes:
+        mm = re.search(r'create_prim\([^)]*' + re.escape(cp) + r'[^)]*position\s*=\s*\[([^\]]+)\]', code)
+        if mm:
+            v = [float(x) for x in mm.group(1).split(",")]
+            return [v[0], v[1]]
     return [0.0, 0.4]
 
 
@@ -68,6 +76,33 @@ for cp in CUBES:
 print("MEASURE "+json.dumps(res))
 '''
 
+# A single 5000-update PLAY RPC 504s for a SLOW receiver (UR10 cuRobo + reroot/relay overhead, cont.233):
+# the Kit RPC gateway times the request out before the loop finishes. Play in CHUNKS (each its own RPC,
+# under the gateway timeout) then measure with PLAY=False. Robust either way: a genuinely-stuck receiver
+# now reports a clean delivered=0 instead of crashing the gate on an empty (504) MEASURE output.
+PLAY_CHUNK = '''
+import omni.kit.app, omni.timeline
+app=omni.kit.app.get_app(); tl=omni.timeline.get_timeline_interface()
+if not tl.is_playing(): tl.play()
+for _ in range(__N__): app.update()
+print("PLAYED __N__")
+'''
+
+
+async def _play_and_measure(kt, target, cubes, total=6000, chunk=1000):
+    done = 0
+    while done < total:
+        n = min(chunk, total - done)
+        await kt.exec_sync(PLAY_CHUNK.replace("__N__", str(n)), timeout=200)
+        done += n
+    code = MEASURE.replace("__TARGET__", repr(target)).replace("__CUBES__", repr(cubes)).replace("__PLAY__", "False")
+    out = (await kt.exec_sync(code, timeout=120)).get("output", "").strip()
+    lines = [l for l in out.splitlines() if l.startswith("MEASURE")]
+    if not lines:
+        return {"target": target, "delivered": 0, "total": len(cubes), "poses": {},
+                "measure_error": out[-400:]}
+    return json.loads(lines[-1][8:])
+
 
 async def run_stage0(name):
     from service.isaac_assist_service.chat.tools import kit_tools as kt
@@ -77,9 +112,7 @@ async def run_stage0(name):
     await kt.exec_sync("import omni.usd; omni.usd.get_context().new_stage()", timeout=25)
     await kt.exec_sync("import builtins\nfor k in [x for x in list(vars(builtins)) if x.startswith('_curobo_pp_sub_')]:\n    try: delattr(builtins,k)\n    except Exception: pass\n", timeout=10)
     await execute_template_canonical(tpl); await settle_after_canonical(tpl)
-    code = MEASURE.replace("__TARGET__", repr(target)).replace("__CUBES__", repr(cubes)).replace("__PLAY__", "True")
-    out = (await kt.exec_sync(code, timeout=300)).get("output", "").strip()
-    r = json.loads([l for l in out.splitlines() if l.startswith("MEASURE")][-1][8:])
+    r = await _play_and_measure(kt, target, cubes)
     # handoff = delivered cube world poses
     r["handoff"] = {cp: r["poses"][cp] for cp in cubes if r["poses"].get(cp)}
     return r
@@ -89,7 +122,8 @@ async def run_stage_k(k, name, handoff):
     """Faithful relay: derive offset so this stage's pick lands on the handoff, re-instantiate the relayed
     cube(s) at the handoff world pos, source_override the controller to them."""
     from service.isaac_assist_service.chat.tools import kit_tools as kt
-    from service.isaac_assist_service.chat.canonical_instantiator import execute_template_canonical
+    from service.isaac_assist_service.chat.canonical_instantiator import execute_template_canonical, settle_after_canonical
+    from service.isaac_assist_service.chat.composer import reroot_prim_path
     tpl = json.load(open(f"{REPO}/workspace/templates/{name}.json"))
     root = f"inst{k}"
     handoff_cubes = list(handoff.values())              # world poses of stage k-1's delivered cubes
@@ -99,32 +133,43 @@ async def run_stage_k(k, name, handoff):
     relay_paths = [f"/World/{root}/Cube_{i+1}" for i in range(len(handoff_cubes))]
     await kt.exec_sync("import omni.usd; omni.usd.get_context().new_stage()", timeout=25)
     await kt.exec_sync("import builtins\nfor k in [x for x in list(vars(builtins)) if x.startswith('_curobo_pp_sub_')]:\n    try: delattr(builtins,k)\n    except Exception: pass\n", timeout=10)
-    # NOTE the relayed cubes live at a sibling instance root so the controller (rerooted to `root`) does NOT
-    # spawn over them; source_override points the controller at these relayed paths.
-    relay_root = f"/World/relay{k}"
-    relay_cube_paths = [f"{relay_root}/Cube_{i+1}" for i in range(len(handoff_cubes))]
-    await execute_template_canonical(tpl, instance_root=root, origin_offset=off, source_override=relay_cube_paths)
-    # delete this stage's own placeholder cubes, then re-instantiate the RELAYED cubes at the handoff world pos
-    dl = "import omni.usd\nfrom pxr import Sdf, UsdGeom, UsdPhysics, PhysxSchema, Gf\nstage=omni.usd.get_context().get_stage()\n"
-    dl += f"for pr in list(stage.Traverse()):\n    p=str(pr.GetPath()); nm=pr.GetName()\n    if p.startswith('/World/{root}/') and (nm.startswith('Cube') or nm.startswith('Item') or nm.startswith('Brick')):\n        stage.RemovePrim(p)\n"
-    dl += f"stage.DefinePrim('{relay_root}','Xform')\n"
-    for cp, X in zip(relay_cube_paths, handoff_cubes):
-        dl += (f"c=UsdGeom.Cube.Define(stage,'{cp}'); c.GetSizeAttr().Set(0.05)\n"
-               f"x=UsdGeom.Xformable(c.GetPrim()); x.ClearXformOpOrder(); x.AddTranslateOp().Set(Gf.Vec3d({X[0]},{X[1]},{max(X[2],0.78)}))\n"
-               "for api in (UsdPhysics.RigidBodyAPI, UsdPhysics.CollisionAPI, UsdPhysics.MassAPI):\n    api.Apply(c.GetPrim())\n"
-               "PhysxSchema.PhysxRigidBodyAPI.Apply(c.GetPrim())\n"
-               "rel=c.GetPrim().CreateRelationship('physics:materialBinding', custom=False)\n"
-               "rel.SetTargets([Sdf.Path('/World/PhysicsMaterials/rubber_natural')])\n")
-    dl += "print('RELAY_PLACED')\n"
-    await kt.exec_sync(dl, timeout=30)
-    # target = stage k's destination, rerooted+offset to its instance
-    from service.isaac_assist_service.chat.composer import reroot_prim_path
-    _, target = _src_target_cubes(tpl)
+    own_cubes, target = _src_target_cubes(tpl)
     target_inst = reroot_prim_path(target, root)
-    code = MEASURE.replace("__TARGET__", repr(target_inst)).replace("__CUBES__", repr(relay_cube_paths)).replace("__PLAY__", "True")
-    out = (await kt.exec_sync(code, timeout=300)).get("output", "").strip()
-    r = json.loads([l for l in out.splitlines() if l.startswith("MEASURE")][-1][8:])
+    has_sensor = bool(re.search(r'add_proximity_sensor', tpl.get("code") or ""))
+    if has_sensor:
+        # SENSOR-driven receiver (e.g. CP-CHAIN-FLAT): delete this stage's own placeholder cubes and re-
+        # instantiate the RELAYED cubes at the handoff (a sibling relay root so the controller doesn't spawn
+        # over them); the proximity sensor at the offset-aligned pick detects them dynamically. source_override
+        # points the controller at the relay paths.
+        relay_root = f"/World/relay{k}"
+        measure_cubes = [f"{relay_root}/Cube_{i+1}" for i in range(len(handoff_cubes))]
+        await execute_template_canonical(tpl, instance_root=root, origin_offset=off, source_override=measure_cubes)
+        dl = "import omni.usd\nfrom pxr import Sdf, UsdGeom, UsdPhysics, PhysxSchema, Gf\nstage=omni.usd.get_context().get_stage()\n"
+        dl += f"for pr in list(stage.Traverse()):\n    p=str(pr.GetPath()); nm=pr.GetName()\n    if p.startswith('/World/{root}/') and (nm.startswith('Cube') or nm.startswith('Item') or nm.startswith('Brick')):\n        stage.RemovePrim(p)\n"
+        dl += f"stage.DefinePrim('{relay_root}','Xform')\n"
+        for cp, X in zip(measure_cubes, handoff_cubes):
+            dl += (f"c=UsdGeom.Cube.Define(stage,'{cp}'); c.GetSizeAttr().Set(0.05)\n"
+                   f"x=UsdGeom.Xformable(c.GetPrim()); x.ClearXformOpOrder(); x.AddTranslateOp().Set(Gf.Vec3d({X[0]},{X[1]},{max(X[2],0.78)}))\n"
+                   "for api in (UsdPhysics.RigidBodyAPI, UsdPhysics.CollisionAPI, UsdPhysics.MassAPI):\n    api.Apply(c.GetPrim())\n"
+                   "PhysxSchema.PhysxRigidBodyAPI.Apply(c.GetPrim())\n"
+                   "rel=c.GetPrim().CreateRelationship('physics:materialBinding', custom=False)\n"
+                   "rel.SetTargets([Sdf.Path('/World/PhysicsMaterials/rubber_natural')])\n")
+        dl += "print('RELAY_PLACED')\n"
+        await kt.exec_sync(dl, timeout=30)
+    else:
+        # SOURCE_PATHS-driven receiver (no proximity sensor, e.g. CP-CHAIN-UR10-SRC): the auto-offset already
+        # places this stage's OWN pedestal+cube EXACTLY at the handoff (off = X0_xy - source_cube_xy), so the
+        # controller picks its own cube at the handoff pose with NO relay-override. source_override to a post-
+        # build relay path does NOT bind for a source_paths controller (the relay cube stayed 0-jiggle, 0/1,
+        # cont.234) — a fresh own-cube at the identical handoff pose is the faithful relay for a settled box.
+        measure_cubes = [reroot_prim_path(c, root) for c in own_cubes]
+        await execute_template_canonical(tpl, instance_root=root, origin_offset=off)
+        # NOTE: no settle_after_canonical here — its settle_state uses un-rerooted paths (/World/Cube_1) that
+        # don't match the instance build; the own cube is built at rest on the offset pedestal, _play_and_
+        # measure's play settles it.
+    r = await _play_and_measure(kt, target_inst, measure_cubes)
     r["auto_offset"] = list(off); r["handoff_in"] = X0
+    r["receiver_mode"] = "sensor" if has_sensor else "source_paths"
     return r
 
 

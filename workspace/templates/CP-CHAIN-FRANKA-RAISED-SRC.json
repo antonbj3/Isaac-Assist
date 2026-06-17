@@ -1,0 +1,69 @@
+{
+  "task_id": "CP-CHAIN-FRANKA-RAISED-SRC",
+  "goal": "Robot-diversity chain SOURCE stage (Franka) with a RAISED handoff for a downstream UR10 receiver: a Franka Panda picks a cube resting in FRONT of it and delivers it onto a RAISED handoff STAND (top z=0.95, cube rests at z~0.975) BEHIND it. The raised height matches the UR10's PROVEN pedestal-pick envelope (CP-CHAIN-UR10-SRC picks at z~0.975) per the cont.229 handoff-height-compatibility rule: a UR10 CANNOT reliably pick a flat 0.775 cube, so a Franka->UR10 chain needs the source to deliver RAISED. Same CP-01-proven Franka pick regime as CP-CHAIN-FRANKA-SRC; only the destination changes (raised Stand instead of a flat Tray/deep Bin). Enables the Franka->UR10 cross-Kit robot-diversity pair (chain_xkit_gate.py CP-CHAIN-FRANKA-RAISED-SRC CP-CHAIN-UR10-SRC), completing the diversity matrix opposite the proven UR10->Franka GOLD.",
+  "tools_used": [
+    "create_prim",
+    "set_attribute",
+    "apply_api_schema",
+    "set_physics_scene_config",
+    "robot_wizard",
+    "bulk_set_attribute",
+    "apply_physics_material",
+    "add_proximity_sensor",
+    "setup_pick_place_controller"
+  ],
+  "thoughts": "cont.233: the Franka->UR10 robot-diversity pair (reverse of the proven UR10->Franka GOLD). Per the cont.229 handoff-height rule, a UR10 RECEIVER needs its pick RAISED to ~0.975 (it can't reliably pick a flat 0.775 cube; gate 0/1 at both quadrants, res_None). So the Franka SOURCE must deliver RAISED. This = CP-CHAIN-FRANKA-SRC's proven Franka pick (+90deg orient, 0.40m front pick, CP-01 regime) but delivers onto a Stand at [0,-0.4] top z=0.95 (cube rests 0.975) instead of a flat Tray. The downstream receiver = CP-CHAIN-UR10-SRC itself (pick-raised 0.975 -> deliver-flat = the only viable UR10-receiver pattern). chain_xkit_gate auto-aligns the UR10's pedestal-pick to this delivery (its _pick_xy now falls back to the source-cube xy [-0.5,0.4] since CP-CHAIN-UR10-SRC has no proximity sensor). Source stand top is 0.20 wide (> the receiver's 0.12 pedestal) for gentle-place tolerance; only the cube centre transfers as the handoff so the receiver's own pedestal supports the relay. Validate: (1) gate_one/scene_eyes RAW standalone on a FRESH Kit (cube reaches Stand at ~0.975, no roll-off); (2) chain_xkit_gate.py CP-CHAIN-FRANKA-RAISED-SRC CP-CHAIN-UR10-SRC = Franka->UR10 line; N-of-M before GOLD.",
+  "code": "# Franka RAISED-stand SOURCE: picks a front cube -> delivers onto a RAISED handoff STAND (top z=0.95,\n# cube rests z~0.975 = the UR10's proven pedestal-pick height) so a downstream UR10 receiver can relay it\n# cross-Kit (the cont.229 handoff-height rule: UR10 can't reliably PICK a flat 0.775 cube, needs ~0.975).\n# Same CP-01-proven Franka pick regime as CP-CHAIN-FRANKA-SRC; only the destination height changes.\ncreate_prim(prim_path=\"/World/DomeLight\", prim_type=\"DomeLight\")\nset_attribute(prim_path=\"/World/DomeLight\", attr_name=\"inputs:intensity\", value=1000.0)\n\ncreate_prim(prim_path=\"/World/Ground\", prim_type=\"Cube\", position=[0, 0, -0.5], scale=[20, 20, 1])\napply_api_schema(prim_path=\"/World/Ground\", schema_name=\"PhysicsCollisionAPI\")\n\nset_physics_scene_config(config={\"enable_gpu_dynamics\": False, \"broadphase_type\": \"MBP\"})\n\n# Work table: half-extents [0.6,0.9,0.375], centre [0,0,0.375] -> TOP z=0.75; covers pick(+y), base, stand(-y).\ncreate_prim(prim_path=\"/World/Table\", prim_type=\"Cube\", position=[0, 0, 0.375], scale=[0.6, 0.9, 0.375])\napply_api_schema(prim_path=\"/World/Table\", schema_name=\"PhysicsCollisionAPI\")\n\n# CP-01-PROVEN orientation: +90deg about Z so base +X = world +Y; pick 0.40m in FRONT = reachable regime.\nrobot_wizard(\n    robot_name=\"franka_panda\",\n    dest_path=\"/World/Franka\",\n    position=[0, 0, 0.75],\n    orientation=[0.7071068, 0, 0, 0.7071068],\n)\n\n# ONE workpiece, 0.40m IN FRONT (local +y) under the PickSensor.\ncreate_prim(prim_path=\"/World/Cube_1\", prim_type=\"Cube\", position=[0.0, 0.4, 0.80], size=0.05)\nfor api in (\"PhysicsRigidBodyAPI\", \"PhysicsCollisionAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n    apply_api_schema(prim_path=\"/World/Cube_1\", schema_name=api)\nbulk_set_attribute(prim_paths=[\"/World/Cube_1\"], attr=\"physxRigidBody:sleepThreshold\", value=0.0)\napply_physics_material(prim_path=\"/World/Cube_1\", material_name=\"rubber\")\n\n# RAISED handoff STAND BEHIND the robot (local -y = base -X, the CP-01-proven place side). Half-extents\n# [0.10,0.10,0.075], centre z=0.875 -> TOP z=0.95 -> the relayed cube (size 0.05) rests at centre z~0.975.\n# Top is WIDER (0.20) than the UR10 receiver pedestal (0.12) for gentle-place tolerance; only the cube\n# CENTRE transfers as the handoff, so the receiver re-instantiates on its OWN pedestal regardless.\ncreate_prim(prim_path=\"/World/Stand\", prim_type=\"Cube\", position=[0.0, -0.4, 0.875], scale=[0.10, 0.10, 0.075])\napply_api_schema(prim_path=\"/World/Stand\", schema_name=\"PhysicsCollisionAPI\")\n\nadd_proximity_sensor(sensor_path=\"/World/PickSensor\", position=[0.0, 0.4, 0.85], size=[0.08, 0.08, 0.14])\n\nsetup_pick_place_controller(\n    robot_path=\"/World/Franka\",\n    target_source=\"curobo\",\n    sensor_path=\"/World/PickSensor\",\n    belt_path=None,\n    source_paths=[\"/World/Cube_1\"],\n    destination_path=\"/World/Stand\",\n    drop_target=[0.0, -0.4, 1.0],\n    planning_obstacles=[\"/World/Stand\"],\n)",
+  "settle_state": {
+    "cubes": {
+      "/World/Cube_1": [
+        0.0,
+        0.4,
+        0.8
+      ]
+    },
+    "conveyors": {}
+  },
+  "simulate_args": {
+    "cube_path": "/World/Cube_1",
+    "target_path": "/World/Stand",
+    "duration_s": 120,
+    "xy_tolerance": 0.1
+  },
+  "verify_args": {
+    "stages": [
+      {
+        "robot_path": "/World/Franka",
+        "pick_path": "/World/PickSensor",
+        "place_path": "/World/Stand",
+        "robot_kind": "franka_panda"
+      }
+    ],
+    "cube_path": "/World/Cube_1"
+  },
+  "motion_controllers": {
+    "verified": [],
+    "failed": {},
+    "untested": [
+      "curobo"
+    ]
+  },
+  "verified_status": "STANDALONE 4/4 RAW-GENUINE 2026-06-17 (cont.233-234): 1 local scene_eyes + 3 Modal cloud containers, ALL CONVERGED+GRIPPED, SETTLED-Z=0.975 on Stand, upright 3.5-4.1deg, RIGID HOLD, NO roll-off (final local [-0.0015,-0.386,0.975]). A NEW robust Franka block (raised-handoff source); the Franka half of the Franka->UR10 diversity pair. CHAIN STATUS: Franka->UR10 cross-Kit GOLD is BLOCKED at the UR10 RECEIVER. chain_xkit_gate.py stage0 (this template) delivers 1/1 -> handoff [-0.001,-0.386,0.975], but stage1 (CP-CHAIN-UR10-SRC offset to the handoff) plan_fails 617/633 -> 0/1 (cont.234 ctrl:* dump): the UR10 pick-place controller MIS-HANDLES instance_root+origin_offset (grasp-goal/cuRobo world-frame under offset; arm pursues wrong-direction goals). NOT source_override/sensor/reroot (ctrl:picked_path correct). UR10 picks NATIVELY (stage0 GOLD) but can't be a cross-Kit RECEIVER (which requires offset). Franka receiver handles offset fine (UR10->Franka GOLD). NEXT: zero-offset co-design (Franka delivers to UR10 NATIVE pick so off~0) OR fix UR10 offset handling. NOTE scene_timeseries ts=False on the raised Stand = raised-target blind-spot (NOT_SEATED/NON_RIGID_GRIP assume bin-height); scene_eyes authoritative.",
+  "intent": {
+    "pattern_hint": "pick_place",
+    "structural_features": {
+      "n_robot_stations": 1,
+      "n_handoffs": 0,
+      "destination_kind": "raised_stand",
+      "uses_conveyor_transport": false,
+      "n_workpieces": 1
+    },
+    "structural_tags": [
+      "isaac:robot.fixed_base.arm",
+      "isaac:robot.franka_panda",
+      "isaac:topology.single_station",
+      "isaac:surface.raised_stand",
+      "isaac:role.chain_source_stage"
+    ]
+  }
+}

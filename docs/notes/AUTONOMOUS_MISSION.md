@@ -5731,3 +5731,33 @@ The detector flagged any cube ending >=0.15m below START -> false-fired on pick-
 scene_eyes CP-CHAIN-UR10-SRC -> OFF-SURFACE now ABSENT, CONVERGED+GRIPPED+upright preserved. Keep-side sound
 (real floor/lower-level falls end <0.70 -> still flag; grid->pile is a separate z-levels detector). Committed.
 This prevents false-NEGATIVE OFF-SURFACE on a whole template class (palletizers/stacking/raised-handoff).
+
+cont.233 (2026-06-17): BREADTH+CLOUD for the Franka->UR10 diversity pair. Built CP-CHAIN-FRANKA-RAISED-SRC
+(Franka raised-handoff SOURCE: delivers onto a raised Stand top 0.95, cube rests ~0.975 = the UR10 pedestal-
+pick height per cont.229). scene_eyes RAW standalone: CONVERGED+GRIPPED, SETTLED-Z=0.975 on Stand, upright,
+RIGID HOLD, final [-0.0015,-0.386,0.975], NO roll-off. Modal Franka-breadth N-of-M (Anton's $9, run PARALLEL
+to the local UR10 work = right division of labour): 3x each {RAISED-SRC, CP-CHAIN-FRANKA-SRC, CP-CHAIN-FLAT}
+= 9 fresh-Kit cloud containers eyes=True -> ALL 3/3 RAW-genuine (RAISED-SRC SETTLED-Z=0.975, SRC=0.775,
+FLAT=0.785; all CONVERGED+GRIPPED+RIGID HOLD+upright). Franka half of the pair = 4/4 (1 local + 3 cloud),
+deterministic. Modal app auto-stopped clean (no leaked credits). Tools: _pick_xy fallback to the source-cube
+xy (sensor-less receivers); scene_timeseries ts=False on a raised Stand = raised-target blind-spot
+(NOT_SEATED/NON_RIGID_GRIP assume bin-height) -> eyes authoritative, logged.
+
+cont.234 (2026-06-17): ROOT-CAUSED the Franka->UR10 cross-Kit GOLD blocker (diagnostik-foerst, ctrl:* dump
+NOT inference). chain stage0 (RAISED-SRC) 1/1 -> handoff [-0.001,-0.386,0.975]; stage1 (CP-CHAIN-UR10-SRC,
+auto-offset [0.499,-0.786] to land its pedestal-pick on the handoff) = 0/1, cube 0-jiggle. RULED OUT in
+sequence: (a) gateway-504 on the single 5000-update MEASURE RPC -> FIXED via chunked _play_and_measure
+(6x1000-update RPCs each under the gateway timeout + clean PLAY=False measure; VERIFIED clean delivered
+counts, no 504); (b) source_override binding to a post-build relay path -> added a no-sensor branch (source_
+paths receivers pick their OWN offset-placed cube at the handoff, since off=X0-pick_xy puts it exactly there,
+no relay-override) -> STILL 0/1; (c) reroot -> ctrl:picked_path=/World/inst1/Cube_1 is CORRECT. CONFIRMED
+cause (ctrl:* on the offset UR10): plan_calls=633 plan_fails=617, arm pursued WRONG-direction goals (ee ended
++x at [1.683,-0.495] while the cube is -x at [-0.001,-0.386]), last_fail_goal=[-0.758,-0.244,0.936] not near
+the cube = the UR10 pick-place controller MIS-HANDLES instance_root+origin_offset (grasp-goal / cuRobo world-
+frame computed wrong under offset). The UR10 picks fine NATIVELY (stage0 = the UR10->Franka GOLD) but can NOT
+be a cross-Kit RECEIVER, which requires offsetting it to the handoff. The Franka receiver handles offset fine
+(sensor-driven, UR10->Franka GOLD). So robot-diversity via cross-Kit is proven for Franka receivers; a UR10
+receiver needs either a zero-offset co-designed pair (Franka delivers to the UR10's NATIVE pick xy [-0.5,0.4]
+so off~0 and the UR10 runs in its proven frame) OR a fix to the UR10 controller's instance-offset handling.
+Committed: CP-CHAIN-FRANKA-RAISED-SRC (4/4) + chain_xkit_gate (_pick_xy + chunked MEASURE + no-sensor branch)
++ untracked CP-CHAIN-UR10-SRC.
