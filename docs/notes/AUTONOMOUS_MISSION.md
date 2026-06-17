@@ -4874,3 +4874,16 @@ print(1) -> "success":true), not bare /health (which answers at ~2s while the ap
 VERIFIED: reports "KIT FRESH UP ~6s (exec-ready)" and exec_sync works immediately after = honest readiness gate,
 no more "Cannot connect :8001" mid-build. (restart_kit.sh is outside the repo; this log is the durable record.)
 This is the standard restart-before-each-measurement wrapper -> every future measurement benefits.
+
+cont.173c (2026-06-17): chain blocker NARROWED (time-boxed read, no clean bounded fix found -> stop grinding).
+BOTH cuRobo AND builtin pick-place controllers are driven by omni.physx subscribe_physics_step_events callbacks
+(pick_place.py:898/1563; the callback calls controller.forward() each tick) — so a bare play()+app.update() loop
+SHOULD fire both. Yet CP-01 (cuRobo) runs via chain_gate's _run_steps while CP-84 (builtin) does not. So the
+blocker is NOT "the run path skips stepping" generically — it's specific to CP-84's builtin callback under the
+chain build path. NEXT-SESSION debug (precise): add a one-shot debug print inside CP-84's controller callback +
+forward() (does the callback FIRE under chain_gate? does forward() raise/no-op? is the SingleArticulation handle
+valid post-play in the chain build vs compose path?). SingleArticulation.initialize() timing vs play is the prime
+suspect (init binds the physics handle; if the chain build path leaves it stale, forward() silently no-ops). This
+is controller-execution instrumentation = a focused session, not tail-of-session. Robot-diversity-via-chain
+remains the strategically-correct path (bypasses #47); the single remaining blocker is now this one callback/init
+question + a flat-handoff stage0.
