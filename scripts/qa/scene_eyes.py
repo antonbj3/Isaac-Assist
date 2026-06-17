@@ -878,6 +878,7 @@ def _analyse(js):
         for _h in (_r.get("grp") or []):
             _sg_held.add(_h)
     _ga = []
+    _t_end = rows[-1].get("t", 0.0) if rows else 0.0
     for _nm in sorted(_ej_objs):
         _gr = (_nm in _grip_objs) or (_nm in _sg_held)
         _md = None; _mt = None
@@ -887,16 +888,27 @@ def _analyse(js):
                 _dd = math.dist(_tp, _op)
                 if _md is None or _dd < _md:
                     _md = _dd; _mt = _r["t"]
-        _ga.append((_nm, _gr, _md, _mt))
+        # cont.188: end-of-run object SPEED — distinguishes a STILL-FEEDING / in-transit cube (on a
+        # conveyor, not yet at the pick = under-duration) from a genuinely UNREACHABLE one. A never-gripped
+        # cube still moving at run-end is an under-duration false-NEGATIVE, NOT a reach-fail (CP-10 @100s:
+        # 3 cubes mislabeled "NEVER approached (reach)" were still feeding -> 9/9 GENUINE at full 280s).
+        _tail = [(_r["t"], (_r.get("cubes") or {}).get(_nm)) for _r in rows if _r.get("t", 0.0) >= _t_end - 1.0]
+        _tail = [(t, p) for t, p in _tail if p]
+        _endmv = (math.dist(_tail[-1][1], _tail[0][1]) / (_tail[-1][0] - _tail[0][0])) \
+            if (len(_tail) >= 2 and _tail[-1][0] - _tail[0][0] > 1e-3) else 0.0
+        _ga.append((_nm, _gr, _md, _mt, _endmv))
     if any(not g[1] for g in _ga):   # report when something was never gripped (the interesting case)
         out.append("GRIP-ATTEMPT (per-object; gripped? else closest gripper-to-object approach):")
-        for _nm, _gr, _md, _mt in sorted(_ga, key=lambda x: (x[1], x[2] if x[2] is not None else 9.0)):
+        for _nm, _gr, _md, _mt, _endmv in sorted(_ga, key=lambda x: (x[1], x[2] if x[2] is not None else 9.0)):
             if _gr:
                 out.append("    %-14s GRIPPED" % _nm)
             elif _md is not None:
-                _tag = ("NEAR-MISS (moving-pick? cube moved during approach)" if _md < 0.06
-                        else "approached but not gripped" if _md < 0.15
-                        else "NEVER approached (reach / sensor-not-triggered / not-claimed)")
+                if _endmv > 0.03:   # still moving at run-end = feeding / in-transit, NOT unreachable
+                    _tag = "STILL IN MOTION @ end (%.2f m/s -> under-duration/feeding, NOT a reach-fail)" % _endmv
+                else:
+                    _tag = ("NEAR-MISS (moving-pick? cube moved during approach)" if _md < 0.06
+                            else "approached but not gripped" if _md < 0.15
+                            else "NEVER approached (reach / sensor-not-triggered / not-claimed)")
                 out.append("    %-14s never-gripped  closest tool approach=%4.0fmm @%5.1fs  %s" % (_nm, _md * 1000, _mt or 0, _tag))
             else:
                 out.append("    %-14s never-gripped  (no tool/pos data)" % _nm)

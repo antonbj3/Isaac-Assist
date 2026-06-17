@@ -5102,3 +5102,14 @@ multi-cube templates at their FULL duration_s (a short run = false-negative as c
 tier holds under adversarial audit (CP-08, CP-13, CP-10 all confirmed genuine this session). FOLLOW-UP (living
 tools): GRIP-ATTEMPT labels a still-FEEDING cube as "NEVER approached (reach/...)" -> misleads (I almost flagged
 a false-GENUINE); refine to distinguish in-motion/feeding from truly-unreachable (next).
+
+cont.188 (2026-06-17): scene_eyes GRIP-ATTEMPT refined — distinguish STILL-FEEDING from UNREACHABLE (living
+tools; the gap cont.187 hit). A never-gripped cube's END-OF-RUN speed (displacement over the last 1s) now
+labels it: >0.03 m/s -> "STILL IN MOTION @ end (X m/s -> under-duration/feeding, NOT a reach-fail)"; else the
+prior NEAR-MISS / approached / "NEVER approached (reach)" tags. LABEL-ONLY: the line still says "never-gripped"
+so eyes_gold_gate's reject is UNCHANGED (a cube still feeding at run-end IS not-delivered = correct reject for
+that run) — this only sharpens the DIAGNOSTIC so an auditor isn't fooled into reading under-duration as a
+reach-fail (which nearly made me flag CP-10 as a false-GENUINE). Verified: tag logic unit-tested (feeding 0.2m/s
+-> in-motion; settled 0.0 -> reach; near-miss/approached preserved); parses OK; gate-byte-identical
+("never-gripped" still emitted). Pairs with the cont.187 lesson (audit conveyor-fed templates at full
+duration_s).
