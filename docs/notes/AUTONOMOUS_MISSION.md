@@ -5563,3 +5563,18 @@ config (CPU/MBP both). Remaining prime suspect: a global PhysX state the UR10 SU
 instrument). Per directive (don't grind one issue), pivoting; the contact-report/surface-gripper deep-dive
 is the documented entry point. Session NET: instrument-trust guard built+committed (kit_restart.sh/
 kit_health.py); CP-CHAIN-FLAT confirmed real gold; #29(b) precisely landed.
+
+cont.219 (2026-06-17): ★★ ROOT CAUSE of #29(b) AND the degradation mystery — ONE UR10 (surface-gripper) run
+CORRUPTS GLOBAL PhysX state, surviving new_stage(), so the NEXT template explodes. AIRTIGHT A/B/A on a fresh
+Kit (kit_restart.sh): A) CP-01 (pure Franka) -> 4/4 clean stack; POISON) one UR10 stage0 (CP-CHAIN-UR10-SRC);
+B) CP-01 again (new_stage) -> 0/4, cubes EXPLODED to z~=-29000, speed ~15000 m/s + cuRobo plan-fail. So:
+  - #29(b) chain fails because stage0 UR10 corrupts PhysX before stage1 Franka grasps (grip exerts no force).
+  - the "build-count degradation" was NOT generic build-count -- it was UR10/surface-gripper runs.
+  - cuRobo is INNOCENT (multi-Franka parallel composition golds work); the UR10-vs-Franka diff = surface
+    gripper (auto-injected IsaacSurfaceGripper + raycast->FixedJoint workaround). Corruption survives
+    tl.stop()+new_stage()+settle -> deep in the PhysX sim-view/CUDA state, not a USD prim.
+OPERATIONAL RULE (now): restart Kit (kit_restart.sh) after ANY UR10 run before measuring anything else; never
+trust a measurement that follows a UR10 in the same Kit. UR10 golds verified ONE-per-Kit stand; any batch
+that ran a UR10 then other templates in one Kit is suspect. Memory: feedback_ur10_corrupts_global_physx.
+NEXT (dedicated): pinpoint+fix the surface-gripper teardown PhysX residue (unblocks #29b chain + reliable
+UR10 composition). #29(b) is now ROOT-CAUSED, not just narrowed.
