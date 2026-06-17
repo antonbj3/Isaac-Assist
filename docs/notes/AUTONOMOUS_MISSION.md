@@ -4956,3 +4956,19 @@ palletize/grid role is SATURATED (CP-08/10/12/19/27/30/46/49/77 all GENUINE); th
 43, CP-71) add zero marginal breadth to a saturated role. So block-breadth is NOT where the multiplier is
 gated — ROBOT-DIVERSITY is (chain UR10-controller-arming + #47 parallel). Refocuses effort: the robot-diversity
 levers (focused-session/Anton-gated) are the real multiplier bottleneck, not adding more Franka blocks.
+
+cont.178 (2026-06-17): chain UR10-arming — SingleArticulation.initialize() hypothesis ALSO REFUTED (non-invasive
+diagnostics now EXHAUSTED). Riktad probe (no chain_gate edit): built CP-70 @ inst0 via execute_template_canonical
+(chain_gate's exact build) -> bare play+800 updates -> inst0/Cube_1 UNTOUCHED [-0.5,0.4,0.83] (artroot
+/World/inst0/UR10/root_joint). Then SingleArticulation(root).initialize() + 1000 more updates -> cube STILL
+UNTOUCHED. So articulation-init is NOT the arming step either (cont.175 already refuted physics_sim_view). The
+UR10 controller does not START under chain_gate's run despite build being IDENTICAL to compose_canonicals
+(:1226 calls the same execute_template_canonical, and compose+scene_eyes DOES drive it). The cube is UNTOUCHED
+(not mid-transit) = the controller never armed/started, not a step-count issue. EVERY non-invasive hypothesis is
+now refuted (namespacing, gripper, builtin-vs-cuRobo, physics_sim_view, articulation-init). The only remaining
+diagnostic is INVASIVE: instrument the UR10 controller's physx step-callback directly (add a one-shot print in
+the generated _on_step/forward to see if it FIRES under chain_gate vs compose, and the controller state-machine
+phase) — that needs editing the generated controller code (escaping hazard: \n -> \\n) = a genuinely focused
+session. GENUINE HARD STOP: this is now provably a focused-session debug, not tail-of-session — I cannot make
+non-invasive progress. Robot-diversity-via-chain blocker = UR10 controller-never-starts under chain_gate's
+execute_template_canonical+_run_steps path (Franka starts fine there); precise next = invasive callback probe.
