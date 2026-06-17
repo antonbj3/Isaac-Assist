@@ -5164,3 +5164,16 @@ the offset magnitude (~0.085m) dwarfs any cube-position discrepancy. EYES-FIRST 
 refuted with raw data (stale-planner env, side-reach, mount-table obstacle, cube-on-cube, material,
 collision-filtering); the AABB measurement localized it. Validator scripts/qa/franka_reach_sweep.py and
 the chain_gate placeholder-delete stand.
+
+cont.193 (2026-06-17): PROACTIVE false-success-vakt on the composable-block canonical reps (the
+multiplier's foundation) — adversarially re-auditing the two STRUCTURE-sensitive golds UNDER COMPOSITION
+against RAW per-object eyes.json (not the scene_eyes summary), trying to REFUTE them. Both HOLD:
+  * CP-08 palletize/grid (compose CP-01+CP-08, focus inst1): 4 cubes end SPREAD — min-pair-xy 0.137m,
+    max 0.210m (all >> the 0.07m pile threshold), ALL at one z-level (0.82) = a genuine 1-level grid
+    delivered to the pallet. The 6d2048fa grid-collapse fix is verified by RAW data; NOT a pile.
+  * CP-13 stack/column (compose CP-01+CP-13, focus inst1): 2 cubes end at identical xy (spread 0.002m)
+    but distinct z (0.825/0.875 = clean 2-high stack), none on the floor = a genuine stack, not a topple.
+  Both were the highest false-success RISK classes (the cont.40 CP-08 grid->pile was the cautionary tale).
+  Verdict: the composable-block foundation's riskiest canonical reps are trustworthy under composition.
+  Method = the locked-in eyes-first discipline: read RAW per-object trajectories + compute spread/z-levels
+  myself, never the summary metric.
