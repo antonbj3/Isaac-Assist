@@ -5723,3 +5723,11 @@ it flagged stage0's cube 'net-fell 0.20m from start' — a FALSE-POSITIVE for pi
 settled signals confirm genuine). Detector compares final-z to START, should compare to the DELIVERY height.
 Minor (human-readable as false-pos given the other signals); logged for a future scene_eyes fix. Also noted:
 CP-CHAIN-FLAT's transit swing brushes the Table (panda fingers|Table t=4.1/6.5s) — cosmetic, delivery clean.
+
+cont.232 (2026-06-17): FIXED the scene_eyes OFF-SURFACE false-positive found in cont.231 (tools are living).
+The detector flagged any cube ending >=0.15m below START -> false-fired on pick-HIGH/deliver-LOW (pedestal
+0.975->tray 0.775, de-palletize, raised-handoff relays). Fix (scene_eyes.py ~739): ALSO require final_z <
+~0.70 (below working-table height) to flag = a genuine fall to a lower level/floor. VERIFIED: re-ran
+scene_eyes CP-CHAIN-UR10-SRC -> OFF-SURFACE now ABSENT, CONVERGED+GRIPPED+upright preserved. Keep-side sound
+(real floor/lower-level falls end <0.70 -> still flag; grid->pile is a separate z-levels detector). Committed.
+This prevents false-NEGATIVE OFF-SURFACE on a whole template class (palletizers/stacking/raised-handoff).
