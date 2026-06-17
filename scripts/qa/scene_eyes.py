@@ -58,7 +58,15 @@ else:
     NFRAMES = int(ARGS[2]) if len(ARGS) > 2 else 16
 # In compose mode, focus the probe on ONE instance's robot (default inst1, the 2nd cell
 # that degrades). Empty for single-template -> auto-detect (byte-identical).
-FOCUS = ("/World/" + os.environ.get("EYES_FOCUS", "inst1")) if COMPOSE else ""
+# #28 v2 (cont.171): --attach (the observe_scene LLM tool) may ALSO scope a composed instance via
+# EYES_FOCUS (observe inst0 then inst1 of the LLM's OWN composed scene); a bare --attach with no
+# EYES_FOCUS stays FOCUS="" (auto-detect) -> byte-identical to v1 and to every non-attach run.
+if COMPOSE:
+    FOCUS = "/World/" + os.environ.get("EYES_FOCUS", "inst1")
+elif ATTACH and os.environ.get("EYES_FOCUS"):
+    FOCUS = "/World/" + os.environ["EYES_FOCUS"]
+else:
+    FOCUS = ""
 OUT = f"/home/anton/.isaac_qa/run/eyes/{TPL}"
 # PER-INSTANCE eyes.json (cont.149/#39.3): a composed run observes each cell with a distinct EYES_FOCUS but all
 # instances wrote to the SAME compose_<cells>/eyes.json -> only the LAST instance's raw data survived, blocking

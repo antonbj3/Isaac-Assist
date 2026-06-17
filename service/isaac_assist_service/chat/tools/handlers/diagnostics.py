@@ -3400,13 +3400,21 @@ async def _handle_observe_scene(args: Dict) -> Dict:
     except Exception:
         dur = 40.0
     dur = max(5.0, min(dur, 240.0))
+    focus = str(args.get("focus") or "").strip()        # e.g. "inst0" to scope ONE cell of a composed scene
     script = _os.path.join(repo, "scripts", "qa", "scene_eyes.py")
     if not _os.path.exists(script):
         return {"error": "scene_eyes.py not found at %s" % script}
     cmd = [_sys.executable, script, "loaded", str(dur), "--attach", "--noframes"]
+    # Pass focus via EYES_FOCUS; clear any inherited value when unfocused so a bare call observes
+    # the whole (auto-detected) scene — byte-identical to the v1 behaviour.
+    env = dict(_os.environ)
+    if focus:
+        env["EYES_FOCUS"] = focus
+    else:
+        env.pop("EYES_FOCUS", None)
     try:
         proc = await _aio.create_subprocess_exec(
-            *cmd, cwd=repo,
+            *cmd, cwd=repo, env=env,
             stdout=_aio.subprocess.PIPE, stderr=_aio.subprocess.PIPE)
         out, err = await _aio.wait_for(proc.communicate(), timeout=dur + 200.0)
     except _aio.TimeoutError:
@@ -3434,7 +3442,7 @@ async def _handle_observe_scene(args: Dict) -> Dict:
         tail = (err or b"").decode("utf-8", "replace")[-800:]
         return {"error": "observe_scene produced no analysis (no scene loaded? Kit down?)",
                 "stderr_tail": tail}
-    return {"success": True, "duration_s": dur, "analysis": analysis[-7000:]}
+    return {"success": True, "duration_s": dur, "focus": focus or None, "analysis": analysis[-7000:]}
 
 
 @with_telemetry

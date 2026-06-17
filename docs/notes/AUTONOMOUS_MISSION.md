@@ -4813,3 +4813,16 @@ the #28 fresh session (noted, NOT blockers): (1) --attach has NO focus-scoping (
 v1 observes the auto-detected robot + all cubes globally; composed per-instance observe = v2; (2) verify the
 LLM actually CALLS observe_scene + reasons (a direct_eval LLM run, Kit-bound) — the HANDLER is proven, the
 LLM-integration eval is the next step.
+
+cont.171 (2026-06-17): observe_scene v2 — PER-INSTANCE focus for COMPOSED scenes (the #28-followup I scoped in
+cont.170, now shipped). The strategy is COMPOSITION, so the LLM must observe EACH CELL of its composed scene
+separately (leaf names collide: inst0/Cube_1 AND inst1/Cube_1). v1 --attach had no focus-scoping. FIX: scene_eyes
+sets FOCUS from EYES_FOCUS in --attach mode too (elif ATTACH and EYES_FOCUS) — which activates ALL the existing
+cont.166 FOCUS-scoping (robot line 93, cup 118, belt 127, CUBES 177) at once; a bare --attach with no EYES_FOCUS
+stays FOCUS="" (byte-identical to v1 + every non-attach run, smoke-verified). observe_scene handler gains a
+`focus` param (sets EYES_FOCUS env; clears it when unfocused so the default observes the whole scene) + schema
+param. VERIFIED on a CP-01+CP-01 composition: focus=inst0 -> robot /World/inst0/Franka, Cube_1 x=-1.33;
+focus=inst1 -> robot /World/inst1/Franka, Cube_1 x=4.75 = correctly scoped to each cell's OWN robot+cube
+(different x despite the colliding 'Cube_1' leaf = genuine, not auto-detect). #28 gap-2 now covers composed
+scenes. Remaining #28: the direct_eval LLM-calls-it run (Kit-bound, fresh session) + ChromaDB retrieval scoring
+(watched window).

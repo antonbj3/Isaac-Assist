@@ -923,6 +923,7 @@ ISAAC_SIM_TOOLS = [
                 "type": "object",
                 "properties": {
                     "duration_s": {"type": "number", "description": "Seconds of physics to run + observe (default 40). Use a longer value for slow/multi-pick placements so cubes fully settle."},
+                    "focus": {"type": "string", "description": "Optional: for a COMPOSED multi-cell scene, scope the observation to ONE instance's robot + objects, e.g. 'inst0' or 'inst1' (leaf names collide across cells, so observe each cell separately). Omit for a single-cell scene (observes the whole auto-detected scene)."},
                 },
             },
         },
