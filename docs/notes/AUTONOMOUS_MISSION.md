@@ -5460,3 +5460,79 @@ flat-delivering UR10 source. NET this thread (cont.208-212): the months-vague ch
 now MEASURED to be a flat-vs-elevated HANDOFF-SURFACE issue (cube-on-BaseCube), NOT orientation/height/
 controller -- corrected my own cont.208 side-grasp error via the same-template control. Tools: chain_gate +
 grasp_geom + plan-goal capture (eyes_plan_capture).
+
+cont.214 (2026-06-17): ★★ INSTRUMENT WAS DEGRADED — a cascade of cont.208-213 conclusions rested on a
+BROKEN Kit; re-measured everything on fresh Kits. ROOT PROCESS BUG: my "fresh" Kit FAILED to bind 8001
+(boot log: "OSError [Errno 98] address already in use" + "Disabling kvdb because another kit process is
+locking it") because a STALE ~37-min Kit already held 8001 (pgrep "kit|isaac" MISSES it — the launcher's
+KitApp runs as bare `python` via heredoc). ALL my exec_sync went to that stale Kit, and I ran ~10 builds on
+it -> build-count DEGRADATION: CP-01 (7/7 gold) delivered 0/4 with cubes EXPLODING to z=-26000 and
+plan_calls==plan_fails. After killing ALL kit procs (pkill launcher + kill the ss-found 8001 pid) and
+booting ONE clean Kit, CP-01 delivers 4/4 (pf=0, clean stack). CORRECTIONS forced by the clean instrument:
+  (1) CP-CHAIN-FLAT standalone DELIVERS 1/1 (gate_one stable_ok, Bin/Floor, upright) -- it is REAL GOLD.
+      My cont.214-morning "false gold / flat-static Franka grip is broken" claim was a DEGRADED-KIT artifact
+      (gate_one had said delivered_count=0 on the stale Kit). The cont.208-213 premise "standalone delivers"
+      was RIGHT after all; my morning negation of it was the error.
+  (2) chain_gate's manual play-loop is NOT broken for Franka -- step_diag V1 (tl.play()+4000 app.update,
+      chain_gate's exact stepping) DELIVERS the standalone on a fresh Kit. The `chain_gate CP-CHAIN-FLAT`=0/1
+      I saw was Kit degradation (build #6). My 2400-update traces were ALSO too short AND/OR degraded.
+  (3) The UR10->Franka CHAIN RELAY genuinely FAILS 0/1 -- confirmed on FRESH Kits with proper stepping
+      (chain_gate runs 1-2 build#2 0/1; A/B retire-sub test both 0/1, 5000 updates). pick_reject
+      "Cube_1:failed", relay cube unmoved at [0.51,-0.39,0.775]. Cause NARROWED (clean instrument):
+        - NOT height: flat-tray relay at 0.775 (= working-standalone height) STILL fails (cont.212
+          flat-vs-elevated handoff hypothesis REFUTED).
+        - NOT multi-robot gating: retiring the live inst0/UR10 _curobo_pp_sub_ (Franka runs single-robot,
+          subs=1) STILL fails identically. (#47 multi-robot path is NOT the relay-fail cause.)
+        - => isolated to the CROSS-INSTANCE source_override grip: the Franka cannot grip inst0/Cube_1 (a
+          UR10-delivered cube in a foreign namespace) though it grips its OWN cube 1/1 at the same relative
+          pose. Same material (rubber static=1.0/dyn=0.8 on both, RAW physics:materialBinding resolves fine
+          -- my "null material" was a probe artifact: UsdShade.ComputeBoundMaterial doesn't see the raw
+          physics:materialBinding rel PhysX reads). Relay cube is a free dynamic body, NOT joint-anchored to
+          the UR10. Open sub-question: namespace/source_override path-handling vs the cube's UR10-placement
+          physics history -- next clean test = Franka + foreign-path cube with NO UR10 motion.
+  (4) HARNESS GAP for chains: simulate_traversal_check (the gate that DRIVES the Franka grip) does
+      tl.set_current_time(0.0) -> TELEPORTS the relay cube back to its AUTHORED pedestal [-0.5,0.4,0.975]
+      (cont.181 reset bug) -> can't gate a relay; re-authoring the USD translate does NOT survive (PhysX
+      restores the body's initial pose on play). chain_gate avoids the reset but needs >=4000 updates + a
+      HEALTHY Kit. A correct chain-relay gate needs gate-stepping WITHOUT the time-reset (or pin the body's
+      physics reset-pose, not just USD). LESSON (the big one): a degraded instrument manufactures false
+      NEGATIVES as readily as false positives -- ALWAYS run a fresh-Kit positive control before trusting a
+      negative (saved to memory feedback_kit_degradation_and_stale_process).
+
+cont.215 (2026-06-17): #29(b) chain relay ROOT NARROWED to a CROSS-NAMESPACE grasp; every other variable
+refuted on the clean instrument (each test = fresh/healthy Kit, 5000-update chain_gate stepping that
+DELIVERS the standalone). The relay (inst1/Franka picking inst0/Cube_1) fails 0/1; the Franka descends to
+the EXACT correct grasp pose (clean trace: hand_z=0.88=cube_z+0.105, h2c=0.105 straight above, gap 0.08->0.0)
+but the cube is NEVER captured/moved, then retreats empty. Relay cube physics is NORMAL (free dynamic body,
+not kinematic, collision on, sleep_threshold=0, NO joints). REFUTED, each with a clean A/B:
+  - source_override mechanism: standalone + source_override to its OWN path DELIVERS 1/1 (RUN2).
+  - missing settle/re-arm: standalone built DURING live play with NO settle DELIVERS 1/1 (Y_NOSETTLE).
+  - multi-robot gating: retiring the live inst0/UR10 _curobo_pp_sub_ (Franka single-robot) STILL fails.
+  - UR10 PHYSICAL presence: DELETING the UR10+gripper+pedestal prims (relay cube left free on the tray)
+    STILL fails -> the parked UR10 arm is NOT blocking.
+  - handoff height: flat-tray relay at 0.775 (= standalone height) STILL fails (cont.212 REFUTED).
+  - collision filtering: NO CollisionGroup/filteredPairs code in composer/instantiator/pick_place.
+The lone remaining structural difference vs the delivering case: inst1/Franka grips inst0/Cube_1 (CROSS
+namespace) -- parallel composition is ALWAYS same-instance (instN/Franka picks instN/cube), so this exact
+pairing is never otherwise exercised. gap->0.0 + zero cube motion = the fingers never engage the cross-
+namespace cube (pass-through or no-friction-contact). NEXT (dedicated session): PhysX CONTACT-PAIR report
+between inst1 fingers and inst0/Cube_1 during the grasp -- zero contacts => contact suppressed for the cross-
+namespace pair (find why); >0 contacts => friction/force fails to hold. CONFIRMED THIS SESSION (clean Kit):
+CP-CHAIN-FLAT STANDALONE delivers 1/1 (gate_one stable_ok + 6 independent fresh-Kit confirmations) = REAL
+GOLD. Net: the months-old "chain relay grasp fails" is now a SINGLE well-scoped open question (cross-
+namespace contact), with all the plausible confounds eliminated on a trustworthy instrument.
+
+cont.216 (2026-06-17): TOOLING — built the instrument-trust guard I hand-derived ~6x this session
+(VERKTYGEN ÄR LEVANDE). Two new first-class tools (tested end-to-end on a fresh Kit):
+  * scripts/qa/kit_restart.sh (a FILE, not heredoc -> no sleep-block) — kills launcher + the :8001 holder
+    (detected by PORT via ss, since pgrep "kit|isaac" misses the bare-`python` KitApp), waits for the port
+    to free, launches ONE fresh Kit, waits /health, then VERIFIES the boot log has NO "address already in
+    use" (i.e. WE bound it, not a stale Kit answering /health). Exit nonzero on bind conflict / no health.
+  * scripts/qa/kit_health.py — POSITIVE-CONTROL pre-flight: builds a known-gold control (default
+    CP-CHAIN-FLAT, fast + gate-clean + confirmed 1/1) through simulate_traversal_check, asserts
+    delivered_count>0; reports :8001 owner (+etime) and the recent boot-log bind status. Exit 0 = instrument
+    TRUSTWORTHY (negatives can be believed); exit 1 = DEGRADED (restart, don't trust the negative).
+  Verified: kit_restart.sh -> fresh clean-bound Kit; kit_health.py -> CP-CHAIN-FLAT delivered 1/1 stable_ok
+  -> "INSTRUMENT TRUSTWORTHY". STANDARD PRE-FLIGHT for every future Kit session: kit_restart.sh, then
+  kit_health.py, before believing any negative gate/scene_eyes result. Closes the lucka behind the whole
+  cont.214-215 degraded-instrument cascade.
