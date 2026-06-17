@@ -111,6 +111,23 @@ async def run(specs):
         # already valid (no re-arm needed). And settle's tl.stop()+set_current_time(0) would RESET physics
         # to t=0 -> teleport the stage0-DELIVERED relayed cube back to its authored start, out of stage k's
         # reach (cont.180 bug: CP-54 saw inst0/Cube_1 at the pedestal -> wait_sensor, plan_calls=0).
+        # cont.183 HANDOFF: zero stage k's OWN conveyor belts. In a chain stage k sources the RELAYED cube
+        # (source_override), not its own belt-fed cubes, but its belt sweeps the relayed cube out of the
+        # pick zone before pickup (cont.182: CP-54's belt carried inst0/Cube_1 to [2.081,-0.39]). Stopping
+        # stage k's belt lets the relayed cube rest where stage (k-1) delivered it.
+        await kit_tools.exec_sync(
+            "import omni.usd\n"
+            "from pxr import Sdf, Gf\n"
+            "stage=omni.usd.get_context().get_stage()\n"
+            f"root='/World/{root}/'\n"
+            "_n=0\n"
+            "for pr in stage.Traverse():\n"
+            "    p=str(pr.GetPath())\n"
+            "    nm=pr.GetName()\n"
+            "    if p.startswith(root) and (('Conveyor' in nm) or nm.endswith('Belt')):\n"
+            "        a=pr.GetAttribute('physxSurfaceVelocity:surfaceVelocity')\n"
+            "        if a and a.IsDefined(): a.Set(Gf.Vec3f(0,0,0)); _n+=1\n"
+            "print('ZEROED_BELTS', _n)\n", timeout=15)
         await _run_steps(kit_tools, RUN_STEPS + 1000)
         results.append(await _measure(kit_tools, root, name, chained,
                                       reroot_prim_path(tgt, root) if tgt else None))

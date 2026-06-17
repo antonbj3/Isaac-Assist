@@ -5035,3 +5035,18 @@ re-validated -> UR10 chain-stage0 delivers 1/1 for BOTH cuRobo CP-70 AND builtin
 in that fix found+fixed (scope to stage0); stage1 = handoff-geometry design (sensor-align + belt-clearance),
 per-template, the documented caveat. Robot-diversity-via-chain is mechanically WORKING for the robot side; the
 remaining gold blocker is handoff-geometry design (#29), not the controllers.
+
+cont.183 (2026-06-17): chain handoff — sensor-alignment SOLVED, conveyor-overlap is the fundamental blocker
+(= #29 design). Added belt-zeroing of stage k's OWN conveyors after build (a relay stage sources the RELAYED
+cube via source_override, not its belt-fed cubes, so its belt should not sweep the handoff). VERIFIED the
+sensor-alignment math: offset [0.11,-0.79] puts CP-54's PickSensor EXACTLY on the relayed cube's landing
+[0.51,-0.39] (PickSensor_local [0.4,0.4] + offset). Belt zeroed ([0,0,0]). BUT the cube STILL ended at
+[1.262,-0.39] = CP-54's conveyor position -> the belt swept it during the BUILD's timeline-start (before the
+post-build zeroing ran). ROOT: CP-54's PickSensor + ConveyorBelt are CO-LOCATED in its frame, so ANY offset
+that aligns the sensor to the relayed cube also drops the conveyor over it -> structurally unsuitable for a
+chain handoff. A robust UR10->Franka chain needs a stage1 template whose pick-zone is CLEAR of its conveyor,
+OR a dedicated handoff-tray (#29 L3 auto-handoff). The CONTROLLER side is fully solved (stage0 re-arm; both
+robot types); the remaining is purely handoff SCENE-DESIGN. Belt-zeroing kept as a safe general handoff aid
+(no-regression: stage k sources the relay, not its own belt cubes; insufficient alone for CP-54 due to
+build-time belt motion). SESSION ROBOT-DIVERSITY ARC COMPLETE for the controller side: the hard blocker (UR10
+chain-stage0, 6 wakes) is SOLVED + verified; the full chain gold awaits a clean handoff template (#29).
