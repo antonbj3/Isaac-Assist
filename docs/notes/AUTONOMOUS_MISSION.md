@@ -5090,3 +5090,15 @@ position-honest tier is honest about the limitation). To UPGRADE kit/assembly to
 drop targets (controller/template change) + wider slot spacing (~60mm) — a deeper kit-assembly task, not a
 quick fix. NET: false-success-vakt PASSED on the REP (tier accurate); the kit/assembly GENUINE gap is real +
 scoped (per-slot routing). The registry's position-honest-vs-GENUINE distinction is doing its job.
+
+cont.187 (2026-06-17): false-success-vakt audit of CP-10 (palletize/grid GENUINE) — verdict HOLDS; my OWN audit
+was under-duration (self-correction). Adversarial scene_eyes @100s showed 3/9 cubes "never-gripped, NEVER
+approached (reach, closest 317-891mm)" -> looked like a false-GENUINE. BUT reading RAW start/final + duration_s
+revealed it: CP-10's duration_s=280, I ran 100s; the 3 "ungripped" cubes (Cube_1/2/3) were STILL FEEDING on the
+conveyor (Cube_1 -2.699->-1.229, y=0.4 = conveyor, not yet at pick), while Cube_4-9 were picked+placed. Re-ran
+@280s -> ALL 9 CONVERGED+GRIPPED, tight 3x3 grid (1 z-level, min-pair 58mm spread) -> GOLD. So CP-10's GENUINE
+verdict is CONFIRMED; the refutation failed = MY 100s audit's under-duration error. LESSON: audit conveyor-fed
+multi-cube templates at their FULL duration_s (a short run = false-negative as cubes feed in). Registry GENUINE
+tier holds under adversarial audit (CP-08, CP-13, CP-10 all confirmed genuine this session). FOLLOW-UP (living
+tools): GRIP-ATTEMPT labels a still-FEEDING cube as "NEVER approached (reach/...)" -> misleads (I almost flagged
+a false-GENUINE); refine to distinguish in-motion/feeding from truly-unreachable (next).
