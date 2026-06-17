@@ -5662,3 +5662,13 @@ chain_xkit_gate.py CP-CHAIN-UR10-SRC CP-CHAIN-FLAT => stage0 1/1 (handoff [0.51,
 — ALL DELIVERED (faithful cross-Kit relay)". So the SYSTEM abstracts the handoff geometry (the #29 L3 ask):
 no hand-tuned @offset, and stage k consumes the EXACT object stage k-1 produced. Robot-diversity chain is now
 a genuine, reusable, gated capability. NEXT: N-of-M robustness + generalize to other template pairs (breadth).
+
+cont.227 (2026-06-17): ★★ N-of-M GOLD — faithful cross-Kit UR10->Franka relay is 3/3 DETERMINISTIC. Ran
+chain_xkit_gate.py CP-CHAIN-UR10-SRC CP-CHAIN-FLAT 3x: every run = 1/1 + 1/1 ALL DELIVERED, with BIT-IDENTICAL
+handoff [0.51,-0.39,0.775], auto-offset [0.51,-0.79,0], relay-cube final [0.512,-1.182,0.785]. So it is not
+stochastic — the cross-Kit SERIAL design is DETERMINISTIC because each stage runs ALONE in a clean Kit (no
+concurrent-cuRobo contention, no shared-state races — the very things that make single-Kit parallel
+composition #47 stochastic). This is a KEY structural advantage: robot-diversity via cross-Kit is more robust
+THAN parallel composition, not less. ROBOT-DIVERSITY CHAIN = GOLD (this pair). Remaining = breadth (more
+template pairs) + optional scene_eyes RAW per-stage structural verify. The months-blocked multiplier axis
+(robot-diversity) is now an achieved, deterministic, reusable capability.
