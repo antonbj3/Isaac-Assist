@@ -5651,3 +5651,14 @@ the geometric guarantee that stage(k-1)'s delivery == stage k's pick location is
 responsibility (same as single-Kit chain_gate's @offset) — the gate reports the handoff pos for that check but
 doesn't yet auto-verify pick-zone containment. NEXT: add handoff pick-zone containment verification + N-of-M.
 Tool committed. UR10 deep-fix (#47) no longer blocks robot-diversity — it's a perf/elegance optimization now.
+
+cont.226 (2026-06-17): ★ FAITHFUL auto-handoff completed (closes the cont.225 caveat). Upgraded
+chain_xkit_gate.py from "two independent clean-Kit deliveries" to a TRUE relay: stage k AUTO-DERIVES its
+offset from stage k-1's recorded delivery pos + its own pick-sensor xy (O = X_xy - sensor_xy, so its pick
+lands on the handoff), then RE-INSTANTIATES the relayed cube at the handoff world pos (sibling /World/relayK
+root so the rerooted controller doesn't spawn over it) and source_overrides the controller to it. VERIFIED:
+chain_xkit_gate.py CP-CHAIN-UR10-SRC CP-CHAIN-FLAT => stage0 1/1 (handoff [0.51,-0.39,0.775]) + auto-offset
+[0.51,-0.79,0] + stage1 delivers the RELAYED cube /World/relay1/Cube_1 -> inst1/Bin = "2 stage(s), 1/1 + 1/1
+— ALL DELIVERED (faithful cross-Kit relay)". So the SYSTEM abstracts the handoff geometry (the #29 L3 ask):
+no hand-tuned @offset, and stage k consumes the EXACT object stage k-1 produced. Robot-diversity chain is now
+a genuine, reusable, gated capability. NEXT: N-of-M robustness + generalize to other template pairs (breadth).
