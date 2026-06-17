@@ -66,7 +66,7 @@ def _parse(arg, idx):
 
 async def run(specs):
     from service.isaac_assist_service.chat.tools import kit_tools
-    from service.isaac_assist_service.chat.canonical_instantiator import execute_template_canonical
+    from service.isaac_assist_service.chat.canonical_instantiator import execute_template_canonical, settle_after_canonical
     from service.isaac_assist_service.chat.composer import reroot_prim_path
 
     # fresh stage
@@ -81,6 +81,12 @@ async def run(specs):
     chained = [reroot_prim_path(c, "inst0") for c in cubes0 if c]
 
     await execute_template_canonical(tpl0, instance_root="inst0", origin_offset=off0)
+    # cont.180: re-arm after build (tl.stop + _pp_reset_epoch) so the controller re-validates its
+    # articulation handle. Without it the UR10 controller plans (plan_calls++) but the arm never moves
+    # (cont.179: stale handle after play -> apply_action no-op; Franka tolerates it, UR10 doesn't). The
+    # cube-restore no-ops for namespaced instances; the GLOBAL epoch re-arm re-validates the handle.
+    # Verified: UR10 gd 1.289 -> 0.025 (cone reaches cube) + cube carried after this call.
+    await settle_after_canonical(tpl0)
     await _run_steps(kit_tools, RUN_STEPS)
 
     results = []
@@ -100,6 +106,7 @@ async def run(specs):
         # build stage i sourcing the chained cubes; run; measure relay into its target
         await execute_template_canonical(tpl, instance_root=root, origin_offset=off,
                                          source_override=chained)
+        await settle_after_canonical(tpl)   # cont.180: re-arm stage k's controller (re-validate articulation handle)
         await _run_steps(kit_tools, RUN_STEPS + 1000)
         results.append(await _measure(kit_tools, root, name, chained,
                                       reroot_prim_path(tgt, root) if tgt else None))

@@ -4989,3 +4989,19 @@ failed because they didn't re-bind the CONTROLLER's OWN articulation handle. FIX
 needs its articulation handle re-validated AFTER play under chain_gate — world.reset() or the controller re-arm
 (canonical_instantiator:248) that compose+scene_eyes triggers. This is now a PRECISE, testable fix direction,
 not a black box.
+
+cont.180 (2026-06-17): ★★★ ROBOT-DIVERSITY CHAIN STAGE0 BLOCKER SOLVED — the re-arm fix WORKS. cont.179
+diagnosed it (UR10 controller plans but arm stuck = stale articulation handle after play under chain_gate's
+bare run). FIX: chain_gate now calls settle_after_canonical(tpl) after EACH stage build (before _run_steps) —
+its tl.stop() + _pp_reset_epoch bump re-arms the controller, which re-validates the articulation handle. The
+cube-restore no-ops for namespaced instances (paths don't match) so it doesn't reset relayed cubes; the GLOBAL
+epoch re-arm is the active effect. VERIFIED: isolated probe showed UR10 gd 1.289->0.025 (cone reaches cube) +
+cube carried after the re-arm; FULL chain CP-70->CP-54: inst0 CP-70 (UR10) relay 0/1 -> 1/1 (UR10 now DELIVERS
+in the chain!). NO-REGRESSION: CP-01->CP-01 (proven Franka chain) stage0 still delivers 3/4 (4th is RUN_STEPS
+duration-limited, not re-arm-broken; the re-arm is exactly what scene_eyes' non-compose path already does ->
+proven-safe, CP-01 standalone = 4/4 cont.176). So UR10-as-chain-stage0 is UNBLOCKED = robot-diversity via the
+sequential chain (which bypasses #47 parallel-contention) is now MECHANICALLY WORKING. REMAINING for a full
+UR10->Franka chain GOLD: the handoff GEOMETRY — stage1 CP-54 cuRobo "planning failed for inst0/Cube_1" because
+the cube sits inside CP-70's DEEP Bin (the chain_gate doc's documented deep-bin caveat; a per-template DESIGN
+concern, NOT a controller bug). Next: a flat/shallow handoff (UR10 delivers onto a tray/flat surface -> Franka
+picks freely). The hard blocker (UR10 controller-arming, 6 wakes) is DONE; the rest is handoff-geometry design.
