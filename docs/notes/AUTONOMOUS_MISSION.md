@@ -5578,3 +5578,13 @@ trust a measurement that follows a UR10 in the same Kit. UR10 golds verified ONE
 that ran a UR10 then other templates in one Kit is suspect. Memory: feedback_ur10_corrupts_global_physx.
 NEXT (dedicated): pinpoint+fix the surface-gripper teardown PhysX residue (unblocks #29b chain + reliable
 UR10 composition). #29(b) is now ROOT-CAUSED, not just narrowed.
+
+cont.220 (2026-06-17): tested the CHEAP fix for the UR10-PhysX-corruption — it FAILS. After the UR10 stage0,
+`omni.physx.get_physx_interface().reset_simulation()` + `release_physics_objects()` + `force_load_physics_
+from_usd()` (post timeline.stop, pre new_stage) → B's CP-01 STILL explodes to the IDENTICAL deterministic
+coord (c1 z=-28829.48, same as no-reset) = the reset touched the corruption ZERO. So it's BELOW the PhysX-
+object layer (CUDA / cuRobo-warp GPU state or SimulationManager sim-view). ONLY a full Kit restart
+(kit_restart.sh) clears it — the sole working mitigation. The deeper fix (surface-gripper teardown repair, or
+a SimulationManager/CUDA-context reset that actually clears it) is a dedicated Isaac-internals session.
+Memory feedback_ur10_corrupts_global_physx updated. This wake: #29(b) + the degradation mystery fully root-
+caused; cheap-fix avenue closed; instrument-trust guard shipped.
