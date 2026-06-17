@@ -113,6 +113,11 @@ async def run(specs):
 
 
 async def _run_steps(kit_tools, n):
+    # cont.175 NOTE: tried mirroring scene_eyes' _KIT-probe arming (warm-up + SimulationManager.
+    # initialize_physics + World) here to fix UR10-as-stage0 not moving — MEASURED ineffective
+    # (physics_sim_view went True + timeline playing, but the UR10 cube stayed UNTOUCHED). So the
+    # physics_sim_view was NOT the blocker; reverted to keep the proven CP-01 chain path byte-identical.
+    # The UR10 controller-execution-under-chain_gate blocker is deeper (focused-session debug).
     await kit_tools.exec_sync(
         "import omni.timeline,omni.kit.app; omni.timeline.get_timeline_interface().play()\n"
         "_a=omni.kit.app.get_app()\n"

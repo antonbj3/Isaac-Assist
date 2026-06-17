@@ -4906,3 +4906,19 @@ chain_gate's _run_steps (the UR10 cube is UNTOUCHED = no cuRobo plan issued = co
 chain_gate). HARD STOP on the chain vein this session — 4 wakes of diagnosis; it's a focused controller-arming
 debug, not tail-of-session. Robot-diversity-via-chain remains strategically correct (bypasses #47); the lone
 blocker is now precisely: UR10 controller-arming under chain_gate's run-path (Franka already works there).
+
+cont.175 (2026-06-17): UR10-chain-stage0 arming hypothesis TESTED + REFUTED (false-success-vakt on my own fix).
+cont.174 isolated the blocker to "UR10 controller not armed under chain_gate's _run_steps". HYPOTHESIS: the
+_KIT-probe arms physics_sim_view (play -> 12 warm-up updates -> SimulationManager.initialize_physics -> World)
+while chain_gate's bare play+app.update() doesn't, so the UR10 controller callback no-ops. Mirrored that arming
+into chain_gate._run_steps + re-ran CP-70->CP-54. RESULT: STILL relay 0/1; raw query post-run = playing=True,
+physics_sim_view=True (arming WORKED), but inst0/Cube_1 STILL UNTOUCHED at its pick [-0.5,0.4,0.83]. So
+physics_sim_view was NOT the blocker. REVERTED the arming (kept the proven CP-01 chain path byte-identical; the
+change added regression risk for zero benefit). The UR10-controller-under-chain_gate blocker is DEEPER than
+psv/arming — genuinely a focused-session debug now (cheap hypotheses exhausted: namespacing OK, gripper
+namespaced OK, builtin-vs-cuRobo refuted, physics_sim_view refuted). NEXT (focused): instrument whether the UR10
+controller's physx step-callback is even SUBSCRIBED under chain_gate's execute_template_canonical(inst0) build
+(vs compose_canonicals) + whether its internal state-machine advances — the callback subscription or the
+controller's per-instance phase_id scoping is the next suspect. HARD STOP on the chain this session (5
+hypotheses tested). Robot-diversity-via-chain stays strategically correct; blocker precisely scoped for a
+dedicated session.
