@@ -5223,3 +5223,16 @@ robot-diversity; if an anchor is a fling-in false-gold the whole side is suspect
   So the UR10 blocks are real grip+carry+deliver, not just position-honest -> when the robot-diversity
   EXECUTION blockers (#29 grasp-pose, #47 concurrent-cuRobo) are resolved, the underlying blocks hold.
   Method = eyes-first RAW (grp gripped-list + per-cube trajectory + grip-slip), never the summary.
+
+cont.198 (2026-06-17): NEW false-success vein PROACTIVELY audited — COLOR-SORT ROUTING. The
+delivery/position gate counts "cubes in bins" but is BLIND to MIS-ROUTING (a cube in the wrong-color bin
+still passes) = an invisible false-gold class (the directive's exact warning). Audited CP-16 (4-color
+sorter) RAW: parsed its color_routing (Cube_red->RedBin etc.) + bin x-positions (Red -0.45/Blue -0.15/
+Green +0.15/Yellow +0.45, y-0.4, footprint +-0.10), then checked each cube's FINAL x against its ASSIGNED
+bin. Result: 4/4 CORRECT (each cube <0.01 off its assigned bin x, in-bin not floor) -> routing genuinely
+correct, NOT a mis-route false-gold. Upgraded CP-16 TRUSTED(position-honest) -> GENUINE(routed). This is
+the xy-containment check task #36 names ("eyes_gold_gate bin/sort class has no xy-containment check"): the
+METHOD is now hand-derived + proven (parse color_routing + bin xy -> per-cube containment vs ASSIGNED bin).
+Promoting it to a first-class detector (a routing_validate.py / eyes_gold_gate hook) is the #36 follow-up;
+the per-template parser (CP-16 uses a bin_specs loop; others vary) is the only fiddly part. Color-sort
+class now anchored by CP-03 (canonical GENUINE) + CP-16 (GENUINE routed).
