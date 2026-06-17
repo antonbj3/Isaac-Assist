@@ -4845,3 +4845,25 @@ process-global plan/move lock makes parallel-serialize wall-clock-contended (the
 that by construction (temporal separation, not lock-sharing). Also confirmed this wake: the observe_scene
 LLM-USES-IT validation needs the FULL service stack (direct_eval POSTs to uvicorn :8000 + LLM backend + Kit +
 likely a tool-description tuning loop) = genuinely a fresh focused session, not a tail-of-session measurement.
+
+cont.173 (2026-06-17): UR10->Franka CHAIN attempted (robot-diversity via the #47-bypassing sequential path) —
+BUILT + RAN + diagnosed; concrete blockers found (this is now well-scoped fresh-session work, not abstract).
+Ran chain_gate.py CP-84 CP-01@1.0,-0.4,0. RESULT both stages relay=0/1. DIAGNOSED (raw stage query, not the
+summary): (1) ★ stage0 CP-84 (UR10) NEVER PICKED — inst0/Cube_1 sat untouched on its pedestal [-0.5,0.4,0.975].
+NOT namespacing, NOT the UR10: CP-84 built at inst0 via compose_canonicals (scene_eyes --compose) DELIVERS
+(SETTLED-Z Cube_1=0.825 on BaseCube, plan_calls=0 -> CP-84 uses a BUILTIN PickPlaceController, not cuRobo). But
+chain_gate's execute_template_canonical(instance_root=inst0)+_run_steps path does NOT drive that builtin
+controller. compose_canonicals(:1226) makes the IDENTICAL execute_template_canonical call + both run via
+play+app.update() with NO extra settle/arm -> the difference is a SUBTLE run-path/controller-arming behavior for
+BUILTIN (non-cuRobo) controllers (chain was proven only for CP-01=cuRobo-callback-driven). Couldn't isolate
+without deeper instrumentation = fresh-session. (2) my offset put CP-01's ConveyorBelt back over the UR10
+(GEOMETRIC_OVERLAP advisory, depth 0.045m) -> a bigger +x offset needed for belt clearance.
+   NET TENSION for a robust UR10->Franka chain: stage0 must be cuRobo-callback-driven (so chain_gate's _run_steps
+drives it) AND deliver to a PICKABLE-FLAT handoff. CP-84 has the flat handoff (stacks on a base) but is BUILTIN;
+CP-69/70 are cuRobo but deliver into DEEP bins (un-pickable). FRESH-SESSION NEXT (two options): (A) make
+chain_gate drive builtin controllers (route stage build/run through the same path compose_canonicals+scene_eyes
+uses — instrument WHY app.update() drives the builtin there but not in _run_steps), or (B) make/modify a
+cuRobo UR10 template that delivers onto a FLAT surface (tray/conveyor), then chain it to a Franka. The chain
+MECHANISM + robot-agnosticism are confirmed; the blocker is controller-execution-path + handoff-geometry, both
+per-template/infra design = NOT tail-of-session. (The Kit /health-at-2s vs app-ready-at-8s race bit twice more;
+a real exec_sync readiness-ping before builds is the reliable guard — candidate for baking into restart_kit.sh.)
