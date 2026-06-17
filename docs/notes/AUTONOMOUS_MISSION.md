@@ -5272,3 +5272,15 @@ NET color-sort sweep: CP-03/16/32/33 clean GENUINE-routed; CP-34 genuine stochas
 cont.199); CP-35 tool-confounded but scene_eyes-OK. No CONFIRMED mis-routing false-gold in the class.
 LESSON: even a fresh first-class detector needs adversarial disambiguation against scene_eyes before its
 flags are trusted — a NOT-IN-ANY-BIN/undelivered flag is ambiguous (scatter vs still-feeding vs tool-confound).
+
+cont.201 (2026-06-17): KIT/ASSEMBLY canonical CP-50 audited RAW (slot/tray-routing vein, extended to
+destination_map+trays since routing_validate keys on color_routing+bins). Ground truth from color_specs:
+Cube_1/3=Red->RedTray, Cube_2/4=Blue->BlueTray. Result: 4/4 CORRECT — vision-driven classification routed
+both red cubes to RedTray (x-0.3) + both blue to BlueTray (x+0.3), all in-tray-settled, none floor/feeding.
+No mis-kitting. Upgraded CP-50 TRUSTED(position-honest) -> GENUINE(kit-routed). ★ CAPSTONE: EVERY canonical
+anchor is now RAW-verified GENUINE this session (not just position-honest): pick-place CP-01/CP-73,
+grid CP-08/CP-42, column CP-13, color-sort CP-03/CP-16, kit CP-50, UR10 CP-70/CP-73. The composable-block
+FOUNDATION (the breadth half of the multiplier) is verified at its anchors across all classes + both robot
+families. Method throughout: eyes-first RAW per-object containment/grip/trajectory, control-before-trust,
+false-success-vakt (incl. on my own tools). Remaining frontier unchanged: robot-diversity EXECUTION
+(#29 grasp-pose deep-fix, #47 Anton-gated), #28 harness (watched-window).
