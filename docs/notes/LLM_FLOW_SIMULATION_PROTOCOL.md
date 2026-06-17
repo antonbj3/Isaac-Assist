@@ -43,8 +43,15 @@ primary model is runtime composition (pre-creating all pairs doesn't scale or ge
    surface ALL blocks a multi-station prompt needs". Harness run DEFERRED to a WATCHED WINDOW with
    Anton — the cron constraint "retrieval-harness bara i bevakat fönster" (ChromaDB freeze history,
    froze the machine 2x). Do NOT run the harness autonomously. The cases themselves are committed +
-   correct (ground_truth = verified golds); only the SCORING run waits. Still TODO: decomposition-
-   specific scoring (per-subtask retrieval) + more diverse combos.
+   correct (ground_truth = verified golds); only the SCORING run waits.
+   → **EXTENDED 2026-06-17 (cont.195)**: added C-05..C-07 (more diverse combos; every GT+alt block
+   self-checked to exist as a file AND be TRUSTED/GENUINE in composable_blocks.json): C-05 [CP-42,CP-13]
+   brick-palletizer + column (uses the cont.194-verified CP-42 brick grid); C-06 [CP-73,CP-13] =
+   ROBOT-DIVERSITY retrieval (UR10 pick + Franka stack; key_tag isaac:robot.heterogeneous, differing_axis
+   robot_family — tests whether retrieval surfaces blocks from BOTH robot families for a heterogeneous
+   task = the multiplier's bottleneck axis at the Kit-free retrieval layer); C-07 [CP-03,CP-08] color-sort
+   + grid. Authoring cases is ChromaDB-FREE (only the harness RUN is gated). Still TODO: decomposition-
+   specific scoring (per-subtask retrieval); run the harness in a watched window.
 2. **scene_eyes as an LLM tool**: ✅ DONE 2026-06-17 (cont.170/171, commits 64163d53 + 6339227f).
    `observe_scene` is now a callable tool (tool_schemas.py + `_handle_observe_scene` in
    diagnostics.py): subprocesses scene_eyes --attach against the loaded Kit stage and returns the

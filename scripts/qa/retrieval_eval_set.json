@@ -557,5 +557,50 @@
     "expected_action": "compose",
     "split": "dev",
     "source": "gold_verified"
+  },
+  {
+    "id": "C-05",
+    "prompt": "Set up two Franka stations side by side: a 2x2 brick palletizer and a 2-cube column stacker",
+    "ground_truth": ["CP-42", "CP-13"],
+    "acceptable_alternatives": ["CP-08", "CP-14", "CP-15"],
+    "hard_negatives": [],
+    "difficulty": "composition",
+    "pattern_hint": "palletize",
+    "category": "compose",
+    "complexity": "multi",
+    "intent_dimensions": {"pattern_hint": "palletize", "key_tags": ["isaac:topology.multi_station"], "differing_axis": "object_geometry"},
+    "expected_action": "compose",
+    "split": "dev",
+    "source": "gold_verified"
+  },
+  {
+    "id": "C-06",
+    "prompt": "A UR10 unloads cubes from a conveyor into a bin, and a Franka stacks cubes into a column",
+    "ground_truth": ["CP-73", "CP-13"],
+    "acceptable_alternatives": ["CP-69", "CP-70", "CP-75"],
+    "hard_negatives": [],
+    "difficulty": "composition",
+    "pattern_hint": "pick_place",
+    "category": "compose",
+    "complexity": "multi",
+    "intent_dimensions": {"pattern_hint": "pick_place", "key_tags": ["isaac:topology.multi_station", "isaac:robot.heterogeneous"], "differing_axis": "robot_family"},
+    "expected_action": "compose",
+    "split": "dev",
+    "source": "gold_verified"
+  },
+  {
+    "id": "C-07",
+    "prompt": "A color-sorting station feeds a 2x2 grid palletizer, both Franka",
+    "ground_truth": ["CP-03", "CP-08"],
+    "acceptable_alternatives": ["CP-42", "CP-27", "CP-30"],
+    "hard_negatives": [],
+    "difficulty": "composition",
+    "pattern_hint": "color_sort",
+    "category": "compose",
+    "complexity": "multi",
+    "intent_dimensions": {"pattern_hint": "color_sort", "key_tags": ["isaac:topology.multi_station"], "differing_axis": "n_robot_stations"},
+    "expected_action": "compose",
+    "split": "dev",
+    "source": "gold_verified"
   }
 ]

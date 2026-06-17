@@ -5185,3 +5185,14 @@ RAW: 4 bricks end in a clean 2x2 grid (min-pair-xy 0.118m ~= the authored 0.12 s
 diagonal, 1 z-level, none on floor) = GENUINE grid. composable_blocks.json: CP-42 verdict + basis updated
 (surgical edit), summary trusted 64->65, pending 1->0. The registry now has ZERO unknowns (65 trusted,
 4 partial=throughput/belt-limited, 1 false=CP-09 scatter). +1 robust block to the breadth foundation.
+
+cont.195 (2026-06-17): #28 LLM-flow track advanced (Kit-free, ChromaDB-free — autonomously safe; only the
+harness RUN is gated to a watched window). Added composition retrieval-eval cases C-05..C-07 to
+scripts/qa/retrieval_eval_set.json (was C-01..C-04), each GT grounded in verified golds + SELF-CHECKED
+(every GT+alt block exists as a file AND is TRUSTED/GENUINE in composable_blocks.json — false-success-vakt
+on my own additions, 0 problems): C-05 [CP-42,CP-13] brick-palletizer+column; C-06 [CP-73,CP-13] =
+ROBOT-DIVERSITY retrieval (UR10 pick + Franka stack, key_tag isaac:robot.heterogeneous) testing whether
+retrieval surfaces BOTH robot families for a heterogeneous task = the multiplier's bottleneck axis probed
+at the Kit-free layer (execution is blocked #29/#47, but retrieval is testable now); C-07 [CP-03,CP-08]
+color-sort+grid. 40 eval cases total. Picked this because robot-diversity EXECUTION is blocked and the
+breadth foundation is mature+clean, so the highest-value UNBLOCKED frontier is the Kit-free LLM-flow track.
