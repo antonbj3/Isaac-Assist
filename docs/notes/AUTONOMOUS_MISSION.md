@@ -5536,3 +5536,18 @@ cont.216 (2026-06-17): TOOLING — built the instrument-trust guard I hand-deriv
   -> "INSTRUMENT TRUSTWORTHY". STANDARD PRE-FLIGHT for every future Kit session: kit_restart.sh, then
   kit_health.py, before believing any negative gate/scene_eyes result. Closes the lucka behind the whole
   cont.214-215 degraded-instrument cascade.
+
+cont.217 (2026-06-17): #29(b) — "cross-namespace grasp" (cont.215) REFUTED by minimal repro; root re-
+narrowed to UR10 stage0 ACTIVITY poisoning global state. With the trustworthy instrument + a build-time
+PhysX contact report, the MINIMAL cross-namespace grasp (inst1/Franka grips a hand-placed inst0/Cube_1, NO
+UR10) DELIVERS 1/1 with REAL finger↔cube contacts (891 events, panda_left/right_finger ↔ inst0/Cube_1). So
+cross-namespace contact is NOT suppressed. Further A/Bs (all DELIVER without the factor): idle pre-play 4900
+steps + build-during-play (preplay_test), physics-config (create_scene_baseline defaults CPU/MBP = same as
+CP-CHAIN-FLAT), planner-sharing (cuRobo planner cached PER-(robot_cfg,arm_scope) → UR10 & Franka SEPARATE).
+The failure REQUIRES the UR10's ACTIVE stage0 (cuRobo+motion+surface-gripper): a FRESH cube placed after
+stage0 also fails (freshcube_chain) — BUT that has a possible stale-controller-ref confound (cube replaced
+AFTER stage1 build). LANDING: UR10 stage0 poisons some GLOBAL state (candidate: process-global cuRobo lock /
+PhysX/CUDA) that kills the subsequent Franka GRIP (plan_fails=0, cube 0-jiggle = no grip force), not planning.
+NEXT (dedicated): clean fresh-cube-BEFORE-stage1-build test; inspect global cuRobo `_lock`/PhysX state post-
+stage0; build-time contact report on the REAL chain grasp. (Memory project_isaac_assist_chain_relay_crossns
+updated; the file name is now legacy — finding is "UR10-stage0-activity", not cross-namespace.)
