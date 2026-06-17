@@ -4933,3 +4933,11 @@ CONVERGED+GRIPPED -> GOLD "delivery verified (4 gripped)". So the SETTLED-Z floo
 genuine Franka deliveries (cubes settle >0.6) and the _sg_held grip-OR doesn't regress finger-grip detection
 (Franka finger-contact still caught by _grip_objs; grp/_sg_held is additive). Both gold classes (stack + bin)
 clean. The session's gate work is regression-safe on the core blocks the runtime-LLM composes.
+
+cont.176b (2026-06-17): no-regression TRIFECTA complete — CP-08 (Franka palletizer GRID) also GOLD through the
+changed pipeline: STACK STRUCTURE 1 z-level [0.825] + min-pair-xy 137mm (flat SPREAD grid, NOT a cont.150 pile),
+SETTLED-Z all 4 at 0.825 (>0.6, no false floor-reject), 4 CONVERGED+GRIPPED -> "grid verified". So ALL THREE
+gold classes verified clean on REAL core composable blocks: stack (CP-13), bin (CP-01), palletize/grid (CP-08)
++ 11/11 synthetic selfcheck + UR10 real (CP-69/70/84). This session's scene_eyes/eyes_gold_gate changes
+(grip-recognition _sg_held, SETTLED-Z, floor-guard) are regression-safe across every gold class AND both robot
+types. The whole session's gate work is now adversarially confirmed clean on the blocks the runtime-LLM composes.
