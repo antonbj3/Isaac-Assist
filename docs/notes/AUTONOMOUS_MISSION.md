@@ -5050,3 +5050,19 @@ robot types); the remaining is purely handoff SCENE-DESIGN. Belt-zeroing kept as
 (no-regression: stage k sources the relay, not its own belt cubes; insufficient alone for CP-54 due to
 build-time belt motion). SESSION ROBOT-DIVERSITY ARC COMPLETE for the controller side: the hard blocker (UR10
 chain-stage0, 6 wakes) is SOLVED + verified; the full chain gold awaits a clean handoff template (#29).
+
+cont.184 (2026-06-17): chain handoff ROOT CAUSE confirmed across 3 pairings = #29 (stage0-delivery-surface vs
+stage1-pick-structure must be reconciled). CP-84->CP-01: sensor aligned ([0.51,-0.39]) + CP-01's conveyor is
+STATIC (no surfaceVelocity), yet the relayed cube STILL ended at [1.272,-0.39] = STRUCTURE-COLLISION: CP-01's
+table/conveyor PROP is built at the handoff location (overlapping CP-84's BaseCube + the relayed cube) -> PhysX
+corrective forces eject the cube along the table. So every pairing hits a DIFFERENT handoff interference:
+CP-70->CP-54 = deep-bin (cuRobo no-plan-into-bin); CP-84->CP-54 = conveyor-SWEEP (moving belt); CP-84->CP-01 =
+structure-COLLISION (static table overlaps BaseCube). COMMON ROOT: stage1's pick STRUCTURE occupies the handoff
+location, and stage0 delivers to its OWN target (BaseCube/Bin) which doesn't coincide cleanly with stage1's
+pick surface. The clean fix = #29 L3 auto-handoff: OVERRIDE stage0's delivery target onto stage1's pick surface
+(so the cube lands directly on stage1's pickable surface, no separate colliding structure), AND ensure stage1's
+pick-zone is a clear flat surface (static, no belt, no overlapping prop). chain_gate currently uses stage0's
+own target -> can't do this. ROBOT-DIVERSITY ARC (this session, ~6 wakes): CONTROLLER SIDE FULLY SOLVED (stage0
+re-arm unblocks UR10 chain-delivery for both controller types; sensor-alignment math solved; belt-zeroing aid
+added); the full chain GOLD is now a pure #29 handoff-geometry-abstraction task (reconcile delivery+pick
+surfaces), precisely scoped, NOT a controller/arming mystery. Handing off to a dedicated #29 design session.
