@@ -5253,3 +5253,22 @@ UNASSESSABLE by this tool's exact-suffix mapping (honest out-of-scope; prefix-ma
 enhancement). NET: color-sort routing is broadly CORRECT (CP-03/16/32/33 clean, CP-34 routes-correct-but-
 flaky-delivery) — no MIS-ROUTING false-gold found; the one issue is a stochastic DELIVERY, now honestly
 marked. routing_validate.py = reusable #36 detector (control-validated + bug-fixed in the same session).
+
+cont.200 (2026-06-17): FALSE-SUCCESS-VAKT ON MY OWN TOOL (the standard cycle, applied reflexively).
+The CP-35 "3/8 ROUTING-FALSE" (cont.199) was WRONG — caught by disambiguating with scene_eyes (the
+directive's discriminator). scene_eyes at FULL 175s showed 9/10 CP-35 cubes settled in the bin-area
+(stacked color-pairs), only Cube_r1 still on the feed. So routing_validate had reproduced the cont.188
+UNDER-DURATION trap inside itself: its 5000-step cap (~150s) under-ran the throughput-paced 8-10-cube
+sorter, reading still-feeding cubes as NOT-IN-ANY-BIN. FIXED (VERKTYGEN ÄR LEVANDE): (a) run the FULL
+authored duration (steps = dur*40, cap 8000); (b) capture t=0 START positions pre-play and label a cube
+that barely moved as STILL-FEEDING(under-duration) -> INCOMPLETE, NOT a routing fail (the cont.188
+still-feeding discriminator, now built into routing_validate); (c) a moved-but-floor cube ->
+ROUTING-FALSE(picked-then-dropped). RE-VALIDATED: CP-16 control still ROUTED-OK 4/4; CP-35 improved
+3/8->5/8 with the longer run. CP-35 NOT downgraded: it has a 5th scene color 'd' (d1/d2) NOT in its
+color_routing (10 cubes/5 colors vs routed 8/4) -> routing_validate's bin-containment read is CONFOUNDED
+there (flags r1/b1/g1 NOT-IN-ANY-BIN while scene_eyes shows them bin-area-stacked). Documented as a tool
+limitation (scene colors must subset color_routing); CP-35 stays TRUSTED (scene_eyes shows ~9/10 deliver).
+NET color-sort sweep: CP-03/16/32/33 clean GENUINE-routed; CP-34 genuine stochastic blue-drop (downgraded
+cont.199); CP-35 tool-confounded but scene_eyes-OK. No CONFIRMED mis-routing false-gold in the class.
+LESSON: even a fresh first-class detector needs adversarial disambiguation against scene_eyes before its
+flags are trusted — a NOT-IN-ANY-BIN/undelivered flag is ambiguous (scatter vs still-feeding vs tool-confound).
