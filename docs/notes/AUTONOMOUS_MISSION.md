@@ -5588,3 +5588,15 @@ object layer (CUDA / cuRobo-warp GPU state or SimulationManager sim-view). ONLY 
 a SimulationManager/CUDA-context reset that actually clears it) is a dedicated Isaac-internals session.
 Memory feedback_ur10_corrupts_global_physx updated. This wake: #29(b) + the degradation mystery fully root-
 caused; cheap-fix avenue closed; instrument-trust guard shipped.
+
+cont.221 (2026-06-17): false-success audit of the UR10+Franka PARALLEL composition (does today's PhysX
+corruption mean prior UR10 composition golds are false?). compose_gate.py CP-69(UR10)+CP-13(Franka) on a
+FRESH Kit (kit_restart) = 0/2: UR10 cell 0/1, Franka cell 0/2 with cuRobo PLAN-failures (goal [4.66,0.40,
+1.075]). The Franka cell fails at PLANNING (not grip) -> dominated by the known #47 concurrent-cuRobo
+contention, which ENTANGLES with today's PhysX-grip corruption — can't cleanly isolate them in concurrent
+UR10+Franka composition. This is consistent with the memory's "stochastic-blocked" note, but a clean fresh-
+Kit run failing TEMPERS the "proven UR10 cell delivers in composed CP-69+CP-13" claim (it's stochastic at
+best). NET: UR10 robot-diversity is blocked on BOTH axes — sequential CHAIN (#29b, PhysX corruption) AND
+parallel composition (#47 cuRobo contention, compounded by PhysX corruption). Both need the dedicated Isaac-
+internals fix (surface-gripper teardown + cuRobo-lock serialization). Pure-Franka composition (no UR10) is
+unaffected and remains the reliable breadth lever.
