@@ -5416,3 +5416,16 @@ _DOWN_Q_BASE (computed from the base quat) — plausibly stage0 (CP-84, also cuR
 state that the stage1 Franka inherits, flipping the down-quat 90deg. NEXT (#29(b) dedicated): dump the
 _DOWN_Q_BASE + _usd_quat the stage1 controller actually uses for the relay grasp vs standalone; if the
 base quat differs, that's the bug. Harness: chain_gate + /tmp/grasp_geom.py + /tmp/cp01_graspquat.py.
+
+cont.210 (2026-06-17): VISUAL confirmation (Anton: 'open a printscreen') — captured viewport frames of
+the chain-relay grasp (/tmp/grasp_shot/grasp{0,1,2}.png, camera on the inst1 Franka gripper+cube). Frame
+shows the Franka gripper TILTED ~toward horizontal (matches the measured hand_q=[0.707,0,0.707,0]) with
+the cube STILL on its BaseCube, ungripped (grasp0=grasp1, no lift). CRITICAL DISTINCTION (Anton's worry):
+the panda_hand is FLUSH against its wrist — NO gap to the joint above. The 'gap-to-joint-above' signature
+was the UR10 SUCTION-CUP kinematic-follower mount-gap bug; the Franka hand is a rigid link with no
+follower, so that bug is NOT recurring. This is a different mechanism: a Franka grasp-POSE ORIENTATION
+issue (relay grasp solves ~90deg off top-down), and SCOPED to the source_override chain-relay (CP-01 +
+standalone CP-CHAIN-FLAT grip clean top-down + deliver). So: same visual CLASS (gripper off-axis), DIFFERENT
+cause, NOT a corpus regression. #29(b) is precisely a relay-grasp-orientation problem; root-cause next step
+unchanged (dump _DOWN_Q_BASE/_usd_quat + the goal quat the stage1 controller uses for the relay vs the
+top-down standalone). Sent grasp1.png to Anton.
