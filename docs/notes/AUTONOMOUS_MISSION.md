@@ -5196,3 +5196,19 @@ retrieval surfaces BOTH robot families for a heterogeneous task = the multiplier
 at the Kit-free layer (execution is blocked #29/#47, but retrieval is testable now); C-07 [CP-03,CP-08]
 color-sort+grid. 40 eval cases total. Picked this because robot-diversity EXECUTION is blocked and the
 breadth foundation is mature+clean, so the highest-value UNBLOCKED frontier is the Kit-free LLM-flow track.
+
+cont.196 (2026-06-17): composable-registry non-trusted entries ASSESSED as all HONEST (no hidden
+false-golds or stale-negatives left) — eyes-first reasoning, no wasted Kit run. The lone FALSE = CP-09
+(stack/column): GOAL is a 5-HIGH conveyor-fed tower; errors compound up a 5-cube column -> topple, and
+its basis is "this session" (recent, NOT stale like CP-42 was). The stack class is robustly covered by
+CP-13 (2-high, re-verified cont.193), so CP-09 is a genuinely-hard REDUNDANT variation -> FALSE is honest;
+annotated its basis "don't re-audit (low value)". The 4 PARTIAL grids (CP-20/25/43/71) are
+throughput/belt-limited (task #44, not composer bugs) on 16-18-object pallets. NET: registry = 65 trusted
++ 4 honest-partial + 1 honest-false, ZERO unknowns, every non-gold explained. Breadth foundation is
+mature, clean, and honestly characterized; remaining high-value frontiers are all blocked/gated
+(robot-diversity execution #29/#47, retrieval-harness watched-window, Anton-gated #9/#47).
+SESSION SUMMARY (cont.189-196): eyes-first root-caused #29(b) [grasp-pose offset on the source_override
+relayed cube; 6 hypotheses refuted with RAW data], locked the eyes-first discipline (memory
+feedback_eyes_first_not_ctrl_summary), proactively re-verified CP-08+CP-13 canonical golds RAW under
+composition, resolved CP-42 UNCLEAR->GENUINE, added 3 grounded composition eval cases (incl. a
+robot-diversity retrieval case), and assessed the registry as fully honest. 6 commits.
