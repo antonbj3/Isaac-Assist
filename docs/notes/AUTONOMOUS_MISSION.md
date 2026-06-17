@@ -5113,3 +5113,36 @@ reach-fail (which nearly made me flag CP-10 as a false-GENUINE). Verified: tag l
 -> in-motion; settled 0.0 -> reach; near-miss/approached preserved); parses OK; gate-byte-identical
 ("never-gripped" still emitted). Pairs with the cont.187 lesson (audit conveyor-fed templates at full
 duration_s).
+
+cont.189-191 (2026-06-17): #29(b) UR10->Franka chain stage1 — ROOT CAUSE found EYES-FIRST after a
+process correction. Anton flagged (3x) that I was concluding from ctrl:* SUMMARY metrics, not raw
+scene_eyes data. He was right: I burned FOUR refuted hypotheses (side-reach, mount-table obstacle,
+cube-on-cube, material) each from a ctrl:*/gate read, before a RAW per-tick trajectory (hand + finger-gap
++ relayed cube) cracked it in ONE run.
+  * ENVIRONMENT bug (general, important): the cached cuRobo planner DEGRADES across builds within one
+    long-lived Kit -> spurious res_None. PROVEN: CP-01 (proven Franka) delivered 0/4 (plan_fails=36) on a
+    ~2h Kit + 3 un-restarted builds, 3/4 (plan_fails=0) after a clean restart. This invalidated my early
+    chain measurements. Reinforces restart-BEFORE-each-measurement (which I'd violated).
+  * REFUTED by controlled sweep (new validator scripts/qa/franka_reach_sweep.py — one param at a time):
+    the approach pose is REACHABLE at ALL forward distances 0.30-0.55m for BOTH identity and +90deg
+    orientation. "0.45 too far / 0.40 ok" was a GUESS from CP-01's distance, not a measurement. Distance
+    and orientation are NOT the boundary.
+  * RAW grip trace (fine, 30-step samples) = the actual mechanism: the Franka descends to the grasp pose
+    EXACTLY on the relayed cube (h2c=0.105 PURELY vertical, xy aligned, fingertip-center at the cube
+    centre 0.825), fingers CLOSE and DWELL ~90 steps -> but close all the way to gap=0.0 and the cube has
+    ZERO displacement the entire run. gap=0.0 (not ~0.05 cube width) = the jaw closed through/past the
+    cube WITHOUT capturing it. NOT geometry/reach/plan/material/timing (SimClock ON changed nothing).
+    => GRIP-CAPTURE FAILURE on the cross-instance relayed cube (prime suspect: per-instance collision
+    filtering so inst1's fingers don't collide with inst0/Cube_1). Deep grip-physics issue -> PARKED for a
+    dedicated session (relates #9 grip-physics decision); breadth is the multiplier, not forcing this one
+    handoff (Anton's steer).
+  * Artifacts: scripts/qa/chain_gate.py gains a stage-k placeholder-DELETE (a clean flat stage1 spawns its
+    placeholder AT the pick spot for a real standalone control; in the chain it would collide with the
+    relay landing -> delete it; source_override uses inst0 cubes so the local placeholder is vestigial).
+    workspace/templates/CP-CHAIN-FLAT.json rewritten CP-01-faithful (DESIGN-ONLY, NOT gold; it delivers
+    1/1 STANDALONE on a fresh Kit, fails only as a chain RELAY due to the grip-capture issue above).
+    scripts/qa/franka_reach_sweep.py = new controlled Franka top-down reach validator (reach_validate is
+    UR10-suction-only; this fills the gap).
+  * LESSON (new memory feedback_eyes_first_not_ctrl_summary): ctrl:* ARE summary metrics, never the basis
+    for a mechanism conclusion; run the raw per-object/per-tick trajectory FIRST, before any hypothesis.
+    Eyes-first is FASTER (1 run vs 4).

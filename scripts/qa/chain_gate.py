@@ -128,6 +128,24 @@ async def run(specs):
             "        a=pr.GetAttribute('physxSurfaceVelocity:surfaceVelocity')\n"
             "        if a and a.IsDefined(): a.Set(Gf.Vec3f(0,0,0)); _n+=1\n"
             "print('ZEROED_BELTS', _n)\n", timeout=15)
+        # cont.189 HANDOFF: delete stage k's OWN placeholder cubes. Stage k sources the RELAYED
+        # cube (source_override = inst0 paths), so its locally-spawned /World/inst{k}/Cube_* are
+        # vestigial — and a clean stage-1 (CP-CHAIN-FLAT) spawns its placeholder AT the pick spot so
+        # the STANDALONE control is meaningful; in the chain that placeholder lands on the SAME world
+        # xy as the relay -> a cube-on-cube collision that ejects the relay. Remove them (the inst0
+        # relayed cube has a different prim path -> untouched).
+        await kit_tools.exec_sync(
+            "import omni.usd\n"
+            "stage=omni.usd.get_context().get_stage()\n"
+            f"root='/World/{root}/'\n"
+            "_d=[]\n"
+            "for pr in list(stage.Traverse()):\n"
+            "    p=str(pr.GetPath()); nm=pr.GetName()\n"
+            "    if p.startswith(root) and (nm.startswith('Cube') or nm.startswith('Item') or nm.startswith('Brick')):\n"
+            "        _d.append(p)\n"
+            "for p in _d:\n"
+            "    stage.RemovePrim(p)\n"
+            "print('DELETED_PLACEHOLDERS', len(_d))\n", timeout=15)
         await _run_steps(kit_tools, RUN_STEPS + 1000)
         results.append(await _measure(kit_tools, root, name, chained,
                                       reroot_prim_path(tgt, root) if tgt else None))
