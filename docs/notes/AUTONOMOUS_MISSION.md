@@ -5146,3 +5146,21 @@ cube-on-cube, material) each from a ctrl:*/gate read, before a RAW per-tick traj
   * LESSON (new memory feedback_eyes_first_not_ctrl_summary): ctrl:* ARE summary metrics, never the basis
     for a mechanism conclusion; run the raw per-object/per-tick trajectory FIRST, before any hypothesis.
     Eyes-first is FASTER (1 run vs 4).
+
+cont.192 (2026-06-17): #29(b) root cause REFINED (false-success-vakt on my OWN cont.191 commit) via a
+controlled A/B + finger-AABB measurement (eyes-first). cont.191 said "grip-capture failure, suspect
+collision filtering" — REFUTED: (a) no collision groups exist in composer/instantiator/handler code; (b)
+the relayed cube is a NORMAL rigid body after CP-84 delivers (collision=True, not kinematic, NO joints,
+settled). The ACTUAL mechanism (raw AABB at the grip dwell): the Franka fingers straddle correctly in Y
+but sit ENTIRELY in +x of the cube (finger x-min 0.57 > cube x-max 0.537, ~0.085m off) AND above it
+(finger z>=0.919 vs cube top 0.85) -> the jaw closes BESIDE/ABOVE the cube -> gap->0.0 on empty space,
+cube zero-displacement. CONTROLLED A/B: the STANDALONE (own placeholder source) grips (gap settles ~0.0475
+= cube width, cube lifts disp->0.8); the CHAIN (source_override -> relayed cube) misses. The flat-drop
+test (relayed cube dropped to 0.775 = the standalone's exact height/support) ALSO missed -> NOT height,
+NOT support, NOT physics, NOT friction (binding works cross-instance), NOT collision-groups. It is a
+GRASP-POSE offset specific to the source_override / relayed-cube path. Deep grasp-pose-construction issue
+-> PARKED (relates #9 grip-physics). Honest caveat: the finger PRIM AABB may not be exactly the pad, but
+the offset magnitude (~0.085m) dwarfs any cube-position discrepancy. EYES-FIRST throughout: 6 hypotheses
+refuted with raw data (stale-planner env, side-reach, mount-table obstacle, cube-on-cube, material,
+collision-filtering); the AABB measurement localized it. Validator scripts/qa/franka_reach_sweep.py and
+the chain_gate placeholder-delete stand.
