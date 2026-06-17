@@ -5340,3 +5340,24 @@ eval). Lesson: retrieval-eval (task-match) and the verdict registry (execution-r
 layers — don't cross-contaminate. (A #28 DESIGN question for Anton: should runtime retrieval PREFER
 execution-clean blocks when several match? Not an autonomous change — the current eval tests task-match,
 which is correct for its scope.)
+
+cont.206 (2026-06-17): "jobba på" — actively re-attacked the ROBOT-DIVERSITY execution bottleneck (the
+multiplier's real gate) via two FRESH angles; both confirmed genuinely blocked (verified, not assumed):
+  (1) HYPOTHESIS: a parallel [builtin-UR10 + cuRobo-Franka] composition has only 1 cuRobo planner ->
+      sidesteps #47. REFUTED: CP-84 (the "UR10 builtin stacking" template) is target_source="curobo" —
+      "builtin" in its goal refers to the raycast GRIP mechanism, not the planner. ALL UR10 arm templates
+      are cuRobo (RmpFlow deprecated); there is no builtin-arm escape. So UR10+Franka parallel = 2 cuRobo
+      -> #47 genuinely applies (precondition_check's refuse was CORRECT). Measured the composition: both
+      cells failed (UR10 Cube_1 unmoved + Franka cubes rode belt) — consistent with #47 contention + a
+      scene_eyes-compose focus-scoped-arming confound (it arms only EYES_FOCUS).
+  (2) build_composed_scene(refuse_policy="serialize") is a MISNOMER (canonical_instantiator.py:1239): it
+      does NOT serialize — it "proceeds but FLAGS" concurrent-cuRobo, running both planners concurrently
+      (-> the measured starvation). So the #47 serialize FIX is UNIMPLEMENTED. Implementing a real
+      process-global cuRobo turn-taking lock is the fix direction but is Anton-gated (refuse-vs-serialize
+      product decision) + "deep, dedicated session" + touches shared controller machinery (regression
+      risk). NOT done autonomously.
+  CONCLUSION: robot-diversity execution is genuinely gated — parallel needs Anton's #47 decision +
+  serialize implementation; chain (#29) bypasses #47 but is blocked on the parked grasp-pose offset (deep,
+  flagged for rabbit-holing). Both fresh angles dead-ended at the same real gates. The "serialize"-policy
+  misnomer is the one actionable clarification for Anton's #47 call: choosing "serialize" today is a no-op
+  (it must be built first).
