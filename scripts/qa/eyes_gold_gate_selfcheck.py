@@ -65,6 +65,20 @@ GRID_FLAT = """    Cube_1         closest= 104mm  -> CONVERGED + GRIPPED
 STACK STRUCTURE (4 objs): 1 z-level(s) [0.825] | xy-extent=0.16x0.15m | min-pair-xy=0.131m
 """
 
+# A genuine SINGLE-cube asset-suction (UR10) bin delivery: CONVERGED+GRIPPED via the SurfaceGripper
+# gripped-list (no finger/cup contact-force row), settled ON the bin (>0.6m). No STACK STRUCTURE (1 obj).
+# Guards the 2026-06-17 false-NEGATIVE fix: a single-cube bin must pass on grip + above-floor settle.
+SINGLE_CUBE_BIN = """PICK CONVERGENCE (claimed-pick objects; did the arm settle on what it claimed?):
+    arm motion: max-joint-range=203°  arm-reversals=22
+    Cube_1         closest=  25mm (dz=  22mm dxy=  11mm) @  7.0s  -> CONVERGED + GRIPPED
+SETTLED-Z (box-like delivery cubes, final z m): Cube_1=0.785
+"""
+
+# Same single-cube grip, but the cube ended ON THE FLOOR (grip -> place-plan fails -> release midair ->
+# fall = the realistic concurrent-cuRobo failure). Must REJECT via SETTLED-Z even though it CONVERGED+GRIPPED.
+# Guards the 2026-06-17 false-POSITIVE closure (the grip fix would otherwise pass a floor-drop).
+SINGLE_CUBE_FLOORDROP = SINGLE_CUBE_BIN.replace("Cube_1=0.785", "Cube_1=0.100")
+
 # A palletizer "grid" that COLLAPSED to a pile (composed CP-08, cont.150): 2 z-levels + cubes overlapping.
 GRID_PILE = """    Cube_1         closest= 104mm  -> CONVERGED + GRIPPED
     Cube_2         closest= 104mm  -> CONVERGED + GRIPPED
@@ -84,6 +98,8 @@ CASES = [
     ("fell to ground -> REJECT",        LOW_Z,          "stack/column",   False, "below 0.6m"),
     ("flat spread grid -> GOLD",        GRID_FLAT,      "palletize/grid", True,  "grid verified"),
     ("grid collapsed to pile -> REJECT",GRID_PILE,      "palletize/grid", False, "PILE/STACK"),
+    ("1-cube suction bin -> GOLD",      SINGLE_CUBE_BIN,       "pick-place-bin", True,  "delivery verified"),
+    ("1-cube grip+floordrop -> REJECT", SINGLE_CUBE_FLOORDROP, "pick-place-bin", False, "below 0.6m"),
 ]
 
 

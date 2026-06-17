@@ -4740,3 +4740,22 @@ refuse-vs-serialize POLICY is explicitly Anton-gated (composer.py comment). NET:
 (commit); robot-diversity gold = continued #46, deep + Anton-gated (serialize concurrent cuRobo planning), a
 dedicated session, NOT tail-of-window. Both fixes byte-identical-safe for the single-robot path (13/13 UR10
 milestone untouched).
+
+cont.167 (2026-06-17): ★ scene_eyes GRIP-detection false-NEGATIVE on ASSET-SUCTION (the gap #46 exposed) FIXED +
+the false-POSITIVE it would have opened CLOSED — adversarially, with controls. CHAIN: the UR10 asset
+short_gripper.usd grips by RAYCAST → no finger/cup CONTACT-FORCE row → scene_eyes GRIP-ATTEMPT + PICK
+CONVERGENCE (both keyed on contact-based _grip_objs) read a genuine 25mm carried+delivered grip as
+"never-gripped" / no "CONVERGED+GRIPPED" → eyes_gold_gate HARD-REJECTS (line 39/66 + needs CONVERGED+GRIPPED)
+→ EVERY UR10 asset-suction delivery false-rejected through the local gold-gate. FIX: both detectors now OR in
+_sg_held = objects the SurfaceGripper ITSELF reported holding (the authoritative per-tick `grp` engagement
+signal); the cont.120 LIFT guard on PICK CONVERGENCE is preserved → no phantom-grip false-pass.
+   ★ ADVERSARIAL DISCIPLINE (false-success-vakt on my OWN fix): running controls, the grip fix EXPOSED a
+pre-existing bin-gate false-POSITIVE — STACK STRUCTURE z-levels (the gate's low_z floor-check) only emit for
+>=2 objects, so a SINGLE-cube bin had NO placement guard → a grip-then-drop-to-FLOOR (z=0.1, exactly the
+concurrent-cuRobo place-fail→release-midair→fall mode) FALSE-PASSED. CLOSED: scene_eyes emits a parseable
+SETTLED-Z (box-like, ANY count); eyes_gold_gate's low_z now reads it too → floor-drops reject for 1 AND N
+cubes. CONTROLS (on real CP-69 eyes.json): A genuine z=0.785→PASS, B grip+floordrop z=0.1→REJECT(below 0.6m),
+C never-SG-gripped→REJECT(never approached). +2 selfcheck invariants (now 11/11 PASS). NET: asset-suction
+deliveries now correctly gold-gradeable AND floor-drops still rejected — a pure tightening, no false-pos/neg
+trade. All edits host-side _analyse + gate (Kit-side data collection untouched); verified by exec'ing the
+real _analyse on real rows (faithful). Standalone CP-69 + Franka multi-cube selfcheck = zero regression.

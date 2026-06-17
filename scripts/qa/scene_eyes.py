@@ -771,6 +771,18 @@ def _analyse(js):
             _kind = "spread grid (gaps present, gripper-clearance ok)" if _minpair > 0.045 else "clustered/piled (overlapping, no clean gaps)"
             out.append("    -> FLAT 1-tier %s. OK for a PALLETIZER; a SCATTER FALSE-SUCCESS for a TOWER/column stacker — judge by template intent." % _kind)
 
+    # SETTLED-Z floor-guard feed (2026-06-17): the gold-gate's low_z floor-check reads STACK STRUCTURE z-levels,
+    # which only emit for >=2 objects -> a SINGLE-cube bin delivery had NO floor guard. Once asset-suction grips
+    # are correctly recognized (CONVERGED+GRIPPED), a grip-then-drop-to-FLOOR would FALSE-PASS the bin gate.
+    # Emit each box-like cube's final settled z (ANY count) so the gate rejects a cube that ended on the ground
+    # (the realistic concurrent-cuRobo place-fail -> release-midair -> fall). (predicate mirrors _boxlike below.)
+    def _boxlike_z(_n):
+        _l = _n.lower()
+        return _l.startswith(("cube", "item", "brick")) or any(_k in _l for _k in ("box", "crate", "package", "block", "carton", "parcel", "brick"))
+    _szl = [(_nm, _finals[_nm][2]) for _nm in sorted(_finals) if _boxlike_z(_nm)]
+    if _szl:
+        out.append("SETTLED-Z (box-like delivery cubes, final z m): " + "  ".join("%s=%.3f" % (n, z) for n, z in _szl))
+
     # ORIENTATION / TOPPLE (2026-06-16, Anton "vaksamma för false success"): a cube delivered to the right XY/Z
     # but resting ON ITS SIDE is NOT correctly placed — the position/bbox gate AND the CONVERGED+GRIPPED count
     # are both blind to it. scene_timeseries already flags this via settled-tilt and it surfaces in the Modal
@@ -847,9 +859,19 @@ def _analyse(js):
             for _p in _k.split("|"):
                 if _p.strip() in _ej_objs:
                     _grip_objs.add(_p.strip())
+    # AUTHORITATIVE engagement signal: objects the SurfaceGripper ITSELF reported holding at any tick
+    # (per-tick `grp`). Asset-suction (short_gripper.usd) grips by RAYCAST -> no finger/cup CONTACT-FORCE
+    # row -> the contact-based _grip_objs misses it -> a false 'never-gripped' that eyes_gold_gate then
+    # HARD-REJECTS as a partial (false-negative on every genuine UR10 asset-suction delivery, 2026-06-17).
+    # Defer to the SG's own gripped-list = ground truth (objects never in `grp` keep their old verdict, so
+    # the partial-catching reject is preserved -> no new false-POSITIVE risk).
+    _sg_held = set()
+    for _r in rows:
+        for _h in (_r.get("grp") or []):
+            _sg_held.add(_h)
     _ga = []
     for _nm in sorted(_ej_objs):
-        _gr = _nm in _grip_objs
+        _gr = (_nm in _grip_objs) or (_nm in _sg_held)
         _md = None; _mt = None
         for _r in rows:
             _tp = _r.get("tool_p"); _op = (_r.get("cubes") or {}).get(_nm)
@@ -914,7 +936,11 @@ def _analyse(js):
             if _best is None:
                 out.append("    %-14s CLAIMED but no tool/pos data" % _bn); continue
             _dd, _tt, _dz, _dxy = _best
-            _grp = _bn in _grip_objs
+            # _grp = engaged by EITHER a finger/cup contact-force row OR the SurfaceGripper's own gripped-list
+            # (_sg_held; asset-suction raycast-grips have no contact-force row). The cont.120 LIFT guard below
+            # (_held = _grp and _lifted) still gates the "GRIPPED" verdict, so a phantom SG-report that never
+            # lifts the object does NOT read as held -> no false-positive (2026-06-17).
+            _grp = (_bn in _grip_objs) or (_bn in _sg_held)
             # 2026-06-16: "GRIPPED" must mean the grasp actually PICKED THE OBJECT UP, not a momentary
             # finger-touch. A grasp that contacts then SLIPS never lifts the object (cont.120: a 0.3s
             # contact at the cube TOP EDGE dz=137mm read "CONVERGED + GRIPPED" while the cube never rose

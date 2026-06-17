@@ -50,6 +50,18 @@ def verdict_for_instance(text, cls):
             low_z = any(float(z) < 0.6 for z in zmatch0.group(1).split(","))
         except Exception:
             low_z = False
+    # SETTLED-Z floor-check (2026-06-17): STACK STRUCTURE z-levels only emit for >=2 objects, so a SINGLE-cube
+    # bin delivery had NO floor guard -> a grip-then-drop-to-floor false-PASSED once asset-suction grips read as
+    # CONVERGED+GRIPPED. scene_eyes now emits per-box-cube SETTLED-Z for ANY count; reject if any settled <0.6m.
+    szmatch = re.search(r"SETTLED-Z \([^)]*\): (.+)", text)
+    if szmatch:
+        try:
+            for _tok in szmatch.group(1).split():
+                if "=" in _tok and float(_tok.split("=")[1]) < 0.6:
+                    low_z = True
+                    break
+        except Exception:
+            pass
     zmatch = re.search(r"STACK STRUCTURE \([^)]*\): (\d+) z-level", text)
     zlevels = int(zmatch.group(1)) if zmatch else None
     # min-pair-xy (closest cube-pair in the plane) — distinguishes a SPREAD grid (gaps, gripper clearance)
