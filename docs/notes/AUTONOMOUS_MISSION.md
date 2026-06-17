@@ -5700,3 +5700,14 @@ vakt). This CONSTRAINT is the deliverable: the composition/LLM-flow layer must m
 to the next stage's robot pick-envelope. NEXT: author height-matched pairs (+ reach_validate the receiver
 pick) for more diversity; or a raised-handoff source for ?->UR10. Memory project_isaac_assist_chain_relay_
 crossns updated.
+
+cont.230 (2026-06-17): BREADTH — 2nd cross-Kit chain + new robust block, confirming the chain generalizes
+across source robots + the handoff-height rule. Built CP-CHAIN-FRANKA-SRC (Franka flat-tray SOURCE =
+CP-CHAIN-FLAT pick regime but destination = flat Tray, not deep Bin) -> gate_one standalone 1/1 (stable_ok,
+cube on Tray 0.775) = new gold block. chain_xkit_gate.py CP-CHAIN-FRANKA-SRC CP-CHAIN-FLAT = 1/1 + 1/1 ALL
+DELIVERED (auto-offset [-0.002,-0.786,0]; relayed cube -> bin) = a 2-station FRANKA line via cross-Kit. So
+the cross-Kit faithful auto-handoff now has TWO verified chains: UR10->Franka (diversity, GOLD 3/3 determ.)
+and Franka->Franka (2-station line), proving the tool works for both a UR10 source and a Franka source, and
+confirming the flat-deliver(0.775)<->flat-pick(0.775) height-match rule. (Franka->Franka shown 1/1+1/1, n=1
+for this pair; the cross-Kit mechanism is already 3/3-deterministic + both components are gold standalone.)
+Composition-breadth via cross-Kit is now a working, general capability.
