@@ -5387,3 +5387,18 @@ highest-leverage robot-diversity lever is #29(b) grasp-pose (chain supplies ever
 Both deep, but #29(b) is NEARER (chain mechanism + UR10 stage0 + re-arm + handoff geometry all already
 work). The dedicated robot-diversity-GOLD session should target #29(b), measuring the ACTUAL EE/TCP pose at
 the relay grasp (not the finger-prim AABB) to localize the offset, with chain_gate as the harness.
+
+cont.208 (2026-06-17): #29(b) MECHANISM MEASURED DIRECTLY (decisive eyes-first read of the ACTUAL
+panda_hand pose+quat at the relay grasp, not the finger-prim AABB). RESULT: the relayed-cube grasp is a
+SIDE GRASP, not top-down. EE_down_axis=[-1.0,0.0,0.0] (gripper approaches along world -X, horizontal);
+hand_q=[0.707,0,0.707,0] (90deg about Y); finger_mid [0.571,-0.387,0.93] sits +0.058 X and +0.105 Z off
+the cube [0.512,-0.387,0.825] -> the jaw closes horizontally beside+above the cube on empty air -> gap->0
+with zero cube displacement. This SUPERSEDES/CORRECTS the cont.192 'xy-offset' read (that was the
+finger-prim AABB; the real cause is an ORIENTATION flip to a side IK branch). Standalone (own placeholder)
+grips TOP-DOWN + lifts -> the source_override/relayed-cube path induces cuRobo to solve a horizontal-branch
+grasp for the SAME top-down request (_DOWN_Q_BASE is base-derived, identical; only the achieved IK branch
+differs). FIX DIRECTION (dedicated #29(b) session): force the top-down branch for the relay grasp -- e.g.
+tighten the grasp orientation tolerance / seed the IK from a top-down config / project_to_goal_frame, so
+cuRobo can't fall to the -X side solution. Controller-level (orientation constraint), regression-sensitive
+(shared Franka path) -> not at session-tail, but now PRECISELY specified: it's a side-vs-topdown IK-branch
+selection, measured, with chain_gate + this grasp_geom probe (/tmp/grasp_geom.py) as the harness.
