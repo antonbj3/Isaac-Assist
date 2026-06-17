@@ -106,7 +106,11 @@ async def run(specs):
         # build stage i sourcing the chained cubes; run; measure relay into its target
         await execute_template_canonical(tpl, instance_root=root, origin_offset=off,
                                          source_override=chained)
-        await settle_after_canonical(tpl)   # cont.180: re-arm stage k's controller (re-validate articulation handle)
+        # cont.181: do NOT settle_after_canonical here. Stage k>0 builds DURING live play (stage0 left the
+        # timeline playing), so its controller's articulation handle is bound to the LIVE physics view =
+        # already valid (no re-arm needed). And settle's tl.stop()+set_current_time(0) would RESET physics
+        # to t=0 -> teleport the stage0-DELIVERED relayed cube back to its authored start, out of stage k's
+        # reach (cont.180 bug: CP-54 saw inst0/Cube_1 at the pedestal -> wait_sensor, plan_calls=0).
         await _run_steps(kit_tools, RUN_STEPS + 1000)
         results.append(await _measure(kit_tools, root, name, chained,
                                       reroot_prim_path(tgt, root) if tgt else None))

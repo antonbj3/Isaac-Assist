@@ -5005,3 +5005,18 @@ UR10->Franka chain GOLD: the handoff GEOMETRY — stage1 CP-54 cuRobo "planning 
 the cube sits inside CP-70's DEEP Bin (the chain_gate doc's documented deep-bin caveat; a per-template DESIGN
 concern, NOT a controller bug). Next: a flat/shallow handoff (UR10 delivers onto a tray/flat surface -> Franka
 picks freely). The hard blocker (UR10 controller-arming, 6 wakes) is DONE; the rest is handoff-geometry design.
+
+cont.181 (2026-06-17): re-arm fix SCOPED to stage0 (cont.180 bug fixed) + stage1 precisely characterized.
+cont.180's fix called settle_after_canonical for EVERY stage -> bug: for stage k>0 its tl.stop()+
+set_current_time(0) RESETS physics to t=0 -> teleports the stage0-DELIVERED relayed cube back to its authored
+start (CP-54 then saw inst0/Cube_1 at the pedestal -> wait_sensor, plan_calls=0). FIX: only stage0 needs the
+re-arm (it builds PRE-play -> stale handle; cube at start anyway so reset is harmless). Stage k>0 builds DURING
+live play (stage0 left the timeline playing) -> its controller handle is already valid -> NO re-arm, and the
+settle would wrongly reset the relay. VERIFIED: with the scoped fix, CP-84->CP-54 the relayed cube STAYS on
+BaseCube [0.51,-0.39,0.825] (reset gone) and stage0 still 1/1. STAGE1 now precisely characterized: CP-54 runs
+(tick 7515, plan_calls 8) but stays in wait_sensor, picked_path="" -> its PICK-SENSOR never triggers because the
+relayed cube isn't in CP-54's sensor zone. = handoff SENSOR-ALIGNMENT (the chain_gate doc's "offset must align
+stage-k's SENSOR onto stage-(k-1)'s delivery"); my offset aligned CP-54's BASE (reach) but not its SENSOR. Next:
+offset that puts CP-54's pick-sensor (~[0.0-0.4, 0.4] in its frame) ONTO the relayed cube [0.51,-0.39] ->
+offset ~[0.3,-0.79,0]. NET: robot-diversity-via-chain stage0 SOLVED (re-arm, both controller types); stage1 =
+per-template offset-alignment tuning (geometry, my authority), no longer a controller/arming mystery.
