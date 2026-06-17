@@ -4922,3 +4922,14 @@ controller's physx step-callback is even SUBSCRIBED under chain_gate's execute_t
 controller's per-instance phase_id scoping is the next suspect. HARD STOP on the chain this session (5
 hypotheses tested). Robot-diversity-via-chain stays strategically correct; blocker precisely scoped for a
 dedicated session.
+
+cont.176 (2026-06-17): NO-REGRESSION verified on core composable Franka blocks (false-success-vakt on THIS
+session's scene_eyes + eyes_gold_gate changes). cont.167's grip-recognition (_sg_held), SETTLED-Z + floor-guard
+(low_z) changed the detector/gate output for ALL templates; I had only verified them SYNTHETICALLY (selfcheck
+11/11) + on UR10/suction. Now verified on REAL Franka core blocks through the full pipeline: CP-13 (Franka 2-cube
+STACK) -> STACK STRUCTURE 2 z-levels [0.825,0.875], SETTLED-Z both >0.6, both CONVERGED+GRIPPED -> GOLD "column
+verified"; CP-01 (Franka 4-cube BIN) -> SETTLED-Z [0.935,0.885,0.835,0.785] all >0.6 (piled in bin, normal), 4
+CONVERGED+GRIPPED -> GOLD "delivery verified (4 gripped)". So the SETTLED-Z floor-guard does NOT false-reject
+genuine Franka deliveries (cubes settle >0.6) and the _sg_held grip-OR doesn't regress finger-grip detection
+(Franka finger-contact still caught by _grip_objs; grp/_sg_held is additive). Both gold classes (stack + bin)
+clean. The session's gate work is regression-safe on the core blocks the runtime-LLM composes.
