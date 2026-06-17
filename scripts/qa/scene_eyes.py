@@ -105,14 +105,18 @@ FOLL = ROBOT + "_SGFollower" if (ROBOT and stage.GetPrimAtPath(Sdf.Path(ROBOT + 
 CUP = None
 for _gpr in stage.Traverse():
     _gp = str(_gpr.GetPath())
-    if _gp.endswith("_ShortGripper/suction_cup"): CUP = _gp; break
+    # #46: scope the cup to the FOCUS instance in compose mode (the cup is now namespaced under
+    # /World/instN/<leaf>_ShortGripper). Single-template FOCUS="" -> `not FOCUS` -> byte-identical.
+    if _gp.endswith("_ShortGripper/suction_cup") and (not FOCUS or _gp.startswith(FOCUS + "/")): CUP = _gp; break
 TOOL = CONE or FOLL or CUP or EE   # tool proxy: cone/cup is USD-live (tracks the suction tip)
 # 2026-06-14: belt surface-velocity per tick -> pins the belt-PAUSE/RESUME timeline (the conveyor-stall
 # class: belt pauses during pick phases / while a cube is "imminent"; if it never resumes the boxes stall).
 BELT = None
 for _bpr in stage.Traverse():
     _bnm = _bpr.GetName()
-    if ("Conveyor" in _bnm) or _bnm.endswith("Belt"):
+    # #46: same focus-scoping as CUP — a global first-belt pick crosses instances in compose mode
+    # (one cell's belt read for another). Single-template FOCUS="" -> byte-identical.
+    if (("Conveyor" in _bnm) or _bnm.endswith("Belt")) and (not FOCUS or str(_bpr.GetPath()).startswith(FOCUS + "/")):
         BELT = str(_bpr.GetPath()); break
 _belt_sv_attr = None
 if BELT:

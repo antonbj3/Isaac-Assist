@@ -4713,3 +4713,30 @@ UR10 suction-under-composition timing. A DEDICATED UR10-composition session, not
 answered the strategic question + pinned the specific blocker. Franka-only composition (parallel 2-5, 12 blocks)
 remains the solid tier. (NOTE: never mix a kill of the Kit :8001 pid into a compound bash command -> exit 144;
 clean up Kit in a separate step.)
+
+cont.166 (2026-06-17): ★ #46 NAMESPACING SUB-BLOCKER RESOLVED (robot-diversity, fresh dedicated window) — the
+UR10 asset ShortGripper prim was hardcoded to /World/<leaf>_ShortGripper (root) instead of under the robot's
+instance root. FIX (robot.py asset-gripper block): base _agp on robot_path's PARENT (the instance root
+/World/instN in composition; /World single-robot -> BYTE-IDENTICAL there, statically proven + empirically
+confirmed: standalone CP-69 still delivers Cube_1 to bin [0.5085,-0.3865,0.785] stable, plan_fails=0, ZERO
+regression). The procedural fallback already sibling-namespaced (robot_path+"_SGFollower"); the asset path now
+mirrors it. + scene_eyes.py: focus-scope CUP & BELT detection to EYES_FOCUS ((not FOCUS or startswith) guard ->
+byte-identical single-template). STRUCTURAL PROOF: compose CP-69+CP-13 -> cup now at
+/World/inst0/ee_link_ShortGripper/suction_cup (was /World root); artic roots clean (inst0/UR10, inst1/Franka).
+RUNTIME PROOF: scene_eyes --compose focus inst0 -> the namespaced inst0 cup engaged (cup-cube_d=0.025, grip
+status=2), and Cube_1 RAW trajectory = picked@conveyor(-0.95) -> carried arc -> SETTLED IN BIN
+[0.509,-0.387,0.785] stable 105s = DELIVERED. The cont.165 "inst1 tracked root cup, 3.7m never approached"
+wrong-tool artifact is ELIMINATED. (★ scene_eyes SUMMARY lied again: GRIP-ATTEMPT "never-gripped" + "Floor
+contact" false-negatives for a 25mm asset-suction grip that demonstrably carried+delivered the cube -- read RAW
+trajectory, not summary; same false-neg in standalone CP-69.)
+   BUT robot-diversity FULL GOLD is NOT achieved -- it is gated on CONCURRENT-CUROBO CONTENTION (the deeper
+2nd blocker cont.165 anticipated, now pinned precisely): precondition_check (composer.py:266) flags
+'concurrent_curobo'=refuse because the cuRobo plan/move locks are PROCESS-GLOBAL (per-instance scope was
+MEASURED ineffective + reverted). The authoritative gate (compose_and_verify, build_composed_scene path, both
+controllers concurrent) gave inst0=0/1 inst1=0/2 -- yet the scene_eyes/compose_canonicals run delivered inst0.
+SAME composition, DIFFERENT outcome = STOCHASTIC contention (matches the wall-clock-grip / 3-cell-drop vein).
+Franka-ONLY 2-5 cell tier is deterministic gold; mixing a UR10 cuRobo arm re-opens the contention wall. The
+refuse-vs-serialize POLICY is explicitly Anton-gated (composer.py comment). NET: #46 namespacing = DONE & proven
+(commit); robot-diversity gold = continued #46, deep + Anton-gated (serialize concurrent cuRobo planning), a
+dedicated session, NOT tail-of-window. Both fixes byte-identical-safe for the single-robot path (13/13 UR10
+milestone untouched).

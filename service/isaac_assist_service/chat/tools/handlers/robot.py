@@ -6538,7 +6538,14 @@ if sg_prim and sg_prim.IsValid():
             # to the flange = the real tool-structure mount; the cube<->gripper grip stays the compliant suction
             # (NOT an EE<->cube weld -> faithful, honours the no-FJ-grip rule).
             _gname = art_path.split("/")[-1] + "_ShortGripper"
-            _agp = "/World/" + _gname
+            # #46 robot-diversity: namespace the gripper under the ROBOT's parent (the instance root
+            # /World/instN in a composition; /World in a single-robot scene -> BYTE-IDENTICAL there).
+            # Hardcoding /World leaked the cup to the global namespace -> two composed UR10 cells both
+            # authored /World/<leaf>_ShortGripper (collision), and scene_eyes focusing one cell tracked
+            # the OTHER cell's root-level cup as its tool. The procedural fallback below already
+            # sibling-namespaces (robot_path + "_SGFollower"); mirror that so the asset path matches.
+            _rparent = robot_path.rsplit("/", 1)[0] if "/" in robot_path.strip("/") else "/World"
+            _agp = (_rparent or "/World") + "/" + _gname
             _agpp = stage.DefinePrim(_Sa.Path(_agp), "Xform")
             _agpp.GetReferences().AddReference(_SHORT)
             # place /Root coincident with ee_link (identity relative): short_gripper /Root local +X == ee_link tool
