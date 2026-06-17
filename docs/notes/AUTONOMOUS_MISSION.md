@@ -5066,3 +5066,14 @@ own target -> can't do this. ROBOT-DIVERSITY ARC (this session, ~6 wakes): CONTR
 re-arm unblocks UR10 chain-delivery for both controller types; sensor-alignment math solved; belt-zeroing aid
 added); the full chain GOLD is now a pure #29 handoff-geometry-abstraction task (reconcile delivery+pick
 surfaces), precisely scoped, NOT a controller/arming mystery. Handing off to a dedicated #29 design session.
+
+cont.185 (2026-06-17): #41 RESOLVED by audit (false-success-vakt on the composer) — POSITION_KWARGS is complete
+for composition. Corpus scan of every workspace/templates/*.json for position-suffixed kwargs NOT in
+POSITION_KWARGS (the precondition_check 'uncovered_position_kwarg' signal, run across the whole corpus): the ONLY
+uncovered kwarg is `camera_position`, and only in 5 NON-COMPOSED SDG templates (CP-NEW-*sdg*/scene-sdg-full-
+pipeline). Cameras in those are scene-global (whole-scene data-gen), which should NOT be offset per-instance ->
+camera_position is CORRECTLY excluded from POSITION_KWARGS (adding it would wrongly offset a global camera).
+So the latent-mis-offset concern of #41 is NOT realized: every COMPOSABLE manipulation template's position kwarg
+(pick_target/place_position/drop_target/target/goal_position/waypoint/etc.) is covered + offset correctly. No
+change needed; #41 closed. (If an SDG template ever gets composed WITH a per-instance camera, revisit — but SDG
+is a standalone data-gen track, not part of the manipulation composable set.)
