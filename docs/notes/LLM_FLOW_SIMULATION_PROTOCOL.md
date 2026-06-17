@@ -45,9 +45,14 @@ primary model is runtime composition (pre-creating all pairs doesn't scale or ge
    froze the machine 2x). Do NOT run the harness autonomously. The cases themselves are committed +
    correct (ground_truth = verified golds); only the SCORING run waits. Still TODO: decomposition-
    specific scoring (per-subtask retrieval) + more diverse combos.
-2. **scene_eyes as an LLM tool**: expose a `observe_scene`/`scene_eyes` tool in
-   chat/tools/tool_schemas.py so Gemini can call it to verify its own scene (currently only
-   referenced in a diagnostics tool description, NOT a callable tool).
+2. **scene_eyes as an LLM tool**: ✅ DONE 2026-06-17 (cont.170/171, commits 64163d53 + 6339227f).
+   `observe_scene` is now a callable tool (tool_schemas.py + `_handle_observe_scene` in
+   diagnostics.py): subprocesses scene_eyes --attach against the loaded Kit stage and returns the
+   real per-object verdict (CONVERGED+GRIPPED / SETTLED-Z / GRIP-SLIP / TOPPLE / BELT / trajectories) —
+   reuses the EXACT QA truth tool, no divergence. LIVE complement to the artifact-based
+   diagnose_task_outcome. v2 adds a `focus` param (observe ONE cell of a COMPOSED scene, e.g. inst0).
+   Verified end-to-end (CP-69 single + CP-01×2 composed per-instance). REMAINING: a direct_eval run to
+   confirm Gemini actually CALLS observe_scene + reasons on it (Kit-bound, may need description tuning).
 3. **Gemini 3.1 / flash-2.5 switch**: wire the model name through (where the provider is
    instantiated). A/B old vs new model on the eval set.
 4. **Reasoning observability**: capture, per case — which templates retrieved (+scores),
