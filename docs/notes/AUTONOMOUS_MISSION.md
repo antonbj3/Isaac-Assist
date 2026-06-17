@@ -5077,3 +5077,16 @@ So the latent-mis-offset concern of #41 is NOT realized: every COMPOSABLE manipu
 (pick_target/place_position/drop_target/target/goal_position/waypoint/etc.) is covered + offset correctly. No
 change needed; #41 closed. (If an SDG template ever gets composed WITH a per-instance camera, revisit — but SDG
 is a standalone data-gen track, not part of the manipulation composable set.)
+
+cont.186 (2026-06-17): false-success-vakt audit of CP-50 (kit/assembly canonical REP, TRUSTED(position-honest))
+-> registry tier CONFIRMED ACCURATE (no over-claim). Adversarial scene_eyes + RAW read: 4 cubes end as 2 STACKS
+of 2 (Cube_1 on Cube_3 @ RedTray xy [-0.3,-0.4], 13mm/dz50mm; Cube_2 on Cube_4 @ BlueTray [0.3,-0.4], 18mm/dz50mm)
+-> STACK STRUCTURE 2 z-levels + min-pair 13mm. ROOT (tray query): RedTray's 2 slots are 8mm apart
+([-0.334,-0.42] vs [-0.326,-0.42]) — a 50mm cube can't fit 2 side-by-side — AND the controller drops at the TRAY
+CENTER, not per-slot. So routing is CORRECT (reds->RedTray, blues->BlueTray) + delivery is position-honest
+(cubes at the trays), but it is NOT distinct-slot kitting -> exactly why the registry marks it
+TRUSTED(position-honest), NOT GENUINE. The audit VERIFIES the registry doesn't over-claim CP-50 (the
+position-honest tier is honest about the limitation). To UPGRADE kit/assembly to GENUINE would need per-SLOT
+drop targets (controller/template change) + wider slot spacing (~60mm) — a deeper kit-assembly task, not a
+quick fix. NET: false-success-vakt PASSED on the REP (tier accurate); the kit/assembly GENUINE gap is real +
+scoped (per-slot routing). The registry's position-honest-vs-GENUINE distinction is doing its job.
