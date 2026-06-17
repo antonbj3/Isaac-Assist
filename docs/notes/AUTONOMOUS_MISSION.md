@@ -5444,3 +5444,19 @@ higher on CP-84's BaseCube). SAME orientation as the working standalone; only th
 #29(b) = relay-cube descend/position (the descend stops ~0.1m short of the BaseCube-elevated cube), NOT
 orientation. LESSON (again): always run the SAME-TEMPLATE working control before claiming a mechanism;
 a quat that 'looks' rotated may be the normal convention (the working twin proves it).
+
+cont.212 (2026-06-17): #29(b) PRECISELY CHARACTERIZED via measured plan-goals (chain vs standalone) —
+two hypotheses RULED OUT with hard data, root isolated. (1) NOT orientation: standalone (delivers) grasp
+hand_q=[0.707,0,0.707,0] == chain (cont.211); the normal grasp for this template. (2) NOT the grasp-height
+formula: the descend GOAL = cube_z + 0.105 in BOTH (standalone cube 0.775->goal 0.88 GRIPS; chain cube
+0.825->goal 0.93 MISSES) — identical offset. So the relay grasp has the CORRECT orientation AND the CORRECT
+height-offset; it misses only because the relay cube sits 0.05m higher ON CP-84's BaseCube (cube-on-cube),
+where the +0.105 offset that seats on a flat table doesn't seat. The clean flat-handoff fix-test was
+INCONCLUSIVE (deleting BaseCube mid-run disrupted the controller -> 0 grasp plans, delivered 0; a confound,
+not a result). FIX DIRECTION (my authority, dedicated build): pair the Franka stage1 with a stage0 that
+DELIVERS ONTO A FLAT TRAY at ~the standalone height (0.775), NOT a stacked 5cm BaseCube -> the relay then
+matches the working standalone exactly. CP-84 (stacks on BaseCube) is the wrong stage0 for a relay; need a
+flat-delivering UR10 source. NET this thread (cont.208-212): the months-vague chain-relay 'grasp fails' is
+now MEASURED to be a flat-vs-elevated HANDOFF-SURFACE issue (cube-on-BaseCube), NOT orientation/height/
+controller -- corrected my own cont.208 side-grasp error via the same-template control. Tools: chain_gate +
+grasp_geom + plan-goal capture (eyes_plan_capture).
