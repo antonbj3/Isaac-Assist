@@ -3384,6 +3384,59 @@ async def _handle_diagnose_task_outcome(args: Dict) -> Dict:
                     outdir=args.get("outdir"))
 
 
+async def _handle_observe_scene(args: Dict) -> Dict:
+    """LIVE scene observation — the runtime-LLM's EYES on its OWN built scene
+    (#28 gap 2, Anton). Runs scripts/qa/scene_eyes.py in --attach mode against
+    the CURRENTLY loaded Kit stage: plays physics for duration_s, then analyses
+    raw per-object motion (CONVERGED+GRIPPED / SETTLED-Z / GRIP-SLIP / EJECTION /
+    TOPPLE / BELT / trajectories). Reuses the EXACT QA truth tool (scene_eyes) so
+    the LLM sees what the gold-gate sees — no analysis divergence. LIVE complement
+    to diagnose_task_outcome (which reads a saved artifact). Subprocess pattern
+    (same as the training/ros2 handlers); attaches to the single Kit on :8001."""
+    import asyncio as _aio, os as _os, sys as _sys  # noqa: PLC0415
+    repo = _os.environ.get("ISAAC_ASSIST_REPO") or "/home/anton/projects/Omniverse_Nemotron_Ext"
+    try:
+        dur = float(args.get("duration_s") or 40.0)
+    except Exception:
+        dur = 40.0
+    dur = max(5.0, min(dur, 240.0))
+    script = _os.path.join(repo, "scripts", "qa", "scene_eyes.py")
+    if not _os.path.exists(script):
+        return {"error": "scene_eyes.py not found at %s" % script}
+    cmd = [_sys.executable, script, "loaded", str(dur), "--attach", "--noframes"]
+    try:
+        proc = await _aio.create_subprocess_exec(
+            *cmd, cwd=repo,
+            stdout=_aio.subprocess.PIPE, stderr=_aio.subprocess.PIPE)
+        out, err = await _aio.wait_for(proc.communicate(), timeout=dur + 200.0)
+    except _aio.TimeoutError:
+        try:
+            proc.kill()
+        except Exception:
+            pass
+        return {"error": "observe_scene timed out (Kit stalled or no scene loaded)"}
+    except Exception as e:  # noqa: BLE001
+        return {"error": "observe_scene failed to launch: %s" % e}
+    text = (out or b"").decode("utf-8", "replace")
+    # Keep the analysis verdict sections; drop Kit boot noise + warnings + raw plan dumps.
+    keep = []
+    for ln in text.splitlines():
+        s = ln.strip()
+        if not s:
+            continue
+        if s[0] == "[" and "s]" in s[:14]:                      # [N.NNNs] Kit boot/ext lines
+            continue
+        if ("Warning" in s) or ("deprecat" in s) or ("Fabric" in s) or s.startswith("plan#"):
+            continue
+        keep.append(ln)
+    analysis = "\n".join(keep)
+    if not analysis.strip():
+        tail = (err or b"").decode("utf-8", "replace")[-800:]
+        return {"error": "observe_scene produced no analysis (no scene loaded? Kit down?)",
+                "stderr_tail": tail}
+    return {"success": True, "duration_s": dur, "analysis": analysis[-7000:]}
+
+
 @with_telemetry
 async def _handle_trace_goal_frame(args: Dict) -> Dict:
     """GOAL-FRAME DECISION TRACE — controller-side analog of scene_eyes for the
@@ -6237,6 +6290,7 @@ def register(
     data["diagnose_pick_execution"] = _handle_diagnose_pick_execution
     data["trace_goal_frame"] = _handle_trace_goal_frame
     data["diagnose_task_outcome"] = _handle_diagnose_task_outcome
+    data["observe_scene"] = _handle_observe_scene
     data["explain_error"] = None  # LLM-inline (no executor)
     data["get_active_state"] = _handle_get_active_state
     data["get_console_errors"] = _handle_get_console_errors

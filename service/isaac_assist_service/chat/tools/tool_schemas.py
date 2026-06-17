@@ -903,6 +903,33 @@ ISAAC_SIM_TOOLS = [
     {
         "type": "function",
         "function": {
+            "name": "observe_scene",
+            "description": (
+                "LIVE per-object EYES on the scene you just built — runs physics for "
+                "duration_s seconds on the CURRENTLY loaded Kit stage, then returns what "
+                "actually HAPPENED to every workpiece. The runtime complement to "
+                "diagnose_task_outcome (which reads a saved artifact). Reuses scene_eyes, "
+                "the QA truth tool — NEVER the controller's self-report (gates have a "
+                "documented false-positive history; raw motion does not lie). Returns, per "
+                "object: CONVERGED+GRIPPED vs never-gripped, SETTLED-Z (delivered onto the "
+                "target surface vs fell to the floor <0.6m), GRIP-SLIP, EJECTION/EXPLOSION, "
+                "ORIENTATION/TOPPLE (>60deg), the BELT timeline, and per-object "
+                "trajectories. Use it to VERIFY your OWN composed/instantiated scene before "
+                "claiming success — a delivered-count or gate=True is NOT proof. NB: it "
+                "ADVANCES the sim by duration_s (observation = run + see); use the "
+                "template's settle time for slow placements (default 40s)."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "duration_s": {"type": "number", "description": "Seconds of physics to run + observe (default 40). Use a longer value for slow/multi-pick placements so cubes fully settle."},
+                },
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "setup_ros2_control_compat",
             "description": (
                 "PHASE 6 M1: configure Isaac Sim's ROS2 bridge to use the standard "

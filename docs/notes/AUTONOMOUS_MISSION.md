@@ -4794,3 +4794,22 @@ ADEQUATE duration (match template duration_s / verify low end-velocity). The SET
 TIGHTENING (settled floor-drops now reject; the mid-air-at-run-end pass is PRE-EXISTING no-settle-check
 behavior, NOT introduced). Settled-tail robustness = noted future enhancement (doesn't fix under-duration, only
 end-of-run bounce). CP-71 reliably crashed Kit (gravity-dispenser heavy) = #44/dispenser territory, not grip.
+
+cont.170 (2026-06-17): ★ #28 gap-2 SHIPPED — scene_eyes is now an LLM-callable tool `observe_scene` (Anton:
+"Should become an LLM-callable tool"). The runtime-LLM's strategy END-GOAL loop = compose/instantiate ->
+OBSERVE-own-scene -> reason. Added: tool schema in tool_schemas.py + `_handle_observe_scene` in diagnostics.py
+(registered data["observe_scene"]; no _models entry needed — MODEL_REGISTRY.get->None skips validation
+gracefully). The handler subprocesses scripts/qa/scene_eyes.py in --attach mode against the loaded Kit stage
+(same established pattern as the training/ros2 handlers), so it REUSES THE EXACT QA TRUTH TOOL — the LLM sees
+what the gold-gate sees, zero analysis divergence (vs porting/duplicating into isaac_assist_service.qa). It is
+the LIVE complement to the existing artifact-based diagnose_task_outcome. VERIFIED END-TO-END: built CP-69 in
+Kit, called the handler exactly as the executor would -> success, 2631-char analysis with the real verdict
+(Cube_1 CONVERGED+GRIPPED@6.7s, SETTLED-Z=0.785 delivered in bin, GRIP TIMELINE, ORIENTATION) = it RAN physics
+40s + observed the live pick. Boot noise/warnings/plan-dumps stripped; output bounded to 7000 chars.
+   GOTCHA confirmed (twice this session): restart_kit.sh's /health can answer at ~2s while the app isn't ready
+until ~8s -> a build that races immediately fails with "Cannot connect :8001". Re-running after the app is
+truly ready works. (The CP-71 gravity-dispenser also reliably stalls Kit -> #44.) Tool-design FOLLOW-UPS for
+the #28 fresh session (noted, NOT blockers): (1) --attach has NO focus-scoping (FOCUS only set in --compose) ->
+v1 observes the auto-detected robot + all cubes globally; composed per-instance observe = v2; (2) verify the
+LLM actually CALLS observe_scene + reasons (a direct_eval LLM run, Kit-bound) — the HANDLER is proven, the
+LLM-integration eval is the next step.
