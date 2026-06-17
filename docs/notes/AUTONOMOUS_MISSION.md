@@ -4972,3 +4972,20 @@ phase) — that needs editing the generated controller code (escaping hazard: \n
 session. GENUINE HARD STOP: this is now provably a focused-session debug, not tail-of-session — I cannot make
 non-invasive progress. Robot-diversity-via-chain blocker = UR10 controller-never-starts under chain_gate's
 execute_template_canonical+_run_steps path (Franka starts fine there); precise next = invasive callback probe.
+
+cont.179 (2026-06-17): ★★ BREAKTHROUGH + SELF-CORRECTION (read the controller's OWN state, not just the cube).
+cont.174-178 concluded "UR10 controller never STARTS under chain_gate" — WRONG. Probing the robot prim's ctrl:*
+USD attributes after a chain_gate-style build+run shows the controller IS RUNNING: ctrl:phase="executing",
+ctrl:mode="curobo", ctrl:plan_calls 10->13->16, ctrl:plan_fails=0, ctrl:tick_count 405->807->1209 (callback
+FIRING), ctrl:picked_path=/World/inst0/Cube_1. So the controller starts + plans SUCCESSFULLY. The real symptom:
+ctrl:graspdiag "gd=1.289 ... cone=[0.69,0.17,1.27] cube=[-0.5,0.4,0.83]" — the cone/ee is stuck at the UR10
+HOME pose [0.69,0.17,1.27], CONSTANT across 400/800/1200 steps, 1.29m from the cube. So cuRobo PLANS (plan_calls
+climbing) but the ARM NEVER MOVES -> the planned joint targets are NOT being APPLIED to the articulation =
+apply_action no-op = STALE articulation handle after play() under chain_gate's bare _run_steps (compose+
+scene_eyes re-validates the handle; chain_gate doesn't). My "never starts" was a classic infer-from-final-state
+error (cube untouched -> assumed no controller) refuted by reading ctrl:phase (the directive's "read RAW, gates
+lie" applied to my OWN diagnosis). The cont.175 physics_sim_view + cont.178 SingleArticulation(probe) experiments
+failed because they didn't re-bind the CONTROLLER's OWN articulation handle. FIX CANDIDATE (next): the controller
+needs its articulation handle re-validated AFTER play under chain_gate — world.reset() or the controller re-arm
+(canonical_instantiator:248) that compose+scene_eyes triggers. This is now a PRECISE, testable fix direction,
+not a black box.
