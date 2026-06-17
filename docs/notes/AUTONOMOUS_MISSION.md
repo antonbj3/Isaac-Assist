@@ -4941,3 +4941,18 @@ gold classes verified clean on REAL core composable blocks: stack (CP-13), bin (
 + 11/11 synthetic selfcheck + UR10 real (CP-69/70/84). This session's scene_eyes/eyes_gold_gate changes
 (grip-recognition _sg_held, SETTLED-Z, floor-guard) are regression-safe across every gold class AND both robot
 types. The whole session's gate work is now adversarially confirmed clean on the blocks the runtime-LLM composes.
+
+cont.177 (2026-06-17): BREDD-multiplier state audited (composable_blocks.json) — the core is well-covered; the
+multiplier BOTTLENECK is robot-diversity, not block-breadth. canonical_blocks (role->GENUINE rep): Franka
+pick-place-bin CP-01, stack CP-13, palletize/grid CP-08, color-sort CP-03, kit/assembly CP-50; UR10
+pick-place-bin CP-73. GAPS (rep=None): Franka:inspect/vision, Franka:other, UR10:{color-sort,other,
+palletize/grid}. Investigated each for a clean GOLD-promotable candidate (false-success-vakt: "TRUSTED(position-
+honest)" != scene_eyes-GENUINE): (1) Franka:inspect/vision CP-18 = inspect-AND-REJECT (5 cubes, 1 intentionally-
+defective routed AWAY from GoodBin) -> the standard delivery gate reads the rejected cube as "never-gripped" ->
+false-rejects; needs an inspect-reject gate CLASS to verify (not a clean promotion). (2) Franka:other CP-61/68 =
+specialized (CortexFranka stack / dual-robot handoff) — not generic role-fillers. (3) UR10 gaps = #47-blocked
+(UR10 can't compose yet regardless). NET: the COMPOSABLE (Franka) core roles ARE GENUINE-verified; the
+palletize/grid role is SATURATED (CP-08/10/12/19/27/30/46/49/77 all GENUINE); the PARTIAL palletizers (CP-20/25/
+43, CP-71) add zero marginal breadth to a saturated role. So block-breadth is NOT where the multiplier is
+gated — ROBOT-DIVERSITY is (chain UR10-controller-arming + #47 parallel). Refocuses effort: the robot-diversity
+levers (focused-session/Anton-gated) are the real multiplier bottleneck, not adding more Franka blocks.
