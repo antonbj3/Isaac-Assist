@@ -24,7 +24,13 @@ REPO = "/home/anton/projects/Omniverse_Nemotron_Ext"
 SWEEP = "/tmp/stacker_sweep.txt"
 # scene_eyes verdicts already established this session (gold re-verification, cont.96-98):
 KNOWN = {"CP-01": "GENUINE", "CP-03": "GENUINE", "CP-13": "GENUINE(column)",
-         "CP-28": "GENUINE", "CP-29": "GENUINE", "CP-09": "FALSE(scatter)"}
+         "CP-28": "GENUINE", "CP-29": "GENUINE", "CP-09": "FALSE(scatter)",
+         # RAW-verified 2026-06-17 (cont.193-202; scene_eyes/routing_validate per-object) — pinned here so a
+         # registry regen reproduces them instead of reverting to TRUSTED(position-honest)/sweep defaults:
+         "CP-08": "GENUINE(grid)", "CP-42": "GENUINE(grid)",          # grid spread RAW-verified (CP-42 was UNCLEAR pre-#45)
+         "CP-16": "GENUINE(routed)", "CP-50": "GENUINE(kit-routed)",  # color-sort + kit tray-routing xy-containment
+         "CP-70": "GENUINE(grip+deliver)", "CP-73": "GENUINE(grip+deliver)",  # UR10 anchors: grip+carry+deliver, 0 slip
+         "CP-34": "PARTIAL(stochastic blue place)"}                   # blue stochastic to far bin (in-bin 1/floor 2)
 # canonical representative per (robot, class) — the most vanilla/robust block to compose FROM:
 CANON = {("Franka", "pick-place-bin"): "CP-01", ("Franka", "color-sort"): "CP-03",
          ("Franka", "stack/column"): "CP-13", ("Franka", "palletize/grid"): "CP-08",

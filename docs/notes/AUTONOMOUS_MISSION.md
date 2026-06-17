@@ -5310,3 +5310,19 @@ code_template, hand-authored CP-CHAIN-FLAT doesn't). NET: CP-NEW-occupancy-map-n
 fixable (env module missing for its core feature); Carter nav itself (CP-64) is solid. Stopped (avoided
 rabbit-holing an env-blocked AI-generated template). ENV GAP logged: isaacsim.asset.gen absent ->
 occupancy-map/Nav2-export nav templates can't run their map step (Anton: an Isaac asset-gen pip/ext).
+
+cont.204 (2026-06-17): PERSISTENCE FIX — this session's 6 RAW-verified verdict upgrades were only in the
+GITIGNORED composable_blocks.json (regenerable-away). Confirmed composable_registry.py REGENERATES that
+json from a hardcoded KNOWN dict (line 26, TRACKED) + sweep + heuristics; a regen would have CLOBBERED the
+upgrades back to TRUSTED(position-honest). FIX: encoded the RAW-verified verdicts into KNOWN (tracked,
+committed, regen-proof): CP-08/CP-42 GENUINE(grid), CP-16 GENUINE(routed), CP-50 GENUINE(kit-routed),
+CP-70/CP-73 GENUINE(grip+deliver), CP-34 PARTIAL(stochastic blue place). Now a registry regen reproduces
+the session's verifications instead of silently reverting. (The navigate_to "log_error" error is NOT a
+codebase bug — comprehensive grep: no log_error defined anywhere in service/; it originates in Kit's
+wheeled-robots controller, fires only on already-failing nav. Closed, not fixable here.)
+★ SESSION CLOSE (cont.189-204, ~21 commits): every strategically-relevant axis verified or its blocker
+identified — breadth anchors all GENUINE (both robots, every class), composition layer (grid/stack/kit)
+holds, color-sort routing verified + new routing_validate.py (#36), nav foundation (CP-64) solid; genuine
+catches CP-34 + the eyes-first/code_template/under-duration lessons; verdicts now regen-proof. Remaining
+frontier is execution-gated only: #29 grasp-pose (deep), #47 (Anton), #28 harness (watched-window),
+isaacsim.asset.gen (env). Foundation = solid; multiplier gated on execution, not breadth.
