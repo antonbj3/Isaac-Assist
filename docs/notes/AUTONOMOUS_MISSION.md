@@ -4777,3 +4777,20 @@ SCATTERED multi-stacker mislabeled bin would false-pass the structure check); (2
 (/World/BaseCube) isn't tracked by scene_eyes (no Cube*/Item* prefix) -> the 2-level column is invisible, so
 naively adding the stack keyword would FALSE-REJECT CP-84 (base untracked -> <2 z-levels). Coupled fix = add
 keywords + track the base anchor; deferred (not a clean tail-of-sweep partial).
+
+cont.169 (2026-06-17): UR10 gold-gradeability sweep + false-success-vakt on the grip fix — THOROUGH. Real-tool
+runs through scene_eyes + eyes_gold_gate: CP-69 (asset/bin) GOLD genuine; CP-84 (cone/stack) GOLD genuine
+(Cube_1 on BaseCube, audited); CP-70 (asset/bin) GOLD genuine (live stage: Cube_1 [0.51,-0.289,0.785] INSIDE
+Bin bbox). So the cont.167 grip fix (_sg_held = SurfaceGripper `grp` list) is robust across BOTH grip
+mechanisms (asset short_gripper raycast + procedural cone) AND classes (bin + stack). FALSE-POSITIVE check:
+CP-71 (4-cube dispenser) REJECTED — but via a KIT CRASH mid-run (exec_sync lost :8001, no eyes.json) -> the
+gate FAILS-CLOSED on no-data (NOT a false-pass); the synthetic controls B (floor-drop->REJECT) + C
+(never-gripped->REJECT) on real CP-69 data already prove non-deliveries reject. NET: the grip fix does NOT
+false-pass; UR10/suction is now first-class gold-gradeable via the LOCAL gate (always false-rejected before).
+   ★ FINDING (false-success-vakt on my OWN SETTLED-Z): it reports the LAST-row z, which is PROVISIONAL if the
+run is under-duration. CP-70 @40s read SETTLED-Z=0.964 (cube still descending) but settled to 0.785 IN the bin
+after the run (live-verified) -> verdict still correct, but the reading was transient. LESSON: grade with
+ADEQUATE duration (match template duration_s / verify low end-velocity). The SETTLED-Z addition is still a net
+TIGHTENING (settled floor-drops now reject; the mid-air-at-run-end pass is PRE-EXISTING no-settle-check
+behavior, NOT introduced). Settled-tail robustness = noted future enhancement (doesn't fix under-duration, only
+end-of-run bounce). CP-71 reliably crashed Kit (gravity-dispenser heavy) = #44/dispenser territory, not grip.
