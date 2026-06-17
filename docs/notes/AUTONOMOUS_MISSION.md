@@ -5212,3 +5212,14 @@ relayed cube; 6 hypotheses refuted with RAW data], locked the eyes-first discipl
 feedback_eyes_first_not_ctrl_summary), proactively re-verified CP-08+CP-13 canonical golds RAW under
 composition, resolved CP-42 UNCLEAR->GENUINE, added 3 grounded composition eval cases (incl. a
 robot-diversity retrieval case), and assessed the registry as fully honest. 6 commits.
+
+cont.197 (2026-06-17): PROACTIVE false-success-vakt on the ROBOT-DIVERSITY foundation (the multiplier's
+bottleneck axis) — adversarially audited the two UR10 anchors RAW (the UR10 side underpins all
+robot-diversity; if an anchor is a fling-in false-gold the whole side is suspect). BOTH genuinely robust
+(upgraded TRUSTED(position-honest) -> GENUINE(grip+deliver)):
+  * CP-73 (UR10 canonical, 4 cubes off a MOVING conveyor): all 4 ever-gripped (grp), all 4 delivered into
+    the bin (xy~0.52,-0.28; z 0.785/0.835/0.885/0.935 = clean 0.05-stacked), none on floor, 0 grip-slip.
+  * CP-70 (UR10 surface_gripper, 1 cube): gripped + carried to bin (0.51,-0.29,0.785), not on floor, 0 slip.
+  So the UR10 blocks are real grip+carry+deliver, not just position-honest -> when the robot-diversity
+  EXECUTION blockers (#29 grasp-pose, #47 concurrent-cuRobo) are resolved, the underlying blocks hold.
+  Method = eyes-first RAW (grp gripped-list + per-cube trajectory + grip-slip), never the summary.
