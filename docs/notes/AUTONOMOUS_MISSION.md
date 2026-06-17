@@ -5326,3 +5326,17 @@ holds, color-sort routing verified + new routing_validate.py (#36), nav foundati
 catches CP-34 + the eyes-first/code_template/under-duration lessons; verdicts now regen-proof. Remaining
 frontier is execution-gated only: #29 grasp-pose (deep), #47 (Anton), #28 harness (watched-window),
 isaacsim.asset.gen (env). Foundation = solid; multiplier gated on execution, not breadth.
+
+cont.205 (2026-06-17): eval-set consistency check (Kit-free) after the session's verdict changes — does any
+#28 retrieval-eval ground_truth ground on a now-downgraded/false block? Check flagged 14, but
+FALSE-SUCCESS-VAKT ON MY OWN CHECK refuted 13: the "(unknown)" blocks (CP-64 nav, CP-78/59/48/60, the
+CP-NEW-* niche templates) aren't UNVERIFIED — they're just OUT of the arm-composition registry's scope, and
+they're the correct RETRIEVAL targets for their eval categories. KEY DISTINCTION: a retrieval ground_truth
+is the TASK-MATCHING template, NOT an execution-clean requirement. So the lone "real" flag (ND-05 GT=CP-34
+PARTIAL) is ALSO fine — CP-34 IS the 3-color sorter (red/green/blue), the exact retrieval match; its PARTIAL
+status is a downstream EXECUTION concern, separate from retrieval correctness. NET: eval set is
+retrieval-SOUND; made NO spurious edits (editing would conflate retrieval vs execution + over-loosen the
+eval). Lesson: retrieval-eval (task-match) and the verdict registry (execution-robustness) are SEPARATE
+layers — don't cross-contaminate. (A #28 DESIGN question for Anton: should runtime retrieval PREFER
+execution-clean blocks when several match? Not an autonomous change — the current eval tests task-match,
+which is correct for its scope.)
