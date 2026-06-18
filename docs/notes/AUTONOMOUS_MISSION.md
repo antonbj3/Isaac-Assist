@@ -6602,3 +6602,14 @@ eyes capture was a BLIND [-4800:] tail that grabbed cuRobo PLANNER spam (plan#/s
 (CONVERG/GRIP/SETTLED). FIXED (verktygen-är-levande): extract verdict LINES -> res["eyes_summary"], drop planner
 spam; logic-verified locally (PASS), cloud re-run deferred (cost). So the cloud breadth pipeline NOW captures the
 genuine signal — re-run for real breadth verdicts when CC/$ allows, batched SMALL (cold-boot cost) or warm-pool.
+
+cont.307 (2026-06-18, local Kit) — BREADTH-CAMPAIGN STRATEGIC INSIGHT: scene_eyes on belt-fed position-honest
+blocks (CP-17 color-sort, CP-04 pick-place, CP-38 high-vol sorter) ALL show the SAME signature — GENUINE
+mechanism (CONVERGED+GRIPPED, RIGID HOLD, delivered+stacked in bin, no scatter/eject/topple) but throttled by
+"BELT MOSTLY PAUSED -> conveyor-stall" (belt moving ~1% of run -> cubes don't advance to pick zone -> only 4-7
+of N completed in window). NOT individual fakes -> a SHARED belt-stall root. CP-38 also flagged ARM-VS-SCENE
+COLLISION (swing hits support -> stalls). REFRAME: the breadth bottleneck for the belt-fed-sorter subset is ONE
+systematic belt-pause/resume bug (the belt pauses for a pick but doesn't RESUME enough to advance the next cube),
+not 43 blocks to grind. HIGH-LEVERAGE FIX = the shared belt-pause/resume (task #37; ⚠️SENSITIVE — CP-52/65 shared,
+needs multi-template no-regression; known blocker) — a dedicated fresh-context session, NOT a quick edit. So these
+belt-fed blocks stay position-honest HONESTLY (genuine mechanism, belt-throttled throughput) until that fix lands.
