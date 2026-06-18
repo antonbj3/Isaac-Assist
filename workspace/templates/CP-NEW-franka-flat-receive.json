@@ -1,0 +1,160 @@
+{
+  "task_id": "CP-NEW-franka-flat-receive",
+  "goal": "Franka picks one cube off a FLAT OPEN platform (no conveyor, no walls) and delivers it into an open-top bin. Authored as the clean STAGE-1 of a robot-diversity sequential chain (#29): it has NO conveyor prop and NO moving belt, so when chained behind CP-NEW-ur10-flat-deliver it does NOT sweep or eject the relayed cube (the cont.182 conveyor-SWEEP and cont.184 structure-COLLISION blockers both come from stage-1's belt/prop sitting in the handoff zone). The pick is reach-based + sensor-gated, so the relayed cube only has to land within Franka reach on the platform.",
+  "tools_used": [
+    "create_scene_baseline",
+    "robot_wizard",
+    "create_conveyor",
+    "create_prim",
+    "apply_api_schema",
+    "bulk_set_attribute",
+    "apply_physics_material",
+    "create_bin",
+    "add_proximity_sensor",
+    "setup_pick_place_controller"
+  ],
+  "thoughts": "Conveyor-free Franka receiver designed to be a CLEAN chain stage-1:\n1) Franka base at (0,0,0.75), oriented [0.7071,0,0,0.7071] (90deg Z) so a workpiece at world +X picks in the robot's natural direction (CP-01 convention).\n2) PICK SURFACE = a FLAT platform (create_conveyor with surface_velocity=[0,0,0] -> static collidable slab, no walls). Placed at (0.4,0.0,0.78) INSIDE Franka reach (0.85m). Its top z = 0.80. This MIRRORS stage-0's HandoffPad: when chained, the offset lands stage-0's pad (and the cube on it) on top of this receiver platform so the geometry coincides.\n3) NO conveyor belt. The chain blockers (cont.182 SWEEP, cont.184 COLLISION) are ALL caused by stage-1's own moving/static conveyor prop occupying the handoff zone co-located with its PickSensor (CP-01/CP-54 PickSensor and belt are both at local y=0.4). This template has neither -> nothing to sweep or eject the relayed cube.\n4) The pick handler is REACH-BASED (_cube_at_sensor: any undelivered source cube within Franka reach 0.85m of base, z-window base_z +/- [-0.30,+0.50], preferring the one closest to the sensor). So a relayed cube resting on the platform within ~0.80m of the Franka base is picked even if not perfectly under the sensor. This relaxes the chain offset tolerance from exact-sensor to within-reach.\n5) ONE source cube (Cube_R) authored on the platform for STANDALONE function-gate (Franka picks it off the flat surface -> bin). In a chain, chain_gate's source_override replaces source_paths with the inst0 relayed cube paths, and the authored Cube_R simply isn't referenced (it can coexist or be ignored; chain_gate measures only the chained cubes).\n6) BIN behind robot at (0,-0.4,0.75) — the stage-1 delivery target.",
+  "code": "# Toolified opening [P2-07]: light + cell + table + physics in ONE call\ncreate_scene_baseline(include_ground=False, table_size=[2.0, 1.0])\n\n# Franka oriented so world +X workpiece is in robot's natural pick direction\nrobot_wizard(\n    robot_name=\"franka_panda\",\n    dest_path=\"/World/Franka\",\n    position=[0, 0, 0.75],\n    orientation=[0.7071068, 0, 0, 0.7071068],\n)\n\n# FLAT OPEN pick platform (static slab: surface_velocity=[0,0,0]), inside reach.\n# Top surface z = 0.78 + 0.04/2 = 0.80. Mirrors stage-0's HandoffPad for the chain.\ncreate_conveyor(\n    prim_path=\"/World/ReceivePad\",\n    position=[0.4, 0.0, 0.78],\n    size=[0.40, 0.40, 0.04],\n    surface_velocity=[0, 0, 0],\n)\n\n# Source cube on the pick platform (STANDALONE only; chain overrides source_paths)\ncreate_prim(prim_path=\"/World/Cube_R\", prim_type=\"Cube\", position=[0.4, 0.0, 0.825], size=0.05)\nfor api in (\"PhysicsRigidBodyAPI\", \"PhysicsCollisionAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n    apply_api_schema(prim_path=\"/World/Cube_R\", schema_name=api)\nbulk_set_attribute(prim_paths=[\"/World/Cube_R\"], attr=\"physxRigidBody:sleepThreshold\", value=0.0)\napply_physics_material(prim_path=\"/World/Cube_R\", material_name=\"rubber\")\n\n# Output bin behind robot, floor flush on table top\ncreate_bin(prim_path=\"/World/Bin\", position=[0, -0.4, 0.75], size=[0.3, 0.3, 0.15])\n\n# Pick sensor over the platform centre\nadd_proximity_sensor(sensor_path=\"/World/PickSensor\", position=[0.4, 0.0, 0.825], size=[0.12, 0.12, 0.06])\n\n# cuRobo controller — no belt_path (no conveyor). Picks the cube off the flat pad.\nsetup_pick_place_controller(\n    robot_path=\"/World/Franka\",\n    target_source=\"curobo\",\n    sensor_path=\"/World/PickSensor\",\n    source_paths=[\"/World/Cube_R\"],\n    destination_path=\"/World/Bin\",\n    planning_obstacles=[\"/World/Table\", \"/World/ReceivePad\", \"/World/Bin\"],\n)",
+  "settle_state": {
+    "cubes": {
+      "/World/Cube_R": [0.4, 0.0, 0.825]
+    },
+    "conveyors": {
+      "/World/ReceivePad": [0, 0, 0]
+    }
+  },
+  "verify_args": {
+    "stages": [
+      {
+        "robot_path": "/World/Franka",
+        "pick_path": "/World/ReceivePad",
+        "place_path": "/World/Bin",
+        "robot_kind": "franka_panda"
+      }
+    ],
+    "cube_path": "/World/Cube_R"
+  },
+  "simulate_args": {
+    "cube_path": "/World/Cube_R",
+    "target_path": "/World/Bin",
+    "duration_s": 180,
+    "xy_tolerance": 0.1
+  },
+  "extends": "CP-01",
+  "extension_notes": "CP-NEW-franka-flat-receive = CP-01 with the conveyor REMOVED and the pick source changed to a flat static platform (ReceivePad). The deliberate removal of the belt is the chain fix: CP-01/CP-54 fail as chain stage-1 because their PickSensor and conveyor are co-located (both local y=0.4), so any sensor-aligning offset drops the belt over the handoff (cont.183) -> SWEEP (moving) or COLLISION (static prop ejecting the relayed cube, cont.184). With no belt, nothing occupies the handoff zone but the pickable flat slab. Authored for #29: pair behind CP-NEW-ur10-flat-deliver.",
+  "failure_modes": [
+    "Standalone: Franka picks Cube_R off the flat pad into the bin (CP-01 controller path, simpler than a moving belt). Drop precision into the 0.3x0.3x0.15 bin is the CP-01-proven path.",
+    "Chain: the relayed cube must land within Franka reach (0.85m of base) AND in the z-window (base_z 0.75 +/- [-0.30,+0.50] = [0.45,1.25]) for the reach-based _cube_at_sensor to select it. The recommended offset (chain_usage) puts it at world (0.4,0.0,0.825) = 0.40m from base, z=0.825, well inside both.",
+    "If the relayed cube lands slightly off the pad it may roll; the pad is 0.40x0.40 (large vs 0.05 cube) so a +/-0.15 landing error stays on the slab.",
+    "Cube_R coexisting with the relayed inst0 cube under chain: chain_gate's apply_source_override REPLACES source_paths with the inst0 cube list, so Cube_R is no longer a pick source and is not measured. It sits inert on the pad (harmless). If a future chain wants it gone, omit it via a param; not needed for the relay measure."
+  ],
+  "verified_status": "build-spec-2026-06-17; STANDALONE function-gate EXPECTED pass (CP-01 controller path, static flat pick); CHAIN stage-1 untested (human-serial Kit run required).",
+  "chain_usage": {
+    "role": "stage-1 of a robot-diversity sequential chain (#29)",
+    "pair_with_stage0": "CP-NEW-ur10-flat-deliver",
+    "stage0_delivers_cube_to_world": [0.5, -0.4, 0.825],
+    "stage1_pick_surface_local": [0.4, 0.0, 0.78],
+    "offset_from_stage0": [-0.1, -0.4, 0.0],
+    "offset_derivation": "Align stage-1's ReceivePad world position onto stage-0's HandoffPad delivery point. stage-0 delivers the cube to world [0.5,-0.4,0.825]. stage-1's ReceivePad is authored at local [0.4,0.0,0.78]; with origin_offset O it sits at [0.4+Ox, 0.0+Oy]. Set [0.4+Ox,0.0+Oy] = [0.5,-0.4] -> Ox=0.1, Oy=-0.4. BUT chain_gate's pick is reach-based from the stage-1 Franka base (which also shifts by O to [0+Ox,0+Oy]); the relayed cube at [0.5,-0.4] must be within 0.85m of the shifted base. With O=[0.1,-0.4]: base=[0.1,-0.4], cube=[0.5,-0.4] -> 0.40m (inside reach), cube lands centred on the shifted ReceivePad (now at [0.5,-0.4]) at z=0.825 (its own top). PickSensor (shifted to [0.5,-0.4]) sits exactly over the cube. CLI: chain_gate.py CP-NEW-ur10-flat-deliver CP-NEW-franka-flat-receive@0.1,-0.4,0",
+    "chain_gate_cli": "scripts/qa/chain_gate.py CP-NEW-ur10-flat-deliver CP-NEW-franka-flat-receive@0.1,-0.4,0"
+  },
+  "intent": {
+    "pattern_hint": "pick_place",
+    "structural_features": {
+      "n_robot_stations": 1,
+      "n_handoffs": 0,
+      "destination_kind": "single_bin",
+      "uses_conveyor_transport": false
+    },
+    "structural_tags": [
+      "isaac:robot.fixed_base.arm",
+      "isaac:topology.single_station",
+      "isaac:source.flat_platform"
+    ]
+  },
+  "roles": {
+    "primary_robot": {
+      "constraints": ["franka_panda", "ur5e", "kinova_gen3"],
+      "expected_count": 1,
+      "required": true
+    },
+    "pick_platform": {
+      "constraints": ["conveyor", "platform"],
+      "expected_count": 1,
+      "required": true
+    },
+    "primary_destination": {
+      "constraints": ["bin"],
+      "expected_count": 1,
+      "required": true
+    },
+    "pick_sensor": {
+      "constraints": ["proximity_sensor"],
+      "expected_count": 1,
+      "required": true
+    },
+    "workpieces": {
+      "constraints": ["cube"],
+      "min": 1,
+      "max": 1,
+      "unordered": false
+    }
+  },
+  "role_defaults": {
+    "primary_robot": {
+      "path": "/World/Franka",
+      "class": "franka_panda",
+      "position": [0, 0, 0.75],
+      "orientation": [0.7071068, 0, 0, 0.7071068]
+    },
+    "pick_platform": {
+      "path": "/World/ReceivePad",
+      "position": [0.4, 0.0, 0.78],
+      "size": [0.4, 0.4, 0.04],
+      "surface_velocity": [0, 0, 0]
+    },
+    "primary_destination": {
+      "path": "/World/Bin",
+      "position": [0, -0.4, 0.75],
+      "size": [0.3, 0.3, 0.15]
+    },
+    "pick_sensor": {
+      "path": "/World/PickSensor",
+      "position": [0.4, 0.0, 0.825],
+      "size": [0.12, 0.12, 0.06]
+    },
+    "workpieces": [
+      {
+        "path": "/World/Cube_R",
+        "position": [0.4, 0.0, 0.825]
+      }
+    ]
+  },
+  "code_template": "# Toolified opening [P2-07]: light + cell + table + physics in ONE call\ncreate_scene_baseline(include_ground=False, table_size=[2.0, 1.0])\n\nrobot_wizard(\n    robot_name={{primary_robot.class}},\n    dest_path={{primary_robot.path}},\n    position={{primary_robot.position}},\n    orientation={{primary_robot.orientation}},\n)\n\n# FLAT OPEN pick platform (static slab)\ncreate_conveyor(\n    prim_path={{pick_platform.path}},\n    position={{pick_platform.position}},\n    size={{pick_platform.size}},\n    surface_velocity={{pick_platform.surface_velocity}},\n)\n\ncreate_prim(prim_path={{workpieces[0].path}}, prim_type=\"Cube\", position={{workpieces[0].position}}, size=0.05)\nfor api in (\"PhysicsRigidBodyAPI\", \"PhysicsCollisionAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n    apply_api_schema(prim_path={{workpieces[0].path}}, schema_name=api)\nbulk_set_attribute(prim_paths=[{{workpieces[0].path}}], attr=\"physxRigidBody:sleepThreshold\", value=0.0)\napply_physics_material(prim_path={{workpieces[0].path}}, material_name=\"rubber\")\n\ncreate_bin(prim_path={{primary_destination.path}}, position={{primary_destination.position}}, size={{primary_destination.size}})\n\nadd_proximity_sensor(sensor_path={{pick_sensor.path}}, position={{pick_sensor.position}}, size={{pick_sensor.size}})\n\nsetup_pick_place_controller(\n    robot_path={{primary_robot.path}},\n    target_source=\"curobo\",\n    sensor_path={{pick_sensor.path}},\n    source_paths=[{{workpieces[0].path}}],\n    destination_path={{primary_destination.path}},\n    planning_obstacles=[\"/World/Table\", {{pick_platform.path}}, {{primary_destination.path}}],\n)",
+  "verify_args_template": {
+    "stages": [
+      {
+        "robot_path": "{{primary_robot.path}}",
+        "pick_path": "{{pick_platform.path}}",
+        "place_path": "{{primary_destination.path}}",
+        "robot_kind": "{{primary_robot.class}}"
+      }
+    ],
+    "cube_path": "{{workpieces[0].path}}"
+  },
+  "simulate_args_template": {
+    "cube_path": "{{workpieces[0].path}}",
+    "target_path": "{{primary_destination.path}}",
+    "duration_s": 180
+  },
+  "diagnose_args": {
+    "robot_path": "/World/Franka",
+    "sensor_path": "/World/PickSensor",
+    "robot_base": [0.0, 0.0, 0.75],
+    "drop_pose": [0, -0.4, 0.75]
+  },
+  "motion_controllers": {
+    "verified": [],
+    "untested": ["curobo"]
+  }
+}

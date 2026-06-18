@@ -1,0 +1,163 @@
+{
+  "task_id": "CP-NEW-ur10-flat-deliver",
+  "goal": "UR10 + surface_gripper picks one cube off a stationary feeder and delivers it onto a FLAT OPEN low platform (no walls, no belt motion) instead of a deep bin or a stack-target. Authored as the clean STAGE-0 of a robot-diversity sequential chain (#29): the flat platform is a pickable handoff surface a Franka stage-1 can grab from with a free top-down grip. Standalone it is a UR10 cuRobo+suction pick-place that delivers 1/1.",
+  "tools_used": [
+    "create_scene_baseline",
+    "robot_wizard",
+    "surface_gripper",
+    "create_conveyor",
+    "create_prim",
+    "apply_api_schema",
+    "bulk_set_attribute",
+    "apply_physics_material",
+    "add_proximity_sensor",
+    "setup_pick_place_controller"
+  ],
+  "thoughts": "Flat-platform handoff design (vs CP-70 deep Bin / CP-84 BaseCube stack-target):\n1) UR10 base on table at (0,0,0.75) + suction on ee_link — same proven CP-70 controller path (cuRobo + surface_gripper, function-gate verified, raycast workaround).\n2) Stationary FEEDER at (-0.5,0.4,0.78) carries one cube into the UR10 pick zone (surface_velocity 0.001 = effectively static, the CP-70 feeder pattern).\n3) DELIVERY TARGET = a FLAT OPEN platform (create_conveyor with surface_velocity=[0,0,0]). create_conveyor with zero velocity yields a single static collidable kinematic Cube — a flat slab with NO walls and NO belt motion. This is the whole point: a deep bin (5 walls) blocks a downstream pick (cuRobo no-plan-into-walls + PhysX grip-vs-wall blow-up); a BaseCube stack-target is a colliding prop a downstream conveyor overlaps; a FLAT slab is freely pickable top-down.\n4) Platform top surface z = 0.78 + 0.04/2 = 0.80 (a 0.04m-thick slab centred at z=0.78). The delivered cube rests centred on the slab top at z ~ 0.825 (slab top 0.80 + half cube 0.025) — exactly table-top pick height, in the downstream Franka's z-window.\n5) Platform placed at (0.5,-0.4,0.78) — INSIDE UR10 reach (1.20m), clear of the feeder, on a flat open part of the table. drop_target=[0.5,-0.4,0.825] drops the cube onto the slab top centre. planning_obstacles include the platform so cuRobo plans down to the top surface without colliding.\n6) Distinct delivery footprint: the platform is a SLAB the downstream stage-1 Franka can reach with no overlapping pick structure (the chained Franka in CP-NEW-franka-flat-receive has NO conveyor) — this reconciles the cont.184 COMMON ROOT (stage0-delivery-surface vs stage1-pick-structure).",
+  "code": "# Toolified opening [P2-07]: light + ground + cell + table + physics in ONE call\ncreate_scene_baseline(table_size=[3.0, 1.0])\n\n# UR10 spawned via robot_wizard (applies home_joints, ee_link)\nrobot_wizard(\n    robot_name=\"ur10\",\n    dest_path=\"/World/UR10\",\n    position=[0, 0, 0.75],\n    orientation=[1, 0, 0, 0],\n)\n\n# Suction gripper attached to UR10's ee_link (CP-70 proven path)\nsurface_gripper(\n    robot_path=\"/World/UR10\",\n    ee_link=\"/World/UR10/ee_link\",\n    grip_threshold=0.02,\n    force_limit=200.0,\n    torque_limit=200.0,\n)\n\n# Stationary feeder (verifier bridge for the source cube)\ncreate_conveyor(\n    prim_path=\"/World/Feeder\",\n    position=[-0.5, 0.4, 0.78],\n    size=[0.40, 0.30, 0.05],\n    surface_velocity=[0.001, 0, 0],\n)\n\n# Single cube on feeder\ncreate_prim(prim_path=\"/World/Cube_1\", prim_type=\"Cube\", position=[-0.5, 0.4, 0.835], size=0.05)\nfor api in (\"PhysicsRigidBodyAPI\", \"PhysicsCollisionAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n    apply_api_schema(prim_path=\"/World/Cube_1\", schema_name=api)\nbulk_set_attribute(prim_paths=[\"/World/Cube_1\"], attr=\"physxRigidBody:sleepThreshold\", value=0.0)\napply_physics_material(prim_path=\"/World/Cube_1\", material_name=\"rubber\")\n\n# FLAT OPEN delivery platform: create_conveyor with surface_velocity=[0,0,0]\n# = a single static collidable kinematic Cube slab, NO walls, NO motion.\n# Top surface z = 0.78 + 0.04/2 = 0.80. Placed inside UR10 reach, clear of feeder.\ncreate_conveyor(\n    prim_path=\"/World/HandoffPad\",\n    position=[0.5, -0.4, 0.78],\n    size=[0.40, 0.40, 0.04],\n    surface_velocity=[0, 0, 0],\n)\n\n# Pick sensor on the feeder pick zone\nadd_proximity_sensor(sensor_path=\"/World/PickSensor\", position=[-0.4, 0.4, 0.835], size=[0.10, 0.06, 0.06])\n\n# UR10 cuRobo controller — delivers onto the flat pad top centre\nsetup_pick_place_controller(\n    robot_path=\"/World/UR10\",\n    robot_family=\"ur10\",\n    target_source=\"curobo\",\n    sensor_path=\"/World/PickSensor\",\n    belt_path=\"/World/Feeder\",\n    source_paths=[\"/World/Cube_1\"],\n    destination_path=\"/World/HandoffPad\",\n    drop_target=[0.5, -0.4, 0.825],\n    planning_obstacles=[\"/World/Table\", \"/World/Feeder\", \"/World/HandoffPad\"],\n)",
+  "settle_state": {
+    "cubes": {
+      "/World/Cube_1": [-0.5, 0.4, 0.835]
+    },
+    "conveyors": {
+      "/World/Feeder": [0.001, 0, 0],
+      "/World/HandoffPad": [0, 0, 0]
+    }
+  },
+  "verify_args": {
+    "stages": [
+      {
+        "robot_path": "/World/UR10",
+        "pick_path": "/World/Feeder",
+        "place_path": "/World/HandoffPad",
+        "robot_kind": "ur10e"
+      }
+    ],
+    "cube_path": "/World/Cube_1"
+  },
+  "simulate_args": {
+    "cube_path": "/World/Cube_1",
+    "target_path": "/World/HandoffPad",
+    "duration_s": 180,
+    "xy_tolerance": 0.12
+  },
+  "extends": "CP-70",
+  "extension_notes": "CP-NEW-ur10-flat-deliver = CP-70 with the deep Bin replaced by a FLAT OPEN platform (HandoffPad: create_conveyor with surface_velocity=[0,0,0] -> static collidable slab, no walls, no motion). This makes the delivery surface PICKABLE by a downstream Franka stage-1 (top-down/suction grip with no wall blow-up), which a deep bin (CP-70) or a stack-target BaseCube (CP-84) is not. Authored for #29 robot-diversity sequential chain: pair with CP-NEW-franka-flat-receive as stage-1.",
+  "failure_modes": [
+    "Same UR10+suction integration path as CP-70 (function-gate verified there): SurfaceGripper schema, ee_link path, cuRobo+suction coordination. No new robot-side risk.",
+    "Drop precision onto the flat pad: if cuRobo's descent ends ~0.02m high the cube tumbles a little but stays on the 0.40x0.40 slab (large landing area vs a 0.05 cube). xy_tolerance=0.12 in simulate_args covers it.",
+    "Platform is a kinematic rigid body (create_conveyor applies kinematicEnabled=True) with zero surface velocity — it does NOT push the delivered cube (verified: surfaceVelocity=[0,0,0] disables the integrator's push). It just provides a flat collision surface.",
+    "In a chain, stage-0's HandoffPad becomes the stage-1 pick surface ONLY if stage-1's pick zone overlaps the pad world position — handled by the chain offset (see chain usage note), not a standalone failure."
+  ],
+  "verified_status": "build-spec-2026-06-17; STANDALONE function-gate EXPECTED pass (CP-70 controller path, flat target easier than deep bin); CHAIN stage-0 untested (human-serial Kit run required).",
+  "chain_usage": {
+    "role": "stage-0 of a robot-diversity sequential chain (#29)",
+    "delivers_cube_to_world": [0.5, -0.4, 0.825],
+    "pair_with_stage1": "CP-NEW-franka-flat-receive",
+    "recommended_offset": "see CP-NEW-franka-flat-receive.chain_usage.offset_from_stage0"
+  },
+  "intent": {
+    "pattern_hint": "pick_place",
+    "structural_features": {
+      "n_robot_stations": 1,
+      "n_handoffs": 0,
+      "destination_kind": "flat_platform",
+      "uses_conveyor_transport": true
+    },
+    "structural_tags": [
+      "isaac:transport.conveyor",
+      "isaac:robot.fixed_base.arm",
+      "isaac:topology.single_station",
+      "isaac:robot.ur10",
+      "isaac:gripper.surface_suction",
+      "isaac:destination.flat_platform"
+    ]
+  },
+  "roles": {
+    "primary_robot": {
+      "constraints": ["ur10e", "ur10"],
+      "expected_count": 1,
+      "required": true
+    },
+    "input_conveyor": {
+      "constraints": ["conveyor"],
+      "expected_count": 1,
+      "required": true
+    },
+    "primary_destination": {
+      "constraints": ["conveyor", "platform"],
+      "expected_count": 1,
+      "required": true
+    },
+    "pick_sensor": {
+      "constraints": ["proximity_sensor"],
+      "expected_count": 1,
+      "required": true
+    },
+    "workpieces": {
+      "constraints": ["cube"],
+      "min": 1,
+      "max": 1,
+      "unordered": false
+    }
+  },
+  "role_defaults": {
+    "primary_robot": {
+      "path": "/World/UR10",
+      "class": "ur10e",
+      "position": [0, 0, 0.75],
+      "orientation": [1, 0, 0, 0],
+      "ee_link": "/World/UR10/ee_link"
+    },
+    "input_conveyor": {
+      "path": "/World/Feeder",
+      "position": [-0.5, 0.4, 0.78],
+      "size": [0.4, 0.3, 0.05],
+      "surface_velocity": [0.001, 0, 0]
+    },
+    "primary_destination": {
+      "path": "/World/HandoffPad",
+      "position": [0.5, -0.4, 0.78],
+      "size": [0.4, 0.4, 0.04],
+      "surface_velocity": [0, 0, 0]
+    },
+    "pick_sensor": {
+      "path": "/World/PickSensor",
+      "position": [-0.4, 0.4, 0.835],
+      "size": [0.1, 0.06, 0.06]
+    },
+    "workpieces": [
+      {
+        "path": "/World/Cube_1",
+        "position": [-0.5, 0.4, 0.835]
+      }
+    ]
+  },
+  "code_template": "# Toolified opening [P2-07]: light + ground + cell + table + physics in ONE call\ncreate_scene_baseline(table_size=[3.0, 1.0])\n\n# UR10 spawned via robot_wizard (applies home_joints, ee_link)\nrobot_wizard(\n    robot_name=\"ur10\",\n    dest_path={{primary_robot.path}},\n    position={{primary_robot.position}},\n    orientation=[1, 0, 0, 0],\n)\n\n# Suction gripper attached to UR10's ee_link\nsurface_gripper(\n    robot_path={{primary_robot.path}},\n    ee_link={{primary_robot.ee_link}},\n    grip_threshold=0.02,\n    force_limit=200.0,\n    torque_limit=200.0,\n)\n\n# Stationary feeder (verifier bridge for cube)\ncreate_conveyor(\n    prim_path={{input_conveyor.path}},\n    position={{input_conveyor.position}},\n    size={{input_conveyor.size}},\n    surface_velocity={{input_conveyor.surface_velocity}},\n)\n\n# Single cube on feeder\ncreate_prim(prim_path={{workpieces[0].path}}, prim_type=\"Cube\", position={{workpieces[0].position}}, size=0.05)\nfor api in (\"PhysicsRigidBodyAPI\", \"PhysicsCollisionAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n    apply_api_schema(prim_path={{workpieces[0].path}}, schema_name=api)\nbulk_set_attribute(prim_paths=[{{workpieces[0].path}}], attr=\"physxRigidBody:sleepThreshold\", value=0.0)\napply_physics_material(prim_path={{workpieces[0].path}}, material_name=\"rubber\")\n\n# FLAT OPEN delivery platform (static slab: surface_velocity=[0,0,0])\ncreate_conveyor(\n    prim_path={{primary_destination.path}},\n    position={{primary_destination.position}},\n    size={{primary_destination.size}},\n    surface_velocity={{primary_destination.surface_velocity}},\n)\n\n# Pick sensor\nadd_proximity_sensor(sensor_path={{pick_sensor.path}}, position={{pick_sensor.position}}, size={{pick_sensor.size}})\n\n# UR10 cuRobo controller\nsetup_pick_place_controller(\n    robot_path={{primary_robot.path}},\n    robot_family=\"ur10\",\n    target_source=\"curobo\",\n    sensor_path={{pick_sensor.path}},\n    belt_path={{input_conveyor.path}},\n    source_paths=[{{workpieces[0].path}}],\n    destination_path={{primary_destination.path}},\n    drop_target=[0.5, -0.4, 0.825],\n    planning_obstacles=[\"/World/Table\", {{input_conveyor.path}}, {{primary_destination.path}}],\n)",
+  "verify_args_template": {
+    "stages": [
+      {
+        "robot_path": "{{primary_robot.path}}",
+        "pick_path": "{{input_conveyor.path}}",
+        "place_path": "{{primary_destination.path}}",
+        "robot_kind": "ur10e"
+      }
+    ],
+    "cube_path": "{{workpieces[0].path}}"
+  },
+  "simulate_args_template": {
+    "cube_path": "{{workpieces[0].path}}",
+    "target_path": "{{primary_destination.path}}",
+    "duration_s": 180
+  },
+  "diagnose_args": {
+    "robot_path": "/World/UR10",
+    "sensor_path": "/World/PickSensor",
+    "pick_pose": [-0.5, 0.4, 0.835],
+    "drop_pose": [0.5, -0.4, 0.825]
+  },
+  "motion_controllers": {
+    "verified": [],
+    "untested": ["curobo"]
+  }
+}
