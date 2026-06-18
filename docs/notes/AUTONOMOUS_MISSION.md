@@ -6363,3 +6363,8 @@ CP-08 palletize(4) -> CP-CHAIN-PALLETIZE-RECV re-palletize(4->grid) -> CP-CHAIN-
 composer LIST-offset fix (#41) HOLDS ACROSS ALL 3 STAGES (auto_offset propagated: stage1 [-0.073,-0.88], stage2
 [-0.14,-1.744]). CHAIN_TOTAL=12000. => the runtime composition composes to DEPTH (3 stages) x BREADTH x
 MULTI-CUBE x OPERATION-VARIETY, all verified. The composition capability is comprehensively demonstrated.
+
+cont.287 (2026-06-18) — palletize-receiver GENERALIZES (false-success-vakt robustness): CP-12 (n=3) ->
+CP-CHAIN-PALLETIZE-RECV = 3/3 + 3/3, RAW = distinct-slot grid (z=0.785). Not CP-08-specific. Pivoting to the
+breadth axis (a): scene_eyes-audit TRUSTED blocks for ACTUAL GRIP (position-honest != grip-honest; suction grips
+false-NEG on summaries -> read RAW). Auditing CP-81 (UR10 n=2 suction, TRUSTED).
