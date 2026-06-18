@@ -89,20 +89,22 @@ print("PLAYED __N__")
 '''
 
 
-async def _play_and_measure(kt, target, cubes, total=6000, chunk=1000):
-    # RE-ACQUIRE (cont.261): a rerooted/OFFSET build needs a STOP->PLAY so the scene-reset-manager re-acquires
-    # each controller against the final sim view. The bare play in PLAY_CHUNK left an OFFSET UR10 receiver with
-    # stale controller state -> it targeted a WRONG goal (~[-0.257,-1.058], not the cube at [0.5,-1.2]) -> 3950
-    # res_None plan-fails, while scene_eyes (which STOP->PLAYs) DELIVERED the same build at the same offset.
-    # Native (off=0) chains are unaffected (re-acquire is harmless there) — same fix as compose_and_verify /
-    # compose_gate (cont.256). MEASURED cont.261.
-    await kt.exec_sync(
-        "import omni.timeline, omni.kit.app\n"
-        "tl=omni.timeline.get_timeline_interface(); app=omni.kit.app.get_app()\n"
-        "tl.stop()\n"
-        "for _ in range(10): app.update()\n"
-        "tl.play()\n"
-        "for _ in range(90): app.update()\n", timeout=150)
+async def _play_and_measure(kt, target, cubes, total=6000, chunk=1000, reacquire=False):
+    # RE-ACQUIRE (cont.261): an OFFSET UR10 source_paths receiver (path-3, own-cube) needs a STOP->PLAY so the
+    # scene-reset-manager re-acquires the controller against the final sim view — the bare play in PLAY_CHUNK
+    # left it with stale state -> WRONG goal (~[-0.257,-1.058], not the cube at [0.5,-1.2]) -> 3950 res_None
+    # plan-fails, while scene_eyes (which STOP->PLAYs) DELIVERED the same build. ⚠️ GATED by `reacquire`:
+    # a SENSOR receiver (path-2) re-instantiates its relay cube AFTER build, and tl.stop() TELEPORTS that body
+    # off the handoff (PhysX restores initial pose, cont.181) -> breaks the GOLD Franka relay (CP-CHAIN-FLAT
+    # 1/1->0/1, cont.261b regression). So only path-3 passes reacquire=True; path-1/path-2/native stay bare.
+    if reacquire:
+        await kt.exec_sync(
+            "import omni.timeline, omni.kit.app\n"
+            "tl=omni.timeline.get_timeline_interface(); app=omni.kit.app.get_app()\n"
+            "tl.stop()\n"
+            "for _ in range(10): app.update()\n"
+            "tl.play()\n"
+            "for _ in range(90): app.update()\n", timeout=150)
     done = 0
     while done < total:
         n = min(chunk, total - done)
@@ -213,7 +215,9 @@ async def run_stage_k(k, name, handoff):
         # NOTE: no settle_after_canonical here — its settle_state uses un-rerooted paths (/World/Cube_1) that
         # don't match the instance build; the own cube is built at rest on the offset pedestal, _play_and_
         # measure's play settles it.
-    r = await _play_and_measure(kt, target_inst, measure_cubes)
+    # reacquire only for path-3 (source_paths own-cube): the OFFSET UR10 controller needs the STOP->PLAY
+    # re-acquire; a SENSOR receiver (path-2) must NOT stop (it would teleport its post-build relay cube).
+    r = await _play_and_measure(kt, target_inst, measure_cubes, reacquire=not has_sensor)
     r["auto_offset"] = list(off); r["handoff_in"] = X0
     r["receiver_mode"] = "sensor" if has_sensor else "source_paths"
     return r

@@ -81,3 +81,14 @@ CP-73 (canonical UR10) built NATIVE vs at OFFSET, instrument plan goals + arm EE
   MEASUREMENT ARTIFACT of the bare-play; the snap-to-zero + co-designed-zero-offset requirement compensated
   for THAT, not a UR10 limitation. => robot-diversity chains generalize to ARBITRARY-offset UR10 receivers
   via path-3, NO hand-designed zero-offset pairs needed. Commit pending no-regression on native GOLD chain.
+- cont.261b (2026-06-18): ✅ #2 RESOLVED + no regression. The unconditional STOP->PLAY (cont.261) REGRESSED
+  the path-2 sensor relay (CP-CHAIN-FLAT 1/1->0/1: tl.stop() teleported its post-build relay cube off the
+  handoff to [0.846,1.479,0.525]). GATED the fix: _play_and_measure(reacquire=...), True ONLY for path-3
+  (source_paths own-cube, =not has_sensor), False for path-2/native. RE-VERIFIED BOTH in one run:
+  (1) native GOLD chain CP-CHAIN-UR10-SRC->CP-CHAIN-FLAT = 1/1 + 1/1 ALL DELIVERED (relay cube
+  [0.512,-1.182,0.785] = the original GOLD); (2) path-3 forced off=[0.5,-0.8] = delivered 1/1, 0 planfails.
+  So: offset UR10 receivers deliver via path-3, native/sensor chains unregressed. ROBOT-DIVERSITY CHAINS
+  GENERALIZE TO ARBITRARY-OFFSET UR10 RECEIVERS — no hand-designed zero-offset pairs needed (#2 multiplier
+  unblocked). LESSON: a shared play/measure change MUST be no-regression-tested against existing golds — the
+  regression was invisible to the path-3 success and only caught by the native-chain run. STOP->PLAY is not
+  universally safe (resets post-build-placed bodies); gate it. Memory: feedback_composed_scene_needs_stopplay.
