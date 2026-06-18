@@ -17,6 +17,7 @@ CHECKS=(
   "chain_registry_validate.py"  # chain_stages.json internally consistent (positions, handoff reach)
   "test_chain_compat.py"        # handoff predictor agrees with proven ground truth + neg-controls
   "test_composable_blocks.py"   # block catalog consistent + genuine/position-honest summary matches verdicts
+  "test_bin_containment.py"     # scene_eyes bin-aware ORIENTATION fix: deep-bin topple suppressed, surface stays reject
 )
 
 pass=0; fail=0; failed=()

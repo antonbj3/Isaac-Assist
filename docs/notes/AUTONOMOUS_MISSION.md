@@ -6842,3 +6842,18 @@ my own premature "accessible single-robot breadth EXHAUSTED": ~12-13 Franka posi
 (CP-17 sorter, CP-37/41/45 bin-variants, CP-44 cube+sphere, CP-36 shelf, CP-56 rotary, CP-66 recycling-sort,
 CP-NEW-kit-prep/inspector) — only ~10 were driven last stretch + the multi-robot/UR10 ones are the deferred deep
 set. So option-(a) breadth has a real accessible queue ([[feedback_verify_before_dismissing]] instance #3).
+
+cont.318c — BREADTH batch1 (option a) + a SCENE_EYES TOOL FIX (the standard build->audit->fix cycle). 3 Franka
+position-honest blocks driven to GENUINE via scene_eyes RAW: CP-45 (side-mount bin) + CP-37 (obstacle-avoidance
+bin) clean 4/4 CONVERGED+GRIPPED no-topple; CP-41 (mixed-mass bin) GENUINE 4/4 across 2 runs (run1 2 cubes tipped
+IN the bin = collection, run2 all upright). ★ CP-41 exposed a scene_eyes FALSE-POSITIVE (Anton's symmetric
+directive — catch false-pos high-res too): the ORIENTATION reject was NOT destination-aware, so it flagged
+CP-41's bin-collection topple as "*** ORIENTATION FAIL ***", which the gold-gate (eyes_gold_gate.py:77 parses
+that exact line) would turn into a false-REJECT of a genuine bin gold. FIX: made the reject bin-containment-aware
+— a toppled box-like cube resting INSIDE a deep walled container (Bin/Tote/Hopper, wall-height>0.08) is
+collection, NOT a reject; surface/grid/shelf/pallet topples STAY rejects (wall-height guard = NO false-negative).
+CONTROLS: deterministic test_bin_containment.py (7/7: deep-bin->suppress, shallow-bin/Table/outside/above->reject;
+pxr is standalone-importable, added to run_static_checks.sh = 7/7) + the gold-gate selfcheck STILL passes
+(surface-topple still rejects) + safe try/except fallback (degrades to old behavior, can't manufacture a
+false-success). Live wiring confirmation pending a stochastic bin-topple (CP-41 re-test ran upright). Files:
+scripts/qa/scene_eyes.py, scripts/qa/test_bin_containment.py (new), scripts/qa/run_static_checks.sh.

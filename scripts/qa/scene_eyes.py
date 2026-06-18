@@ -846,11 +846,36 @@ def _analyse(js):
         def _boxlike(_n):
             _l = _n.lower()
             return _l.startswith(("cube", "item", "brick")) or any(_k in _l for _k in ("box", "crate", "package", "block", "carton", "parcel", "brick"))
-        _topp = [(n, t) for n, t in _ori if t > 60 and _boxlike(n)]
-        out.append("ORIENTATION (settled cube tilt from world-up; >60°=TOPPLED, 30-60°=TILTED; round items skipped; reject scoped to box-like):")
+        # DESTINATION-AWARE (2026-06-19, Anton symmetric false-positive directive): a cube TOPPLED but resting
+        # INSIDE a deep walled CONTAINER (bin/tote/hopper) is normal COLLECTION, NOT a placement defect — the
+        # orientation reject must not fire for it (else a genuine bin delivery false-FAILs, and the gold-gate
+        # parsing this text false-rejects a real bin gold; CP-41 mixed-mass->Bin was the catch: 4/4 delivered,
+        # 2 cubes tipped in the bin = fine). Surface/grid/shelf/pallet topples STAY rejects (those need upright);
+        # the wall-height>0.08 guard keeps a flat surface from ever counting as a container -> NO false-negative.
+        def _in_deep_container(_pos):
+            if not _pos: return False
+            try:
+                _bc = UsdGeom.BBoxCache(0, [UsdGeom.Tokens.default_])
+                for _pr in stage.Traverse():
+                    if not any(_k in _pr.GetName() for _k in ("Bin", "Tote", "Hopper", "Bucket")): continue
+                    _rng = _bc.ComputeWorldBound(_pr).ComputeAlignedRange()
+                    if _rng.IsEmpty(): continue
+                    _mn = _rng.GetMin(); _mx = _rng.GetMax()
+                    if float(_mx[2] - _mn[2]) < 0.08: continue   # flat plate/lid, not a walled container
+                    if (_mn[0] - 0.03 <= _pos[0] <= _mx[0] + 0.03 and _mn[1] - 0.03 <= _pos[1] <= _mx[1] + 0.03
+                            and _pos[2] <= _mx[2] + 0.03):
+                        return True
+            except Exception: pass
+            return False
+        _binned = {n for n, t in _ori if t > 60 and _boxlike(n) and _in_deep_container(_finals.get(n))}
+        _topp = [(n, t) for n, t in _ori if t > 60 and _boxlike(n) and n not in _binned]
+        out.append("ORIENTATION (settled cube tilt from world-up; >60°=TOPPLED, 30-60°=TILTED; round items skipped; reject scoped to box-like; in-bin topple = collection, not a reject):")
         for _nm, _t in sorted(_ori, key=lambda x: -x[1]):
             _tag = "TOPPLED" if _t > 60 else "TILTED" if _t > 30 else "upright"
-            out.append("    %-14s tilt=%5.1f°  %s%s" % (_nm, _t, _tag, "" if (_boxlike(_nm) or _t <= 60) else " (non-box; not a reject)"))
+            _sfx = ""
+            if _t > 60 and not _boxlike(_nm): _sfx = " (non-box; not a reject)"
+            elif _nm in _binned: _sfx = " (in bin — collection, not a reject)"
+            out.append("    %-14s tilt=%5.1f°  %s%s" % (_nm, _t, _tag, _sfx))
         if _topp:
             out.append("*** ORIENTATION FAIL: %d object(s) TOPPLED (delivered but tipped >60° from upright = not correctly placed): %s ***" % (
                 len(_topp), ", ".join(n for n, _ in _topp)))
