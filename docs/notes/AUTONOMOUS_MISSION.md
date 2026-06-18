@@ -6347,3 +6347,11 @@ DISTINCT-slot places ~2x binning's planning; 1700*N=6800 -> 3/4 with Cube_4 mid-
 xkit_gate: + CHAIN_TOTAL env override on the window + module-scope `import os as _os` (fixed my own NameError
 regression). The dig fixed 2 GENERAL bugs en route: drop_targets schema accepts list (f292c989) + composer
 offsets LIST drop_targets (#41, f0056d2f). So palletize->re-palletize MULTI-CUBE GRID-OUTPUT chain = verified.
+
+cont.285 (2026-06-18) — PLC-EXPORT covers the VERIFIED COMPOSITION LIBRARY. All 7 proven chains
+(UR10->Franka, Franka->UR10 raised, UR10->Franka HandoffPad, Franka LINE, CP-08/CP-12 multi-cube palletize->pick,
+CP-08 palletize->re-palletize) export to WELL-FORMED deployable IEC 61131-3 ST (PROGRAM + CASE state machine +
+S_Handoff station-interlock), verified PROGRAM=1/CASE=1/handoff=1 each. So the PLC-export first step is COMPLETE:
+any sim-validated composition (single or multi-station) -> deployable PLC skeleton. (First export line printed a
+spurious "claude native binary" env-noise msg but the file generated fine.) Launching the composition-DEPTH
+capstone: 3-stage multi-cube CP-08 palletize -> CP-CHAIN-PALLETIZE-RECV re-palletize -> CP-CHAIN-FLAT pick.
