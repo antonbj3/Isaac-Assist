@@ -6380,3 +6380,12 @@ SESSION STATE: composition richly demonstrated+verified (5 chain types, 3-stage 
 palletize-receiver grid-output, generality CP-08/CP-12) + 2 GENERAL bug fixes (drop_targets list schema + composer
 list-offset #41) + PLC-export PoC+coverage (7 chains->deployable ST). REMAINING = DEEP/FRESH-CONTEXT: UR10
 grid-spread fix (IK, root-caused [[ur10_gridspread_limit]]), PLC consume-IR refactor, real-assets/L3.
+
+cont.289 (2026-06-18) — UR10 grid-spread WINDOW HYPOTHESIS REFUTED -> confirmed PURE IK-FLAIL. CHAIN_TOTAL=12000
+(the longer window that fixed the Franka palletize-receiver 3/4->4/4) STILL gives the UR10 grid 1/4 — cubes
+scatter to RANDOM positions ([0.869,0.40]/[-0.26,-0.08]/[0.706,0.12]), NOT window-limited mid-transit; only the
+one slot (Cube_3 @[0.408,-0.236]) lands. So the diff is robot, not timing: the FRANKA grid-spread works (just
+needs time); the UR10 SCATTERS regardless of window = UR10-specific IK-flail. Now tested 5 angles
+(pile[3/4], path-keyed drop_targets[broke], class-keyed[broke], within-radius[1/4], longer-window[1/4]) ->
+robot-diversity MULTI-CUBE conclusively BLOCKED on the UR10 grid-spread IK; fix = a DEEP shared cuRobo-controller
+change (wrist-constraint and/or force-release-scatter gate), FRESH-CONTEXT. Deleted the broken template.
