@@ -5986,3 +5986,16 @@ spawn+drive; occupancy-map-nav stays env-blocked on isaacsim.asset.gen). reached
 (secondary, same as multi-amr). This nav push = a generalizing CLASS-fix (not per-template). NET nav-track
 state: CARTER/wheeled drive works for CP-64 + multi-amr 3/3 + the create_wheeled_robot class (spawn+drive);
 REMAINING = obstacle/fleet REACH (head-on coordination, a feature) + jetbot WheeledRobot.init (deep).
+
+cont.249 (2026-06-17): NAV auto-repair generalization CONFIRMED across a 3rd template + the per-template-issue
+pattern is now clear (stopping the sweep). CP-NEW-forklift-handoff-arm: the create_wheeled_robot spawn auto-
+repair spawns /World/Forklift (was absent) = 3rd template confirmed (after cart-handoff-amr + forklift-amr-
+pallet). It is a REAL nav+arm template (setup_pick_place_controller, not the cart-handoff signal-choreography).
+BUT PARTIAL: Forklift spawns + drives only 0.154m then STUCK (a scene obstacle in the forklift/pallet layout;
+contrast the clear-path 1.0-2.9m drives of cart-handoff/forklift-amr-pallet) AND Franka arm 2/3 (Item_2/Item_3
+CONVERGED+GRIPPED; Item_1 GRIP-SLIP seat dz=105mm, contact-never-lifted). CONCLUSION: the 4 generalizing nav
+class-fixes (cont.246-248: wheel-scope, create_wheeled_robot spawn auto-repair, nav_gate path-discovery,
+_artroot) are BANKED + confirmed across the create_wheeled_robot class (3 spawn, 2 drive clean). The remaining
+nav work is PER-TEMPLATE (individual scene-obstacle + arm-grip issues on DESIGN-ONLY templates) or FEATURE-
+level (obstacle-aware fleet coordination, jetbot) -- lower value than the class-fix, fresh-effort. Nav-track
+clean veins HARVESTED; the class-fix is the durable win.
