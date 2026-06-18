@@ -5825,3 +5825,19 @@ NEXT (fresh-context, decisive): add a TEMP debug print in _gen_pick_place_curobo
 goal_tool_pose (world+base) + collision status, run the offset build (chain_xkit_gate forces 0/1 under any
 offset = ready A/B) vs the native build (1/1), diff the values, revert the print. Still OPTIONAL -- the
 Franka->UR10 GOLD ships via the cont.235 zero-offset workaround.
+
+cont.239 (2026-06-17): LLM-FLOW split (b) compose-REASONING harness BUILT + PASSING (Kit-free + ChromaDB-free
+= parallel-safe; closes a documented GAP in LLM_FLOW_SIMULATION_PROTOCOL.md, "does it pick the right blocks").
+scripts/qa/compose_reason_eval.py gives Gemini the canonical_blocks catalog + a multi-station task and scores
+whether it DECOMPOSES + selects the right cell per sub-task (right robot family AND op), with NO ChromaDB
+retrieval and NO Kit. 5/5 cases PASS (gemini-robotics-er-1.6-preview, ~2s/case, free tier): het-2stn
+[CP-73 UR10-pick + CP-13 Franka-stack] = heterogeneous, BOTH robot families (the multiplier bottleneck axis);
+franka-2op [CP-01,CP-08]; sort+kit [CP-03,CP-50]; 3stn-mixed [CP-73,CP-08,CP-13] (3 stations); and ★ gap-ur10-
+sort: asked for a UR10 colour-sorter (UR10:color-sort = NULL in catalog) -> Gemini correctly FLAGGED the gap +
+picked NOTHING instead of hallucinating CP-03 (wrong robot) / CP-73 (wrong op) = false-success-vakt PASS (the
+planner is honest about catalog gaps). So the runtime-LLM-composition REASONING layer (the END GOAL core) is
+validated for decompose + explicit-robot/op selection + gap-honesty. HONEST SCOPE: cases name robot+op
+explicitly (moderate difficulty); harder extensions (robot-family INFERENCE when unnamed, ambiguous ops,
+distractor lures, layout/handoff wiring) = next. Retrieval half (split a) stays ChromaDB-watched-window-gated.
+This is the strategic END GOAL (KOMPOSITION = runtime LLM capability) tested Kit-free, in parallel with the
+serial-Kit robot-diversity work this session.
