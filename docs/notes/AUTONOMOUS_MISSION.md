@@ -6756,3 +6756,11 @@ is the binding slowness. Basis corrected (old 'some never gripped' implied reach
 redundant harder-variant - palletize/grid covered). [Per-object disambiguation: all 16 'moved' but xy-extent
 0.28>grid 0.21 = 8 grid + 8 conveyor, not a convergence under-count.] high-res adversarial audit thoroughly worked:
 CP-15/19/10 confirmed solid, CP-20/CP-25 partials resolved (topple / throughput), CP-31 caught.
+
+cont.316b — ★CP-26 (last pick-place-bin matrix block) HIGH-RES CATCH: 4/4 CONVERGED+GRIPPED but 3/4 TOPPLED (tilt
+90-136deg) + scattered LOW (z 0.635, 2 fell 0.19m to x~1.65 far-out) -> gate FALSE-PASSED as 4/4-delivered;
+per-object ORIENTATION refutes. Real (CP-25 clean on same fresh Kit). -> PARTIAL [genuine 28, partial 7]. Likely
+scene/placement issue, deferred (redundant class). PICK-PLACE-BIN MATRIX COMPLETE: CP-04/21/22/23/24 clean (5) +
+CP-31/CP-26 caught (2) = 2/7 fail the per-object checks the position-gate passed. Verify-EACH robustly validated
+(don't assume matrix uniformity). High-res breadth campaign cont.305-316b: genuine 21->28, 4 high-res catches
+(CP-20/CP-31/CP-26 + the belt-stall false-NEG on myself), 3 golds adversarially confirmed, 2 partials resolved.
