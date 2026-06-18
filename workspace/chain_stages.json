@@ -20,6 +20,7 @@
     {"stages": ["CP-CHAIN-FRANKA-SRC", "CP-CHAIN-FLAT"], "dir": "Franka->Franka (same-robot LINE)", "handoff": "flat 0.775", "result": "1/1+1/1 (cont.267)"},
     {"stages": ["CP-08", "CP-CHAIN-FLAT"], "dir": "Franka(palletize)->Franka(pick) MULTI-CUBE", "handoff": "flat-grid 0.825 (4 cubes)", "result": "4/4+4/4 N-of-M=2 (cont.269) — faithful multi-cube relay, RAW: tight grid handoff + stable 4-stack collected in bin"},
     {"stages": ["CP-12", "CP-CHAIN-FLAT"], "dir": "Franka(palletize)->Franka(pick) MULTI-CUBE", "handoff": "flat-grid 0.825 (3 cubes)", "result": "3/3+3/3 (cont.271) — generality: multi-cube works across palletizers + N (not CP-08-specific)"},
-    {"stages": ["CP-08", "CP-CHAIN-PALLETIZE-RECV"], "dir": "Franka(palletize)->Franka(RE-PALLETIZE) MULTI-CUBE GRID-OUTPUT", "handoff": "flat-grid 0.825 (4)", "result": "4/4+4/4 (cont.284, operation-variety: chain ENDS IN A GRID not a bin; needs CHAIN_TOTAL~12000)"}
+    {"stages": ["CP-08", "CP-CHAIN-PALLETIZE-RECV"], "dir": "Franka(palletize)->Franka(RE-PALLETIZE) MULTI-CUBE GRID-OUTPUT", "handoff": "flat-grid 0.825 (4)", "result": "4/4+4/4 (cont.284, operation-variety: chain ENDS IN A GRID not a bin; needs CHAIN_TOTAL~12000)"},
+    {"stages": ["CP-08", "CP-CHAIN-PALLETIZE-RECV", "CP-CHAIN-FLAT"], "dir": "Franka 3-STAGE multi-cube (palletize->re-palletize->pick) — composition DEPTH", "handoff": "flat-grid 0.825 x2", "result": "4/4+4/4+4/4 (cont.286; RAW: grid@stage1, stack-in-bin@stage2; offset propagates across all 3 stages; CHAIN_TOTAL=12000)"}
   ]
 }

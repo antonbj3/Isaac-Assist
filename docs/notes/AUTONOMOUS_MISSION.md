@@ -6355,3 +6355,11 @@ S_Handoff station-interlock), verified PROGRAM=1/CASE=1/handoff=1 each. So the P
 any sim-validated composition (single or multi-station) -> deployable PLC skeleton. (First export line printed a
 spurious "claude native binary" env-noise msg but the file generated fine.) Launching the composition-DEPTH
 capstone: 3-stage multi-cube CP-08 palletize -> CP-CHAIN-PALLETIZE-RECV re-palletize -> CP-CHAIN-FLAT pick.
+
+cont.286 (2026-06-18) — ★ COMPOSITION DEPTH capstone: 3-stage multi-cube chain
+CP-08 palletize(4) -> CP-CHAIN-PALLETIZE-RECV re-palletize(4->grid) -> CP-CHAIN-FLAT pick(4->bin) =
+4/4 + 4/4 + 4/4 ALL DELIVERED. RAW false-success-vakt: stage1 = distinct-slot 2x2 GRID (z=0.785, 1 level,
+~0.13m spacing); stage2 = clean 4-STACK in bin (tight xy [-0.15,-2.14], z-steps 0.785/0.835/0.885/0.935). The
+composer LIST-offset fix (#41) HOLDS ACROSS ALL 3 STAGES (auto_offset propagated: stage1 [-0.073,-0.88], stage2
+[-0.14,-1.744]). CHAIN_TOTAL=12000. => the runtime composition composes to DEPTH (3 stages) x BREADTH x
+MULTI-CUBE x OPERATION-VARIETY, all verified. The composition capability is comprehensively demonstrated.
