@@ -5794,3 +5794,18 @@ INTEGRATION shown 1x (cross-Kit serial = deterministic by design; per-stage Kit 
 process-PhysX corruption before stage2). So COMPOSITION = chaining robust templates is now demonstrated
 across 3 stages x 3 robots = the strategic multiplier (breadth x robot-diversity) in action. No new code/
 template -- pure use of the cont.233-235 blocks + harness.
+
+cont.237 (2026-06-17): SCOPED the optional UR10 origin_offset fix (general-case; NOT blocking -- the Franka->
+UR10 GOLD uses the cont.235 zero-offset workaround). Narrowed by code read: the FRANKA native controller pins
+its base pose CORRECTLY under offset (pick_place.py ~2705-2722 + 2767: set_robot_base_pose(robot_position =
+the robot's ComputeLocalToWorldTransform translation)), which is why the Franka receiver handles instance_root
++origin_offset fine (UR10->Franka GOLD + 3-stage stage2). The UR10 uses a SEPARATE cuRobo controller from
+_gen_pick_place_curobo (pick_place.py:486); its grasp goal / plan frame does NOT account for the robot's
+OFFSET world base pose -> cont.234 ctrl: last_fail_goal mis-computed [-0.758,-0.244,0.936] vs cube
+[-0.001,-0.386,0.975], arm wrong-direction. FIX (fresh-context): in _gen_pick_place_curobo, transform the
+pick/place WORLD goals into the robot BASE frame using the robot's actual world base pose (or set cuRobo's
+robot base pose), mirroring the Franka pin. Payoff: upgrades Franka->UR10 to a FAITHFUL (literal-object) relay
++ enables UR10-in-any-chain-stage + likely helps #47 (same-Kit UR10 composition offset). Ready A/B for the
+fix: chain_xkit_gate CP-CHAIN-UR10-RECV-NATIVE delivers NATIVE (off=0) but 0/1 under ANY origin_offset (even
+14mm) -- so a fixed handler should make the offset build deliver. Verify one-per-fresh-Kit (UR10 corrupts
+process PhysX).
