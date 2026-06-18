@@ -6220,3 +6220,13 @@ with a deep-bin source — NOT a relay-infrastructure limit. cont.268 reach-conc
 scene_eyes run where CP-08 had only placed 3/4 (Cube_1 still at feeder -> 0.88m extent); full runs place 4/4
 tight. So a PALLETIZER->PICKER multi-cube chain is a real composition capability. Added CP-08 (multi-cube
 source) + CP-CHAIN-FLAT (1..N receiver) + the proven chain to chain_stages.json. NULÄGE "(b) relays 1/N" = STALE.
+
+cont.270 (2026-06-18) — CP-71 (UR10 palletize n=4 PARTIAL) DIAGNOSED + DEFERRED. scene_eyes RAW: 2/4 GRIPPED
+(Item_2,Item_4 converged 25/60mm), 2/4 NEVER-GRIPPED (Item_1,Item_3 — suction approaches only to 102/116mm,
+undershoots the <50mm suction range), Item_3 TOPPLED, and the suction grabbed the TABLE at t=37.7s
+(gripped=['Table']). = a multi-failure UR10-suction-palletize issue (descend undershoot + topple + table
+mis-grip), NOT a one-line fix. AND its delivery is a 2x2 grid INSIDE OutBin (0.12m bin) -> handoff-incompatible
+(compose_handoff flags "bin"); even if fixed it can't chain. As a parallel block, robot-diversity-parallel is
+PhysX-blocked. So CP-71->GENUINE is LOW-ROI (parallel-blocked + chain-bin-blocked) -> deferred, not rabbit-holed.
+=> multi-cube ROBOT-DIVERSITY (UR10-palletize->Franka-pick) stays blocked: no GENUINE UR10 multi-cube FLAT
+source (CP-71 deep+bin; CP-73 n=4 GENUINE but ->bin). Would need authoring a flat UR10 multi-cube source.
