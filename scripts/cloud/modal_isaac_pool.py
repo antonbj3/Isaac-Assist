@@ -509,7 +509,18 @@ def run_template(template_id: str, skip_ts: bool = False,
                                  template_id, str(_edur), "--noframes"],
                                 capture_output=True, text=True,
                                 timeout=_edur + 600, env=genv)
-            res["eyes_tail"] = (pe.stdout + pe.stderr)[-4800:]
+            # cont.306: a BLIND [-4800:] tail captured cuRobo PLANNER spam (plan#/seed_cost), burying the
+            # scene_eyes VERDICT (CONVERG/GRIP-SLIP/SETTLED-Z/STACK/EJECT/TOPPLED/BELT). Extract the verdict
+            # LINES (mirrors the local grep) so the cloud breadth signal is actually usable, not planner noise.
+            _keep = ("EYES_DONE", "CONTACTS", "GRIP-SLIP", "RIGID HOLD", "GRIP CONTACT", "EJECTION", "EXPLOSION",
+                     "OFF-SURFACE", "OBJECT-OBJECT", "STACK STRUCTURE", "SETTLED-Z", "ORIENTATION FAIL",
+                     "TOPPLED", "TILTED", "BELT", "PICK CONVERGENCE", "CONVERGED", "NEAR-MISS", "THRASH", "-> ")
+            _drop = ("cuRobo RESULT", "dir(res)", "plan#", "seed_cost", "seed_rank", "debug_info", "per-joint",
+                     "object orientation relative")
+            _vl = [l for l in (pe.stdout + "\n" + pe.stderr).splitlines()
+                   if any(w in l for w in _keep) and not any(w in l for w in _drop)]
+            res["eyes_summary"] = "\n".join(_vl)[-4800:]
+            res["eyes_tail"] = (pe.stdout + pe.stderr)[-1200:]   # small raw tail for debugging
     except Exception as e:  # noqa: BLE001
         res["error"] = str(e)[-3000:]
     finally:

@@ -6592,3 +6592,13 @@ promoted. Local breadth spot-checks: CP-17 (3-class sort) + CP-04 genuine grip R
 --templates <15 distinct-op Franka position-honest: color-sort/assembly/vision/other> --eyes -> parallel cloud
 run_template (fresh-Kit gate + scene_eyes each), autonomous on Modal credit (~0 CC), self-stops on .map complete.
 UR10 excluded (cloud rule). Review verdicts when CC refreshes.
+
+cont.306 (2026-06-18) — Modal breadth batch HONEST outcome + cloud tool-fix. Launched 15 distinct-op Franka
+position-honest blocks (run_template --eyes); 6/15 done (CP-33/32/02/18/17/47 gate=True) at the 20-min waiter cap;
+STOPPED the app (-y, cost cap ~$4-5; cold Kit boot ~170-190s/block DOMINATES cost — 6 containers x long wall-time).
+★FALSE-SUCCESS-VAKT: gate=True is the POSITION gate (these were ALREADY position-honest) — NOT genuine grip proof,
+so I did NOT promote them (gate-count är ej bevis). The genuine signal (scene_eyes RAW) was UNUSABLE: run_template's
+eyes capture was a BLIND [-4800:] tail that grabbed cuRobo PLANNER spam (plan#/seed_cost), burying the verdict
+(CONVERG/GRIP/SETTLED). FIXED (verktygen-är-levande): extract verdict LINES -> res["eyes_summary"], drop planner
+spam; logic-verified locally (PASS), cloud re-run deferred (cost). So the cloud breadth pipeline NOW captures the
+genuine signal — re-run for real breadth verdicts when CC/$ allows, batched SMALL (cold-boot cost) or warm-pool.
