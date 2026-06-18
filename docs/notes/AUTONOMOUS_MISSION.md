@@ -6513,3 +6513,14 @@ checker CAUGHT all 3. PLC-export PoC now has a full adversarial verification tri
 faithfulness (roundtrip 7/7) + control-flow (4/4, neg-control-proven). All 3 emitter claims that I'd only
 self-assessed are now externally/adversarially verified. Vein exhausted -- the PoC is honest+tested within its
 documented scope (not bytecode-compiled, motion-FBs integrator-bound, safety stubbed; consume-refactor Anton-gated).
+
+cont.300 (2026-06-18, Kit-free, CORE composition) — STATIC registry validator chain_registry_validate.py:
+formalizes chain_stages.json's handoff_rule + guards consistency (stage-existence, position-capability
+[first sources / last receives / MID does BOTH], surface-not-deep-bin, delivery-height in receiver robot's pick
+band). On first run it CAUGHT a real modeling gap: the proven 3-stage chain's middle stage CP-CHAIN-PALLETIZE-RECV
+was role=receiver / can_src=False, despite cont.286 proving it sources stage 3 (its re-palletized grid) — the same
+mid-stage cont.296 taught the LLM about. FIXED the registry: PALLETIZE-RECV now declares can_source + delivers_z
+0.80 + delivers_surface flat-grid (accurately models the proven mid-stage). Re-validate 8/8 GREEN. NEGATIVE-CONTROL
+proven: injected stale-ref / reach-violation / bad-terminal -> validator caught all 3 (not a tautological pass).
+So the composition registry is now self-consistent + statically guarded, and the mid-stage capability is FORMALIZED
+(it was only implicit before, which is exactly why the 3-stage LLM-discoverability needed the cont.296 hint).
