@@ -6397,3 +6397,16 @@ CP-20 layer-yaw, mixed-SKU per-item orientation) would be rejected by validation
 Union[float,int,Dict,List]; tool_schemas.py -> type:[object,array,number]. Unit-verified scalar/list/dict all
 accept. Same pattern as the drop_targets fix (f292c989); both = the #41 'POSITION_KWARGS/args hand-maintained,
 latent non-dict mis-validation' family. No current template hit it yet (preventive, confirmed-pattern).
+
+cont.291 (2026-06-18) — 3-stage LLM PLANNING: dry-run "palletize->re-palletize->pick" -> LLM picks 2/3
+[CP-08, CP-CHAIN-PALLETIZE-RECV] + gap_flag=True (HALTs honestly on the missing 3rd = false-success-vakt PASS,
+no hallucination). The palletize-receiver is presented to Gemini as a terminal "receiver", not a MID-STAGE whose
+grid output chains further -> the planner can't discover the 3rd pick stage. Planner is SAFE (gap-honest); 3-stage
+EXECUTION is proven (cont.286, 4/4x3). Discoverability fix (present palletize-receiver as receiver+source mid-stage
+in plan_with_gemini _cl) is MARGINAL (3-stage tasks rare + gap-honest is safe + Gemini-quota-bound to verify) ->
+noted, deferred. END-GOAL planning validated for 1-2 stage (common cases) + gap-honest for 3-stage.
+[CHECKPOINT cont.269-291] Composition richly demonstrated+verified (5 chain types, 3-stage depth 4/4x3,
+multi-cube, palletize-receiver grid-output, generality) + 3 latent bug fixes (drop_targets schema, composer
+list-offset #41, gripper_rotation schema) + PLC-export PoC+coverage (7 chains->deployable ST) + UR10 grid-spread
+thoroughly RCA'd (5 angles, pure IK-flail, deferred). REMAINING = DEEP/FRESH-CONTEXT: UR10 IK shared-controller
+fix, PLC consume-IR refactor (IR-executor), real-assets/L3.
