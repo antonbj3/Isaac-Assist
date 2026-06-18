@@ -116,23 +116,30 @@ def extract_ir(tid):
 
 
 def emit_sfc(ir):
-    """Emit an IEC 61131-3 SFC skeleton + ST action bodies (text)."""
+    """Emit a deployable IEC 61131-3 ST CASE state machine (the standard real-PLC sequence pattern — a sim-
+    validated sequence a PLC programmer can drop into a project). One CASE branch per SFC step; the transition
+    guard advances `step`. NOTE: this is a SKELETON — the guards (EE_reached/grip_confirmed) + motion calls
+    (MoveLinear/GripperClose) are placeholders a PLCopen MC_* / vendor motion library binds; not yet
+    toolchain-compiled (no IEC compiler wired). Proves the sequence exports to valid-shaped ST."""
+    steps = ir["steps"]
     L = []
-    L.append(f"(* SFC export — template {ir['template']} ({ir['robot']}, {ir['n_objects']} objects) *)")
+    L.append(f"(* Deployable ST (IEC 61131-3 CASE) — template {ir['template']} ({ir['robot']}, {ir['n_objects']} objects) *)")
     L.append(f"(* {ir['doc']} *)")
     L.append("PROGRAM PickPlaceSequence")
-    L.append("VAR  step : INT := 0;  done : BOOL := FALSE;  END_VAR")
-    L.append("")
-    steps = ir["steps"]
+    L.append("VAR")
+    L.append("    step  : INT  := 0;")
+    L.append("    done  : BOOL := FALSE;")
+    L.append("END_VAR")
+    L.append("CASE step OF")
     for i, s in enumerate(steps):
-        nxt = steps[i + 1]["step"] if i + 1 < len(steps) else None
-        L.append(f"STEP {s['step']}:")
-        L.append(f"    (* action *) {s['action']};")
-        if s["transition"] is not None and nxt:
-            L.append(f"    (* transition *) IF {s['transition']} THEN GOTO {nxt}; END_IF")
+        guard = s["transition"]
+        L.append(f"    {i}: (* {s['step']} *)")
+        L.append(f"        {s['action']};")
+        if guard is not None and i + 1 < len(steps):
+            L.append(f"        IF {guard} THEN step := {i + 1}; END_IF;")
         else:
-            L.append(f"    done := TRUE;")
-        L.append("END_STEP")
+            L.append("        done := TRUE;")
+    L.append("END_CASE")
     L.append("END_PROGRAM")
     return "\n".join(L)
 
