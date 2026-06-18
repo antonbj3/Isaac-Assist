@@ -6230,3 +6230,18 @@ mis-grip), NOT a one-line fix. AND its delivery is a 2x2 grid INSIDE OutBin (0.1
 PhysX-blocked. So CP-71->GENUINE is LOW-ROI (parallel-blocked + chain-bin-blocked) -> deferred, not rabbit-holed.
 => multi-cube ROBOT-DIVERSITY (UR10-palletize->Franka-pick) stays blocked: no GENUINE UR10 multi-cube FLAT
 source (CP-71 deep+bin; CP-73 n=4 GENUINE but ->bin). Would need authoring a flat UR10 multi-cube source.
+
+cont.273 (2026-06-18) — ROBOT-DIVERSITY MULTI-CUBE characterized + DEFERRED (3rd depth-reveal; not essential).
+  • CP-73 (UR10, single drop_target -> PILES a 4-stack) -> CP-CHAIN-FLAT = 4/4 + 3/4. RAW: the relay
+    re-instantiated CP-73's 4-STACK; picking the top cubes KNOCKED Cube_3 aside (ended [0.461,-0.29], displaced)
+    -> abandoned after retries = STACK-HANDOFF DESTABILIZATION. The cross-robot picks themselves work; the loss
+    is the piled-stack handoff (a SPREAD source avoids it, cf. CP-08/CP-12 grids = 100%).
+  • Spread-fix attempt CP-CHAIN-UR10-MULTI-SRC (CP-73 + cube-PATH-keyed drop_targets 2x2 grid) -> 1/4 REGRESSION
+    (2 cubes never picked). DIAGNOSTIK-FÖRST root cause: the cuRobo controller's _bin_drop_pos keys drop_targets
+    by SEMANTIC CLASS (_cube_semantic_class), NOT cube-path. CP-08's path-keys work on the FRANKA path but not
+    the UR10 cuRobo path -> non-matching keys broke the pick loop. DELETED the broken template (no false artifact).
+  • PATH FORWARD (deferred, focused authoring): a UR10 spread source needs SEMANTIC-CLASS-keyed drop_targets —
+    the CP-NEW-palletizer-mixed-sku pattern (an existing UR10 color-sort n=6 that spreads by class). Assign 4
+    distinct Semantics classes to the cubes + class-keyed grid. NOT done now (over-invest guard; 3rd depth-reveal).
+  • NOT ESSENTIAL: the multiplier is already rich WITHOUT robot-diversity multi-cube — parallel-Franka +
+    1-cube robot-diversity BOTH directions + Franka LINE + multi-cube Franka (CP-08/CP-12) are all proven.
