@@ -6168,3 +6168,17 @@ loop now executes BOTH structures green: parallel-Franka (compose_and_verify) + 
 deep-bin failure for free. LAST piece for a fully LLM-DRIVEN sequential green: put chain-ready blocks in the
 LLM's pick-catalog (compose_reason_eval CATALOG) so Gemini picks chainable sources for handoff tasks (the
 --cells override path is proven green). Memory: project_isaac_assist_chain_relay_crossns.
+
+cont.264 (2026-06-18) — ✅✅ FULLY LLM-DRIVEN SEQUENTIAL robot-diversity loop GREEN end-to-end. Augmented the
+orchestrator's Gemini catalog with chain-ready stages + handoff-height guidance (compose_reason_eval untouched
+-> its eval still valid; commit 5668a674). FULL run (live Gemini + cross-Kit Kit chain): handoff task ->
+Gemini PICKED [CP-CHAIN-UR10-SRC, CP-CHAIN-FLAT] structure=sequential (not the bin-delivering canonical blocks)
+-> handoff-compat COMPAT (flat 0.775) -> chain_xkit_gate -> stage0 1/1 + stage1 1/1 -> ALL DELIVERED -> ✅
+SEQUENTIAL CHAIN GREEN. So the runtime-LLM composition capability now executes BOTH structures end-to-end,
+LLM-driven + verified: PARALLEL-Franka (#1, compose_and_verify) AND SEQUENTIAL robot-diversity (UR10<->Franka
+cross-Kit, arbitrary offsets post cont.261). The complete arc this session: "UR10 mishandles offset" phantom
+(refuted) -> bare-play root cause (3rd harness) -> arbitrary-offset chains -> orchestrator wiring -> #29
+handoff-compat -> chain-ready LLM catalog -> fully LLM-driven sequential GREEN. HONEST SCOPE (not overclaiming):
+this is ONE proven UR10->Franka single-cube chain end-to-end; the MECHANISM/loop is proven, BREADTH remains
+(more chain-ready stages, more robot pairs, multi-cube handoff, the cont.262 weak-CP-73 + multi-cube-relay
+gaps). NOT "sequential composition done" — the loop works; breadth is the next axis.
