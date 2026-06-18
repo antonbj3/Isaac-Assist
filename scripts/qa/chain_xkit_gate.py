@@ -105,6 +105,10 @@ async def _play_and_measure(kt, target, cubes, total=6000, chunk=1000, reacquire
             "for _ in range(10): app.update()\n"
             "tl.play()\n"
             "for _ in range(90): app.update()\n", timeout=150)
+    # cont.277: scale the measurement window with N — a fixed 6000 FALSE-NEGATIVES large multi-cube chains
+    # (CP-08's 4 cubes used ~1500 updates each; a 6/9-cube chain would be cut off mid-delivery). max() keeps the
+    # 6000 floor; only GROWS the window, and the controller idles after S["done"] -> benign for working chains.
+    total = max(total, 1700 * len(cubes))
     done = 0
     while done < total:
         n = min(chunk, total - done)

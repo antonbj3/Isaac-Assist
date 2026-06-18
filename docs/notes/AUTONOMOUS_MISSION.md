@@ -6270,3 +6270,16 @@ So the runtime composition SYSTEM both COMPOSES (planning verified cont.274 dry-
 gap=False) and EXECUTES (here) a multi-cube chain (palletizer->picker, 4 cubes). MULTI-CUBE COMPOSITION =
 COMPLETE: proven (269/271) + general (CP-08 n=4, CP-12 n=3) + LLM-composable (274) + loop-executable (276).
 Only the single-run Gemini plan+execute awaits a free-tier quota reset (275 429 = quota, NOT a capability gap).
+
+cont.277 (2026-06-18) — MULTI-CUBE SCALING LIMIT characterized (false-success-vakt: NOT "scales to any N").
+CP-19 (palletizes 6 into a WIDE 1x6 row, x-extent 0.84m) -> CP-CHAIN-FLAT = 3/6 + 3/6. RAW: LEFT 3
+(x=-0.42..-0.28, within the offset receiver's reach) delivered (stacked in bin); RIGHT 3 (x=0.28..0.42,
+0.7-0.84m from the receiver's offset origin) ended z=0.525 = FELL off the offset receiver's table + unreachable.
+=> the multi-cube chain BOUND = the source's delivery SPREAD must fit the (static) receiver reach/table
+(~0.4-0.5m), NOT N per se: CP-08 (0.14m 2x2) + CP-12 (0.28m) fit; CP-19's 0.84m row exceeds it. A genuine
+PHYSICAL limit (static-arm reach) — design guideline: TIGHT-handoff multi-cube sources (a wide handoff would
+need a mobile receiver, out of scope). NOT added to chain_stages (limit-demonstrator, not a clean source).
+TOOL FIX (committed): chain_xkit_gate._play_and_measure now scales its window total=max(6000,1700*N) — a fixed
+6000 would FALSE-NEGATIVE a TIGHT large-N chain (CP-08's 4 cubes used ~1500 updates each). Benign (only grows;
+controller idles after done). This CP-19 run was table-limited so didn't exercise the window, but the scaling
+is correct for tight large-N.
