@@ -6830,3 +6830,15 @@ composition multiplier (breadth-of-operations axis). Finer obs (noted, NOT over-
 refinement, separate from the STACK-receiver's value. Static 6/6 green (9/9 proven_chains). Files:
 workspace/templates/CP-CHAIN-STACK-RECV.json (new), workspace/chain_stages.json (stage + output + proven_chain),
 scripts/qa/compose_orchestrate.py (output-aware catalog).
+
+cont.318b — 3-STAGE DEPTH demo for the STACK op: CP-12 -> CP-CHAIN-PALLETIZE-RECV -> CP-CHAIN-STACK-RECV =
+3/3+3/3+3/3 — the FIRST 3-stage chain with 3 DISTINCT operation-types (palletize -> re-palletize/grid ->
+stack/column) AND the first ending in a TOWER. RAW: stage1 a flat L-grid (z=0.785 distinct xy, not a pile), stage2
+a clean 3-high COLUMN (z 0.825/0.875/0.925 distinct, xy 5mm spread); the auto-offset propagated across all 3
+stages (final cubes at world y~-2.14). So the new stack op composes at DEPTH, not just as a 2-stage end-cap.
+Single run of a composition-of-(N-of-M-verified)-stages + deterministic stack output (place-to-fixed-target) =
+sufficient (2-stage was N-of-M=2; the 3-stage mechanism is the proven CP-08->PALLETIZE->FLAT path). ★ Also caught
+my own premature "accessible single-robot breadth EXHAUSTED": ~12-13 Franka position-honest blocks remain DRIVABLE
+(CP-17 sorter, CP-37/41/45 bin-variants, CP-44 cube+sphere, CP-36 shelf, CP-56 rotary, CP-66 recycling-sort,
+CP-NEW-kit-prep/inspector) — only ~10 were driven last stretch + the multi-robot/UR10 ones are the deferred deep
+set. So option-(a) breadth has a real accessible queue ([[feedback_verify_before_dismissing]] instance #3).
