@@ -64,12 +64,20 @@ def _dynamic_feed(tpl):
     return None
 
 
-async def _validate_one(kit_tools, etc, sac, name):
+async def _validate_one(kit_tools, etc, sac, name, instance_root=None, origin_offset=(0.0, 0.0, 0.0)):
     tpl = json.load(open(f"{REPO}/workspace/templates/{name}.json"))
     sa = tpl.get("simulate_args") or {}
     declared = list(sa.get("cube_paths") or ([sa["cube_path"]] if sa.get("cube_path") else []))
     dest = sa.get("target_path")
     feed = _dynamic_feed(tpl)
+    # --offset (cont.257): build at a non-zero origin_offset under an instance_root to probe reachability
+    # UNDER COMPOSITION OFFSET (the #2 robot-diversity question). The scene prims reroot to /World/<root>/...
+    # so the declared picks + dest must be rerooted to match (the auto-discovered probe targets reroot with
+    # the scene). Default (instance_root=None) is the byte-identical native probe.
+    if instance_root:
+        from service.isaac_assist_service.chat.composer import reroot_prim_path
+        declared = [reroot_prim_path(p, instance_root) for p in declared]
+        dest = reroot_prim_path(dest, instance_root) if dest else dest
 
     # truncate the shared probe log FIRST (before build/settle), so the probe output — which may fire during
     # settle_after_canonical's physics steps OR during the play burst — is retained. Kit is single-tenant.
@@ -97,7 +105,7 @@ async def _validate_one(kit_tools, etc, sac, name):
         "builtins._reach_probe_extra_paths=%s\n"
         "builtins._ur10_ik_seeds=%s\n" % (_extra, IK_SEEDS), timeout=10)
 
-    b = await asyncio.wait_for(etc(tpl), timeout=600)
+    b = await asyncio.wait_for(etc(tpl, instance_root=instance_root, origin_offset=origin_offset), timeout=600)
     if not b.get("instantiated"):
         return {"template": name, "status": "BUILD_FAIL", "errors": str(b.get("errors"))[:300]}
     try:
@@ -173,8 +181,19 @@ async def _validate_one(kit_tools, etc, sac, name):
 
 async def main():
     names = [a for a in sys.argv[1:] if not a.startswith("--")]
+    # --offset X,Y,Z : build each template at a non-zero origin_offset (under instance_root "probe") to test
+    # reachability UNDER COMPOSITION OFFSET (#2 robot-diversity). Default = native (byte-identical) probe.
+    off = (0.0, 0.0, 0.0); iroot = None
+    if "--offset" in sys.argv:
+        _ov = sys.argv[sys.argv.index("--offset") + 1]
+        try:
+            off = tuple(float(x) for x in _ov.split(","))
+            iroot = "probe"
+        except Exception:
+            print("usage: reach_validate.py <TEMPLATE> ... --offset X,Y,Z", file=sys.stderr); return
+        names = [n for n in names if n != _ov]   # the offset value token is NOT a template name
     if not names:
-        print("usage: reach_validate.py <TEMPLATE> [TEMPLATE ...]", file=sys.stderr)
+        print("usage: reach_validate.py <TEMPLATE> [TEMPLATE ...] [--offset X,Y,Z]", file=sys.stderr)
         return
     from service.isaac_assist_service.chat.tools import kit_tools
     from service.isaac_assist_service.chat.canonical_instantiator import (
@@ -182,14 +201,15 @@ async def main():
     reports = []
     for nm in names:
         try:
-            rep = await _validate_one(kit_tools, etc, sac, nm)
+            rep = await _validate_one(kit_tools, etc, sac, nm, instance_root=iroot, origin_offset=off)
         except Exception as e:
             rep = {"template": nm, "status": "ERROR", "error": repr(e)[:300]}
+        rep["offset"] = list(off); rep["instance_root"] = iroot
         reports.append(rep)
         # human summary -> stderr (stdout stays clean JSON)
         v = rep.get("layout_verdict", rep.get("status"))
-        print("[reach_validate] %-44s %-22s (%s/%s picks reachable)%s" % (
-            nm, v, rep.get("n_reachable", "?"), rep.get("n_picks_probed", "?"),
+        print("[reach_validate] %-30s off=%-16s %-22s (%s/%s picks reachable)%s" % (
+            nm, str(list(off)), v, rep.get("n_reachable", "?"), rep.get("n_picks_probed", "?"),
             ("  WARN: " + " | ".join(rep["warnings"])) if rep.get("warnings") else ""), file=sys.stderr)
     print(json.dumps(reports, indent=2))
 
