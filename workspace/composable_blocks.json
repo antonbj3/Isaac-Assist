@@ -359,8 +359,8 @@
     "CP-57": {
       "robot": "Franka",
       "class": "color-sort",
-      "verdict": "TRUSTED(position-honest)",
-      "basis": "delivery-gate (honest for bin/sort)",
+      "verdict": "PARTIAL(heap-singulation 3/5)",
+      "basis": "scene_eyes cont.316 @ dur=70: parcel-singulation-from-HEAP (5 overlapping items->bin) is genuinely hard - Item_2/3/5 CONVERGED+GRIPPED (3) but Item_1 GRIP-SLIP (dxy=62mm off-center, contact-never-lifted = failed grip from the heap) + Item_4 unreached. Heap overlap -> marginal off-center grips. NOT clean (>=1 genuine grip-fail). Misclassed as color-sort; it is singulation. Hard task, defer.",
       "n_objects": 5
     },
     "CP-58": {
@@ -505,12 +505,12 @@
     }
   },
   "summary": {
-    "trusted": 62,
+    "trusted": 61,
     "_trusted_note": "the 64 'trusted' = 21 GENUINE (execution-verified by scene_eyes) + 43 position-honest-ONLY (gate said position-ok, EXECUTION NOT verified). Compose-trust the 21 genuine; treat the 43 as candidates that still need an execution check before a GOLD composition claim.",
     "genuine_execution_verified": 31,
-    "position_honest_only": 31,
+    "position_honest_only": 30,
     "false": 1,
-    "partial": 7,
+    "partial": 8,
     "pending": 0,
     "total": 70
   }

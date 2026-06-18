@@ -6777,3 +6777,8 @@ cont.316e — CP-47 (true runtime-vision sorter) GENUINE(vision-routed 2/2) [gen
 CLEAN (CP-32/33/47 all route correct, 0 catches) — unlike the pick-place-bin matrix (2/7 caught). High-res campaign
 total cont.305-316e: genuine 21->31 (10 promotes), 4 catches (CP-20/26/31 + belt false-neg), 3 golds confirmed,
 2 partials resolved. Remaining position-honest = harder (assembly/multi-robot/UR10) or low-yield (clean color-sorts).
+
+cont.316f — CP-57 (parcel-singulation-from-HEAP, mislabeled color-sort) HIGH-RES CATCH -> PARTIAL(3/5): Item_1
+GRIP-SLIP (dxy=62mm off-center, never-lifted from the heap) + Item_4 unreached; heap-overlap -> marginal grips.
+Hard task (not the 2-color sorters CP-32/33/47 which are clean). genuine 31, partial 8. So even within 'color-sort'
+class, verify-EACH matters (sorters clean, heap-singulation hard).
