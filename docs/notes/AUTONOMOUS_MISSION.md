@@ -6192,3 +6192,18 @@ upright, gripped) = no topple under contention. So post-composer-dict-fix stacks
 delivery-honest) -> pivot away. #28 LLM-flow = ChromaDB-gated (retrieval harness, machine-freeze) -> not
 autonomously runnable; its Gemini reasoning half is done. NEXT genuine multiplier work = multi-cube handoff
 (chain relays 1/N; needed for stack/grid-OUTPUT chains) -> authoring a 2-cube chain-ready pair.
+
+cont.268 (2026-06-18) — MULTI-CUBE HANDOFF scoped (diagnostik-först, the foundational breadth gap).
+Findings (code + Kit):
+  1. RELAY infra ALREADY handles N cubes — chain_xkit_gate.run_stage_k builds relay_paths=[Cube_1..Cube_N],
+     zip(measure_cubes,handoff_cubes) creates N relay cubes + source_override's all N (NOT a 1/N relay bug).
+  2. RECEIVER controller ITERATES — pick_place cube_tracking: S["remaining"]=list(SOURCE_PATHS), pops one per
+     delivery until empty -> picks ALL N source(-overridden) cubes. So CP-CHAIN-FLAT given N relay cubes picks N.
+  3. Multi-cube ops SURVIVE OFFSET (scene_eyes RAW, false-success-vakt): CP-08 (4-cube palletizer) @[0.5,-0.8]
+     = proper FLAT GRID (4 objs, 1 z-level 0.825, spread 0.66x0.88m min-pair 0.138m, ALL upright, gripped) —
+     NOT a pile/collapse. The chain-RECEIVER-at-offset behavior holds for multi-cube.
+  4. GAP: cube_tracking SOURCE piles all cubes at a single destination_path (bin_c+DROP_H, no spread). A clean
+     multi-cube handoff needs a source delivering N cubes WITHIN the receiver arm's reach. CP-08's grid (0.88m
+     spread) likely EXCEEDS one Franka reach -> testing CP-08->CP-CHAIN-FLAT to quantify (expect reach-limited).
+So the multi-cube CHAIN is mostly built (relay+iterate+offset all ✅); the open question is reach/cluster, not
+plumbing. cont.262's "relays 1/N" note was the receiver picking 1/N (confounded CP-13-at-offset), NOT the relay.
