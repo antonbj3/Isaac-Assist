@@ -6503,3 +6503,13 @@ position-lossless on chains, literal-orientation captured, runtime-computed-orie
 approach_height captured. Turns the 3 inline verifications (cont.297-299) into a reproducible test so the
 tautological-blindness can't silently return. PLC-export PoC audit fully closed (3 fixes + 2 committed tests:
 test_plc_st_parses.py grammar + test_plc_roundtrip.py faithfulness).
+
+cont.299c — control-flow correctness guard (test_plc_controlflow.py): parses the EMITTED ST text, builds the
+step->next graph, asserts targets-in-range + all-reachable + terminal-reachable + grip-ABANDON-branch lands on
+an Approach-or-terminal (never mid-cycle) + Approach-count==n_objects. 4/4 correct (CP-08 26-step, CP-12 20-step
+multi-object exercise the hand-computed skip arithmetic). NEGATIVE-CONTROL verified (false-success-vakt: a test
+that only passes is useless): injected 3 bugs (out-of-range target, grip-abandon->mid-cycle, unreachable step) ->
+checker CAUGHT all 3. PLC-export PoC now has a full adversarial verification trilogy: syntax (blark 12/12) +
+faithfulness (roundtrip 7/7) + control-flow (4/4, neg-control-proven). All 3 emitter claims that I'd only
+self-assessed are now externally/adversarially verified. Vein exhausted -- the PoC is honest+tested within its
+documented scope (not bytecode-compiled, motion-FBs integrator-bound, safety stubbed; consume-refactor Anton-gated).
