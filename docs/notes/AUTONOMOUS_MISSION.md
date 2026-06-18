@@ -5868,3 +5868,22 @@ invasive edit of the generated f-string (memory reference_generated_code_escapin
 SILENTLY breaks). A focused fresh-context task; the Franka->UR10 GOLD ships via the cont.235 zero-offset
 workaround, so this is OPTIONAL (faithful-relay + UR10-any-stage upside only). NOT circling further this
 session -- 3 turns of code-read have converged on "needs instrumentation".
+
+cont.242 (2026-06-17): FALSE-SUCCESS-VAKT SELF-CORRECTION — the cont.234-241 root cause ("the UR10 cuRobo
+controller MIS-HANDLES instance_root+origin_offset: grasp-goal/world-frame computed wrong -> plan_fails
+617/633, wrong-direction goals") is REFUTED by fresh instrumented data. Injected a TEMP debug print at the
+plan_pose call (REVERTED in this commit) logging point_world + _usd_pos + the source cube world pos, captured
+NATIVE vs OFFSET on FRESH Kits (kit_restart between). The OFFSET build computes CORRECT goals: pick
+point_world=[-0.001,-0.386,1.175] (= offset cube [-0.001,-0.386,0.975] + approach), deliver point_world=
+[0.999,-1.186,...] (= offset tray), _usd_pos=[0.499,-0.786,0.75] (offset-correct); and it PROGRESSES through
+all 8 plan segments (pick #0-5 + deliver #6-7) = plans SUCCEED. So cont.234's plan_fails 617 + last_fail_goal=
+[-0.758,-0.244] was a DEGRADED-KIT ARTIFACT (dbg_chunk had HUNG right before that diagnostic = the instrument-
+lies trap AGAIN, see feedback_kit_degradation_and_stale_process). The offset chain stage IS still 0/1 (a real
+A/B vs off=0 -> 1/1 on health-controlled Kits, cube 0-jiggle), so SOMETHING downstream of goal-computation
+fails under offset (execution-not-applied OR grip-missed) -- but it is NOT the goal/world-frame I claimed for
+8 commits. The Franka->UR10 GOLD (zero-offset native branch, 3/3 RAW-audited) + the workaround STAND (they
+genuinely deliver); only the ROOT-CAUSE JUSTIFICATION was wrong. NEXT (fresh, FAST probe): offset
+CP-CHAIN-UR10-SRC + a SHORT play, dump arm-EE motion (did the arm execute the planned trajectory?) + cube
+final = distinguishes execution-not-applied vs grip-missed-under-offset. LESSON: even a multi-turn ctrl:*-based
+root cause can be a degraded-Kit phantom -- re-verify the SUSPECT diagnostic itself on a fresh Kit before
+building a narrative on it.
