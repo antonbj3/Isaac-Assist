@@ -6105,3 +6105,18 @@ across BREADTH × ROBOT-DIVERSITY × CHAINING, both REASONING and DELIVERY error
   without hand-holding = the actual multiplier (fix UR10-offset-receiver in cuRobo OR make #29 auto-handoff
   generate the zero-offset pairs); (3) BREADTH — drive blocks to GENUINE + fill the 5 empty canonical slots;
   (4) generalize sequential beyond a single flat-handoff cube; (5) later: L3 + real assets + full self-correct loop.
+
+cont.256 (2026-06-18) -- roadmap #1 DONE: WIRED the loop for real. New committed program
+scripts/qa/compose_orchestrate.py (38fea339): ONE program does spec -> Gemini compose-reasoning (pick blocks
++ classify structure + flag gaps) -> route -> build+verify in Kit -> REASONING-vs-DELIVERY report. Replaces
+the cont.252 hand-stitched two-tool demo. FAIL-CLOSED: gap-flag->HALT, non-GENUINE pick->HALT,
+sequential->GATE (needs co-designed CP-CHAIN-*, #2/#29), robot-diverse->GATE (UR10 PhysX), parallel+Franka->
+EXECUTE. Verified: router 5/5 (Gemini-free --cells override: parallel->execute, sequential->gate,
+diverse->gate, non-robust[CP-09 FALSE]->halt, gap->halt); happy path (live Gemini+Kit) "two independent
+Franka cells" -> [CP-01,CP-03] parallel -> verified=True (4/4+2/2) = END-TO-END GREEN as one program.
+*FINDING* (the wired loop exposes what the isolated eval hid): structure classification is STOCHASTIC on
+borderline phrasing -- the SAME "Station 1... Station 2..." independent task classified SEQUENTIAL in one roll
+and PARALLEL in another. Tempers the cont.250-251 "structure 5/5 comprehensively validated" (clean-cue cases).
+No wrong ACTION today (sequential gated regardless) but matters once sequential exec is wired -> #28 follow-up
+(sharpen no-handoff criterion / ensemble-vote structure). Scope: this is #1 (wire the loop), NOT
+composition-done; diversity/sequential-exec/breadth/L3 remain GATED+open, transparently.
