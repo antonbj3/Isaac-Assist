@@ -130,6 +130,27 @@ async def run_stage_k(k, name, handoff):
     X0 = handoff_cubes[0]
     px = _pick_xy(tpl)
     off = (round(X0[0] - px[0], 3), round(X0[1] - px[1], 3), 0.0)   # AUTO-derive: pick lands on handoff
+    # ZERO-OFFSET co-designed pairs (receiver pick placed AT the source's delivery xy) leave only a tiny
+    # residual off from the source's settle variance. SNAP it to native: the UR10 pick-place controller mis-
+    # handles ANY origin_offset (even 14mm -> 0/1 cube-0-jiggle, cont.235) but delivers fine NATIVELY (off=0,
+    # standalone 1/1). The receiver's own cube at its design pick IS the handoff within the residual (~14mm,
+    # negligible for a settled box). For a LARGE offset (true relay realignment) the offset is still applied
+    # (works for Franka receivers; a UR10 receiver must be co-designed zero-offset).
+    if max(abs(off[0]), abs(off[1])) < 0.05:
+        off = (0.0, 0.0, 0.0)
+    if off == (0.0, 0.0, 0.0):
+        # ZERO-OFFSET co-designed pair: in a CROSS-Kit chain each stage runs in its OWN fresh Kit, so no
+        # instance_root namespacing is needed — and the UR10 pick-place controller fails under reroot even at
+        # off=0 (cont.235: 0/1 cube-0-jiggle) while delivering 1/1 NATIVELY. Build EXACTLY like run_stage0
+        # (native: no reroot, no offset); the receiver's own cube at its design pick IS the handoff (within
+        # the snapped ~14mm residual, negligible for a settled box).
+        cubes, target = _src_target_cubes(tpl)
+        await kt.exec_sync("import omni.usd; omni.usd.get_context().new_stage()", timeout=25)
+        await kt.exec_sync("import builtins\nfor k in [x for x in list(vars(builtins)) if x.startswith('_curobo_pp_sub_')]:\n    try: delattr(builtins,k)\n    except Exception: pass\n", timeout=10)
+        await execute_template_canonical(tpl); await settle_after_canonical(tpl)
+        r = await _play_and_measure(kt, target, cubes)
+        r["auto_offset"] = [0.0, 0.0, 0.0]; r["handoff_in"] = X0; r["receiver_mode"] = "native_zero_offset"
+        return r
     relay_paths = [f"/World/{root}/Cube_{i+1}" for i in range(len(handoff_cubes))]
     await kt.exec_sync("import omni.usd; omni.usd.get_context().new_stage()", timeout=25)
     await kt.exec_sync("import builtins\nfor k in [x for x in list(vars(builtins)) if x.startswith('_curobo_pp_sub_')]:\n    try: delattr(builtins,k)\n    except Exception: pass\n", timeout=10)

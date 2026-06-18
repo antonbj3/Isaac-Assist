@@ -5761,3 +5761,23 @@ receiver needs either a zero-offset co-designed pair (Franka delivers to the UR1
 so off~0 and the UR10 runs in its proven frame) OR a fix to the UR10 controller's instance-offset handling.
 Committed: CP-CHAIN-FRANKA-RAISED-SRC (4/4) + chain_xkit_gate (_pick_xy + chunked MEASURE + no-sensor branch)
 + untracked CP-CHAIN-UR10-SRC.
+
+cont.235 (2026-06-17): GOLD ACHIEVED -- Franka->UR10 robot-diversity cross-Kit chain (completes the diversity
+matrix opposite the UR10->Franka GOLD). cont.234 root-caused the blocker (the UR10 pick-place controller mis-
+handles instance_root+origin_offset: plan_fails 617/633, wrong-direction goals); CONFIRMED here via a clean
+A/B -- CP-CHAIN-UR10-RECV-NATIVE (the proven CP-CHAIN-UR10-SRC geometry translated [0.5,-0.8] + BAKED NATIVE
+so its pick is at [0,-0.4] = the Franka RAISED-SRC delivery xy) delivers 1/1 STANDALONE (native), but 0/1 when
+the chain applies origin_offset (even the 14mm residual snapped from settle variance), AND 0/1 even at off=0
+under instance_root (reroot alone breaks the UR10 too). FIX in chain_xkit_gate: (1) SNAP a small auto-offset
+(<0.05m) to exactly 0; (2) a ZERO-OFFSET branch that builds the receiver NATIVELY (no reroot/offset = the
+proven run_stage0 path) -- valid because each cross-Kit stage has its OWN fresh Kit (namespacing moot).
+RESULT: chain_xkit_gate CP-CHAIN-FRANKA-RAISED-SRC CP-CHAIN-UR10-RECV-NATIVE = 1/1+1/1 x3 BIT-IDENTICAL
+(N-of-M PASS). RAW scene_eyes on the UR10 receiver = GENUINE grip (GRIP TIMELINE status=2 gripped=['Cube_1']
+cup-cube_d=0.025 @cubeZ=0.975, carried 0.8m, released t=32.7s, SETTLED-Z=0.775 Tray tilt 0.3deg upright,
+CONVERGED+GRIPPED 25mm), NOT bbox-fooled. CAVEAT (honest, false-success-vakt): LOCATION-handoff (the UR10
+picks its OWN cube at the shared handoff ~14mm from the Franka's delivered pose), NOT a literal-object relay
+like UR10->Franka -- because the UR10 can't be offset/rerooted to consume the literal relayed cube. The
+diversity composition is genuine (Franka delivers to a location, UR10 picks from it). So cross-Kit robot-
+diversity now works BOTH directions: UR10->Franka (faithful, GOLD 3/3) and Franka->UR10 (location-handoff,
+GOLD 3/3). NEXT (optional, not a blocker): fix the UR10 controller instance-offset handling for literal-relay
++ UR10-in-arbitrary-stage. Committed: CP-CHAIN-UR10-RECV-NATIVE (GOLD) + chain_xkit_gate (snap + native branch).

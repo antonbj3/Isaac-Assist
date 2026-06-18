@@ -1,0 +1,67 @@
+{
+  "task_id": "CP-CHAIN-UR10-RECV-NATIVE",
+  "goal": "Zero-offset UR10 RECEIVER for the Franka->UR10 robot-diversity chain: a UR10 picks a RAISED cube at [0,-0.4,0.975] (= the CP-CHAIN-FRANKA-RAISED-SRC delivery xy) and delivers it to a flat Tray. Designed so the cross-Kit auto-offset is ~0 (off = handoff_xy - pick_xy = [0,-0.4]-[0,-0.4]), so the UR10 controller never sees an origin_offset -- which it mis-handles (cont.234: an offset UR10 plan_fails 617/633 with wrong-direction goals). The PROVEN CP-CHAIN-UR10-SRC scene (UR10 picks rel [-0.5,0.4], delivers rel [0.5,-0.4]) translated by [0.5,-0.8] and BAKED natively so reach is identical to the GOLD-stage0. Pairs with CP-CHAIN-FRANKA-RAISED-SRC to complete the Franka->UR10 diversity GOLD.",
+  "tools_used": [
+    "create_scene_baseline",
+    "create_prim",
+    "add_reference",
+    "teleport_prim",
+    "apply_api_schema",
+    "bulk_set_attribute",
+    "apply_physics_material",
+    "setup_pick_place_controller"
+  ],
+  "thoughts": "cont.235: the cont.234 root cause = the UR10 pick-place controller mis-handles instance_root+origin_offset (grasp-goal/cuRobo world-frame computed wrong under offset). FIX without touching the handler: bake the offset NATIVELY so the chain's auto-offset is ~0. Put the UR10's pick at [0,-0.4] = exactly where CP-CHAIN-FRANKA-RAISED-SRC delivers (handoff [-0.001,-0.386,0.975]); then off = X0_xy - pick_xy ~ [0,0], no origin_offset applied, the controller runs in its native frame. Keep the UR10's PROVEN relative geometry (pick rel [-0.5,0.4], deliver rel [0.5,-0.4]) by placing UR10@[0.5,-0.8]; a [4.0,3.5] baseline table covers the shifted cell. Validate: (1) chain_xkit_gate.py CP-CHAIN-UR10-RECV-NATIVE (single-stage = run_stage0 standalone, chunked MEASURE) -> UR10 picks its own [0,-0.4] cube -> Tray; (2) chain_xkit_gate.py CP-CHAIN-FRANKA-RAISED-SRC CP-CHAIN-UR10-RECV-NATIVE -> Franka->UR10 GOLD (off~0). N-of-M before GOLD. One-per-FRESH-Kit (UR10 corrupts process PhysX).",
+  "code": "# Zero-offset UR10 RECEIVER (native-baked offset): UR10 picks a RAISED cube at [0,-0.4,0.975] = the Franka\n# RAISED-SRC delivery xy, so the cross-Kit auto-offset is ~0 (off=X0-pick_xy) and the controller NEVER sees an\n# origin_offset (which the UR10 pick-place controller mis-handles, cont.234). Geometry is the PROVEN\n# CP-CHAIN-UR10-SRC scene translated by [0.5,-0.8] and BAKED natively: UR10@[0.5,-0.8], pick rel [-0.5,0.4],\n# tray rel [0.5,-0.4] = identical relative pose (reach certain). Bigger baseline table covers the shifted cell.\ncreate_scene_baseline(table_size=[4.0, 3.5])\n\ncreate_prim(prim_path=\"/World/UR10\", prim_type=\"Xform\")\nadd_reference(prim_path=\"/World/UR10\", reference_path=\"/mnt/shared_data/isaac-sim-assets-complete-5.0.0/Assets/Isaac/5.0/Collected_Robots/ur10.usd\")\nteleport_prim(prim_path=\"/World/UR10\", position=[0.5, -0.8, 0.75])\n\n# Pedestal+cube at [0,-0.4] (= the Franka RAISED-SRC handoff; rel [-0.5,0.4] from the UR10 base = proven pick).\ncreate_prim(prim_path=\"/World/Pedestal\", prim_type=\"Cube\", position=[0.0, -0.4, 0.875], scale=[0.06, 0.06, 0.075])\napply_api_schema(prim_path=\"/World/Pedestal\", schema_name=\"PhysicsCollisionAPI\")\n\ncreate_prim(prim_path=\"/World/Cube_1\", prim_type=\"Cube\", position=[0.0, -0.4, 0.975], size=0.05)\nfor api in (\"PhysicsRigidBodyAPI\", \"PhysicsCollisionAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n    apply_api_schema(prim_path=\"/World/Cube_1\", schema_name=api)\nbulk_set_attribute(prim_paths=[\"/World/Cube_1\"], attr=\"physxRigidBody:sleepThreshold\", value=0.0)\napply_physics_material(prim_path=\"/World/Cube_1\", material_name=\"rubber\")\n\n# Flat delivery Tray at [1.0,-1.2] (rel [0.5,-0.4] from base = proven deliver side).\ncreate_prim(prim_path=\"/World/Tray\", prim_type=\"Cube\", position=[1.0, -1.2, 0.74], scale=[0.15, 0.15, 0.01])\napply_api_schema(prim_path=\"/World/Tray\", schema_name=\"PhysicsCollisionAPI\")\n\nsetup_pick_place_controller(\n    robot_path=\"/World/UR10\",\n    robot_family=\"ur10\",\n    target_source=\"curobo\",\n    source_paths=[\"/World/Cube_1\"],\n    destination_path=\"/World/Tray\",\n    drop_target=[1.0, -1.2, 0.775],\n    planning_obstacles=[\"/World/Table\", \"/World/Tray\"],\n)",
+  "settle_state": {
+    "cubes": {
+      "/World/Cube_1": [
+        0.0,
+        -0.4,
+        0.975
+      ]
+    },
+    "conveyors": {}
+  },
+  "simulate_args": {
+    "cube_path": "/World/Cube_1",
+    "target_path": "/World/Tray",
+    "duration_s": 180
+  },
+  "verify_args": {
+    "stages": [
+      {
+        "robot_path": "/World/UR10",
+        "pick_path": "/World/Cube_1",
+        "place_path": "/World/Tray",
+        "robot_kind": "ur10e"
+      }
+    ],
+    "cube_path": "/World/Cube_1"
+  },
+  "motion_controllers": {
+    "verified": [],
+    "failed": {},
+    "untested": [
+      "curobo"
+    ]
+  },
+  "verified_status": "GOLD 3/3 N-of-M + RAW grip-audited 2026-06-17 (cont.235). Franka->UR10 cross-Kit robot-diversity chain: chain_xkit_gate.py CP-CHAIN-FRANKA-RAISED-SRC CP-CHAIN-UR10-RECV-NATIVE = 1/1+1/1 x3 BIT-IDENTICAL (stage0 handoff [-0.001,-0.386,0.975]; stage1 cube -> Tray [1.01,-1.19,0.775]). RAW scene_eyes on the UR10 receiver: GRIP TIMELINE status=2 gripped=['Cube_1'] cup-cube_d=0.025 cubeZ=0.975 (suction cup CLOSED on the cube at the pedestal), carried, released t=32.7s -> SETTLED-Z=0.775 on Tray, tilt 0.3deg UPRIGHT, CONVERGED+GRIPPED closest 25mm = GENUINE grip+carry+place (0.8m transport, NOT bbox-fooled). Standalone (native off=0) also 1/1. MECHANISM: the UR10 pick-place controller mis-handles instance_root+origin_offset (cont.234), so this receiver's pick is placed AT the Franka delivery xy [0,-0.4] -> the chain auto-offset snaps to 0 -> chain_xkit_gate builds it NATIVELY (no reroot/offset = the proven run_stage0 path; valid because each cross-Kit stage runs in its OWN fresh Kit). CAVEAT (honest): LOCATION-handoff (the UR10 picks its OWN cube at the shared handoff within ~14mm of the Franka's delivered pose), NOT a literal-object faithful relay like UR10->Franka; the diversity composition is genuine (Franka delivers to a location, UR10 picks from it + delivers onward). One-per-FRESH-Kit (UR10 corrupts process PhysX).",
+  "intent": {
+    "pattern_hint": "pick_place",
+    "structural_features": {
+      "n_robot_stations": 1,
+      "n_handoffs": 0,
+      "destination_kind": "flat_tray",
+      "uses_conveyor_transport": false,
+      "n_workpieces": 1
+    },
+    "structural_tags": [
+      "isaac:robot.fixed_base.arm",
+      "isaac:robot.ur10",
+      "isaac:topology.single_station",
+      "isaac:surface.flat_static",
+      "isaac:role.chain_receiver_stage"
+    ]
+  }
+}
