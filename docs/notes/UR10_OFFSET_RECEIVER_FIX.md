@@ -44,3 +44,17 @@ CP-73 (canonical UR10) built NATIVE vs at OFFSET, instrument plan goals + arm EE
   specific approach/descend/lift/place segment res_None's) OR execution OR surface-grip — NOT basic IK.
   NEXT: full UR10 controller @offset via scene_eyes --compose (native control vs offset) -> read RAW
   per-tick arm trajectory + /tmp/curobo_planfail.log (WHICH segment fails) + grip.
+- cont.259 (2026-06-18): ★★ THE PREMISE IS REFUTED. Fresh-Kit scene_eyes --compose
+  CP-CHAIN-UR10-RECV-NATIVE @offset[0.5,-0.8,0] vs @native: the OFFSET UR10 receiver GRIPS + CARRIES
+  + DELIVERS. RAW per-tick (xy-verified, not summary): grips Cube_1 @t=6.7, carries to the offset
+  Tray, releases @t=32.6, FINAL Cube_1=[1.51,-1.99,0.775] = ON the offset Tray (~[1.5,-2.0,0.775],
+  xy within ~1cm, z at tray top). max plan_fails=0. Native identical (faster). So the UR10 cuRobo
+  controller HANDLES origin_offset CORRECTLY — the memory's "offset receiver fails, arm stuck,
+  plan_fails 617/633" was a PHANTOM (degraded Kit) or a chain-specific confound, NOT the offset.
+  The hand-designed zero-offset workaround was built on a FALSE premise (verify-before-dismissing /
+  phantom-rootcause lesson in action). ⚠️ NOT over-claiming #2 solved: scene_eyes builds the
+  template's OWN cube; the CHAIN additionally does source_override to a RELAYED cube at a sibling
+  /World/relayK root. REMAINING (the real end-to-end): does chain_xkit_gate deliver a Franka->UR10
+  chain with a NON-zero UR10 receiver offset (source_override to relayed cube)? If yes -> robot-
+  diversity chains work for arbitrary offsets, no hand-designed pairs, #2 largely solved. NEXT: read
+  chain_xkit_gate offset derivation + run the chain with a forced non-zero UR10 offset.
