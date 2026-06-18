@@ -505,7 +505,7 @@
     }
   },
   "summary": {
-    "trusted": 64,
+    "trusted": 63,
     "_trusted_note": "the 64 'trusted' = 21 GENUINE (execution-verified by scene_eyes) + 43 position-honest-ONLY (gate said position-ok, EXECUTION NOT verified). Compose-trust the 21 genuine; treat the 43 as candidates that still need an execution check before a GOLD composition claim.",
     "genuine_execution_verified": 26,
     "position_honest_only": 37,
