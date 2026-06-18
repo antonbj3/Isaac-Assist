@@ -59,13 +59,28 @@ def _robot(cp):
 async def plan_with_gemini(task, model):
     from compose_reason_eval import CATALOG, SYS
     from service.isaac_assist_service.chat.llm_gemini import GeminiProvider
+    # AUGMENT (cont.264): the canonical CATALOG only has PARALLEL-station blocks (they deliver into bins -> not
+    # chainable). Add the chain-ready stages so the LLM can pick chainable SOURCE+RECEIVER for a SEQUENTIAL
+    # handoff task. (compose_reason_eval itself is untouched -> its validated eval is unaffected.)
+    _cl = []
+    for cp, m in _CHAIN.items():
+        h = m.get("handoff_surface") or m.get("pick_height")
+        what = ("delivers a part onto a %s handoff surface" % h) if m.get("role") == "source" \
+            else ("picks a part FROM a %s handoff and delivers it" % h)
+        _cl.append("- %s: a %s chain %s that %s" % (cp, m.get("robot"), (m.get("role") or "").upper(), what))
+    aug_catalog = CATALOG + "\n\n--- chain-ready stages (use ONLY for a SEQUENTIAL handoff chain) ---\n" + "\n".join(_cl)
+    aug_sys = SYS + (" For a SEQUENTIAL handoff chain, do NOT use the parallel work-cells (they deliver into "
+                     "bins and can't be picked from); instead pick a chain SOURCE then a chain RECEIVER from the "
+                     "chain-ready stages, whose handoff heights MATCH (flat-source->flat-receiver, raised-source"
+                     "->raised-receiver; UR10 delivers flat + picks raised, Franka delivers flat/raised + picks flat).")
     prov = GeminiProvider(api_key=os.environ["GEMINI_API_KEY"], model=model)
-    r = await prov.complete([{"role": "user", "content": f"Available work-cells:\n{CATALOG}\n\nTask: {task}"}],
-                            {"system_override": SYS})
+    r = await prov.complete([{"role": "user", "content": f"Available work-cells:\n{aug_catalog}\n\nTask: {task}"}],
+                            {"system_override": aug_sys})
     txt = (r.text or "").strip()
     seg = txt.split('"reasoning"')[0] if '"reasoning"' in txt else txt
     seen = set()
-    cells = [c for c in re.findall(r"CP-\d+", seg) if c in _CANON and not (c in seen or seen.add(c))]
+    cells = [c for c in re.findall(r"CP-[A-Z0-9-]+", seg)
+             if (c in _CANON or c in _CHAIN) and not (c in seen or seen.add(c))]
     sm = re.search(r'"structure"\s*:\s*"(sequential|parallel)"', txt)
     gap = bool(re.search(r'"gaps"\s*:\s*\[\s*"[^"]', txt))
     return {"cells": cells, "structure": (sm.group(1) if sm else None), "gap": gap, "raw": txt}
