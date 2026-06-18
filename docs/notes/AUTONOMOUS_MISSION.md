@@ -5999,3 +5999,18 @@ _artroot) are BANKED + confirmed across the create_wheeled_robot class (3 spawn,
 nav work is PER-TEMPLATE (individual scene-obstacle + arm-grip issues on DESIGN-ONLY templates) or FEATURE-
 level (obstacle-aware fleet coordination, jetbot) -- lower value than the class-fix, fresh-effort. Nav-track
 clean veins HARVESTED; the class-fix is the durable win.
+
+cont.250 (2026-06-17): compose-reasoning STRUCTURE dimension (Gemini quota VERIFIED available first --
+diagnostik-foerst, not assumed-blocked). Extended scripts/qa/compose_reason_eval.py: the LLM now ALSO
+classifies composition STRUCTURE -- "sequential" (handoff chain, one cell's output feeds the next) vs
+"parallel" (independent side-by-side stations) -- scored against exp_structure (+ a --only filter for sparing
+subset runs). 3/3 STRUCTURE cases PASS (gemini-robotics-er-1.6-preview): struct-seq-handoff [CP-73 UR10-pick ->
+CP-13 Franka-stack] = sequential; struct-seq-line [CP-01 -> CP-08 in-line, stage1 out = stage2 in] = sequential;
+struct-par-indep [CP-01 + CP-03, no handoff] = parallel. So the runtime-LLM compose-reasoning correctly
+distinguishes WHEN blocks must be CHAINED (cross-Kit sequential handoff = the chain_xkit_gate work) vs placed
+SIDE-BY-SIDE (parallel composition) -- the structural reasoning that determines the composition MECHANISM.
+Total compose-reasoning validation now: decomposition + block-selection (9/9) + structure-classification (3/3)
++ gap-honesty (x2) + robot-inference + op-discrimination + over-compose-avoidance = the END-GOAL reasoning
+layer comprehensively validated, Kit-free + parallel-safe. HONEST SCOPE: the structure cues are EXPLICIT in
+the task text ("hands off", "output IS input", "no connection"); IMPLIED-structure (infer chain-vs-parallel
+when not stated) is the next harder layer. Gemini free-tier was available again (the cont.240 429 had reset).
