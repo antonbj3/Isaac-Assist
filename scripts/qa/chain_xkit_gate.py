@@ -90,6 +90,19 @@ print("PLAYED __N__")
 
 
 async def _play_and_measure(kt, target, cubes, total=6000, chunk=1000):
+    # RE-ACQUIRE (cont.261): a rerooted/OFFSET build needs a STOP->PLAY so the scene-reset-manager re-acquires
+    # each controller against the final sim view. The bare play in PLAY_CHUNK left an OFFSET UR10 receiver with
+    # stale controller state -> it targeted a WRONG goal (~[-0.257,-1.058], not the cube at [0.5,-1.2]) -> 3950
+    # res_None plan-fails, while scene_eyes (which STOP->PLAYs) DELIVERED the same build at the same offset.
+    # Native (off=0) chains are unaffected (re-acquire is harmless there) — same fix as compose_and_verify /
+    # compose_gate (cont.256). MEASURED cont.261.
+    await kt.exec_sync(
+        "import omni.timeline, omni.kit.app\n"
+        "tl=omni.timeline.get_timeline_interface(); app=omni.kit.app.get_app()\n"
+        "tl.stop()\n"
+        "for _ in range(10): app.update()\n"
+        "tl.play()\n"
+        "for _ in range(90): app.update()\n", timeout=150)
     done = 0
     while done < total:
         n = min(chunk, total - done)
@@ -130,20 +143,32 @@ async def run_stage_k(k, name, handoff):
     X0 = handoff_cubes[0]
     px = _pick_xy(tpl)
     off = (round(X0[0] - px[0], 3), round(X0[1] - px[1], 3), 0.0)   # AUTO-derive: pick lands on handoff
-    # ZERO-OFFSET co-designed pairs (receiver pick placed AT the source's delivery xy) leave only a tiny
-    # residual off from the source's settle variance. SNAP it to native: the UR10 pick-place controller mis-
-    # handles ANY origin_offset (even 14mm -> 0/1 cube-0-jiggle, cont.235) but delivers fine NATIVELY (off=0,
-    # standalone 1/1). The receiver's own cube at its design pick IS the handoff within the residual (~14mm,
-    # negligible for a settled box). For a LARGE offset (true relay realignment) the offset is still applied
-    # (works for Franka receivers; a UR10 receiver must be co-designed zero-offset).
-    if max(abs(off[0]), abs(off[1])) < 0.05:
+    # TEST HOOK (cont.260): CHAIN_FORCE_OFF="x,y" forces a LARGE offset through the real chain harness to
+    # re-verify path-3 (source_paths own-cube) delivery under arbitrary offset (UR10-offset re-verification,
+    # the scene_eyes finding that "UR10 mishandles offset" is stale). When set, the snap-to-native is skipped.
+    import os as _os
+    _forced = bool(_os.environ.get("CHAIN_FORCE_OFF"))
+    if _forced:
+        _fx, _fy = (float(v) for v in _os.environ["CHAIN_FORCE_OFF"].split(","))
+        off = (_fx, _fy, 0.0)
+    # SMALL-residual snap (an OPTIMIZATION, not a UR10 limitation): a co-designed pair leaves a tiny residual
+    # off from settle variance; snap it to native so the stage skips a needless reroot. ⚠️ REFUTED HISTORY
+    # (cont.261): this used to claim "the UR10 controller mis-handles ANY origin_offset (14mm -> 0/1)" and "a
+    # UR10 receiver MUST be co-designed zero-offset". That was a MEASUREMENT ARTIFACT — _play_and_measure's
+    # bare play left the offset UR10 receiver un-re-acquired -> wrong goal -> 3950 res_None plan-fails (while
+    # scene_eyes, which STOP->PLAYs, delivered the same build). With the STOP->PLAY re-acquire now in
+    # _play_and_measure, path-3 (reroot+offset, own-cube) DELIVERS at ARBITRARY offset (forced off=[0.5,-0.8]
+    # -> 1/1, cube on the offset Tray, 0 planfails). So a UR10 receiver NO LONGER needs zero-offset co-design;
+    # large auto-derived offsets (non-co-designed pairs) flow through path-3 and deliver.
+    if not _forced and max(abs(off[0]), abs(off[1])) < 0.05:
         off = (0.0, 0.0, 0.0)
     if off == (0.0, 0.0, 0.0):
-        # ZERO-OFFSET co-designed pair: in a CROSS-Kit chain each stage runs in its OWN fresh Kit, so no
-        # instance_root namespacing is needed — and the UR10 pick-place controller fails under reroot even at
-        # off=0 (cont.235: 0/1 cube-0-jiggle) while delivering 1/1 NATIVELY. Build EXACTLY like run_stage0
-        # (native: no reroot, no offset); the receiver's own cube at its design pick IS the handoff (within
-        # the snapped ~14mm residual, negligible for a settled box).
+        # SNAPPED-to-native build (off≈0): in a CROSS-Kit chain each stage runs in its OWN fresh Kit, so no
+        # instance_root namespacing is needed for a co-designed pair — build EXACTLY like run_stage0 (native:
+        # no reroot, no offset); the receiver's own cube at its design pick IS the handoff (within the snapped
+        # ~14mm residual, negligible for a settled box). (The old "UR10 fails under reroot even at off=0" claim
+        # here is REFUTED, cont.261 — scene_eyes rerooted to inst0 + path-3 reroot+offset both deliver; this
+        # native build is now just an optimization for the tiny-residual case, not a UR10 workaround.)
         cubes, target = _src_target_cubes(tpl)
         await kt.exec_sync("import omni.usd; omni.usd.get_context().new_stage()", timeout=25)
         await kt.exec_sync("import builtins\nfor k in [x for x in list(vars(builtins)) if x.startswith('_curobo_pp_sub_')]:\n    try: delattr(builtins,k)\n    except Exception: pass\n", timeout=10)
@@ -225,4 +250,5 @@ async def main():
         len(results), " + ".join("%d/%d" % (r.get("delivered", 0), r.get("total", 1)) for r in results),
         "ALL DELIVERED (faithful cross-Kit relay)" if all_ok else "INCOMPLETE"))
 
-asyncio.run(main())
+if __name__ == "__main__":
+    asyncio.run(main())

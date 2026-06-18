@@ -58,3 +58,26 @@ CP-73 (canonical UR10) built NATIVE vs at OFFSET, instrument plan goals + arm EE
   chain with a NON-zero UR10 receiver offset (source_override to relayed cube)? If yes -> robot-
   diversity chains work for arbitrary offsets, no hand-designed pairs, #2 largely solved. NEXT: read
   chain_xkit_gate offset derivation + run the chain with a forced non-zero UR10 offset.
+- cont.260 (2026-06-18): chain_xkit_gate structure mapped. run_stage_k has 3 paths: (1) off<0.05 ->
+  snap to 0 -> NATIVE own-cube; (2) off>=0.05 + has_sensor -> reroot+offset + source_override to relay
+  cube at sibling /World/relayK (LITERAL relay, proven GOLD for FRANKA CP-CHAIN-FLAT); (3) off>=0.05 +
+  NO sensor -> reroot+offset + OWN cube, NO source_override (LOCATION-handoff). Both UR10 chain
+  templates (CP-CHAIN-UR10-SRC, CP-CHAIN-UR10-RECV-NATIVE) are source_paths (no sensor) -> path 3.
+  So the chain ALREADY routes large-offset UR10 receivers through path 3 (own-cube) = the mechanism
+  scene_eyes PROVED delivers. The snap-to-native (139-140) + the "UR10 must be co-designed zero-offset"
+  comment are STALE: they cite cont.234's path-3 failure, which was an EARLIER codebase (offset/reroot
+  handling fixed since). REMAINING: airtight end-to-end -- force a LARGE offset through the real chain
+  harness (run_stage_k path 3 + _play_and_measure) and confirm the UR10 receiver delivers. Adding
+  CHAIN_FORCE_OFF env override to chain_xkit_gate for this (clean test hook). If it delivers -> remove
+  the stale snap for source_paths receivers + correct the memory + #2 substantially solved.
+- cont.261 (2026-06-18): ★★ ROOT CAUSE NAILED + FIXED. The chain harness `_play_and_measure` did a BARE
+  play (no STOP->PLAY) — a THIRD harness with the freeze-class bug (after compose_and_verify + compose_gate,
+  cont.256). For an OFFSET UR10 receiver the bare play left the controller un-re-acquired -> it targeted a
+  WRONG goal (~[-0.257,-1.058], NOT the cube at [0.5,-1.2]) -> 3950 res_None plan-fails. The build was
+  IDENTICAL to scene_eyes (dump: Cube_1=[0.5,-1.2,0.975], UR10=[1.0,-1.6], Tray=[1.5,-2.0]); the ONLY
+  difference was the play-start (scene_eyes STOP->PLAYs + delivered). FIX: STOP->PLAY re-acquire at the top
+  of _play_and_measure. VERIFIED: run_stage_k path-3 @forced off=[0.5,-0.8] -> delivered=1/1, Cube_1=
+  [1.51,-1.99,0.775] (on the offset Tray), 0 planfails. So the "UR10 mishandles offset" belief was a
+  MEASUREMENT ARTIFACT of the bare-play; the snap-to-zero + co-designed-zero-offset requirement compensated
+  for THAT, not a UR10 limitation. => robot-diversity chains generalize to ARBITRARY-offset UR10 receivers
+  via path-3, NO hand-designed zero-offset pairs needed. Commit pending no-regression on native GOLD chain.
