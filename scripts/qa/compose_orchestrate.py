@@ -15,10 +15,12 @@ robust blocks + the right topology?) and DELIVERY (did the chosen composition ac
 FAIL-CLOSED (no faked greens):
   - LLM flags a gap + picks no buildable cell            -> HALT (won't build a plan the LLM says is incomplete)
   - a picked cell is NOT GENUINE/scene_eyes-verified     -> HALT (won't build on unverified blocks)
-  - structure == sequential                              -> GATED: needs co-designed zero-offset CP-CHAIN-*
-                                                            templates (open frontier #2/#29); reports, no fake build
-  - robot-diverse parallel (UR10 + Franka same Kit)      -> GATED: UR10 process-global PhysX corruption
-                                                            (feedback_ur10_corrupts_global_physx); cross-Kit not wired here
+  - structure == sequential                              -> EXECUTE via chain_xkit_gate (cross-Kit relay;
+                                                            arbitrary-offset UR10 receivers OK post cont.261).
+                                                            Needs chain-ready blocks; arbitrary canonical blocks
+                                                            may not chain (handoff role/height compat = open #29).
+  - robot-diverse parallel (UR10 + Franka same Kit)      -> GATED: UR10 process-global PhysX corruption — robot-
+                                                            diversity goes through the SEQUENTIAL cross-Kit chain.
   - parallel + Franka-only                               -> EXECUTE in Kit (the path that is actually GREEN)
 
 So the orchestrator executes ONLY what is genuinely verified to work, and transparently reports every gate
@@ -81,6 +83,24 @@ def execute_parallel(cells, timeout=780):
     return {"verified": verified, "delivery": deliv, "raw": out}
 
 
+def execute_chain(cells, timeout=2600):
+    """Run the cross-Kit SEQUENTIAL chain executor (chain_xkit_gate) as a subprocess + parse per-stage delivery.
+    chain_xkit_gate restarts the Kit between stages internally. Post cont.261 it handles ARBITRARY-offset UR10
+    receivers (no hand-designed zero-offset pairs). ⚠️ It still needs CHAIN-READY blocks (each stage a
+    source->handoff->receiver with compatible handoff HEIGHT); arbitrary canonical blocks may not chain
+    (role/height compat = open #29 auto-handoff) — in which case a stage honestly reports delivered<total."""
+    res = subprocess.run(["python3", f"{REPO}/scripts/qa/chain_xkit_gate.py"] + cells,
+                         capture_output=True, text=True, timeout=timeout)
+    out = res.stdout + res.stderr
+    stages = []
+    for l in out.splitlines():
+        m = re.search(r"stage(\d+) (\S+): delivered=(\d+)/(\d+)", l)
+        if m:
+            stages.append({"stage": int(m.group(1)), "tpl": m.group(2),
+                           "delivered": int(m.group(3)), "total": int(m.group(4))})
+    return {"all_ok": "ALL DELIVERED" in out, "stages": stages, "raw": out}
+
+
 async def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("task", nargs="?", default=None)
@@ -120,11 +140,20 @@ async def main():
 
     # ---- ROUTE ----
     if p["structure"] == "sequential":
-        print("E2E GATE(sequential): handoff-chain execution needs co-designed zero-offset CP-CHAIN-* templates "
-              "(open frontier #2/#29 auto-handoff). Plan is valid; NOT faking a build."); return
+        # ROUTE sequential -> the cross-Kit chain executor (handles arbitrary-offset UR10 receivers post
+        # cont.261). This is the robot-diversity path (cross-Kit sidesteps the UR10 same-Kit PhysX block).
+        if a.dry_run:
+            print("E2E DRY-RUN: would route sequential %s -> chain_xkit_gate (cross-Kit relay)." % p["cells"]); return
+        print("E2E EXECUTE: sequential %s -> chain_xkit_gate (cross-Kit relay) ... [needs chain-ready blocks; "
+              "arbitrary canonical blocks may not chain = open #29]" % p["cells"])
+        r = execute_chain(p["cells"])
+        print("E2E CHAIN stages=%s all_delivered=%s" % (r["stages"], r["all_ok"]))
+        print("E2E RESULT:", "✅ SEQUENTIAL CHAIN GREEN (cross-Kit relay delivered)" if r["all_ok"]
+              else "❌ chain did not fully deliver (block chain-readiness / handoff-height compat = #29)"); return
     if len(robots) > 1:
-        print("E2E GATE(robot-diversity): %s in one Kit is blocked by UR10 process-global PhysX corruption; "
-              "cross-Kit composition (chain_xkit_gate) is not yet wired into this orchestrator." % robots); return
+        print("E2E GATE(robot-diversity parallel): %s in ONE Kit is blocked by UR10 process-global PhysX "
+              "corruption. Robot-diversity goes through the SEQUENTIAL cross-Kit chain (structure=sequential), "
+              "not same-Kit parallel — re-pose the task as a handoff line." % robots); return
     if a.dry_run:
         print("E2E DRY-RUN: would EXECUTE parallel Franka-only %s in Kit." % p["cells"]); return
 
