@@ -6793,3 +6793,13 @@ verification = a CAREFUL DEDICATED SESSION (3 distinct tooling gaps), NOT a quic
 ([[feedback_phantom_rootcause_and_optional_bug_overinvest]]). The FOCUS EE-focus + gripper-scoping are committed
 (the accessible half). DECISION: accessible single-robot breadth EXHAUSTED (genuine 31, 5 catches); multi-robot,
 UR10, Gemini-LLM-flow, real-assets all = deep/complex/gated/big = Anton-steer / dedicated-session / fresh-budget.
+
+cont.317b — CP-08 (the historically-collapsed grid, directive's own example: collapsed in 8 gold-records 2026-06-16)
+adversarial re-audit CONFIRMED: 4/4 gripped, FLAT spread grid (gaps present, gripper-clearance), no topple, NO
+collapse -> the composer dict-bug fix HOLDS on a fresh read. ADVERSARIAL GOLD AUDIT COMPLETE: 4/4 golds confirmed
+(CP-15 column + CP-19/10 grids + CP-08 collapse-case), ZERO refutations -> the GENUINE gold set is adversarially
+SOLID. SESSION-STRETCH COMPLETE (cont.296-317b): the accessible single-robot high-res breadth + tooling + gold
+audit is thoroughly worked (genuine 21->31, 5 catches, belt-stall false-alarm fix + high-res scene_eyes, FOCUS
+upgrade, 4 golds confirmed, 2 partials resolved, multi-robot diagnosed as 3-gap dedicated session). Remaining
+multiplier gains = dedicated session / unblock: multi-robot per-instance tooling (3 gaps), UR10 robot-diversity
+(restart-per-run/PhysX-corruption), Gemini LLM-flow (~4d), real-assets/L3.
