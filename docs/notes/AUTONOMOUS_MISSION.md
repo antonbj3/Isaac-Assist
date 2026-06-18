@@ -6283,3 +6283,12 @@ TOOL FIX (committed): chain_xkit_gate._play_and_measure now scales its window to
 6000 would FALSE-NEGATIVE a TIGHT large-N chain (CP-08's 4 cubes used ~1500 updates each). Benign (only grows;
 controller idles after done). This CP-19 run was table-limited so didn't exercise the window, but the scaling
 is correct for tight large-N.
+
+cont.278 (2026-06-18) — Multi-cube N=9 (tight 3x3, CP-10): stage0 9/9 (source palletizes 9 cleanly), stage1
+(CP-CHAIN-FLAT pick 9) TIMED OUT at the 2600s budget (stage0's 9-cube palletize + kit_restart consumed it; no
+SUMMARY). DIAGNOSTIK: a TIME/throughput limit, NOT a delivery limit — stage0 proved palletize-9 works, and
+stage1's receiver-iteration + scaled 15300 window are already proven (CP-08 4/4); only the budget ran out. A
+9-cube cross-Kit chain is ~60 min (2 stages x 9 cubes x 15300 updates). NOT re-run (mechanism proven; 60-min
+disproportionate per cost-cap + larger-N de-emphasis). => MULTI-CUBE CHAIN fully characterized: capability-capable
+across N, practical sweet-spot = moderate-N TIGHT grids (N=3,4 fast+100%; N=6 wide-row reach-limited; N=9 tight =
+delivery-capable but ~60min). Window fix sound (functionally validated by CP-19's completed run). Multi-cube arc DONE.
