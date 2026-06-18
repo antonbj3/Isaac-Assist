@@ -6857,3 +6857,12 @@ pxr is standalone-importable, added to run_static_checks.sh = 7/7) + the gold-ga
 (surface-topple still rejects) + safe try/except fallback (degrades to old behavior, can't manufacture a
 false-success). Live wiring confirmation pending a stochastic bin-topple (CP-41 re-test ran upright). Files:
 scripts/qa/scene_eyes.py, scripts/qa/test_bin_containment.py (new), scripts/qa/run_static_checks.sh.
+
+cont.318d — breadth batch2: CP-66 (recycling multi-sensor sort 4/4) + CP-17 (3-class semantic sorter 6/6) ->
+GENUINE; CP-44 (mixed-geometry cube+sphere) -> PARTIAL real catch (3/4: Sphere_1 NEVER approached @160mm /
+rolled-unreached = a sphere-handling gap, NOT a clean delivery; delivered-count is the bar, not 4/4-ish). Campaign
+tally (option a): genuine 31->36 (+5: CP-45/37/41/66/17), 1 PARTIAL catch (CP-44 sphere), 1 scene_eyes
+false-positive fixed (bin-aware orientation). composable_blocks.json summary: genuine_execution_verified=36,
+position_honest_only=24, partial=9, trusted=60, total=70. Remaining accessible single-robot position-honest:
+CP-56 (rotary), CP-36 (shelf), CP-NEW-kit-prep, CP-NEW-inspector, + niche (CP-54/vacuum suction, CP-58 peg,
+CP-61 CortexFranka). Commits 390d7876 (fix) + this (promotions).
