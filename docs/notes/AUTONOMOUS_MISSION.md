@@ -6622,3 +6622,12 @@ COMPOSITION (6x pipeline, parallel boots); for single-block BREADTH it's worse t
 reliable summary, just CC to read). ⚠️ Modal timeout kills the CLIENT not the cloud containers -> ALWAYS modal app
 stop <id> -y after. ABANDON Modal-breadth; breadth = local scene_eyes. CP-68 skipped (2-robot handoff, needs
 per-instance not bare run).
+
+cont.309 (2026-06-18, local) — CP-35 (flagged "tool-confound" sortation, 10 cubes->4 color bins) = 4TH confirming
+block: 7/10 CONVERGED+GRIPPED+RIGID-HOLD, spread 1.71m across 4 bins (genuine sort), belt 92% paused (throttled).
+The "tool-confound" memory flag is NOT reproduced (clean RIGID HOLD grip) -> STALE. So belt-stall insight is now
+ROBUST: 4/4 belt-fed position-honest blocks (CP-17/04/38/35) = genuine-mechanism + belt-stall-throttled, ZERO
+fakes. CONCLUSION on breadth option (a): the belt-fed subset is NOT a per-block grind and NOT fakes — it's ONE
+shared belt-stall (the leverage). Further belt-fed scene_eyes only re-confirms. Remaining breadth = (1) the
+belt-stall systematic fix [dedicated/sensitive], (2) truly-non-belt single-robot blocks [unknown set; heuristic
+unreliable], (3) author new chain-ready stages [option b]. No false-success found in the belt-fed pool.
