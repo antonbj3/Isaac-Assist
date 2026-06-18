@@ -6679,3 +6679,11 @@ per-object movement. high-res per-object is the only ground truth.
 
 cont.313b — CP-22 @ dur=95 -> 4/4 GENUINE(4/4 bin), no topple; high-res belt line live ("100% advanced -> NOT a
 stall"). genuine 24->25. 4 belt-fed single-bin blocks now confirmed (CP-38/04/21/22) + CP-20 topple-caught.
+
+cont.313c — ★CP-31 HIGH-RES CATCH (validates Anton's principle + the verify-each discipline): the pick-place-bin
+matrix is NOT uniformly genuine. CP-31 @ dur=75 re-classified TRUSTED(position-honest) -> PARTIAL(2/3): Cube_2+3
+gripped but Cube_1 THRASH-NO-CONVERGE (154mm, reach/IK fail; settled 0.830 on conveyor = position-gate
+FALSE-PASSED it as delivered) + Cube_2 grip MARGINAL (27° rot-slip). So 3 matrix blocks promoted clean
+(CP-04/21/22) but CP-31 caught partial -> inferring "the matrix is all genuine" would have been a false-positive;
+per-block high-res verification is required. genuine 25, partial 6, position_honest 38. Aggregate position-gate
+lied (counted Cube_1 delivered); per-object pick-convergence + grip-slip refuted it.

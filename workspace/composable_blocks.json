@@ -205,8 +205,8 @@
     "CP-31": {
       "robot": "Franka",
       "class": "pick-place-bin",
-      "verdict": "TRUSTED(position-honest)",
-      "basis": "delivery-gate (honest for bin/sort)",
+      "verdict": "PARTIAL(2/3 — Cube_1 thrash-no-converge + Cube_2 marginal grip)",
+      "basis": "scene_eyes cont.313 @ dur=75 HIGH-RES CATCH: Cube_2+Cube_3 gripped but Cube_1 THRASH-NO-CONVERGE (154mm, never approached -> reach/IK fail; settled 0.830 = on conveyor, position-gate FALSE-PASSED it as delivered) AND Cube_2 grip MARGINAL (27° rotation-slip, not rigid). NOT a clean promote unlike CP-04/21/22/38 -> verifying each matters (don't infer from the matrix). Redundant class (pick-place-bin covered) -> defer the Cube_1 reach fix.",
       "n_objects": 3
     },
     "CP-32": {
@@ -505,12 +505,12 @@
     }
   },
   "summary": {
-    "trusted": 64,
+    "trusted": 63,
     "_trusted_note": "the 64 'trusted' = 21 GENUINE (execution-verified by scene_eyes) + 43 position-honest-ONLY (gate said position-ok, EXECUTION NOT verified). Compose-trust the 21 genuine; treat the 43 as candidates that still need an execution check before a GOLD composition claim.",
     "genuine_execution_verified": 25,
-    "position_honest_only": 39,
+    "position_honest_only": 38,
     "false": 1,
-    "partial": 5,
+    "partial": 6,
     "pending": 0,
     "total": 70
   }
