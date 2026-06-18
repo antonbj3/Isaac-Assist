@@ -6292,3 +6292,13 @@ stage1's receiver-iteration + scaled 15300 window are already proven (CP-08 4/4)
 disproportionate per cost-cap + larger-N de-emphasis). => MULTI-CUBE CHAIN fully characterized: capability-capable
 across N, practical sweet-spot = moderate-N TIGHT grids (N=3,4 fast+100%; N=6 wide-row reach-limited; N=9 tight =
 delivery-capable but ~60min). Window fix sound (functionally validated by CP-19's completed run). Multi-cube arc DONE.
+
+cont.280 (2026-06-18) — ★ ROOT-CAUSED the UR10 grid-spread failure via scene_eyes RAW (diagnostik-först, NOT
+code-speculation; corrected my cont.272 phantom — DROP_TARGETS keys on cube_path not class, pick_place.py:4927).
+The UR10 drop at tight grid slot [0.57,-0.23] hit cuRobo res_None FAILs + a 173° WRIST-FLIP + a z-sweep retry
+(plan#6-24 all stuck on that slot) -> arm flails -> 1-2/4 placed + a cube FLUNG to z=2.378. ROOT CAUSE: spread
+grid slots exceed the UR10's clean-IK reach (slot [0.57,-0.23] radius 0.61 > proven CP-73 single-drop [0.5,-0.3]
+radius 0.58) -> marginal cuRobo plans flail. This ALSO root-causes CP-71 + CP-NEW-palletizer-mixed-sku being
+PARTIAL/TRUSTED (UR10 grid-spread is marginal-IK; UR10 is single-target pick-place-capable [CP-73 4/4] but not
+grid-spread-capable). FIX HYPOTHESIS (testing): keep ALL grid slots WITHIN the proven radius (lower-x
+[0.40-0.50,-0.35..-0.25], radius 0.53-0.56 < 0.58), spacing 0.10m for gripper clearance.
