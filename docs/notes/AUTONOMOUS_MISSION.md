@@ -6879,3 +6879,15 @@ composable_blocks.json: genuine 36->39, position_honest 24->20, false 1->2, part
 (CP-44 sphere-squirt), 1 FALSE (CP-56 rotary-moving-target), 1 scene_eyes TOOL-FIX (bin-aware orientation +
 deterministic test_bin_containment.py). Accessible single-robot Franka campaign = 10 blocks driven; remaining =
 niche higher-risk 3 (CP-54 suction / CP-58 peg-insertion / CP-61 CortexFranka) + multi-robot 7 (deep, deferred).
+
+cont.318f — breadth batch4 (niche higher-risk Franka — ALL GENUINE, the "higher-risk" label was conservative):
+CP-54 (suction) 4/4 delivered to Bin (cubes moved 1.0-1.56m from belt + piled z 0.79-0.94; ★ the GRIP-SLIP
+"suction gripped-set empty / GRIP NEVER FORMED" is a scene_eyes DISPLAY false-negative — delivery RAW + PICK
+CONVERGENCE are ground truth; verified the gold-gate does NOT parse that line, so NO gate impact, display-fix
+deferred); CP-58 (peg-in-hole) 4/4 pegs inserted into the 4-hole array (distinct x -0.15..+0.15, hole z=0.825);
+CP-61 (CortexFranka) 3/3 clean 3-high COLUMN (z 0.785/0.835/0.885 distinct, tight xy 0.02m — STRUCTURE-verified
+per the CP-09 lesson, not delivered-count). genuine 39->42, position_honest 20->17, trusted 59, total 70.
+★ ACCESSIBLE SINGLE-ROBOT FRANKA CAMPAIGN COMPLETE: 13 blocks driven (11 GENUINE + CP-44 PARTIAL sphere-squirt +
+CP-56 FALSE rotary-moving-target) + 1 scene_eyes tool-fix (bin-aware orientation). NEXT = batch5 UR10
+position-honest (robot-diversity axis; a single UR10 block per fresh Kit is accessible — restart-before-each
+handles the process-global PhysX corruption that only breaks COMPOSED scenes).
