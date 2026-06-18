@@ -6524,3 +6524,13 @@ mid-stage cont.296 taught the LLM about. FIXED the registry: PALLETIZE-RECV now 
 proven: injected stale-ref / reach-violation / bad-terminal -> validator caught all 3 (not a tautological pass).
 So the composition registry is now self-consistent + statically guarded, and the mid-stage capability is FORMALIZED
 (it was only implicit before, which is exactly why the 3-stage LLM-discoverability needed the cont.296 hint).
+
+cont.301 (2026-06-18, Kit-free, CORE composition) — verified+guarded the handoff PREDICTOR (compose_handoff.
+chain_compat), the Kit-free gate that routes which (src,recv) pairs the LLM/orchestrator sends into an expensive
+cross-Kit run. Adversarially tested its OWN docstring claim: all 9 proven adjacent pairs -> COMPAT (0 false-neg);
+the documented cont.262 CP-73->CP-13 (deep Bin) -> INCOMPAT (claim holds); NEGATIVE CONTROL flat-0.775 -> UR10-
+raised-0.975 -> INCOMPAT by height (the height branch genuinely discriminates, not a rubber stamp). Also fixed a
+consistency gap: chain_compat used the source's INPUT handoff_z; for a MID-stage source it now prefers delivers_z
+(output height) -- aligns with the cont.300 registry enrichment (correct verdict before only by tolerance luck).
+test_chain_compat.py locks it in. Composition machinery now has a static-verification layer: chain_registry_
+validate (registry consistency) + test_chain_compat (predictor faithfulness), both negative-control-proven.

@@ -31,7 +31,9 @@ def chain_compat(src_name, recv_name):
     recv = json.load(open(f"{REPO}/workspace/templates/{recv_name}.json"))
     s_stage = _STAGES.get(src_name)
     if s_stage:                                            # known chain-ready source
-        deliver_z = s_stage.get("handoff_z"); kind = "surface"; leaf = "(catalog)"
+        # a MID-stage source delivers at its OUTPUT height (delivers_z, e.g. a re-palletized grid), which can
+        # differ from its INPUT handoff_z; fall back to handoff_z for a pure source.
+        deliver_z = s_stage.get("delivers_z", s_stage.get("handoff_z")); kind = "surface"; leaf = "(catalog)"
     else:                                                  # infer from the template's delivery target
         tgt = (src.get("simulate_args") or {}).get("target_path") or ""
         leaf = tgt.rsplit("/", 1)[-1].lower()
