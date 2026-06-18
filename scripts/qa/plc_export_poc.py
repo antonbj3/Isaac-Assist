@@ -166,34 +166,91 @@ def roundtrip_check(tid):
             "lossless": src_ok and drops_ok and dest_ok, "recon": recon}
 
 
+def _phase_of(step_name):
+    """Classify an IR step by canonical phase -> (command, target_mode, z_offset_const, guard_bool).
+    target_mode: 'pick' (index into recipe pick), 'place', 'relative' (EE-relative lift), 'none'."""
+    n = step_name
+    if "Approach" in n: return ("CMD_MOVEL", "pick", "APPROACH_H", "ee_reached")
+    if "Descend" in n:  return ("CMD_MOVEL", "pick", "GRASP_H", "ee_reached")
+    if "Grip" in n:     return ("CMD_GRIP", "none", None, "grip_confirmed")
+    if "Lift" in n:     return ("CMD_MOVEL", "relative", "LIFT_H", "ee_reached")
+    if "Transit" in n:  return ("CMD_MOVEL", "place", "DROP_H", "ee_reached AND settled")
+    if "Release" in n:  return ("CMD_RELEASE", "none", None, "dwell_done")
+    if "Home" in n:     return ("CMD_HOME", "none", None, "system_ready")
+    return ("CMD_HOME", "none", None, None)  # S_Done
+
+
 def emit_sfc(ir):
-    """Emit a deployable IEC 61131-3 ST CASE state machine (the standard real-PLC sequence pattern — a sim-
-    validated sequence a PLC programmer can drop into a project). One CASE branch per SFC step; the transition
-    guard advances `step`. NOTE: this is a SKELETON — the guards (EE_reached/grip_confirmed) + motion calls
-    (MoveLinear/GripperClose) are placeholders a PLCopen MC_* / vendor motion library binds; not yet
-    toolchain-compiled (no IEC compiler wired). Proves the sequence exports to valid-shaped ST."""
+    """Emit a deployable, GRAMMAR-VALID IEC 61131-3 Structured Text CASE state machine (the standard PLC
+    sequence pattern). One CASE branch per SFC step: a command word (cmd / pick_idx / place_idx / offset_z) is
+    written to a motion+gripper layer and PLCopen-style Done/Error feedback bits (ee_reached / grip_confirmed /
+    settled / dwell_done) advance `step`. The Grip step re-descends up to 3x on a grip-miss then abandons the
+    cube (faithful to pick_place.py:800-818). Geometry is engine/cell-agnostic: parts + place targets are
+    RECIPE INDICES (the integrator binds index -> world pose); the concrete prim-paths/poses are in the header
+    comment (slashes are legal only inside comments). VERIFIED parseable by the blark IEC 61131-3 grammar
+    (scripts/qa/test_plc_st_parses.py). The motion/gripper layer + feedback are bound by a PLCopen MC_* /
+    vendor library; not yet toolchain-compiled to bytecode (no IEC codegen), but it is syntactically valid ST."""
     steps = ir["steps"]
+    # recipe: distinct picked objects (1-indexed) + their place targets
+    recipe, idx_of = [], {}
+    for s in steps:
+        o = s.get("object")
+        if o and o not in idx_of:
+            idx_of[o] = len(recipe) + 1
+            recipe.append((o, s.get("place_target")))
     L = []
-    L.append(f"(* Deployable ST (IEC 61131-3 CASE) — template {ir['template']} ({ir['robot']}, {ir['n_objects']} objects) *)")
+    L.append(f"(* Deployable IEC 61131-3 ST (CASE state machine) -- template {ir['template']} *)")
+    L.append(f"(* robot={ir['robot']}  objects={ir['n_objects']}  steps={len(steps)} *)")
     L.append(f"(* {ir['doc']} *)")
+    L.append("(* RECIPE (integrator binds each index to a world pose): *)")
+    for i, (o, pt) in enumerate(recipe):
+        pt = pt or {}
+        L.append(f"(*   [{i+1}] pick {o}  ->  place {pt.get('kind')}={pt.get('value')} *)")
     L.append("PROGRAM PickPlaceSequence")
+    L.append("VAR CONSTANT")
+    L.append("    CMD_NONE    : INT := 0;")
+    L.append("    CMD_HOME    : INT := 1;")
+    L.append("    CMD_MOVEL   : INT := 2;    (* linear move to recipe target + offset_z *)")
+    L.append("    CMD_GRIP    : INT := 3;")
+    L.append("    CMD_RELEASE : INT := 4;")
+    L.append("    APPROACH_H  : REAL := 0.10;    (* pre-grasp approach height, m *)")
+    L.append("    GRASP_H     : REAL := 0.0;     (* grasp height *)")
+    L.append("    LIFT_H      : REAL := 0.15;    (* post-grip lift *)")
+    L.append("    DROP_H      : REAL := 0.05;    (* pre-release drop height *)")
+    L.append("END_VAR")
     L.append("VAR")
-    L.append("    step  : INT  := 0;")
-    L.append("    done  : BOOL := FALSE;")
-    L.append("    grip_retry : INT := 0;   (* grip-miss re-descend counter (controller: 3 tries then abandon) *)")
+    L.append("    step       : INT  := 0;")
+    L.append("    done       : BOOL := FALSE;")
+    L.append("    grip_retry : INT  := 0;     (* grip-miss re-descend counter *)")
+    L.append("    cmd        : INT  := 0;     (* command word -> motion/gripper layer *)")
+    L.append("    pick_idx   : INT  := 0;     (* recipe index of part to pick *)")
+    L.append("    place_idx  : INT  := 0;     (* recipe index of place target *)")
+    L.append("    offset_z   : REAL := 0.0;   (* vertical approach/lift/drop offset *)")
+    L.append("    system_ready   : BOOL := FALSE;   (* feedback <- motion/gripper layer *)")
+    L.append("    ee_reached     : BOOL := FALSE;")
+    L.append("    grip_confirmed : BOOL := FALSE;")
+    L.append("    settled        : BOOL := FALSE;")
+    L.append("    dwell_done     : BOOL := FALSE;")
     L.append("END_VAR")
     L.append("CASE step OF")
     for i, s in enumerate(steps):
-        guard = s["transition"]
+        cmdc, mode, zoff, guard = _phase_of(s["step"])
+        ridx = idx_of.get(s.get("object"), 0)
         L.append(f"    {i}: (* {s['step']} *)")
-        L.append(f"        {s['action']};")
+        asg = [f"cmd := {cmdc};"]
+        if mode == "pick":
+            asg.append(f"pick_idx := {ridx};")
+        elif mode == "place":
+            asg.append(f"place_idx := {ridx};")
+        if zoff:
+            asg.append(f"offset_z := {zoff};")
+        L.append("        " + " ".join(asg) + ("    (* lift is EE-relative *)" if mode == "relative" else ""))
         if "Grip" in s["step"] and guard is not None:
-            # faithful grip-retry (pick_place.py:800-818): on grip-miss, re-descend up to 3x, then abandon the cube.
             descend, lift = i - 1, i + 1
-            skip = i + 4 if i + 4 < len(steps) else len(steps) - 1   # skip Lift/Transit/Release -> next cube's Approach
+            skip = i + 4 if i + 4 < len(steps) else len(steps) - 1   # skip Lift/Transit/Release -> next Approach
             L.append(f"        IF {guard} THEN grip_retry := 0; step := {lift};")
-            L.append(f"        ELSIF grip_retry < 3 THEN grip_retry := grip_retry + 1; step := {descend};  (* re-descend on grip-miss *)")
-            L.append(f"        ELSE grip_retry := 0; step := {skip}; END_IF;  (* abandon cube after 3 tries *)")
+            L.append(f"        ELSIF grip_retry < 3 THEN grip_retry := grip_retry + 1; step := {descend};")
+            L.append(f"        ELSE grip_retry := 0; step := {skip}; END_IF;")
         elif guard is not None and i + 1 < len(steps):
             L.append(f"        IF {guard} THEN step := {i + 1}; END_IF;")
         else:

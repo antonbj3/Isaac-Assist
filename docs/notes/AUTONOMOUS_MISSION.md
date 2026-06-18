@@ -6451,3 +6451,19 @@ plans [CP-08, CP-CHAIN-FLAT] (2 cells, gap=False) — the note did NOT over-comp
 LLM now pick 3?) is UNVERIFIED — Gemini free-tier quota exhausted (3 calls, 429); verify on quota reset. Fix is
 SAFE (additive _cl description, no-regression verified) + likely beneficial (same mechanism as the cont.274
 receiver-discoverability fix that worked). NOT claiming it works (mät-först) — safe + benefit-pending.
+
+cont.297 (2026-06-18, Kit-free) — ★FALSE-SUCCESS caught on my OWN PoC: plc_export emit_sfc claimed "exports to
+valid-shaped ST", but the emitted ST was PSEUDO-ST that NO IEC 61131-3 grammar accepts — verified by feeding it
+to `blark` (a real lark-based IEC 61131-3 parser, pip-installed): PARSE FAILED / UnexpectedCharacters. Root cause:
+slashes in identifiers (pose(/World/Cube_1)), bare time literals (0.4s — must be T#0.4s), named args with = not :=
+(target=...), non-standard array literals ([0,0,h]), bare `halt`. The live consume-IR executor I considered first
+would have been VACUOUS (all chain templates are CODE-driven; swapping simulate_args changes nothing, and there's
+no IR->Python codegen) — correctly avoided manufacturing it. FIX: rewrote emit_sfc to the standard PLC pattern —
+a command word (cmd/pick_idx/place_idx/offset_z) written to a motion+gripper layer, PLCopen-style Done/Error
+feedback bits (ee_reached/grip_confirmed/settled/dwell_done) advancing `step`, VAR CONSTANT heights, prim-paths +
+concrete poses preserved in header comments (slashes legal only in comments). Semantics preserved (6-phase cycle,
+grip-retry re-descend-3x-then-abandon, EE-relative lift, recipe indices). VERIFIED: test_plc_st_parses.py feeds
+every emitted ST to blark -> 12/12 PARSE (incl. multi-object CP-08 26-step/123-line + CP-12, and 2-station chains).
+So the PLC-export's weakest, least-verified link (the ST emit, only ever self-assessed) is now grammar-valid by a
+real external IEC parser, not my own say-so. Still NOT toolchain-compiled to bytecode (no IEC codegen) + motion FBs
+are integrator-bound — honestly scoped in the docstring.
