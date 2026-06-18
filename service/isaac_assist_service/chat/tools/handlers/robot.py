@@ -1766,7 +1766,8 @@ if not _wheels:
     _wheels = [p.GetPath().name for p in _stage.Traverse()
                if 'Joint' in str(p.GetTypeName())
                and 'wheel' in p.GetPath().name.lower()
-               and 'caster' not in p.GetPath().name.lower()]
+               and 'caster' not in p.GetPath().name.lower()
+               and str(p.GetPath()).startswith(robot_path + "/")]
 if not _wheels:
     _wheels = ['joint_wheel_left', 'joint_wheel_right']  # last-resort Carter default
 for _pr in _stage.Traverse():

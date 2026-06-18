@@ -5936,3 +5936,21 @@ canonical_blocks) are UR10-task categories (UR10 color-sort/palletize -- flaky, 
 solid) and breadth-via-new-UR10-blocks is flaky -> the clean high-value veins are HARVESTED this session
 (robot-diversity composition GOLD both directions + 3-stage; compose-reasoning 9/9). Remaining = fresh-effort
 authoring + Gemini-quota-reset.
+
+cont.246 (2026-06-17): NAV TRACK (fresh non-flaky vein — Carter wheeled, pivoted off the closed UR10 dive +
+applying the cont.244 lesson). nav_gate.py on the mostly-build-spec nav templates (CP-64 control reached 1/1
+disp 2.85 = instrument trustworthy). Found 2 REAL runtime nav issues: (1) CP-NEW-multi-amr-corridor 3 AMRs
+spawn but DON'T DRIVE (0/3 moved, disp~0.05, stuck); (2) CP-NEW-amr-pickup-handoff drives (disp 3.2) but never
+reaches (min_dist 0.875, overshoots/leaves). ROOT-CAUSED + FIXED #1 = the multi-AMR drive-stub (task #25):
+_gen_navigate_to FALLBACK wheel-discovery (robot.py ~1766, fires when SingleArticulation.initialize fails at
+build-time) traversed the WHOLE STAGE for "wheel" joints UNSCOPED to robot_path -> for 3 Carters it grabbed
+ALL 3 robots wheel joints -> wrong wheel_dof_names -> WheeledRobot could not drive -> disp~0. Single-AMR worked
+(only 1 robot in the stage). FIX: scope the traversal to str(p.GetPath()).startswith(robot_path+"/").
+RESULT: multi-amr moved 0/3 -> 3/3 (all drive, disp 0.1-0.8; reached 0/3 = duration/distance artifact: goals
+1.5-4m away + short nav_gate window, Carter_3 nearly there min_dist 0.229). GENERALIZES to ALL multi-AMR
+scenes. NO-REGRESSION confirmed: CP-64 (control) reached 1/1 disp 2.852 IDENTICAL; amr-pickup-handoff single-
+AMR drives unchanged. METHOD NOTE (cont.244 lesson applied): made 1 wrong guess first (create_wheeled_robot =
+deprecated no-op, disp byte-identical before/after = refuted; removed as harmless cleanup), THEN READ the
+handler mechanism instead of guessing again -> grounded fix worked first try. NEXT (nav, separate): amr-pickup-
+handoff overshoot/convergence (#2, single-AMR controller-tuning); nav_gate longer-window to confirm multi-amr
+reach.
