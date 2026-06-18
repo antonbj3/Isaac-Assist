@@ -401,7 +401,7 @@
     "CP-69": {
       "robot": "UR10",
       "class": "pick-place-bin",
-      "verdict": "TRUSTED(position-honest)",
+      "verdict": "GENUINE(scene_eyes UR10 suction 1/1 delivered to Bin[0.5,-0.4], cube moved 1.70m; cont.318g)",
       "basis": "delivery-gate (honest for bin/sort)",
       "n_objects": 1
     },
@@ -429,7 +429,7 @@
     "CP-75": {
       "robot": "UR10",
       "class": "pick-place-bin",
-      "verdict": "TRUSTED(position-honest)",
+      "verdict": "GENUINE(scene_eyes UR10 suction 1/1 delivered to Bin[0.5,-0.4], cube moved 1.28m; cont.318g)",
       "basis": "delivery-gate (honest for bin/sort)",
       "n_objects": 1
     },
@@ -443,14 +443,14 @@
     "CP-79": {
       "robot": "UR10",
       "class": "pick-place-bin",
-      "verdict": "TRUSTED(position-honest)",
+      "verdict": "GENUINE(scene_eyes UR10 suction 1/1 delivered to Bin[0.6,-0.4], cube moved 0.82m; cont.318g)",
       "basis": "delivery-gate (honest for bin/sort)",
       "n_objects": 1
     },
     "CP-81": {
       "robot": "UR10",
       "class": "pick-place-bin",
-      "verdict": "TRUSTED(position-honest)",
+      "verdict": "GENUINE(scene_eyes UR10 suction 2/2 delivered to Bin, stacked 2-level z 0.785/0.835; EJECTION flag=2.2m/s fast-watch NOT >8m/s blowup; cont.318g)",
       "basis": "delivery-gate (honest for bin/sort)",
       "n_objects": 2
     },
@@ -506,9 +506,9 @@
   },
   "summary": {
     "trusted": 59,
-    "_trusted_note": "the 59 'trusted' = 42 GENUINE (execution-verified by scene_eyes) + 17 position-honest-ONLY (gate said position-ok, EXECUTION NOT verified). Compose-trust the 42 genuine; treat the 17 as candidates that still need an execution check before a GOLD composition claim.",
-    "genuine_execution_verified": 42,
-    "position_honest_only": 17,
+    "_trusted_note": "the 59 'trusted' = 46 GENUINE (execution-verified by scene_eyes) + 13 position-honest-ONLY (gate said position-ok, EXECUTION NOT verified). Compose-trust the 46 genuine; treat the 13 as candidates that still need an execution check before a GOLD composition claim.",
+    "genuine_execution_verified": 46,
+    "position_honest_only": 13,
     "false": 2,
     "partial": 9,
     "pending": 0,

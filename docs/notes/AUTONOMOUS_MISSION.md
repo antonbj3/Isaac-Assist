@@ -6891,3 +6891,12 @@ per the CP-09 lesson, not delivered-count). genuine 39->42, position_honest 20->
 CP-56 FALSE rotary-moving-target) + 1 scene_eyes tool-fix (bin-aware orientation). NEXT = batch5 UR10
 position-honest (robot-diversity axis; a single UR10 block per fresh Kit is accessible — restart-before-each
 handles the process-global PhysX corruption that only breaks COMPOSED scenes).
+
+cont.318g — breadth batch5 (UR10 robot-diversity; scene_eyes handles UR10 suction correctly: robot=/World/UR10,
+tool=suction_cup, dofs=6, grip seats ~25mm vs Franka's ~103mm fingers): CP-69/75/79 (UR10 single-cube pick-place)
+1/1 each delivered to Bin (moved 0.82-1.70m); CP-81 (UR10 2-cube from pedestal) 2/2 delivered + 2-level stack
+(z 0.785/0.835). ★ CP-81 EJECTION header was Cube_1 @2.2 m/s "fast-watch" = NOT a >8 m/s PhysX blowup (false alarm;
+restart-before-each cleared any UR10 process-corruption — confirms single-block-per-fresh-Kit is corruption-free).
+ALL 4 GENUINE. genuine 42->46, position_honest 17->13, trusted 59. UR10 single-block IS accessible (the
+process-PhysX corruption only breaks COMPOSED multi-cell scenes, not isolated runs). batch6 = remaining 4 UR10
+(CP-82/83/86 + CP-NEW-palletizer-mixed-sku — the palletizer may hit the known UR10 grid-spread limit).
