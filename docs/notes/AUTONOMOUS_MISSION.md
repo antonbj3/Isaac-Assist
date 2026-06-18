@@ -5851,3 +5851,20 @@ on a pallet" -> CP-08 palletize, NOT CP-13 stack = operation discrimination); ga
 compose-REASONING is robust across decomposition + robot-family INFERENCE + over-composition-avoidance + op
 discrimination + gap-honesty -- the END-GOAL reasoning layer is genuinely validated (Kit-free, ChromaDB-free).
 NOTE: free-tier Gemini hit a transient 429 (auto-retried OK) -> run this eval SPARINGLY, not in a tight loop.
+
+cont.241 (2026-06-17): UR10 origin_offset fix — code-read EXHAUSTED (cont.237-238 follow-up); CLEARED more
+suspects so fresh-context effort goes straight to instrumentation. Checked the cuRobo obstacle builder
+(_gen_pick_place_curobo ~5099-5270): the HARDCODED static_paths ["/World/Table","/World/ConveyorBelt",
+"/World/Bin"] (5206) are NOT the bug for this template — for ROBOT_FAMILY ur10 the support-surface filter
+(5218-5227, kw table/belt/conveyor/feeder/ground/floor) drops Table/Belt, /World/Bin doesn't exist in the
+chain templates, and the template's own PLANNING_OBSTACLES (/World/Tray) is composer-rerooted; obstacles are
+all transformed to BASE frame via _world_to_base (correct). _usd_pos is offset-correct (the cont.234 BUILT
+dump = UR10 [0.499,-0.786,0.75]); _world_to_base(cube) -> correct base goal [-0.5,0.4,0.225]. So statically
+EVERYTHING looks offset-correct -- obstacle paths, base pose, world->base transform all cleared -- yet
+plan_fails 617/633 with last_fail_goal=[-0.758,-0.244,0.936] != cube [-0.001,-0.386,0.975]. CONCLUSION: the
+bug is a RUNTIME goal discrepancy invisible to code-read; the ONLY way forward is to instrument the code-gen'd
+controller (log _usd_pos + the actual first goal_tool_pose, world+base, on the offset build vs native) -- an
+invasive edit of the generated f-string (memory reference_generated_code_escaping: escape \n/braces or it
+SILENTLY breaks). A focused fresh-context task; the Franka->UR10 GOLD ships via the cont.235 zero-offset
+workaround, so this is OPTIONAL (faithful-relay + UR10-any-stage upside only). NOT circling further this
+session -- 3 turns of code-read have converged on "needs instrumentation".
