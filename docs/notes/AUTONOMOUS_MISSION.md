@@ -6631,3 +6631,15 @@ fakes. CONCLUSION on breadth option (a): the belt-fed subset is NOT a per-block 
 shared belt-stall (the leverage). Further belt-fed scene_eyes only re-confirms. Remaining breadth = (1) the
 belt-stall systematic fix [dedicated/sensitive], (2) truly-non-belt single-robot blocks [unknown set; heuristic
 unreliable], (3) author new chain-ready stages [option b]. No false-success found in the belt-fed pool.
+
+cont.310 (2026-06-18) — ★SYMMETRIC FALSE-SUCCESS-VAKT caught my OWN false-NEGATIVE. The cont.307-309 "belt-stall
+throttles the belt-fed breadth blocks" was WRONG. DECISIVE TEST: CP-38 (12-cube volume sorter) = 7/12 @ dur=110 ->
+12/12 @ dur=200 (all CONVERGED+GRIPPED+delivered to bin, RIGID HOLD) = WINDOW-LIMITED, not stalled. scene_eyes'
+"*** conveyor-stall ***" warning was a FALSE-ALARM: it flagged movf<0.25, but a correctly SENSOR-GATED belt is
+mostly-paused BY DESIGN (pauses during slow ~15s picks, moves briefly between) — movf 8-14% even when all N deliver;
+CP-38's belt cycled with 7 resume events. FIXED scene_eyes.py:863 — count resume events; flag a true stall only if
+rarely-resumes (<2), else report correct-gating; neg-control verified (true-stall PAUSED-only -> 0 resumes ->
+flagged). PROMOTED CP-38 -> GENUINE(volume-bin 12/12) [genuine 21->22, position_honest 43->42; catalog guard green].
+So the belt-fed sorter blocks are GENUINE + promotable (run adequate dur ~15s x n_cubes), NOT belt-blocked — NO
+dedicated belt-pause fix needed; task #37/#44 re-read as "dur too short" not a belt bug. The cheap longer-dur re-run
+was the decisive falsification. Memory + index corrected.

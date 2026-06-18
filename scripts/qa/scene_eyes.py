@@ -860,8 +860,16 @@ def _analyse(js):
                 _axis = "%s%s" % ("+-"[_vv[_ai] < 0], "xyz"[_ai]); break
         out.append("BELT TIMELINE (surface-velocity |v|, feed-axis %s; MOVING %.0f%% of run):" % (_axis, _movf * 100))
         out.append("    " + "  ".join("%.0fs:%s(%.2f)" % (_t, _s, _v) for _t, _s, _v in _trans[:14]))
-        if _movf < 0.25:
-            out.append("    *** BELT MOSTLY PAUSED -> conveyor-stall: boxes don't advance to the pick zone ***")
+        # cont.310 FALSE-ALARM FIX (decisive test CP-38 12/12 @ dur=200): a correctly SENSOR-GATED belt is
+        # mostly-paused BY DESIGN — it pauses during each slow ~15s pick and moves briefly between to advance the
+        # next cube, so movf is low (8-14%) EVEN WHEN ALL N CUBES DELIVER. The old `movf<0.25` flag false-alarmed
+        # "conveyor-stall" on working belts (it misled a whole breadth pass). A TRUE stall = the belt RARELY
+        # RESUMES (boxes stuck at spawn). Distinguish by counting resume events (PAUSED->MOVING transitions).
+        _resumes = sum(1 for _i in range(1, len(_trans)) if _trans[_i][1] == "MOVING")
+        if _movf < 0.25 and _resumes < 2:
+            out.append("    *** BELT STALLED -> rarely/never resumes (%d resume event(s)); boxes don't advance to the pick zone ***" % _resumes)
+        elif _movf < 0.25:
+            out.append("    (belt mostly-paused but RESUMES %dx = correct sensor-gating during slow picks, NOT a stall; boxes advance ~1 per pick cycle — use a longer dur to complete all N)" % _resumes)
 
     # GRIP-ATTEMPT (2026-06-14, Anton "högupplöst"): per-object, HIGH-RES grip outcome — was each tracked object
     # ever finger/cup-contacted (GRIPPED), and if NOT, how CLOSE did the gripper (tool) get? closest approach
