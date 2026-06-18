@@ -6768,3 +6768,7 @@ CP-31/CP-26 caught (2) = 2/7 fail the per-object checks the position-gate passed
 cont.316c — CP-32 (vision-driven 2-color sorter) GENUINE(vision-routed 2/2) via HIGH-RES ROUTING [genuine 29]:
 2/2 gripped + blue->BlueBin / red->RedBin (<0.01m off, sep 0.794m) = vision-classifier routing genuinely correct.
 Position-honest verification yields BOTH promotes (CP-18/32 routing-correct) and catches (CP-31/26 toppled/thrash).
+
+cont.316d — CP-33 (vision 2-color sorter) GENUINE(vision-routed 2/2) [genuine 30] — routing correct
+(blue->BlueBin, red->RedBin). High-res breadth campaign: genuine 21->30 (9 promotes), 4 catches (CP-20/26/31 +
+belt false-neg), 3 golds confirmed, 2 partials resolved.
