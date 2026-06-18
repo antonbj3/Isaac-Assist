@@ -6613,3 +6613,12 @@ systematic belt-pause/resume bug (the belt pauses for a pick but doesn't RESUME 
 not 43 blocks to grind. HIGH-LEVERAGE FIX = the shared belt-pause/resume (task #37; ⚠️SENSITIVE — CP-52/65 shared,
 needs multi-template no-regression; known blocker) — a dedicated fresh-context session, NOT a quick edit. So these
 belt-fed blocks stay position-honest HONESTLY (genuine mechanism, belt-throttled throughput) until that fix lands.
+
+cont.308 (2026-06-18) — MODAL BREADTH = POOR ROI (honest negative). run_template --eyes single-block: cold Kit
+boot ~3min + scene_eyes ~2-3min = ~5-6min/block; my timeout killed the LOCAL client but cloud containers kept
+running -> ORPHANED app burning credit (stopped -y). ~$5-7 spent across 2 batches, ZERO usable cloud verdicts
+(batch1 eyes-capture broken [fixed cont.306]; batch2 cut off by timeout+orphan). LESSON: Modal amortizes only for
+COMPOSITION (6x pipeline, parallel boots); for single-block BREADTH it's worse than LOCAL scene_eyes (no cold-boot,
+reliable summary, just CC to read). ⚠️ Modal timeout kills the CLIENT not the cloud containers -> ALWAYS modal app
+stop <id> -y after. ABANDON Modal-breadth; breadth = local scene_eyes. CP-68 skipped (2-robot handoff, needs
+per-instance not bare run).
