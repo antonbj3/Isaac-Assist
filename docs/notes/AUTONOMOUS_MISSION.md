@@ -5809,3 +5809,19 @@ robot base pose), mirroring the Franka pin. Payoff: upgrades Franka->UR10 to a F
 fix: chain_xkit_gate CP-CHAIN-UR10-RECV-NATIVE delivers NATIVE (off=0) but 0/1 under ANY origin_offset (even
 14mm) -- so a fixed handler should make the offset build deliver. Verify one-per-fresh-Kit (UR10 corrupts
 process PhysX).
+
+cont.238 (2026-06-17): UR10 origin_offset fix -- DEEPER narrowing by code read (cont.237 follow-up), to save
+fresh-context effort. CLEARED the world->base transform as the cause: the UR10 cuRobo controller
+(_gen_pick_place_curobo) computes _usd_pos/_usd_quat from the REROOTED robot's ComputeLocalToWorldTransform
+(pick_place.py 4561-4566) = offset-correct; _world_to_base (4981) subtracts _usd_pos + applies the inverse
+base quat; obstacles are transformed via _world_to_base (5146,5161). So goal + obstacle BASE-frame coords look
+offset-correct -- yet plan_fails 617/633 under offset (cont.234). Also: the cuRobo gen (3885-5300) calls NO
+set_robot_base_pose (only the Franka RmpFlow path ~2720 does) -- but cuRobo is base-frame-native given base-
+frame goals+obstacles, so that is likely NOT the bug. REMAINING suspects (need KIT INSTRUMENTATION of the
+code-gen'd controller, not code-read): (a) cuRobo MotionGen internal robot/world frame given the manually-
+transformed inputs; (b) the robot SELF-collision profile flagged in-collision under offset (5197 RCA:
+"robot in-collision -> 24/24 plan_pose fail"; the wrong-direction arm = cuRobo escaping a phantom collision).
+NEXT (fresh-context, decisive): add a TEMP debug print in _gen_pick_place_curobo logging _usd_pos + the first
+goal_tool_pose (world+base) + collision status, run the offset build (chain_xkit_gate forces 0/1 under any
+offset = ready A/B) vs the native build (1/1), diff the values, revert the print. Still OPTIONAL -- the
+Franka->UR10 GOLD ships via the cont.235 zero-offset workaround.
