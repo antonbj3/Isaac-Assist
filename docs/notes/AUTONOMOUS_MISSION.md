@@ -6154,3 +6154,17 @@ HANDOFF relays only 1/N -> needs multi-cube handoff abstraction. A GREEN sequent
 chain-ready blocks in the LLM catalog + multi-cube handoff. NEXT (#29): add verified chain-ready blocks to the
 composable catalog so the LLM picks chainable sources, and/or multi-cube relay. Budget: weekly 87% (Kit runs
 token-cheap, stable); hard-stop at 94% (feedback_stop_at_94pct_weekly).
+
+cont.263 (2026-06-18) — #29 handoff abstraction + SEQUENTIAL CHAIN GREEN end-to-end via the orchestrator.
+Built the handoff-compat layer: workspace/chain_stages.json (verified chain-ready blocks + handoff geom) +
+scripts/qa/compose_handoff.py chain_compat(src,recv) [Kit-free: source must deliver onto a PICKABLE SURFACE,
+not a deep bin, at a height matching the receiver robot's pick — UR10 raised 0.975 / Franka flat 0.775].
+compose_orchestrate sequential branch now accepts chain-ready stages + PRE-FILTERS each pair (INCOMPAT->HALT,
+no wasted Kit). Commits 04c169ec + (chain_stages.json force-added, was workspace/* gitignored). CAPSTONE
+(orchestrator -> chain, chain-ready blocks): [CP-CHAIN-UR10-SRC, CP-CHAIN-FLAT] sequential -> HANDOFF COMPAT
+(flat 0.775) -> chain_xkit_gate -> stage0 1/1 + stage1 1/1 -> ✅ SEQUENTIAL CHAIN GREEN. So the runtime-LLM
+loop now executes BOTH structures green: parallel-Franka (compose_and_verify) + sequential robot-diversity
+(handoff-compat pre-filter -> cross-Kit chain). The checker would've pre-filtered the cont.262 CP-73->CP-13
+deep-bin failure for free. LAST piece for a fully LLM-DRIVEN sequential green: put chain-ready blocks in the
+LLM's pick-catalog (compose_reason_eval CATALOG) so Gemini picks chainable sources for handoff tasks (the
+--cells override path is proven green). Memory: project_isaac_assist_chain_relay_crossns.
