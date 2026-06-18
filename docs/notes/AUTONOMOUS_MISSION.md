@@ -5919,3 +5919,20 @@ zero-offset workaround (CP-CHAIN-UR10-RECV-NATIVE, bake the geometry native so o
 is the RIGHT engineering answer (the cross-Kit chain runs each stage in its own Kit, so native-bake costs
 nothing). Franka->UR10 GOLD + 3-stage + workaround all STAND. Hypotheses refuted this arc: wrong-goals(234),
 degraded-phantom(242), wound-home(244) -- 3 strikes = stop guessing, the workaround is the deliverable.
+
+cont.245 (2026-06-17): BREADTH foundation audit (applying the cont.244 lesson — move to higher-value after
+closing the UR10 dive). Diagnosed CP-20 (a PARTIAL Franka palletizer flagged "some never gripped/approached"):
+scene_eyes 150s of its 360s task shows 9/18 gripped+placed (Cube_9-18, SETTLED-Z 0.825-0.834, upright), and
+the 8 "never-approached" (Cube_1-8) have a clean DISTANCE GRADIENT (closest tool approach 180mm[Cube_8] ->
+1195mm[Cube_1]) = the arm is working toward them in sequence, NOT-YET-REACHED, not unreachable. So the PARTIAL
+is THROUGHPUT/duration-limited (an 18-cube palletizer needs the full 360s; 150s = 9 done), matching task #44
+"throughput/belt-stall-limited, NOT a composer bug" -- an HONEST partial, NOT a fixable grip bug (verify-
+before-dismissing: confirmed the CAUSE, didn't dismiss). BREADTH ASSESSMENT: the composable foundation is
+SOLID + well-characterized -- 64 trusted (GENUINE = scene_eyes-RAW grid/column/routed/grip; TRUSTED(position-
+honest) = bin/sort where the delivery-gate IS honest per gate_routing_aware), 5 partial (throughput CP-20/25/
+43 or stochastic CP-34, all honest-not-fixable), 1 honest-false (CP-09 scatter). The real breadth GAPS (null
+canonical_blocks) are UR10-task categories (UR10 color-sort/palletize -- flaky, UR10 corrupts PhysX) + genuinely
+-missing types -> fresh-effort authoring, not quick promotions. So breadth-via-audit is low-value (foundation
+solid) and breadth-via-new-UR10-blocks is flaky -> the clean high-value veins are HARVESTED this session
+(robot-diversity composition GOLD both directions + 3-stage; compose-reasoning 9/9). Remaining = fresh-effort
+authoring + Gemini-quota-reset.
