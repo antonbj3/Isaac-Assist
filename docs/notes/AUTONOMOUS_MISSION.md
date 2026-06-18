@@ -6467,3 +6467,21 @@ every emitted ST to blark -> 12/12 PARSE (incl. multi-object CP-08 26-step/123-l
 So the PLC-export's weakest, least-verified link (the ST emit, only ever self-assessed) is now grammar-valid by a
 real external IEC parser, not my own say-so. Still NOT toolchain-compiled to bytecode (no IEC codegen) + motion FBs
 are integrator-bound — honestly scoped in the docstring.
+
+cont.298 (2026-06-18, Kit-free) — ★FALSE-SUCCESS #2 on my own tool (TAUTOLOGICAL GATE, the sibling-project
+self-check-misses pattern): plc_export roundtrip_check claimed "lossless on 7 templates" but it ONLY compared
+source_paths/drop_targets/destination -- it was structurally BLIND to gripper_rotation (PLACE ORIENTATION). The
+IR had no orientation field at all. Measured the blindness: roundtrip_check(CP-20) / CP-NEW-label-applicator-pose
+/ CP-NEW-6dof-pose-estimate-pick ALL reported lossless=True while silently dropping yaw -- including CP-20's
+per-layer yaw on a 27-cube stack, the label-applicator's label-edge alignment, and the 6dof pick where target
+ORIENTATION is the entire task. A PLC export from that IR would mis-orient every part. FIX (commit pending):
+(1) _code_gripper_rotation AST-extracts a LITERAL gripper_rotation kwarg; _orientation_for resolves
+literal|runtime_computed|none. (2) extract_ir attaches yaw_deg to each place_target + records orientation_capture.
+(3) ir_to_controller_args reconstructs gripper_rotation. (4) roundtrip_check now COMPARES orientation: literal yaw
+must round-trip; runtime-computed yaw (6dof builds it in a loop -> not a static literal) is HONESTLY flagged
+runtime_computed_NOT_captured => lossless=False (no longer falsely lossless). (5) emit_sfc emits a place_yaw
+recipe field + a "RUNTIME-COMPUTED, integrator must supply" ST note. VERIFIED: CP-20 + label-applicator now
+genuinely lossless WITH orientation (literal_captured); 6dof honestly lossless=False; 6 chain templates
+UNREGRESSED (no_orientation, still lossless); 12/12 ST still parse under blark (place_yaw kept it valid). The
+consume-IR claim is now scoped+honest: position + LITERAL orientation captured & verified, runtime-computed
+orientation explicitly NOT captured.

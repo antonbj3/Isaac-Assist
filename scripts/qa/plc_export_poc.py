@@ -66,6 +66,38 @@ def _code_robot_family(code):
     return None
 
 
+def _code_gripper_rotation(code):
+    """gripper_rotation (PLACE ORIENTATION, yaw deg) often lives in template CODE, not simulate_args.
+    AST-parse the controller call's gripper_rotation kwarg IF it is a LITERAL dict/list/number. Returns None
+    when absent OR when it is a runtime-computed variable (e.g. CP-NEW-6dof builds it in a loop from
+    target_orientation) -- the caller MUST treat (None AND 'gripper_rotation' in code) as 'orientation is
+    PRESENT but NOT statically capturable', i.e. the IR is lossy for it (do not claim lossless)."""
+    try:
+        tree = ast.parse(code)
+    except Exception:
+        return None
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Call) and getattr(node.func, "id", "") == "setup_pick_place_controller":
+            for kw in node.keywords:
+                if kw.arg == "gripper_rotation" and isinstance(kw.value, (ast.Dict, ast.List, ast.Constant)):
+                    try:
+                        return ast.literal_eval(kw.value)
+                    except Exception:
+                        return None
+    return None
+
+
+def _orientation_for(sa, code):
+    """Resolve place orientation -> (literal_value_or_None, capture_mode). capture_mode in
+    {'literal','runtime_computed','none'}. runtime_computed = present in code but not a static literal."""
+    gr = sa.get("gripper_rotation")
+    if gr is None:
+        gr = _code_gripper_rotation(code)
+    if gr is not None:
+        return gr, "literal"
+    return None, ("runtime_computed" if "gripper_rotation" in (code or "") else "none")
+
+
 def _cubes_and_targets(sa, code=""):
     """Return [(cube_path, place_target_repr), ...] from a template's simulate_args (+ code-level drop_targets)."""
     cubes = sa.get("source_paths") or sa.get("cube_paths") or ([sa.get("cube_path")] if sa.get("cube_path") else [])
@@ -92,10 +124,25 @@ def extract_ir(tid):
     sa = t.get("simulate_args") or {}
     _code = t.get("code") or ""
     robot = sa.get("robot_family") or _code_robot_family(_code) or ("ur10" if "/World/UR10" in _code else "franka")
-    pairs = _cubes_and_targets(sa, t.get("code") or "")
+    pairs = _cubes_and_targets(sa, _code)
+    gr, orientation_capture = _orientation_for(sa, _code)
+
+    def _yaw(cube, i):
+        if isinstance(gr, dict):
+            return gr.get(cube)
+        if isinstance(gr, list):
+            return gr[i] if i < len(gr) else None
+        if isinstance(gr, (int, float)):
+            return float(gr)
+        return None
+
     steps = [{"step": "S0_Home", "action": "MoveJoint(home_pose); GripperOpen()", "transition": "system_ready"}]
     sid = 1
     for i, (cube, tgt) in enumerate(pairs):
+        y = _yaw(cube, i)
+        tgt = dict(tgt)
+        if y is not None:
+            tgt["yaw_deg"] = y           # PLACE orientation (was silently dropped before cont.298)
         for name, action, guard in _CYCLE:
             steps.append({
                 "step": f"S{sid}_{name}_{i+1}",
@@ -110,6 +157,7 @@ def extract_ir(tid):
     steps.append({"step": "S_Done", "action": "MoveJoint(home_pose); halt", "transition": None})
     return {
         "template": tid, "robot": robot, "n_objects": len(pairs),
+        "orientation_capture": orientation_capture,  # literal | runtime_computed (LOSSY) | none
         "doc": "Engine-agnostic pick-place sequence IR (IEC 61131-3 SFC-shaped). One guarded step chain per object.",
         "steps": steps,
     }
@@ -120,7 +168,7 @@ def ir_to_controller_args(ir):
     Proves the IR is a LOSSLESS engine-agnostic orchestration spec via the controller->IR->controller round-trip
     (the hot-swap-doctrine foundation: one IR, swappable engine). Scope = the orchestration (source_paths +
     per-object drop targets), NOT the full scene/sensor/obstacle setup (those are scene-build, not orchestration)."""
-    objs, drops, dest = [], {}, None
+    objs, drops, dest, rots = [], {}, None, {}
     for s in ir["steps"]:
         o, pt = s.get("object"), s.get("place_target")
         if o and o not in objs:
@@ -130,11 +178,15 @@ def ir_to_controller_args(ir):
                 drops[o] = pt["value"]
             elif pt.get("kind") == "destination_bbox_center":
                 dest = pt["value"]
+            if pt.get("yaw_deg") is not None:
+                rots[o] = pt["yaw_deg"]
     args = {"source_paths": objs, "robot_family": ir.get("robot")}
     if drops:
         args["drop_targets"] = drops
     if dest:
         args["destination_path"] = dest
+    if rots:
+        args["gripper_rotation"] = rots   # PLACE orientation reconstructed from the IR
     return args
 
 
@@ -162,8 +214,28 @@ def roundtrip_check(tid):
     # destination_path is a redundant FALLBACK when drop_targets covers every source cube (orchestration captured)
     drops_cover_all = bool(orig_norm) and all(cp in orig_norm for cp in orig_src)
     dest_ok = (orig_dest == recon.get("destination_path")) or drops_cover_all or (bool(orig_drops) and not orig_dest)
+    # ORIENTATION (gripper_rotation, place yaw) -- previously NOT compared at all (a tautological blind spot:
+    # roundtrip claimed "lossless" while the IR silently dropped yaw). Now: literal yaw must round-trip;
+    # runtime-computed yaw is honestly NOT capturable (lossy); absent yaw is trivially ok.
+    orig_gr, cap = _orientation_for(sa, code)
+    rec_gr = recon.get("gripper_rotation") or {}
+    if cap == "none":
+        orient_ok, orient_note = True, "no_orientation"
+    elif cap == "runtime_computed":
+        orient_ok, orient_note = False, "runtime_computed_NOT_captured"   # honest: the IR is lossy here
+    else:  # literal -> must round-trip
+        if isinstance(orig_gr, dict):
+            gnorm = orig_gr
+        elif isinstance(orig_gr, list):
+            gnorm = {orig_src[i]: orig_gr[i] for i in range(min(len(orig_src), len(orig_gr)))}
+        else:  # scalar applies to every source cube
+            gnorm = {c: orig_gr for c in orig_src}
+        orient_ok = bool(gnorm) and all(
+            cp in rec_gr and round(float(gnorm[cp]), 3) == round(float(rec_gr[cp]), 3) for cp in gnorm)
+        orient_note = "literal_captured" if orient_ok else "literal_mismatch"
     return {"template": tid, "source_paths": src_ok, "drop_targets": drops_ok, "destination": dest_ok,
-            "lossless": src_ok and drops_ok and dest_ok, "recon": recon}
+            "orientation": orient_ok, "orientation_note": orient_note,
+            "lossless": src_ok and drops_ok and dest_ok and orient_ok, "recon": recon}
 
 
 def _phase_of(step_name):
@@ -205,7 +277,11 @@ def emit_sfc(ir):
     L.append("(* RECIPE (integrator binds each index to a world pose): *)")
     for i, (o, pt) in enumerate(recipe):
         pt = pt or {}
-        L.append(f"(*   [{i+1}] pick {o}  ->  place {pt.get('kind')}={pt.get('value')} *)")
+        yaw = f"  yaw={pt.get('yaw_deg')}deg" if pt.get("yaw_deg") is not None else ""
+        L.append(f"(*   [{i+1}] pick {o}  ->  place {pt.get('kind')}={pt.get('value')}{yaw} *)")
+    if ir.get("orientation_capture") == "runtime_computed":
+        L.append("(*   NOTE: place orientation is RUNTIME-COMPUTED in the source template and is NOT *)")
+        L.append("(*         captured here -- the integrator must supply place_yaw per part. *)")
     L.append("PROGRAM PickPlaceSequence")
     L.append("VAR CONSTANT")
     L.append("    CMD_NONE    : INT := 0;")
@@ -226,6 +302,7 @@ def emit_sfc(ir):
     L.append("    pick_idx   : INT  := 0;     (* recipe index of part to pick *)")
     L.append("    place_idx  : INT  := 0;     (* recipe index of place target *)")
     L.append("    offset_z   : REAL := 0.0;   (* vertical approach/lift/drop offset *)")
+    L.append("    place_yaw  : REAL := 0.0;   (* place orientation, deg (0 = no rotation) *)")
     L.append("    system_ready   : BOOL := FALSE;   (* feedback <- motion/gripper layer *)")
     L.append("    ee_reached     : BOOL := FALSE;")
     L.append("    grip_confirmed : BOOL := FALSE;")
@@ -242,6 +319,9 @@ def emit_sfc(ir):
             asg.append(f"pick_idx := {ridx};")
         elif mode == "place":
             asg.append(f"place_idx := {ridx};")
+            pt = s.get("place_target") or {}
+            if pt.get("yaw_deg") is not None:
+                asg.append(f"place_yaw := {float(pt['yaw_deg'])};")
         if zoff:
             asg.append(f"offset_z := {zoff};")
         L.append("        " + " ".join(asg) + ("    (* lift is EE-relative *)" if mode == "relative" else ""))
