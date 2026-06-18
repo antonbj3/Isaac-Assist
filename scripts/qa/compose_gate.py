@@ -43,17 +43,36 @@ async def run(specs):
         cubes = (sa.get("cube_paths") or sa.get("source_paths")
                  or ([sa.get("cube_path")] if sa.get("cube_path") else []))
         target = sa.get("target_path")
+        # ROUTING-AWARE (ported from compose_and_verify, cont.253): a sorter routes each cube to ITS
+        # designated bin (color_routing/drop_targets: key->bin). Measuring ALL cubes against ONE target
+        # false-NEGATIVES the cubes bound for other bins (CP-03 read 1/2 vs the true 2/2). Map each cube to
+        # its CORRECT bin (color key appears in the cube leaf name); fall back to target_path for single-dest.
+        routing = {}
+        for srcr in (sa.get("color_routing"), sa.get("drop_targets")):
+            for kk, vv in (srcr or {}).items():
+                if isinstance(vv, str) and vv.startswith("/"):
+                    routing[str(kk).lower()] = vv
+        cube_targets = {}
+        for c in cubes:
+            if not c:
+                continue
+            leaf = c.rsplit("/", 1)[-1].lower()
+            acc = [b for key, b in routing.items() if key in leaf]
+            if not acc:
+                acc = [target] if target else sorted(set(routing.values()))
+            cube_targets[reroot_prim_path(c, root)] = [reroot_prim_path(b, root) for b in acc]
         nv = {
             "name": name, "root": root, "off": off,
             "cubes": [reroot_prim_path(c, root) for c in cubes if c],
             "target": reroot_prim_path(target, root) if target else None,
+            "cube_targets": cube_targets,
         }
         insts.append(nv)
         compose_arg.append((tpl, root, off))
 
     await compose_canonicals(compose_arg)
 
-    spec_json = json.dumps([{k: v for k, v in d.items() if k in ("name", "root", "cubes", "target")} for d in insts])
+    spec_json = json.dumps([{k: v for k, v in d.items() if k in ("name", "root", "cubes", "target", "cube_targets")} for d in insts])
     import os as _osc
     dbg = bool(_osc.environ.get("COMPOSE_DEBUG"))
     traj = bool(_osc.environ.get("COMPOSE_TRAJ"))
@@ -110,18 +129,22 @@ else:
     for _ in range(N): app.update()
 for d in INSTS:
     tb = bbox(d["target"]) if d["target"] else None
+    ct = d.get("cube_targets") or dict()
     n = 0
     for c in d["cubes"]:
         cp = cpos(c)
-        hit = bool(tb and cp and tb[0][0]-0.05<=cp[0]<=tb[1][0]+0.05 and tb[0][1]-0.05<=cp[1]<=tb[1][1]+0.05 and cp[2]>tb[0][2]-0.05)
+        accs = ct.get(c) or ([d["target"]] if d.get("target") else [])
+        tbs = [bbox(t) for t in accs]; tbs = [t for t in tbs if t]   # each cube vs ITS correct bin(s)
+        hit = bool(cp and any(t[0][0]-0.05<=cp[0]<=t[1][0]+0.05 and t[0][1]-0.05<=cp[1]<=t[1][1]+0.05 and cp[2]>t[0][2]-0.05 for t in tbs))
         if hit:
             n += 1
         if DBG and not hit:
-            # how far did the MISSED cube land from the target bbox? (tolerance-miss vs genuine)
-            if tb and cp:
-                dx = max(tb[0][0]-cp[0], 0, cp[0]-tb[1][0])
-                dy = max(tb[0][1]-cp[1], 0, cp[1]-tb[1][1])
-                dz_below = (tb[0][2]-0.05) - cp[2]
+            # how far did the MISSED cube land from its nearest correct-bin bbox? (tolerance-miss vs genuine)
+            t0 = tbs[0] if tbs else None
+            if t0 and cp:
+                dx = max(t0[0][0]-cp[0], 0, cp[0]-t0[1][0])
+                dy = max(t0[0][1]-cp[1], 0, cp[1]-t0[1][1])
+                dz_below = (t0[0][2]-0.05) - cp[2]
                 print("COMPOSE_MISS inst=%s cube=%s pos=[%.3f,%.3f,%.3f] xy_out=[%.3f,%.3f] below_z=%.3f" % (
                     d["root"], c.split("/")[-1], cp[0], cp[1], cp[2], dx, dy, dz_below))
             else:
