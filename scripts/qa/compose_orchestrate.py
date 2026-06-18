@@ -65,8 +65,14 @@ async def plan_with_gemini(task, model):
     _cl = []
     for cp, m in _CHAIN.items():
         h = m.get("handoff_surface") or m.get("pick_height")
-        what = ("delivers a part onto a %s handoff surface" % h) if m.get("role") == "source" \
-            else ("picks a part FROM a %s handoff and delivers it" % h)
+        n = m.get("n_cube")
+        multi = (isinstance(n, int) and n > 1) or (isinstance(n, str) and "N" in n)
+        if m.get("role") == "source":
+            what = (("palletizes %s parts into a %s handoff grid (a downstream cell can pick each of them)" % (n, h)) if multi
+                    else ("delivers a part onto a %s handoff surface" % h))
+        else:
+            what = (("picks parts (one OR several) off a %s handoff surface and deposits them into a bin" % h) if (multi or "N" in str(n))
+                    else ("picks a part off a %s handoff surface and deposits it into a bin" % h))
         _cl.append("- %s: a %s chain %s that %s" % (cp, m.get("robot"), (m.get("role") or "").upper(), what))
     aug_catalog = CATALOG + "\n\n--- chain-ready stages (use ONLY for a SEQUENTIAL handoff chain) ---\n" + "\n".join(_cl)
     aug_sys = SYS + (" For a SEQUENTIAL handoff chain, do NOT use the parallel work-cells (they deliver into "

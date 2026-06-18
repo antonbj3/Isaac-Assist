@@ -6245,3 +6245,14 @@ cont.273 (2026-06-18) — ROBOT-DIVERSITY MULTI-CUBE characterized + DEFERRED (3
     distinct Semantics classes to the cubes + class-keyed grid. NOT done now (over-invest guard; 3rd depth-reveal).
   • NOT ESSENTIAL: the multiplier is already rich WITHOUT robot-diversity multi-cube — parallel-Franka +
     1-cube robot-diversity BOTH directions + Franka LINE + multi-cube Franka (CP-08/CP-12) are all proven.
+
+cont.274 (2026-06-18) — ★ END-GOAL MULTI-CUBE INTEGRATION (LLM now composes multi-cube chains). Dry-run
+compose_orchestrate on "palletize 4 parts then pick each into a bin" REVEALED a gap: LLM picked the palletizer
+CP-08 but FLAGGED gap_flag=True (gap-honest = false-success-vakt PASS) — it couldn't pair the picker because the
+chain-stage descriptions surfaced to Gemini said "a part" (singular) + omitted "into a bin". FIX
+(compose_orchestrate.plan_with_gemini): chain-stage descriptions now convey multi-cube + the deposit ("palletizes
+N parts into a grid (a downstream cell can pick each)" / "picks one OR several off the surface and deposits into
+a bin"). Re-test: LLM plans [CP-08, CP-CHAIN-FLAT] sequential, gap=False, handoff COMPAT -> routes chain_xkit_gate.
+NO REGRESSION (1-cube UR10->Franka still plans [CP-CHAIN-UR10-SRC, CP-CHAIN-FLAT]). So the RUNTIME LLM composes
+multi-cube chains end-to-end (planning fixed here + execution proven cont.269/271). Launching full Gemini-driven
+loop as the end-to-end capstone.
