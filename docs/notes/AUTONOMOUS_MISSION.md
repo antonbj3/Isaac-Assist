@@ -6708,3 +6708,8 @@ cont.313f — CP-24 @ dur=90 -> GENUINE(4/4 spread-grid) [genuine 27]. Pick-plac
 clean (5) + CP-31 PARTIAL-caught. Class is saturated (8 genuine pick-place-bin) -> remaining matrix (CP-26) is the
 last; further single-robot pick-place breadth is marginal. Next genuine value = distinct under-covered classes
 (complex/multi-robot) or the gated frontiers (LLM-flow #28 Gemini, real-assets/L3).
+
+cont.313g — ★CP-18 (inspect/vision) GENUINE(inspect-routed) via HIGH-RES ROUTING [genuine 28]: 5/5 gripped, 4
+good->GoodBin (spread 0.004m) + Cube_bad REJECTED 0.603m away = inspection CORRECT. Aggregate 5/5-gripped could
+have masked a mis-route; per-object xy confirmed it (Anton's principle). DISTINCT under-covered class now covered +
+set as the Franka:inspect/vision CANONICAL rep (was null). Higher value than matrix grind — fills a capability gap.
