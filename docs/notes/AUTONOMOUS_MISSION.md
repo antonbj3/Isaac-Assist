@@ -6541,3 +6541,10 @@ cont.301b — consolidated the 5 Kit-free guards (cont.297-301) into ONE runnabl
 mätväg" so the guards stay LIVE instead of bit-rotting as orphans. Net for cont.296-301: 12 commits — 1 LLM-plan
 fix + 3 PLC false-success fixes + composition mid-stage modeling fix + predictor consistency fix, ALL guarded by
 6 negative-control-proven Kit-free tests. Zero Kit, zero Gemini, weekly steady ~90%.
+
+cont.301c — adversarial read of the cross-Kit relay surfaced a GENERALITY LIMIT (now documented at source,
+chain_xkit_gate.py:201): the handoff carries POSITION ONLY (_play_and_measure res["poses"] = world translation),
+and each relayed object is re-created as a hardcoded 0.05 UsdGeom.Cube. So the multi-cube handoff is faithful
+ONLY for homogeneous 0.05-cube chains (all proven chains are) — a heterogeneous handoff (Brick/Box/other size)
+would relay a 0.05 cube at the right position but wrong shape/size. NOT a silent overclaim anymore. Deferred
+(no heterogeneous use case; carrying size+type needs a Kit-verified change = optional-feature over-investment).

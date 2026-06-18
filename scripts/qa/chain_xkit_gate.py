@@ -199,6 +199,14 @@ async def run_stage_k(k, name, handoff):
         dl = "import omni.usd\nfrom pxr import Sdf, UsdGeom, UsdPhysics, PhysxSchema, Gf\nstage=omni.usd.get_context().get_stage()\n"
         dl += f"for pr in list(stage.Traverse()):\n    p=str(pr.GetPath()); nm=pr.GetName()\n    if p.startswith('/World/{root}/') and (nm.startswith('Cube') or nm.startswith('Item') or nm.startswith('Brick')):\n        stage.RemovePrim(p)\n"
         dl += f"stage.DefinePrim('{relay_root}','Xform')\n"
+        # ⚠️ GENERALITY LIMIT (cont.301c): the handoff carries POSITION ONLY (_play_and_measure's res["poses"]
+        # = world translation, no size/type), and each relayed object is re-created here as a hardcoded 0.05
+        # UsdGeom.Cube. So the multi-cube handoff is FAITHFUL ONLY for homogeneous 0.05-cube chains (all proven
+        # chains are). A heterogeneous handoff (Brick/Box, or a different cube size) would relay a 0.05 cube at
+        # the right position but the WRONG shape/size -> the receiver picks a stand-in, not the real object. To
+        # generalize: carry the measured bbox size (bb() already computes it) + the source prim type through the
+        # handoff dict, and re-create with that type/size here. Deferred (no heterogeneous chain use case yet;
+        # per feedback_phantom_rootcause_and_optional_bug_overinvest — don't Kit-invest in an optional feature).
         for cp, X in zip(measure_cubes, handoff_cubes):
             dl += (f"c=UsdGeom.Cube.Define(stage,'{cp}'); c.GetSizeAttr().Set(0.05)\n"
                    f"x=UsdGeom.Xformable(c.GetPrim()); x.ClearXformOpOrder(); x.AddTranslateOp().Set(Gf.Vec3d({X[0]},{X[1]},{max(X[2],0.78)}))\n"
