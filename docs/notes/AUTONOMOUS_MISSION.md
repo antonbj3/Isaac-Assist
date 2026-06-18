@@ -6803,3 +6803,30 @@ audit is thoroughly worked (genuine 21->31, 5 catches, belt-stall false-alarm fi
 upgrade, 4 golds confirmed, 2 partials resolved, multi-robot diagnosed as 3-gap dedicated session). Remaining
 multiplier gains = dedicated session / unblock: multi-robot per-instance tooling (3 gaps), UR10 robot-diversity
 (restart-per-run/PhysX-corruption), Gemini LLM-flow (~4d), real-assets/L3.
+
+cont.318 — ★ NEW CHAIN OPERATION-STAGE authored + verified (NÄSTA AXIS option b: AUTHOR+verify chain-ready
+operation-stages = the composition MULTIPLIER itself, not just re-verifying existing blocks — the accessible
+single-robot frontier I'd called "exhausted" was only option a). CP-CHAIN-STACK-RECV: a Franka chain RECEIVER
+that STACKS relayed cubes into a vertical COLUMN/tower — the missing operation (bin=CP-CHAIN-FLAT +
+grid/re-palletize=CP-CHAIN-PALLETIZE-RECV existed; STACK did not). DESIGN: CP-CHAIN-FLAT base + LIST (index-keyed)
+column drop_targets z 0.825/0.875/0.925 on a PalletBase (a dict-keyed-by-NAME column would NOT match the chain's
+DYNAMIC relay-cube paths — the index-list is the chain-receiver idiom, proven by PALLETIZE-RECV). Bottom-up order
+is DETERMINISTIC BY DESIGN, not luck: the auto-offset aligns the receiver's PickSensor onto the FIRST source cube
+-> Cube_1 picked first (SOURCE_PATHS order, _next_cube) -> drop_targets[0]=bottom. Reach-gate already handles the
+tall-stack lift (DROP_TARGETS z-spread>1cube -> 0.40 clearance, the CP-09 tower path). CHAIN-VERIFIED N-of-M=2:
+CP-12 (3-cube palletize source) -> CP-CHAIN-STACK-RECV = 3/3+3/3 x2. HIGH-RES verify (NOT delivered-count — that
+gate is xy-containment+above-floor only = would false-pass a PILE, the CP-09 structural lesson): read RAW poses
+z-levels -> a clean 3-high column, 3 DISTINCT ascending z-levels EXACTLY 0.825/0.875/0.925, tight xy (5-6mm
+spread), ~14mm progressive lean = stable (<25mm half-width, not toppling). IDENTICAL poses across BOTH runs while
+stage0 handoff differed ~1mm -> the stack output is DETERMINISTIC (place-to-fixed-target), not stochastic luck.
+★ TOOL FIX (the gap shows -> first-class detector, VERKTYGEN ÄR LEVANDE): compose_orchestrate's LLM catalog
+builder HARDCODED every terminal receiver as 'deposits into a bin' -> Gemini saw STACK-RECV IDENTICAL to the FLAT
+bin-receiver + flagged a GAP for a 'stack into a column' task (dry-run: picked only the source, gap_flag=True).
+FIX: added an 'output' descriptor field to the chain_stages registry + made the catalog builder output-aware ->
+re-run: Gemini picks [CP-CHAIN-FRANKA-SRC, CP-CHAIN-STACK-RECV] sequential, gap_flag=False = composes the NEW
+operation end-to-end. So the new operation is BOTH Kit-EXECUTED (N-of-M=2) AND runtime-LLM-COMPOSABLE = a real
+composition multiplier (breadth-of-operations axis). Finer obs (noted, NOT over-invested): the LLM picked a
+1-cube source for 'several parts' (cardinality sub-optimal, structure correct) = a future LLM-reasoning
+refinement, separate from the STACK-receiver's value. Static 6/6 green (9/9 proven_chains). Files:
+workspace/templates/CP-CHAIN-STACK-RECV.json (new), workspace/chain_stages.json (stage + output + proven_chain),
+scripts/qa/compose_orchestrate.py (output-aware catalog).

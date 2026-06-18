@@ -79,6 +79,10 @@ async def plan_with_gemini(task, model):
                     "which is ITSELF a handoff a FURTHER pick cell can chain FROM (so this cell can be a MID-stage "
                     "source; only add a 3rd downstream cell if the task explicitly asks for a final pick/sort AFTER "
                     "this re-arrange)" % (h, ds))
+        elif m.get("output"):
+            # Terminal receiver with a NON-bin output (e.g. a STACK/column). The registry's "output"
+            # descriptor lets the LLM tell a tower-builder apart from a bin-dropper (else both read identical).
+            what = "picks parts (one OR several) off a %s handoff surface and STACKS them into %s" % (h, m.get("output"))
         else:
             what = (("picks parts (one OR several) off a %s handoff surface and deposits them into a bin" % h) if (multi or "N" in str(n))
                     else ("picks a part off a %s handoff surface and deposits it into a bin" % h))
