@@ -6691,3 +6691,15 @@ lied (counted Cube_1 delivered); per-object pick-convergence + grip-slip refuted
 cont.313d — CP-23 @ dur=90 -> GENUINE(4/4 spread-grid) [genuine 26]. Matrix tally: CP-04/21/22/23 clean (4) +
 CP-31 PARTIAL-caught (1) + CP-38 clean-volume + CP-20 topple-caught. The high-res breadth pass yields BOTH promotes
 and catches — exactly the symmetric false-pos/false-neg discipline.
+
+cont.313e — CP-02 (kit/assembly) is a MULTI-ROBOT multi-station line (Franka1->conveyor->Franka2); bare scene_eyes
+verified Franka1 genuine (RIGID HOLD) only -> NOT a bare promote (per-instance needed, like CP-07/68). 
+=== BREADTH-CAMPAIGN CONSOLIDATION (cont.305-313e, high-res, Anton's symmetric false-pos/false-neg principle) ===
+genuine 21->26. CLEAN PROMOTES (5): CP-38(12/12 volume), CP-04/21/22(4/4 bin), CP-23(4/4 spread-grid). HIGH-RES
+CATCHES (2): CP-20 (aggregate 18/18-delivered FALSE-POS -> 6 toppled, brick-layer; task #44 root corrected
+belt->topple), CP-31 (gate FALSE-PASSED Cube_1 = thrash-no-converge + Cube_2 marginal grip -> PARTIAL). TOOL: the
+★standout = belt 'conveyor-stall' was a FALSE-ALARM (aggregate movf<25% on correctly-sensor-gated belts) -> fixed
+to HIGH-RES per-object (did each box move from spawn?), catches false-pos AND false-neg. REMAINING: low-distinct
+matrix (CP-24/26, pick-place-bin already 7-genuine-covered); distinct under-covered = MULTI-ROBOT/complex
+(CP-02/07/18/58/68 need per-instance EYES_FOCUS / inspection / assembly-constraint verification) = fresh-budget.
+Lesson: per-block high-res verify (don't infer the matrix is uniform — CP-31 proved it); aggregate lies both ways.
