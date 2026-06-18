@@ -6315,3 +6315,14 @@ cause of UR10 PALLETIZERS (CP-71, CP-NEW-palletizer-mixed-sku) being PARTIAL/TRU
 pick-place-capable (CP-73 4/4), NOT multi-target grid-spread-capable. Per over-invest lesson (workaround ships;
 RD-multicube non-essential — multiplier covered by parallel-Franka + 1-cube-RD-both-dirs + Franka-LINE +
 multi-cube-Franka) -> MOVE ON to higher-value. ~10 turns dug; scene_eyes-RAW root-caused; honest stop, not giving up.
+
+cont.282 (2026-06-18) — PIVOT (Anton "långt ifrån klart, dig in" + composition-breadth deep-blocked): started the
+PLC-EXPORT direction (project_isaac_assist_plc_export_direction, zero-boot, Kit-free, untouched). scripts/qa/
+plc_export_poc.py: pick-place template -> engine-agnostic Sequence-IR (per-object guarded step chain
+approach->descend->grip->lift->transit->release) -> IEC 61131-3 SFC/ST skeleton. FAITHFUL (false-success-vakt on my
+own PoC caught + fixed 2 gaps): parses code-level drop_targets via AST (CP-08 -> 4 explicit grid [x,y,z] drops, not
+dump-at-bbox) + robot_family from the controller call (not a 'UR10' comment). Verified all 7 chain stages +
+CP-08(4)/CP-12(3). --chain mode exports a 2-station COMPOSITION (station1 -> handoff interlock -> station2) as one
+multi-station SFC = the runtime-LLM composition's OUTPUT -> deployable PLC code. This extends composition's VALUE
+(sim-validated sequence -> IEC 61131-3) without any consume-the-IR refactor (proves capture first). NEXT (deeper):
+fuller ST bodies / consume-the-IR / real PLC toolchain.

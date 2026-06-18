@@ -137,7 +137,39 @@ def emit_sfc(ir):
     return "\n".join(L)
 
 
+def chain_ir(src, recv):
+    """Export a 2-station CHAIN composition (station1 -> handoff -> station2) as one multi-station IR.
+    Each station = its own robot/cell; the handoff is a PLC interlock (part_present_at_handoff)."""
+    a, b = extract_ir(src), extract_ir(recv)
+    steps = [s for s in a["steps"] if s["step"] != "S_Done"]
+    steps.append({"step": "S_Handoff",
+                  "action": f"(* station-1 ({a['robot']}) delivered part to handoff surface; interlock to station-2 *)",
+                  "transition": "part_present_at_handoff"})
+    for s in b["steps"]:
+        if s["step"] == "S_Done":
+            continue
+        s2 = dict(s); s2["step"] = "T_" + s2["step"]  # station-2 namespace
+        steps.append(s2)
+    steps.append({"step": "S_Done", "action": "both stations -> home; halt", "transition": None})
+    return {"template": f"{src}__{recv}", "robot": f"{a['robot']}->{b['robot']}",
+            "n_objects": a["n_objects"] + b["n_objects"],
+            "doc": f"2-station CHAIN (station1 {src} [{a['robot']}] -> handoff -> station2 {recv} [{b['robot']}]). "
+                   f"Each station is its own robot/cell; handoff = a PLC interlock.",
+            "steps": steps}
+
+
 def main():
+    if "--chain" in sys.argv:
+        a = [x for x in sys.argv[1:] if not x.startswith("--")]
+        if len(a) < 2:
+            print("usage: --chain SRC RECV"); return
+        os.makedirs(OUT_DIR, exist_ok=True)
+        ir = chain_ir(a[0], a[1]); sfc = emit_sfc(ir)
+        json.dump(ir, open(f"{OUT_DIR}/{ir['template']}.ir.json", "w"), indent=2)
+        open(f"{OUT_DIR}/{ir['template']}.sfc.st", "w").write(sfc)
+        print(f"  CHAIN {a[0]}->{a[1]}: {ir['robot']}, {ir['n_objects']} obj -> IR {len(ir['steps'])} steps -> "
+              f"{OUT_DIR}/{ir['template']}.sfc.st")
+        print("DONE"); return
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
     if "--all-chain" in sys.argv:
         cs = json.load(open(f"{REPO}/workspace/chain_stages.json"))["stages"]
