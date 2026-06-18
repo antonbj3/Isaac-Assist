@@ -6014,3 +6014,15 @@ Total compose-reasoning validation now: decomposition + block-selection (9/9) + 
 layer comprehensively validated, Kit-free + parallel-safe. HONEST SCOPE: the structure cues are EXPLICIT in
 the task text ("hands off", "output IS input", "no connection"); IMPLIED-structure (infer chain-vs-parallel
 when not stated) is the next harder layer. Gemini free-tier was available again (the cont.240 429 had reset).
+
+cont.251 (2026-06-17): compose-reasoning STRUCTURE -- IMPLIED cases 2/2 (false-success-vakt on the cont.250
+explicit 3/3, which could have been lexical cue-matching on "hands off"/"independent"). imp-seq-down ("picks
+raw parts... a DOWNSTREAM Franka assembles THOSE parts into a kit" -> [CP-01,CP-50] sequential) + imp-par-elsew
+("colour-sorts widgets at the bay... ELSEWHERE palletizes crates" -> [CP-03,CP-08] parallel): the LLM infers
+chain-vs-parallel from the FLOW (downstream / elsewhere / those-parts) WITHOUT the explicit structural words =
+GENUINE structural reasoning, not lexical. So structure-classification = 5/5 (3 explicit + 2 implied). The
+END-GOAL compose-reasoning layer is now COMPREHENSIVELY validated Kit-free + parallel-safe: decompose +
+block-select (9/9) + structure (5/5 genuine) + gap-honesty (2/2) + robot-inference + op-discrim + over-compose-
+avoid. Remaining END-GOAL piece = EXECUTION (feed LLM-picked blocks -> composer -> Kit -> scene_eyes), gated by
+UR10-PhysX for robot-diversity composition (same-Kit) and re-uses the proven composer for Franka-only. The
+LLM-flow reasoning half (split b) is DONE; split c (Kit execution) is the integration that remains.

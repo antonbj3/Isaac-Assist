@@ -69,6 +69,13 @@ CASES = [
     {"id": "struct-par-indep", "gt": {"CP-03", "CP-01"}, "exp_structure": "parallel",
      "task": "Two INDEPENDENT cells side by side with NO connection: cell 1 a Franka colour-sorts parts into "
              "bins; cell 2 a Franka picks unrelated parts into a bin. No part ever moves between them."},
+    # ---- IMPLIED structure (no explicit 'handoff'/'independent' words — infer from the flow) ----
+    {"id": "imp-seq-down", "gt": {"CP-01", "CP-50"}, "exp_structure": "sequential",
+     "task": "A Franka picks raw parts onto a staging tray; a downstream Franka assembles those parts into a "
+             "finished kit."},
+    {"id": "imp-par-elsew", "gt": {"CP-03", "CP-08"}, "exp_structure": "parallel",
+     "task": "A Franka colour-sorts loose widgets at the inspection bay; elsewhere on the floor another Franka "
+             "palletizes finished crates into a grid."},
 ]
 
 
