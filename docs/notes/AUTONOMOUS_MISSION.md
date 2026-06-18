@@ -5841,3 +5841,13 @@ explicitly (moderate difficulty); harder extensions (robot-family INFERENCE when
 distractor lures, layout/handoff wiring) = next. Retrieval half (split a) stays ChromaDB-watched-window-gated.
 This is the strategic END GOAL (KOMPOSITION = runtime LLM capability) tested Kit-free, in parallel with the
 serial-Kit robot-diversity work this session.
+
+cont.240 (2026-06-17): EXTENDED compose_reason_eval.py to 9 cases incl. the HARDER ones (where the explicit
+robot+op lexical shortcut FAILS) -> 9/9 PASS, so the cont.239 5/5 was NOT easy-case luck. Added: robot-ambig
+(robot UNSPECIFIED -> Gemini inferred CP-01, exactly one pick-place cell, no extras); over-compose ("one
+station only" -> picked ONLY CP-01, did NOT over-compose into 2 cells); op-discrim ("arrange FLAT in rows+cols
+on a pallet" -> CP-08 palletize, NOT CP-13 stack = operation discrimination); gap-ur10-kit (UR10:kit/assembly
+= NULL -> FLAGGED the gap, did NOT substitute CP-50 Franka-kit = a 2nd gap-honesty PASS). So the runtime-LLM
+compose-REASONING is robust across decomposition + robot-family INFERENCE + over-composition-avoidance + op
+discrimination + gap-honesty -- the END-GOAL reasoning layer is genuinely validated (Kit-free, ChromaDB-free).
+NOTE: free-tier Gemini hit a transient 429 (auto-retried OK) -> run this eval SPARINGLY, not in a tight loop.

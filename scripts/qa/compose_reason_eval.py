@@ -45,6 +45,17 @@ CASES = [
              "(3) a Franka stacks parts into a column."},
     {"id": "gap-ur10-sort", "gt": set(), "gap": True,
      "task": "A single station where a UR10 robot sorts parts by colour into coloured bins."},
+    # ---- HARDER: the explicit robot+op lexical shortcut fails here ----
+    {"id": "robot-ambig", "gt": set(), "any_of": [{"CP-01", "CP-73"}],
+     "forbid": {"CP-03", "CP-08", "CP-13", "CP-50"},
+     "task": "A single station: a robot picks loose parts and drops them into a bin. (Robot unspecified — "
+             "choose any catalog cell that performs this operation.)"},
+    {"id": "over-compose", "gt": {"CP-01"}, "forbid": {"CP-73", "CP-03", "CP-08", "CP-13", "CP-50"},
+     "task": "One station only: a Franka robot picks loose parts and drops them into a bin."},
+    {"id": "op-discrim", "gt": {"CP-08"}, "forbid": {"CP-13"},
+     "task": "A Franka robot arranges parts neatly in rows and columns lying FLAT on a pallet surface."},
+    {"id": "gap-ur10-kit", "gt": set(), "gap": True,
+     "task": "A single station where a UR10 robot assembles a kit from loose parts."},
 ]
 
 
@@ -61,17 +72,27 @@ async def _run(model):
         picks = set(re.findall(r"CP-\d+", txt.split('"reasoning"')[0] if '"reasoning"' in txt else txt))
         picks &= _AVAIL  # only count real catalog ids
         flagged_gap = '"gaps"' in txt and bool(re.search(r'"gaps"\s*:\s*\[\s*"[^"]', txt))
-        if c["gap"]:
+        if c.get("gap", False):
             # PASS = flagged the gap AND did NOT confidently pick a (necessarily wrong) cell
             ok = flagged_gap and not picks
             verdict = "PASS" if ok else ("FALSE-PICK" if picks else "NO-GAP-FLAG")
         else:
-            ok = c["gt"] <= picks
-            verdict = "PASS" if (ok and picks == c["gt"]) else ("RECALL-OK+EXTRA" if ok else "MISS")
+            forbid_hit = picks & c.get("forbid", set())
+            must_ok = c["gt"] <= picks
+            anyof_ok = all(bool(picks & grp) for grp in c.get("any_of", []))
+            ok = must_ok and anyof_ok and not forbid_hit
+            allowed = set(c["gt"])
+            for grp in c.get("any_of", []):
+                allowed |= grp
+            extras = picks - allowed
+            verdict = (("FORBID-HIT" if forbid_hit else "MISS") if not ok
+                       else ("PASS" if not extras else "OK+EXTRA"))
         rows.append({"id": c["id"], "verdict": verdict, "picks": sorted(picks),
                      "gt": sorted(c["gt"]), "gap_flag": flagged_gap, "ok": ok})
-        print(f"  {c['id']:14s} {verdict:14s} picks={sorted(picks)} gt={sorted(c['gt'])} "
-              f"{'gapflag='+str(flagged_gap) if c['gap'] else ''}")
+        _exp = ("gap" if c.get("gap", False) else f"gt={sorted(c['gt'])}"
+                + (f" any{[sorted(g) for g in c['any_of']]}" if c.get("any_of") else "")
+                + (f" forbid={sorted(c['forbid'])}" if c.get("forbid") else ""))
+        print(f"  {c['id']:14s} {verdict:12s} picks={sorted(picks)}  {_exp}")
     n_ok = sum(r["ok"] for r in rows)
     print(f"\nCOMPOSE-REASON: {n_ok}/{len(rows)} cases OK (model={model})")
     return rows
