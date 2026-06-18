@@ -6579,3 +6579,16 @@ receiver, not just re-palletize templates. STATICALLY VERIFIED (no Gemini): only
 (can_source) gets the MID-stage note; pure receivers (CP-CHAIN-FLAT, UR10-RECV-NATIVE, franka-flat-receive) get
 "deposits into bin", no mid-note (MATCH vs expected). The Gemini-EFFECT (does the LLM now compose 3 stages) stays
 pending the quota reset — same as cont.296 — but the code is now registry-driven + general, not template-specific.
+
+cont.305 (2026-06-18) — answered Anton's scene_eyes-multi-robot probe with an ADVERSARIAL AUDIT: scene_eyes
+grip-verifies ONE robot/run (FOCUS-instance or first articulation); objects tracked scene-wide. Audited whether
+any MULTI-ROBOT gold rests on a bare single-robot run: verified_compositions.jsonl 12 multi-cell golds are ALL
+gold_kit_delivery_verified = compose_and_verify PER-INSTANCE delivery (per_inst_measurements=dict, safe by
+construction); gold_scene_eyes_verified tier only on SINGLE-cell records; 0 GENUINE catalog blocks are actually
+multi-robot (CP-12 "3 franka" was a heuristic false-positive = single Franka 3 cubes). CONCLUSION: no false-success
+from single-robot verification of multi-robot golds. My own bare CP-07 spot-check WAS single-cell -> correctly not
+promoted. Local breadth spot-checks: CP-17 (3-class sort) + CP-04 genuine grip RIGID-HOLD but BELT-STALL-throttled
+(4/6, shared belt-pause); not fakes. MODAL ACCELERATION (Anton: use the $7.8): launched modal_isaac_pool::main
+--templates <15 distinct-op Franka position-honest: color-sort/assembly/vision/other> --eyes -> parallel cloud
+run_template (fresh-Kit gate + scene_eyes each), autonomous on Modal credit (~0 CC), self-stops on .map complete.
+UR10 excluded (cloud rule). Review verdicts when CC refreshes.
