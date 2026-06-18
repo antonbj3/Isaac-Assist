@@ -6026,3 +6026,22 @@ block-select (9/9) + structure (5/5 genuine) + gap-honesty (2/2) + robot-inferen
 avoid. Remaining END-GOAL piece = EXECUTION (feed LLM-picked blocks -> composer -> Kit -> scene_eyes), gated by
 UR10-PhysX for robot-diversity composition (same-Kit) and re-uses the proven composer for Franka-only. The
 LLM-flow reasoning half (split b) is DONE; split c (Kit execution) is the integration that remains.
+
+cont.252 (2026-06-18): ★ END-GOAL split (c) CLOSED for Franka + a real deterministic composer bug FIXED.
+Ran the full loop end-to-end: LLM (Gemini compose-reasoning) on a 2-station Franka task -> picked [CP-01,CP-03]
+structure=parallel (correct) -> compose_and_verify built + measured. FIRST run verified=False: inst0(CP-01)
+delivered 0/4 while inst1(CP-03) 2/2. EYES-FIRST root-cause (after burning 2 wrong mechanism guesses --
+sub-clobber [refuted: both _curobo_pp_sub_ keys present]; concurrent-cuRobo plan-lock [made+REVERTED a
+plan-lock-global edit, didn't fix]): the per-tick trace showed inst0's panda_hand FROZEN at home the entire
+run while inst1's moved. SWAP [CP-03,CP-01] -> inst0(CP-03)=0/2, inst1(CP-01)=4/4: the frozen cell is ALWAYS
+the EARLIER-BUILT one, regardless of template = deterministic, not contention. MECHANISM: each cell's install
+runs its own world.reset() which re-creates the physics sim view and ORPHANS every prior cell's controller
+(franka handle bound to a dead view). The Scene-Reset-Manager's re-acquire hooks fire ONLY on a STOP->PLAY
+transition; compose_and_verify's measure did a BARE tl.play() -> hooks never fired -> earlier cells frozen.
+Decisive test: STOP->PLAY before measure -> inst0 hand un-freezes ([-0.388..]->[-0.002,0.307,1.32]) and
+delivers 4/4. FIX (committed 8a26dedd): pump STOP->PLAY+settle before the measurement play. CONFIRMED:
+[CP-01,CP-03] -> inst0 4/4 + inst1 2/2 -> verified=True -> VERIFIED_COMPOSITION_APPENDED. ★ scene_eyes (the
+authoritative gold gate) ALREADY does STOP->PLAY (lines 251-256), so it was never affected -> the scene_eyes-
+gated composed golds (#34 3-cell, #38 5-cell) STAND; this was a bug ONLY in the L2 verified-composition
+training-data generator, which explains the long-noted compose_and_verify-vs-scene_eyes DIVERGENCE. So the
+task->LLM->compose->Kit->verify loop is now GREEN for Franka. Memory: feedback_composed_scene_needs_stopplay.
