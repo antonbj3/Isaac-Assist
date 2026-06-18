@@ -6410,3 +6410,11 @@ multi-cube, palletize-receiver grid-output, generality) + 3 latent bug fixes (dr
 list-offset #41, gripper_rotation schema) + PLC-export PoC+coverage (7 chains->deployable ST) + UR10 grid-spread
 thoroughly RCA'd (5 angles, pure IK-flail, deferred). REMAINING = DEEP/FRESH-CONTEXT: UR10 IK shared-controller
 fix, PLC consume-IR refactor (IR-executor), real-assets/L3.
+
+cont.292 (2026-06-18) — NO-REGRESSION confirmed for the shared composer fix (#41, POSITION_KWARGS += drop_targets).
+Composed CP-08 @offset [0.5,-0.8] (DICT drop_targets) after the fix = clean 2x2 GRID (4 objs, 1 z-level 0.825,
+min-pair 0.137m distinct slots, ALL 4 CONVERGED+GRIPPED) — the dict-offset path is byte-unchanged in practice
+(not just inspection), no regression. So the composer fix is empirically verified BOTH ways: LIST form works
+(palletize-receiver cont.284) + DICT form unregressed (composed CP-08 here). Directive-mandated no-regression of
+a shared change = DONE. The 3 latent bug fixes (drop_targets schema, composer list-offset, gripper_rotation
+schema) are all solid + verified. Tractable composition vein = mined; remaining = deep/fresh-context.
