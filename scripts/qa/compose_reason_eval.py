@@ -30,6 +30,11 @@ SYS = ("You are a factory-scene COMPOSITION PLANNER. You build scenes by selecti
        "Also classify the composition STRUCTURE: 'sequential' if the cells form a HANDOFF CHAIN (one cell's "
        "output part becomes the next cell's input), or 'parallel' if the cells are INDEPENDENT side-by-side "
        "stations with no part handoff between them. "
+       "CRITICAL structure rule: the mere presence of 'Station 1'/'Station 2', numbering, or ordering words "
+       "does NOT by itself make it sequential. Classify 'sequential' ONLY when a PHYSICAL part handled by one "
+       "cell is then HANDED TO and handled by the next cell. If each cell processes its OWN separate/unrelated "
+       "parts with nothing crossing between cells, it is 'parallel' even when the stations are numbered or "
+       "listed in order. Ask: does a part LEAVE cell A and ENTER cell B? If no -> parallel. "
        'Return ONLY JSON: {"cells":["CP-XX",...],"structure":"sequential|parallel","gaps":["..."],"reasoning":"one sentence"}.')
 
 # ground_truth grounded in canonical_blocks; "gap" = the cell asked for is null in the catalog
