@@ -6764,3 +6764,7 @@ scene/placement issue, deferred (redundant class). PICK-PLACE-BIN MATRIX COMPLET
 CP-31/CP-26 caught (2) = 2/7 fail the per-object checks the position-gate passed. Verify-EACH robustly validated
 (don't assume matrix uniformity). High-res breadth campaign cont.305-316b: genuine 21->28, 4 high-res catches
 (CP-20/CP-31/CP-26 + the belt-stall false-NEG on myself), 3 golds adversarially confirmed, 2 partials resolved.
+
+cont.316c — CP-32 (vision-driven 2-color sorter) GENUINE(vision-routed 2/2) via HIGH-RES ROUTING [genuine 29]:
+2/2 gripped + blue->BlueBin / red->RedBin (<0.01m off, sep 0.794m) = vision-classifier routing genuinely correct.
+Position-honest verification yields BOTH promotes (CP-18/32 routing-correct) and catches (CP-31/26 toppled/thrash).
