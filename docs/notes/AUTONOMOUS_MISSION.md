@@ -5903,3 +5903,19 @@ flip-flopped TWICE (234 wrong-goals[degraded ctrl:] -> 242 phantom[goal-capture 
 outcome (arm-motion + delivered) on a FRESH Kit before it is trustworthy. The Franka->UR10 GOLD + zero-offset
 workaround STAND throughout (always genuinely delivered, RAW-audited). Closing the UR10-offset deep-dive here:
 thoroughly characterized (real failure, goals correct, plan/exec cause open), workaround proven, GOLD intact.
+
+cont.244 (2026-06-17): wound-home hypothesis REFUTED -> CLOSING the UR10-offset cause hunt. Joints probe
+(build native vs offset, read SingleArticulation.get_joint_positions after 120 updates): NATIVE
+[0.799,-1.583,1.724,-1.709,-1.571,0.221], OFFSET [0.739,-1.582,1.712,-1.697,-1.571,0.203] -- NEAR-IDENTICAL,
+both near home [0,-1.571,1.571,-1.571,-1.571,0]. So the offset UR10 IS homed (the AUTO-REPAIR robot_wizard(
+home_joints) + re-rooting work); the stuck ee=[1.683,-0.495] is ~the HOME EE (arm starts homed, plan fails,
+stays near home). So NOT a wound-home bug. NET after the full hunt: under origin_offset the cuRobo plan_pose
+FAILS (real, reproduces) for an UN-INSPECTABLE reason -- every input I can read is base-relative-IDENTICAL to
+native and CORRECT: goals (point_world tracks cube/tray), home/start config (near-home), obstacles (rerooted +
+_world_to_base), robot base pose (_usd_pos offset-correct). The cause is a deep cuRobo-INTERNAL (collision-
+spheres / world-config / planner state under a non-origin base) that I cannot reach by code-read or the
+ctrl:*/joints/goal instrumentation available; it would need cuRobo-library-level tracing. CLOSING here: the
+zero-offset workaround (CP-CHAIN-UR10-RECV-NATIVE, bake the geometry native so off=0) sidesteps it cleanly and
+is the RIGHT engineering answer (the cross-Kit chain runs each stage in its own Kit, so native-bake costs
+nothing). Franka->UR10 GOLD + 3-stage + workaround all STAND. Hypotheses refuted this arc: wrong-goals(234),
+degraded-phantom(242), wound-home(244) -- 3 strikes = stop guessing, the workaround is the deliverable.
