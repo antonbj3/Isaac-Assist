@@ -6713,3 +6713,10 @@ cont.313g — ★CP-18 (inspect/vision) GENUINE(inspect-routed) via HIGH-RES ROU
 good->GoodBin (spread 0.004m) + Cube_bad REJECTED 0.603m away = inspection CORRECT. Aggregate 5/5-gripped could
 have masked a mis-route; per-object xy confirmed it (Anton's principle). DISTINCT under-covered class now covered +
 set as the Franka:inspect/vision CANONICAL rep (was null). Higher value than matrix grind — fills a capability gap.
+
+cont.314 (2026-06-18, Anton "kör på") — PROACTIVE ADVERSARIAL GOLD AUDIT (directive: försök REFUTERA golds): 
+CP-15 (3-cube graduated tower GENUINE-column) on FRESH Kit -> 3/3 gripped, clean 3-tier column (z 0.83/0.885/0.93,
+tight xy), NO topple = CONFIRMED (not refuted). CP-19 (6-cube grid GENUINE-grid) -> 6/6 gripped, FLAT spread grid
+(min-pair 0.070m clear gaps, NOT collapsed), no topple = CONFIRMED. Both held under the high-res topple/collapse
+checks -> the GENUINE gold set is adversarially-solid (no hidden false-positives in the sampled column+grid). The
+belt high-res line fires correctly on CP-19 too ("100% advanced -> NOT a stall").
