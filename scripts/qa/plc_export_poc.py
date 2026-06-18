@@ -87,6 +87,21 @@ def _code_gripper_rotation(code):
     return None
 
 
+def _code_kwarg_const(code, name):
+    """AST-extract a NUMERIC literal kwarg (e.g. approach_height) from the controller call. None if absent
+    or non-literal (runtime-computed)."""
+    try:
+        tree = ast.parse(code)
+    except Exception:
+        return None
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Call) and getattr(node.func, "id", "") == "setup_pick_place_controller":
+            for kw in node.keywords:
+                if kw.arg == name and isinstance(kw.value, ast.Constant) and isinstance(kw.value.value, (int, float)):
+                    return float(kw.value.value)
+    return None
+
+
 def _orientation_for(sa, code):
     """Resolve place orientation -> (literal_value_or_None, capture_mode). capture_mode in
     {'literal','runtime_computed','none'}. runtime_computed = present in code but not a static literal."""
@@ -126,6 +141,9 @@ def extract_ir(tid):
     robot = sa.get("robot_family") or _code_robot_family(_code) or ("ur10" if "/World/UR10" in _code else "franka")
     pairs = _cubes_and_targets(sa, _code)
     gr, orientation_capture = _orientation_for(sa, _code)
+    approach_h = sa.get("approach_height")
+    if approach_h is None:
+        approach_h = _code_kwarg_const(_code, "approach_height")  # template's actual approach clearance (varies 0.05-0.2)
 
     def _yaw(cube, i):
         if isinstance(gr, dict):
@@ -158,6 +176,7 @@ def extract_ir(tid):
     return {
         "template": tid, "robot": robot, "n_objects": len(pairs),
         "orientation_capture": orientation_capture,  # literal | runtime_computed (LOSSY) | none
+        "approach_height": approach_h,  # actual template value (None = not set -> PoC default in ST)
         "doc": "Engine-agnostic pick-place sequence IR (IEC 61131-3 SFC-shaped). One guarded step chain per object.",
         "steps": steps,
     }
@@ -187,6 +206,8 @@ def ir_to_controller_args(ir):
         args["destination_path"] = dest
     if rots:
         args["gripper_rotation"] = rots   # PLACE orientation reconstructed from the IR
+    if ir.get("approach_height") is not None:
+        args["approach_height"] = ir["approach_height"]
     return args
 
 
@@ -233,9 +254,16 @@ def roundtrip_check(tid):
         orient_ok = bool(gnorm) and all(
             cp in rec_gr and round(float(gnorm[cp]), 3) == round(float(rec_gr[cp]), 3) for cp in gnorm)
         orient_note = "literal_captured" if orient_ok else "literal_mismatch"
+    # APPROACH HEIGHT (literal only; runtime-computed approach_height is rare and treated as absent -> None)
+    orig_ah = sa.get("approach_height")
+    if orig_ah is None:
+        orig_ah = _code_kwarg_const(code, "approach_height")
+    rec_ah = recon.get("approach_height")
+    approach_ok = (orig_ah is None and rec_ah is None) or (
+        orig_ah is not None and rec_ah is not None and round(float(orig_ah), 4) == round(float(rec_ah), 4))
     return {"template": tid, "source_paths": src_ok, "drop_targets": drops_ok, "destination": dest_ok,
-            "orientation": orient_ok, "orientation_note": orient_note,
-            "lossless": src_ok and drops_ok and dest_ok and orient_ok, "recon": recon}
+            "orientation": orient_ok, "orientation_note": orient_note, "approach_height": approach_ok,
+            "lossless": src_ok and drops_ok and dest_ok and orient_ok and approach_ok, "recon": recon}
 
 
 def _phase_of(step_name):
@@ -289,10 +317,12 @@ def emit_sfc(ir):
     L.append("    CMD_MOVEL   : INT := 2;    (* linear move to recipe target + offset_z *)")
     L.append("    CMD_GRIP    : INT := 3;")
     L.append("    CMD_RELEASE : INT := 4;")
-    L.append("    APPROACH_H  : REAL := 0.10;    (* pre-grasp approach height, m *)")
+    ah = ir.get("approach_height")
+    ah_src = "from template" if ah is not None else "PoC default (template did not set it) -- integrator tunes"
+    L.append(f"    APPROACH_H  : REAL := {float(ah) if ah is not None else 0.10};    (* pre-grasp approach height, m -- {ah_src} *)")
     L.append("    GRASP_H     : REAL := 0.0;     (* grasp height *)")
-    L.append("    LIFT_H      : REAL := 0.15;    (* post-grip lift *)")
-    L.append("    DROP_H      : REAL := 0.05;    (* pre-release drop height *)")
+    L.append("    LIFT_H      : REAL := 0.15;    (* post-grip lift -- PoC default, integrator tunes *)")
+    L.append("    DROP_H      : REAL := 0.05;    (* pre-release drop height -- PoC default, integrator tunes *)")
     L.append("END_VAR")
     L.append("VAR")
     L.append("    step       : INT  := 0;")

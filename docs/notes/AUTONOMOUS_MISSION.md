@@ -6485,3 +6485,15 @@ genuinely lossless WITH orientation (literal_captured); 6dof honestly lossless=F
 UNREGRESSED (no_orientation, still lossless); 12/12 ST still parse under blark (place_yaw kept it valid). The
 consume-IR claim is now scoped+honest: position + LITERAL orientation captured & verified, runtime-computed
 orientation explicitly NOT captured.
+
+cont.299 (2026-06-18, Kit-free) — consume-IR audit, 3rd blind spot: the IR hardcoded APPROACH_H:=0.10 and
+ignored the template's ACTUAL approach_height. 49 templates set it explicitly with real variance (0.05-0.2) —
+e.g. label-applicator's deliberate 0.05 (tight tolerance) was exported as 0.10 (DOUBLE the clearance), 6dof
+likewise. FIX: _code_kwarg_const AST-extracts approach_height; extract_ir carries it; ir_to_controller_args
+reconstructs it; roundtrip_check compares it; emit_sfc emits the REAL value labeled "from template" (and labels
+LIFT_H/DROP_H/GRASP_H honestly as "PoC default — integrator tunes" so there's no false precision). VERIFIED:
+label-applicator now exports APPROACH_H:=0.05, lift-assist :=0.2; chain templates (unset) say "PoC default";
+roundtrip approach=True for all; 6dof still lossless=False (orientation); 12/12 ST parse. CONSUME-IR AUDIT
+COMPLETE across 3 axes (ST grammar-validity / orientation / approach-height) — 3 false-successes caught+fixed
+on my own PLC tooling (cont.297-299). The IR is now faithful within its documented scope; remaining heights are
+honestly-labeled PoC defaults, not silent fabrications.
