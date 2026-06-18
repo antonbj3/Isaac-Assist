@@ -6497,3 +6497,9 @@ roundtrip approach=True for all; 6dof still lossless=False (orientation); 12/12 
 COMPLETE across 3 axes (ST grammar-validity / orientation / approach-height) — 3 false-successes caught+fixed
 on my own PLC tooling (cont.297-299). The IR is now faithful within its documented scope; remaining heights are
 honestly-labeled PoC defaults, not silent fabrications.
+
+cont.299b — committed the consume-IR faithfulness as a REGRESSION GUARD (test_plc_roundtrip.py, 7/7): locks in
+position-lossless on chains, literal-orientation captured, runtime-computed-orientation honestly lossless=False,
+approach_height captured. Turns the 3 inline verifications (cont.297-299) into a reproducible test so the
+tautological-blindness can't silently return. PLC-export PoC audit fully closed (3 fixes + 2 committed tests:
+test_plc_st_parses.py grammar + test_plc_roundtrip.py faithfulness).
