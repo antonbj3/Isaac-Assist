@@ -6643,3 +6643,9 @@ flagged). PROMOTED CP-38 -> GENUINE(volume-bin 12/12) [genuine 21->22, position_
 So the belt-fed sorter blocks are GENUINE + promotable (run adequate dur ~15s x n_cubes), NOT belt-blocked — NO
 dedicated belt-pause fix needed; task #37/#44 re-read as "dur too short" not a belt bug. The cheap longer-dur re-run
 was the decisive falsification. Memory + index corrected.
+
+cont.311 (2026-06-18, local) — CP-04 (pick-place-bin, 4 cubes) re-verified at adequate dur=90 -> 4/4
+CONVERGED+GRIPPED + delivered/stacked in bin (RIGID HOLD); the dur=60 Cube_1 perch (z=1.114) was WINDOW-CUT
+(settles to 0.935 top-of-stack at dur=90); belt MOVING 32% -> NO stall (fix confirmed live). PROMOTED ->
+GENUINE(4/4 bin) [genuine 22->23]. 2nd confirmation that belt-fed single-bin blocks are GENUINE+window-limited,
+not stalled. Pattern: re-verify belt-fed position-honest blocks at adequate dur (~15s x n_cubes) -> promote.

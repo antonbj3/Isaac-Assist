@@ -37,8 +37,8 @@
     "CP-04": {
       "robot": "Franka",
       "class": "pick-place-bin",
-      "verdict": "TRUSTED(position-honest)",
-      "basis": "delivery-gate (honest for bin/sort)",
+      "verdict": "GENUINE(4/4 bin)",
+      "basis": "scene_eyes cont.310: 4/4 CONVERGED+GRIPPED + delivered/stacked in bin (RIGID HOLD) @ dur=90; the dur=60 Cube_1 perch (z=1.114) was WINDOW-CUT (settles to 0.935 top-of-stack at adequate dur); belt MOVING 32% no stall",
       "n_objects": 4
     },
     "CP-07": {
@@ -507,8 +507,8 @@
   "summary": {
     "trusted": 64,
     "_trusted_note": "the 64 'trusted' = 21 GENUINE (execution-verified by scene_eyes) + 43 position-honest-ONLY (gate said position-ok, EXECUTION NOT verified). Compose-trust the 21 genuine; treat the 43 as candidates that still need an execution check before a GOLD composition claim.",
-    "genuine_execution_verified": 22,
-    "position_honest_only": 42,
+    "genuine_execution_verified": 23,
+    "position_honest_only": 41,
     "false": 1,
     "partial": 5,
     "pending": 0,
