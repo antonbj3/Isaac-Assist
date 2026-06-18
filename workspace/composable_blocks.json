@@ -240,7 +240,7 @@
     "CP-36": {
       "robot": "Franka",
       "class": "pick-place-bin",
-      "verdict": "TRUSTED(position-honest)",
+      "verdict": "GENUINE(scene_eyes 4/4 CONVERGED+GRIPPED, two-tier shelf storage; cont.318e)",
       "basis": "delivery-gate (honest for bin/sort)",
       "n_objects": 4
     },
@@ -352,7 +352,7 @@
     "CP-56": {
       "robot": "Franka",
       "class": "pick-place-bin",
-      "verdict": "TRUSTED(position-honest)",
+      "verdict": "FALSE(scene_eyes 0/4: rotary disc 30deg/s friction-drives cubes during pick -> THRASH(Cube_1)+GRIP-SLIP(Cube_2/3/4 contact-never-lifted)+3 toppled; moving-target defeats grip; belt-pause may not pause a rotary disc; cont.318e)",
       "basis": "delivery-gate (honest for bin/sort)",
       "n_objects": 4
     },
@@ -478,7 +478,7 @@
     "CP-NEW-kit-prep-operator": {
       "robot": "Franka",
       "class": "kit/assembly",
-      "verdict": "TRUSTED(position-honest)",
+      "verdict": "GENUINE(scene_eyes 5/5 CONVERGED+GRIPPED, 5-part kitting; cont.318e)",
       "basis": "delivery-gate (honest for bin/sort)",
       "n_objects": 5
     },
@@ -499,17 +499,17 @@
     "CP-NEW-yrkesroll-inspector-reject-divert": {
       "robot": "Franka",
       "class": "color-sort",
-      "verdict": "TRUSTED(position-honest)",
+      "verdict": "GENUINE(scene_eyes 4/4 gripped + ROUTING-verified: 3 good->GoodBin x=-0.35, reject Cube_3->RejectBin x=+0.35; cont.318e)",
       "basis": "delivery-gate (honest for bin/sort)",
       "n_objects": 4
     }
   },
   "summary": {
-    "trusted": 60,
-    "_trusted_note": "the 60 'trusted' = 36 GENUINE (execution-verified by scene_eyes) + 24 position-honest-ONLY (gate said position-ok, EXECUTION NOT verified). Compose-trust the 36 genuine; treat the 24 as candidates that still need an execution check before a GOLD composition claim.",
-    "genuine_execution_verified": 36,
-    "position_honest_only": 24,
-    "false": 1,
+    "trusted": 59,
+    "_trusted_note": "the 59 'trusted' = 39 GENUINE (execution-verified by scene_eyes) + 20 position-honest-ONLY (gate said position-ok, EXECUTION NOT verified). Compose-trust the 39 genuine; treat the 20 as candidates that still need an execution check before a GOLD composition claim.",
+    "genuine_execution_verified": 39,
+    "position_honest_only": 20,
+    "false": 2,
     "partial": 9,
     "pending": 0,
     "total": 70

@@ -6866,3 +6866,16 @@ false-positive fixed (bin-aware orientation). composable_blocks.json summary: ge
 position_honest_only=24, partial=9, trusted=60, total=70. Remaining accessible single-robot position-honest:
 CP-56 (rotary), CP-36 (shelf), CP-NEW-kit-prep, CP-NEW-inspector, + niche (CP-54/vacuum suction, CP-58 peg,
 CP-61 CortexFranka). Commits 390d7876 (fix) + this (promotions).
+
+cont.318e — breadth batch3: CP-36 (two-tier shelf 4/4) + CP-NEW-kit-prep (5-part kitting 5/5) + CP-NEW-inspector
+(reject-divert 4/4 gripped + ROUTING-verified: 3 good->GoodBin x=-0.35, reject Cube_3->RejectBin x=+0.35) ->
+GENUINE. ★ CP-56 (rotary-table) -> FALSE real catch (0/4): the disc rotates 30deg/s as belt_path + friction-drives
+the cubes during the pick -> Cube_1 THRASH-NO-CONVERGE, Cube_2/3/4 GRIP-SLIP (contact, never lifted), 3 toppled;
+the moving target defeats the grip (belt-pause likely does NOT pause a ROTARY disc — angular vs linear
+surfaceVelocity; the fix touches the shared belt-pause = DEFERRED per the no-regression rule, niche block). CP-44
+mechanism confirmed real (sphere squirts from the parallel-finger grip, ejected to x=19.16 — not a tool artifact).
+composable_blocks.json: genuine 36->39, position_honest 24->20, false 1->2, partial 9, trusted 59, total 70.
+★ CAMPAIGN TALLY (option a, cont.318c-e): genuine 31->39 (+8: CP-45/37/41/66/17/36/kit-prep/inspector), 1 PARTIAL
+(CP-44 sphere-squirt), 1 FALSE (CP-56 rotary-moving-target), 1 scene_eyes TOOL-FIX (bin-aware orientation +
+deterministic test_bin_containment.py). Accessible single-robot Franka campaign = 10 blocks driven; remaining =
+niche higher-risk 3 (CP-54 suction / CP-58 peg-insertion / CP-61 CortexFranka) + multi-robot 7 (deep, deferred).
