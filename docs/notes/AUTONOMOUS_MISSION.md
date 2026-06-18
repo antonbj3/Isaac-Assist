@@ -6120,3 +6120,24 @@ and PARALLEL in another. Tempers the cont.250-251 "structure 5/5 comprehensively
 No wrong ACTION today (sequential gated regardless) but matters once sequential exec is wired -> #28 follow-up
 (sharpen no-handoff criterion / ensemble-vote structure). Scope: this is #1 (wire the loop), NOT
 composition-done; diversity/sequential-exec/breadth/L3 remain GATED+open, transparently.
+
+cont.257-261b (2026-06-18) — ★★ #2 ROBOT-DIVERSITY MULTIPLIER UNBLOCKED (Anton 24h deep-effort mandate).
+Full detail: docs/notes/UR10_OFFSET_RECEIVER_FIX.md. The "UR10 mis-handles origin_offset, must be co-designed
+zero-offset" block (cont.234-235, the thing forcing hand-built CP-CHAIN-UR10-* pairs) was a PHANTOM +
+MEASUREMENT ARTIFACT, demolished diagnostik-först: reach_validate --offset (new flag) showed offset pick
+REACHABLE; scene_eyes --compose @offset[0.5,-0.8] showed the UR10 receiver GRIPS+DELIVERS on the offset Tray
+(xy-verified, 0 planfails) -> "UR10 fails at offset" REFUTED. The chain harness still plan-failed (3950
+res_None) though -> false-success-vakt: NOT path 3 working. Dump proved the build was IDENTICAL to scene_eyes;
+ROOT CAUSE = chain_xkit_gate._play_and_measure did a BARE play (no STOP->PLAY) = a THIRD harness with the
+cont.256 freeze-class bug (the audit missed it: it reroots via execute_template_canonical directly, not via
+compose_canonicals). Fix = STOP->PLAY re-acquire, GATED reacquire=not has_sensor (an unconditional one
+REGRESSED the path-2 Franka relay by teleporting its post-build relay cube — caught by the native-chain
+no-regression run, not the path-3 success). VERIFIED: native GOLD CP-CHAIN-UR10-SRC->CP-CHAIN-FLAT=1/1+1/1
+(unregressed) AND path-3 forced off=[0.5,-0.8]=1/1 0-planfail. Commits 9f386869+9fa30406. Tools added:
+reach_validate --offset, chain_xkit_gate CHAIN_FORCE_OFF + __main__ guard. RESULT: robot-diversity cross-Kit
+chains now generalize to ARBITRARY-offset UR10 receivers via path-3 (own-cube) — no hand-designed zero-offset
+pairs needed = the breadth × robot-diversity multiplier is no longer offset-gated. Memory corrected
+(chain_relay_crossns: the offset-failure REFUTED; feedback_composed_scene_needs_stopplay: third harness +
+"STOP->PLAY not universally safe, gate it"). NEXT: wire this into the orchestrator (#1 compose_orchestrate
+routes sequential/diverse -> chain_xkit_gate now that arbitrary offsets work) + a genuinely non-co-designed
+Franka->UR10 chain demo + breadth.
