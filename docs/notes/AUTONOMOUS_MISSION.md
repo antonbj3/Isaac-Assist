@@ -6730,3 +6730,12 @@ scenes (not just compose/attach): EYES_FOCUS=Franka2 -> focuses /World/Franka2, 
 multi-robot single-templates (CP-02/07/68). ★mät-först CAUGHT an incomplete first attempt (robot-detection only
 matched UNDER FOCUS/, silently fell back to auto-detect -> still Franka1); fixed to match AT-FOCUS too; validated
 live (robot=/World/Franka2). The live-test earned its keep.
+
+cont.315b — CP-02 multi-station verification via the FOCUS upgrade revealed a DEEPER tooling gap: EYES_FOCUS=Franka2
+correctly focuses the EE/tool (robot=/World/Franka2), BUT the GRIP-CONTACT/convergence isn't scoped to the focused
+robot — grip-slip detection is SCENE-WIDE (reports the cube's first grip = Franka1's, degenerate 0@0.0s for the
+Franka2 run) + no Franka2 pick-convergence. So per-robot EE-focus works; per-robot GRIP-ATTRIBUTION for multi-
+station scenes is a separate gap (would need to scope the grip-contact span to the FOCUS robot's gripper + handle
+handoff-timing/longer dur). CP-02 stays position-honest HONESTLY (Franka1 genuine RIGID HOLD; Franka2+handoff
+unverified) — don't promote on inconclusive 2nd-station data. The multi-station verification is fresh-budget
+(per-robot grip scoping). The FOCUS upgrade itself is sound + committed (unlocks the EE-focus half).
