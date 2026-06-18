@@ -60,10 +60,25 @@ def main():
             fails.append(f"{a}->{b}")
 
     print(f"\n{n - len(fails)}/{n} ST artifacts parse under the blark IEC 61131-3 grammar.")
+
+    # SECOND BACKEND (hot-swap thesis): the ROS2/MoveItPy node emitted from the SAME IR must be valid Python.
+    import ast
+    r_ok = 0
+    for tid in singles:
+        if not os.path.exists(f"{plc.TPL_DIR}/{tid}.json"):
+            continue
+        try:
+            ast.parse(plc.emit_ros2(plc.extract_ir(tid)))
+            r_ok += 1
+        except SyntaxError as e:
+            print(f"  ROS2 FAIL {tid}: {e}")
+            fails.append(f"ros2:{tid}")
+    print(f"{r_ok} ROS2 backend nodes are ast-valid Python (same IR -> 2nd backend).")
+
     if fails:
-        print("REGRESSION -- these do NOT parse:", fails)
+        print("REGRESSION:", fails)
         sys.exit(1)
-    print("ALL PARSE.")
+    print("ALL BACKENDS VALID (ST + ROS2).")
 
 
 if __name__ == "__main__":

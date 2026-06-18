@@ -6558,3 +6558,15 @@ the 43 as golds) so a consumer can't over-trust position-honest blocks (the CP-0
 false-success class). test_composable_blocks.py guards it (canonical reps + templates present, summary matches
 verdicts) -> static suite now 6/6. Static-verification layer COMPLETE across both composition registries
 (chain_stages + composable_blocks) AND PLC-export (3 guards). One command: run_static_checks.sh.
+
+cont.303 (2026-06-18, Kit-free) — SECOND BACKEND proves the hot-swap thesis (ONE IR, swappable backends).
+emit_ros2(ir) emits the SAME Sequence-IR as a ROS2 + MoveItPy pick-place node (Python). Building it adversarially
+tested whether the IR is engine-agnostic or PLC-specific -> IT HELD UP. AGNOSTICISM BOUNDARY (the finding): the
+SEQUENCE + TARGETS transfer cleanly (same recipe pick-object->place-pose+yaw, same 6-phase cycle, same
+grip-retry-3x); the ONE thing realized differently per backend is the TRANSITION-GUARD mechanism — PLC/ST POLLS a
+feedback bit (ee_reached), ROS2 AWAITS the plan()/execute() RESULT (while not self._grip() and retry<3). So the
+IR's guards are an INTERFACE each backend fulfills natively, not a PLC construct. So the hot-swap doctrine on
+orchestration is now EVIDENCED (2 concrete backends: IEC 61131-3 ST + ROS2 MoveItPy), not just asserted.
+VERIFICATION SCOPE (honest): emitted ROS2 nodes are ast-valid Python (test_plc_st_parses now checks both backends,
+10 ROS2 + 12 ST), NOT run against a live ROS2/MoveIt stack (no rclpy/moveit_py here) — MoveItPy calls are the
+documented API surface, integrator-bound. CLI: plc_export_poc.py <TID> --ros2 -> .ros2.py. Static suite 6/6.

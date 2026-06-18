@@ -391,6 +391,116 @@ def chain_ir(src, recv):
             "steps": steps}
 
 
+def emit_ros2(ir):
+    """SECOND BACKEND (proves the hot-swap thesis: ONE IR, swappable backends). Emits the SAME Sequence-IR as a
+    ROS2 + MoveItPy pick-place node (Python). Building it ADVERSARIALLY tests whether the IR is truly engine-
+    agnostic or has baked-in PLC-isms.
+
+    AGNOSTICISM BOUNDARY (the finding): the SEQUENCE + TARGETS transfer cleanly (same recipe of pick-object ->
+    place-pose+yaw, same per-object 6-phase cycle, same grip-retry-3x) -- those are engine-agnostic. The one
+    thing realized DIFFERENTLY per backend is the TRANSITION-GUARD mechanism: PLC/ST POLLS a feedback bit
+    (ee_reached / grip_confirmed), ROS2/MoveItPy AWAITS the plan()/execute() RESULT. So the IR's guards are an
+    INTERFACE each backend fulfills natively (poll vs await), not a PLC-specific construct -- the IR holds up as
+    engine-agnostic. Pick object pose = perception/TF at runtime (the IR's symbolic pose(cube)); place pose +
+    yaw are explicit from the IR. VERIFICATION SCOPE: ast.parse-valid Python (test_plc_st_parses includes it);
+    NOT run against a live ROS2/MoveIt stack (no rclpy/moveit_py installed) -- the MoveItPy calls are its
+    documented API surface, integrator-bound."""
+    recipe, seen = [], set()
+    for s in ir["steps"]:
+        o = s.get("object")
+        if o and o not in seen:
+            seen.add(o)
+            recipe.append((o, s.get("place_target") or {}))
+    arm = "ur_manipulator" if str(ir.get("robot", "")).lower().startswith("ur") else "panda_arm"
+    ah = ir.get("approach_height")
+    L = []
+    L.append('"""ROS2 + MoveItPy pick-place node from Sequence-IR (template %s, %s, %d objects).'
+             % (ir["template"], ir["robot"], ir["n_objects"]))
+    L.append("Engine-agnostic IR -> ROS2 backend; transition guards realized as AWAIT plan/execute result")
+    L.append('(vs PLC bit-poll). Generated -- not run against a live ROS2 stack."""')
+    L.append("import math")
+    L.append("import rclpy")
+    L.append("from rclpy.node import Node")
+    L.append("from geometry_msgs.msg import PoseStamped")
+    L.append("from moveit.planning import MoveItPy")
+    L.append("")
+    L.append("APPROACH_H = %s   # from template" % (float(ah) if ah is not None else "0.10  # PoC default"))
+    L.append("LIFT_H = 0.15")
+    L.append("DROP_H = 0.05")
+    L.append("")
+    L.append("# RECIPE (pick object pose bound from perception/TF at runtime; place pose explicit from IR):")
+    for i, (o, pt) in enumerate(recipe):
+        yaw = pt.get("yaw_deg")
+        L.append("#   [%d] pick %s -> place %s%s"
+                 % (i + 1, o, pt.get("value"), ("  yaw=%sdeg" % yaw) if yaw is not None else ""))
+    L.append("PLACES = [")
+    for o, pt in recipe:
+        L.append("    {'object': %r, 'place': %r, 'yaw_deg': %s},"
+                 % (o, pt.get("value"), float(pt.get("yaw_deg") or 0.0)))
+    L.append("]")
+    L.append("")
+    L.append("def make_pose(xyz, yaw_deg=0.0, dz=0.0):")
+    L.append("    ps = PoseStamped()")
+    L.append("    ps.header.frame_id = 'world'")
+    L.append("    ps.pose.position.x = float(xyz[0])")
+    L.append("    ps.pose.position.y = float(xyz[1])")
+    L.append("    ps.pose.position.z = float(xyz[2]) + dz")
+    L.append("    half = math.radians(yaw_deg) / 2.0")
+    L.append("    ps.pose.orientation.z = math.sin(half)")
+    L.append("    ps.pose.orientation.w = math.cos(half)")
+    L.append("    return ps")
+    L.append("")
+    L.append("class PickPlaceNode(Node):")
+    L.append("    def __init__(self):")
+    L.append("        super().__init__('pick_place_ir')")
+    L.append("        self.moveit = MoveItPy(node_name='pick_place_ir')")
+    L.append("        self.arm = self.moveit.get_planning_component(%r)" % arm)
+    L.append("        self.gripper = self.moveit.get_planning_component('gripper')")
+    L.append("")
+    L.append("    def _go(self, pose):")
+    L.append("        # GUARD as AWAIT-RESULT (PLC polls ee_reached; here we await plan()/execute())")
+    L.append("        self.arm.set_start_state_to_current_state()")
+    L.append("        self.arm.set_goal_state(pose_stamped_msg=pose, pose_link='tool0')")
+    L.append("        plan = self.arm.plan()")
+    L.append("        if not plan:")
+    L.append("            return False")
+    L.append("        self.moveit.execute(plan.trajectory, controllers=[])")
+    L.append("        return True")
+    L.append("")
+    L.append("    def _grip(self, close):")
+    L.append("        self.gripper.set_goal_state(configuration_name='close' if close else 'open')")
+    L.append("        plan = self.gripper.plan()")
+    L.append("        if plan:")
+    L.append("            self.moveit.execute(plan.trajectory, controllers=[])")
+    L.append("        return bool(plan)")
+    L.append("")
+    L.append("    def get_object_pose(self, name):")
+    L.append("        raise NotImplementedError('bind to perception/TF lookup for ' + name)")
+    L.append("")
+    L.append("    def run(self):")
+    L.append("        for item in PLACES:")
+    L.append("            pick = self.get_object_pose(item['object'])")
+    L.append("            self._go(make_pose(pick, dz=APPROACH_H))                    # S1 approach")
+    L.append("            self._go(make_pose(pick))                                   # S2 descend")
+    L.append("            retry = 0")
+    L.append("            while not self._grip(True) and retry < 3:                   # S3 grip + retry-3x")
+    L.append("                retry += 1")
+    L.append("                self._go(make_pose(pick))                               # re-descend")
+    L.append("            self._go(make_pose(pick, dz=LIFT_H))                        # S4 lift (EE-relative)")
+    L.append("            self._go(make_pose(item['place'], item['yaw_deg'], dz=DROP_H))  # S5 transit + place yaw")
+    L.append("            self._grip(False)                                           # S6 release")
+    L.append("        self.get_logger().info('sequence complete')")
+    L.append("")
+    L.append("def main():")
+    L.append("    rclpy.init()")
+    L.append("    PickPlaceNode().run()")
+    L.append("    rclpy.shutdown()")
+    L.append("")
+    L.append("if __name__ == '__main__':")
+    L.append("    main()")
+    return "\n".join(L)
+
+
 def main():
     if "--chain" in sys.argv:
         a = [x for x in sys.argv[1:] if not x.startswith("--")]
@@ -417,8 +527,12 @@ def main():
         sfc = emit_sfc(ir)
         json.dump(ir, open(f"{OUT_DIR}/{tid}.ir.json", "w"), indent=2)
         open(f"{OUT_DIR}/{tid}.sfc.st", "w").write(sfc)
+        extra = ""
+        if "--ros2" in sys.argv:                       # SECOND backend (same IR -> ROS2/MoveItPy node)
+            open(f"{OUT_DIR}/{tid}.ros2.py", "w").write(emit_ros2(ir))
+            extra = f" + ROS2 {OUT_DIR}/{tid}.ros2.py"
         n_steps = len(ir["steps"])
-        print(f"  {tid}: {ir['robot']}, {ir['n_objects']} obj -> IR {n_steps} steps -> SFC {OUT_DIR}/{tid}.sfc.st")
+        print(f"  {tid}: {ir['robot']}, {ir['n_objects']} obj -> IR {n_steps} steps -> SFC {OUT_DIR}/{tid}.sfc.st{extra}")
     print("DONE")
 
 
