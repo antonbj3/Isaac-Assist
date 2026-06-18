@@ -6059,3 +6059,18 @@ would've frozen under bare-play). The CP-50 variant earlier gave inst2(CP-50)=2/
 .jsonl = 11 gold_kit_delivery_verified + 20 gold_scene_eyes_verified, 0 junk (the "verified=None" rows were
 just eyes_gold_gate's different schema -- verify-before-dismissing, not data poisoning). #30 L2 pipeline is
 UNBLOCKED + producing multi-cell records.
+
+cont.254 (2026-06-18): two follow-ups from runtime-verifying the compose_gate freeze fix. (1) compose_gate
+inst0(CP-01) came back 4/4 (un-frozen, freeze fix confirmed in BOTH harnesses) BUT inst1(CP-03)=1/2 -- a
+SEPARATE pre-existing gap: compose_gate measured all cubes vs ONE target (RedBin), false-NEGATIVING a sorter's
+other-bin cubes. Ported compose_and_verify's routing-aware per-cube-correct-bin measure -> re-verified
+CP-01 CP-03 = 4/4 + 2/2 = 2/2 instances (commit 8abf47ca). False-success-vakt cuts both ways (false-NEG in a
+live gate). (2) CP-50=2/4 (the cont.253 flag) RESOLVED by verify-before-dismissing: NOT a delivery failure --
+CP-50 is a 4-tray VISION-kitting station but its simulate_args has only target_path=/World/RedTray + NO
+drop_targets, and its cubes are Cube_1..4 (not color-named) so the leaf-color heuristic can't auto-route them.
+The 2 blue cubes land correctly in BlueTray but go unmeasured -> reads 2/4. = a TEMPLATE-DATA gap (incomplete
+simulate_args), not a composer bug. Left as-is (vision-routed, non-priority, was my own 3-cell test pick) per
+the don't-over-invest-in-optional lesson. COMPOSITION-PIPELINE THREAD COMPLETE: freeze fixed in both QA gates,
+routing-aware measure unified, production+scene_eyes confirmed unaffected, END-GOAL Franka loop green. Next
+frontier (fresh context): sequential/robot-diversity end-to-end (#29 auto-handoff) or breadth (design-only
+templates -> verified).
