@@ -115,6 +115,57 @@ def extract_ir(tid):
     }
 
 
+def ir_to_controller_args(ir):
+    """CONSUME-IR (the inverse of extract_ir): reconstruct the controller's ORCHESTRATION config from the IR.
+    Proves the IR is a LOSSLESS engine-agnostic orchestration spec via the controller->IR->controller round-trip
+    (the hot-swap-doctrine foundation: one IR, swappable engine). Scope = the orchestration (source_paths +
+    per-object drop targets), NOT the full scene/sensor/obstacle setup (those are scene-build, not orchestration)."""
+    objs, drops, dest = [], {}, None
+    for s in ir["steps"]:
+        o, pt = s.get("object"), s.get("place_target")
+        if o and o not in objs:
+            objs.append(o)
+        if o and pt:
+            if pt.get("kind") == "explicit_pose":
+                drops[o] = pt["value"]
+            elif pt.get("kind") == "destination_bbox_center":
+                dest = pt["value"]
+    args = {"source_paths": objs, "robot_family": ir.get("robot")}
+    if drops:
+        args["drop_targets"] = drops
+    if dest:
+        args["destination_path"] = dest
+    return args
+
+
+def roundtrip_check(tid):
+    """controller -> IR -> controller: does the reconstructed orchestration match the template's original?"""
+    t = json.load(open(f"{TPL_DIR}/{tid}.json"))
+    sa = t.get("simulate_args") or {}
+    code = t.get("code") or ""
+    orig_src = sa.get("source_paths") or sa.get("cube_paths") or ([sa.get("cube_path")] if sa.get("cube_path") else [])
+    orig_drops = sa.get("drop_targets") or _code_drop_targets(code)
+    orig_dest = sa.get("destination_path") or sa.get("target_path") or sa.get("drop_target_path")
+    recon = ir_to_controller_args(extract_ir(tid))
+    src_ok = list(orig_src) == list(recon.get("source_paths", []))
+    rec_drops = recon.get("drop_targets") or {}
+    # normalize the original: a LIST [pos parallel to source_paths] is SEMANTICALLY {cube_i: pos_i}
+    if isinstance(orig_drops, list):
+        orig_norm = {orig_src[i]: orig_drops[i] for i in range(min(len(orig_src), len(orig_drops)))}
+    elif isinstance(orig_drops, dict):
+        orig_norm = orig_drops
+    else:
+        orig_norm = {}
+    drops_ok = (not orig_norm and not rec_drops) or all(
+        cp in rec_drops and [round(float(v), 3) for v in orig_norm[cp]] == [round(float(v), 3) for v in rec_drops[cp]]
+        for cp in orig_norm)
+    # destination_path is a redundant FALLBACK when drop_targets covers every source cube (orchestration captured)
+    drops_cover_all = bool(orig_norm) and all(cp in orig_norm for cp in orig_src)
+    dest_ok = (orig_dest == recon.get("destination_path")) or drops_cover_all or (bool(orig_drops) and not orig_dest)
+    return {"template": tid, "source_paths": src_ok, "drop_targets": drops_ok, "destination": dest_ok,
+            "lossless": src_ok and drops_ok and dest_ok, "recon": recon}
+
+
 def emit_sfc(ir):
     """Emit a deployable IEC 61131-3 ST CASE state machine (the standard real-PLC sequence pattern — a sim-
     validated sequence a PLC programmer can drop into a project). One CASE branch per SFC step; the transition

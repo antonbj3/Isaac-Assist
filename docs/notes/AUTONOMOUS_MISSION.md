@@ -6432,3 +6432,13 @@ grips). The lone suspect (Cube_1 SETTLED-Z=1.004, high) = almost certainly IN-TR
 the slow big-sweep UR10 can't finish lift+transit+place by the 70s cutoff — same incomplete-run pattern as
 CP-08@offset 60s; NOT a stuck false-success). => breadth-(a) confirmed LOW-YIELD even on suction: grips genuine,
 no false-success. NOTE: usage hit 90% weekly (hard-stop 94%) — minding it; stop low-yield Kit re-runs near the cap.
+
+cont.295 (2026-06-18, Kit-FREE — prudent at 90% weekly) — CONSUME-IR FOUNDATION: plc_export_poc.py +=
+ir_to_controller_args (IR -> controller orchestration config) + roundtrip_check. controller -> IR -> controller
+is LOSSLESS for the orchestration (source_paths + per-object drop targets) across 7 templates (single-cube,
+multi-cube DICT CP-08/10/12, multi-cube LIST palletize-receiver, UR10 + Franka). => the IR is a COMPLETE
+engine-agnostic orchestration spec (hot-swap-doctrine foundation): the PLC-export [IR->PLC] + this round-trip
+[IR->controller] both consume ONE IR. The full consume-IR [IR->live Kit run] is the next (Kit) step. FALSE-SUCCESS-
+VAKT on my OWN check: caught+fixed 2 false-mismatches (redundant destination_path fallback when drop_targets
+covers all cubes; LIST [pos_i] is-equivalent-to DICT {cube_i:pos_i}). Usage 90% weekly (hard-stop 94%) — Kit-free
+chosen to conserve; deep Kit builds (consume-IR run, UR10 IK) deferred to fresh budget.
