@@ -866,10 +866,21 @@ def _analyse(js):
         # "conveyor-stall" on working belts (it misled a whole breadth pass). A TRUE stall = the belt RARELY
         # RESUMES (boxes stuck at spawn). Distinguish by counting resume events (PAUSED->MOVING transitions).
         _resumes = sum(1 for _i in range(1, len(_trans)) if _trans[_i][1] == "MOVING")
-        if _movf < 0.25 and _resumes < 2:
-            out.append("    *** BELT STALLED -> rarely/never resumes (%d resume event(s)); boxes don't advance to the pick zone ***" % _resumes)
+        # HIGH-RESOLUTION (Anton 2026-06-18: false-POSITIVES AND false-NEGATIVES must be caught high-res — an
+        # aggregate belt-velocity % lies BOTH ways). The belt's job is to get boxes to the pick zone so they get
+        # PROCESSED; the ground truth is the PER-OBJECT outcome (did each box move from spawn?), not movf. A TRUE
+        # stall = boxes stuck at spawn (never moved). The false-alarm (cont.310) = boxes delivered despite low movf.
+        _o_first, _o_last = {}, {}
+        for _r in rows:
+            for _onm, _op in (_r.get("cubes") or {}).items():
+                if _op:
+                    _o_first.setdefault(_onm, _op); _o_last[_onm] = _op
+        _moved = sum(1 for _onm in _o_first if _o_last.get(_onm) and math.dist(_o_first[_onm], _o_last[_onm]) > 0.10)
+        _movedf = _moved / max(1, len(_o_first))
+        if _movf < 0.25 and _resumes < 2 and _movedf < 0.30:
+            out.append("    *** BELT STALLED -> rarely resumes (%d) AND %.0f%% of boxes never moved from spawn (high-res per-object): they don't reach the pick zone ***" % (_resumes, _movedf * 100))
         elif _movf < 0.25:
-            out.append("    (belt mostly-paused but RESUMES %dx = correct sensor-gating during slow picks, NOT a stall; boxes advance ~1 per pick cycle — use a longer dur to complete all N)" % _resumes)
+            out.append("    (belt mostly-paused = correct sensor-gating during slow picks [%d resumes]; per-object: %.0f%% of boxes ADVANCED/processed -> NOT a stall; longer dur completes all N)" % (_resumes, _movedf * 100))
 
     # GRIP-ATTEMPT (2026-06-14, Anton "högupplöst"): per-object, HIGH-RES grip outcome — was each tracked object
     # ever finger/cup-contacted (GRIPPED), and if NOT, how CLOSE did the gripper (tool) get? closest approach

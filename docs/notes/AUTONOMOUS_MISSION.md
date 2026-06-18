@@ -6657,3 +6657,11 @@ the SAME pattern -> promotable on adequate-dur re-verify (LOW-distinct = composi
 pick-place-bin already covered by CP-01/04/21/28/29). Genuine count this session: 21 -> 24. The DISTINCT
 under-covered classes (inspect/vision CP-18, kit/assembly CP-58 peg-in-hole, multi-robot CP-68) need complex
 verification (inspection/assembly-constraint/per-instance) = fresh-budget work.
+
+cont.312 (2026-06-18, Anton "false-pos AND false-neg måste fångas högupplöst") — upgraded scene_eyes' belt-stall
+warning from a PROXY (resume-count, cont.310) to TRULY HIGH-RESOLUTION: derive it from the PER-OBJECT outcome (did
+each box MOVE from spawn? _o_first->_o_last per cube), not the aggregate belt-velocity %. A TRUE stall now requires
+belt-rarely-resumes AND <30% of boxes ever moved (high-res per-object); the false-alarm is suppressed whenever
+boxes were processed (CP-38 movedf=100%). Verified: delivered-belt -> correct-gating (movedf 100%); true-stall
+(boxes stuck at spawn) -> STALL (movedf 0%). The aggregate belt-% lied BOTH ways (it gave my cont.307-309 false-
+NEGATIVE); the per-object movement is the ground truth for false-pos AND false-neg. compiles.
