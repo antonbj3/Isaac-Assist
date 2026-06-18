@@ -6772,3 +6772,8 @@ Position-honest verification yields BOTH promotes (CP-18/32 routing-correct) and
 cont.316d — CP-33 (vision 2-color sorter) GENUINE(vision-routed 2/2) [genuine 30] — routing correct
 (blue->BlueBin, red->RedBin). High-res breadth campaign: genuine 21->30 (9 promotes), 4 catches (CP-20/26/31 +
 belt false-neg), 3 golds confirmed, 2 partials resolved.
+
+cont.316e — CP-47 (true runtime-vision sorter) GENUINE(vision-routed 2/2) [genuine 31]. Color-sort vein uniformly
+CLEAN (CP-32/33/47 all route correct, 0 catches) — unlike the pick-place-bin matrix (2/7 caught). High-res campaign
+total cont.305-316e: genuine 21->31 (10 promotes), 4 catches (CP-20/26/31 + belt false-neg), 3 golds confirmed,
+2 partials resolved. Remaining position-honest = harder (assembly/multi-robot/UR10) or low-yield (clean color-sorts).
