@@ -2,18 +2,20 @@
   "_doc": "Chain-stage catalog for SEQUENTIAL robot-diversity composition (#29). Each entry is a VERIFIED chain-ready block with a source/receiver role + handoff geometry. A chain stage_k delivers its object to a HANDOFF (height handoff_z, on a surface vs into a container), and the next stage picks FROM that handoff. The handoff-compatibility rule (chain_compat in compose_handoff.py) predicts whether (src,recv) chain, grounded in the proven pairs — it would have pre-filtered the cont.262 CP-73->CP-13 failure (CP-73 delivers into a deep Bin; a Franka receiver needs a pickable flat surface).",
   "stages": {
     "CP-CHAIN-UR10-SRC":          {"robot": "UR10",   "role": "source",   "handoff_surface": "flat",   "handoff_z": 0.775, "n_cube": 1, "verified": "chain stage0 1/1 (cont.261b no-regression)"},
-    "CP-CHAIN-FLAT":              {"robot": "Franka", "role": "receiver", "pick_height":      "flat",   "handoff_z": 0.775, "n_cube": 1, "verified": "chain stage1 1/1 (cont.227 + cont.261b)"},
+    "CP-CHAIN-FLAT":              {"robot": "Franka", "role": "receiver", "pick_height":      "flat",   "handoff_z": 0.775, "n_cube": "1..N", "verified": "chain stage1 1/1 (cont.227+261b); MULTI-CUBE receiver: picks ALL N relay cubes (controller iterates SOURCE_PATHS) — 4/4 x2 from CP-08 grid (cont.269)"},
     "CP-CHAIN-FRANKA-RAISED-SRC": {"robot": "Franka", "role": "source",   "handoff_surface": "raised", "handoff_z": 0.975, "n_cube": 1, "verified": "4/4 RAW (1 local scene_eyes + 3 Modal)"},
     "CP-CHAIN-UR10-RECV-NATIVE":  {"robot": "UR10",   "role": "receiver", "pick_height":      "raised", "handoff_z": 0.975, "n_cube": 1, "verified": "GOLD 3/3 + arbitrary-offset path-3 (cont.261)"},
     "CP-NEW-ur10-flat-deliver":   {"robot": "UR10",   "role": "source",   "handoff_surface": "flat",   "handoff_z": 0.825, "n_cube": 1, "verified": "chain stage0 1/1 (cont.266, HandoffPad design)"},
     "CP-NEW-franka-flat-receive": {"robot": "Franka", "role": "receiver", "pick_height":      "flat",   "handoff_z": 0.825, "n_cube": 1, "verified": "chain stage1 1/1 (cont.266, auto-offset path-2 @[0.11,-0.39])"},
-    "CP-CHAIN-FRANKA-SRC":        {"robot": "Franka", "role": "source",   "handoff_surface": "flat",   "handoff_z": 0.775, "n_cube": 1, "verified": "chain stage0 1/1 (cont.267, Franka->Franka line)"}
+    "CP-CHAIN-FRANKA-SRC":        {"robot": "Franka", "role": "source",   "handoff_surface": "flat",   "handoff_z": 0.775, "n_cube": 1, "verified": "chain stage0 1/1 (cont.267, Franka->Franka line)"},
+    "CP-08":                      {"robot": "Franka", "role": "source",   "handoff_surface": "flat-grid", "handoff_z": 0.825, "n_cube": 4, "verified": "MULTI-CUBE source: chain stage0 4/4 x2 (cont.269), tight 0.144m 2x2 grid handoff"}
   },
   "handoff_rule": "A source delivers onto a SURFACE at handoff_z; a receiver picks at pick_height. They chain iff (a) the source delivers onto a FLAT/RAISED surface (NOT into a deep bin/container — a receiver arm cannot pick from inside a deep bin), AND (b) source.handoff_z matches receiver pick envelope: UR10 picks RAISED (~0.975 pedestal), Franka picks FLAT (~0.775). UR10 delivers flat; Franka delivers flat or raised.",
   "proven_chains": [
     {"stages": ["CP-CHAIN-UR10-SRC", "CP-CHAIN-FLAT"],              "dir": "UR10->Franka", "handoff": "flat 0.775",   "result": "1/1+1/1 GOLD"},
     {"stages": ["CP-CHAIN-FRANKA-RAISED-SRC", "CP-CHAIN-UR10-RECV-NATIVE"], "dir": "Franka->UR10", "handoff": "raised 0.975", "result": "1/1+1/1 GOLD (+arbitrary offset)"},
     {"stages": ["CP-NEW-ur10-flat-deliver", "CP-NEW-franka-flat-receive"], "dir": "UR10->Franka", "handoff": "flat 0.825 HandoffPad", "result": "1/1+1/1 (cont.266, auto-offset [0.11,-0.39] path-2)"},
-    {"stages": ["CP-CHAIN-FRANKA-SRC", "CP-CHAIN-FLAT"], "dir": "Franka->Franka (same-robot LINE)", "handoff": "flat 0.775", "result": "1/1+1/1 (cont.267)"}
+    {"stages": ["CP-CHAIN-FRANKA-SRC", "CP-CHAIN-FLAT"], "dir": "Franka->Franka (same-robot LINE)", "handoff": "flat 0.775", "result": "1/1+1/1 (cont.267)"},
+    {"stages": ["CP-08", "CP-CHAIN-FLAT"], "dir": "Franka(palletize)->Franka(pick) MULTI-CUBE", "handoff": "flat-grid 0.825 (4 cubes)", "result": "4/4+4/4 N-of-M=2 (cont.269) — faithful multi-cube relay, RAW: tight grid handoff + stable 4-stack collected in bin"}
   ]
 }

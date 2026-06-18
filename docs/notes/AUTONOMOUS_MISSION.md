@@ -6207,3 +6207,16 @@ Findings (code + Kit):
      spread) likely EXCEEDS one Franka reach -> testing CP-08->CP-CHAIN-FLAT to quantify (expect reach-limited).
 So the multi-cube CHAIN is mostly built (relay+iterate+offset all ✅); the open question is reach/cluster, not
 plumbing. cont.262's "relays 1/N" note was the receiver picking 1/N (confounded CP-13-at-offset), NOT the relay.
+
+cont.269 (2026-06-18) — ★ MULTI-CUBE HANDOFF PROVEN (refutes the "relays 1/N" belief). chain_xkit_gate
+CP-08 (4-cube palletizer) -> CP-CHAIN-FLAT (Franka picker) = 4/4 + 4/4, N-of-M=2 (both runs identical),
+with EXISTING blocks (NO authoring). Mechanism confirmed end-to-end: run_stage_k builds N relay cubes at the
+N handoff poses + source_overrides all N; the receiver controller iterates SOURCE_PATHS (pops one per delivery
+until empty) -> picks ALL N. RAW false-success-vakt (both runs): stage0 handoff = tight 0.144m 2x2 grid (all 4
+delivered, NOT a scatter); stage1 = 4 cubes settled at tight xy (-0.07..-0.08) with clean 0.05m z-steps = a
+STABLE 4-stack collected in the bin (a bin COLLECTS; stacking inside is valid), NOT a topple/scatter. The old
+"1/N" (cont.262 CP-73->CP-13) was the RECEIVER (CP-13-at-offset stacking its own cubes) picking 1/N, confounded
+with a deep-bin source — NOT a relay-infrastructure limit. cont.268 reach-concern was a misread of a 60s
+scene_eyes run where CP-08 had only placed 3/4 (Cube_1 still at feeder -> 0.88m extent); full runs place 4/4
+tight. So a PALLETIZER->PICKER multi-cube chain is a real composition capability. Added CP-08 (multi-cube
+source) + CP-CHAIN-FLAT (1..N receiver) + the proven chain to chain_stages.json. NULÄGE "(b) relays 1/N" = STALE.
