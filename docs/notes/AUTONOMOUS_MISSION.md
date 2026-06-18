@@ -6256,3 +6256,9 @@ a bin"). Re-test: LLM plans [CP-08, CP-CHAIN-FLAT] sequential, gap=False, handof
 NO REGRESSION (1-cube UR10->Franka still plans [CP-CHAIN-UR10-SRC, CP-CHAIN-FLAT]). So the RUNTIME LLM composes
 multi-cube chains end-to-end (planning fixed here + execution proven cont.269/271). Launching full Gemini-driven
 loop as the end-to-end capstone.
+
+cont.275 (2026-06-18) — full Gemini-driven multi-cube capstone HALTED on Gemini 429 (quota exhausted by the
+cont.274 dry-runs + this call; RAW log = "429 You exceeded your current quota" — NOT an integration failure;
+free-tier resets later, run sparingly). Planning already VERIFIED (cont.274 dry-runs, pre-quota). Demonstrating
+the loop EXECUTION path for multi-cube via --cells (skips Gemini) to close the only untested piece (wrapper
+routes multi-cube cells -> chain_xkit_gate -> deliver), without burning more quota.
