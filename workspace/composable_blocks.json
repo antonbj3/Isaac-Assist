@@ -135,8 +135,8 @@
     "CP-21": {
       "robot": "Franka",
       "class": "pick-place-bin",
-      "verdict": "TRUSTED(position-honest)",
-      "basis": "delivery-gate (honest for bin/sort)",
+      "verdict": "GENUINE(4/4 bin)",
+      "basis": "scene_eyes cont.311: 4/4 CONVERGED+GRIPPED + delivered/stacked in bin (RIGID HOLD) @ dur=95; gravity-feed station; belt MOVING 36% no stall; 3rd belt-fed single-bin confirm",
       "n_objects": 4
     },
     "CP-22": {
@@ -507,8 +507,8 @@
   "summary": {
     "trusted": 64,
     "_trusted_note": "the 64 'trusted' = 21 GENUINE (execution-verified by scene_eyes) + 43 position-honest-ONLY (gate said position-ok, EXECUTION NOT verified). Compose-trust the 21 genuine; treat the 43 as candidates that still need an execution check before a GOLD composition claim.",
-    "genuine_execution_verified": 23,
-    "position_honest_only": 41,
+    "genuine_execution_verified": 24,
+    "position_honest_only": 40,
     "false": 1,
     "partial": 5,
     "pending": 0,

@@ -6649,3 +6649,11 @@ CONVERGED+GRIPPED + delivered/stacked in bin (RIGID HOLD); the dur=60 Cube_1 per
 (settles to 0.935 top-of-stack at dur=90); belt MOVING 32% -> NO stall (fix confirmed live). PROMOTED ->
 GENUINE(4/4 bin) [genuine 22->23]. 2nd confirmation that belt-fed single-bin blocks are GENUINE+window-limited,
 not stalled. Pattern: re-verify belt-fed position-honest blocks at adequate dur (~15s x n_cubes) -> promote.
+
+cont.311b — CP-21 (gravity-feed pick-place-bin, 4 cubes) @ dur=95 -> 4/4 GENUINE(4/4 bin) [genuine 23->24]. 3rd
+belt-fed single-bin confirm (CP-38/04/21). The belt-stall false-alarm fix (cont.310) reframed breadth as SUCCEEDING:
+belt-fed single-bin blocks are genuine+window-limited. Remaining pick-place-bin matrix (CP-22/23/24/26/31) follows
+the SAME pattern -> promotable on adequate-dur re-verify (LOW-distinct = composition material, not new capability;
+pick-place-bin already covered by CP-01/04/21/28/29). Genuine count this session: 21 -> 24. The DISTINCT
+under-covered classes (inspect/vision CP-18, kit/assembly CP-58 peg-in-hole, multi-robot CP-68) need complex
+verification (inspection/assembly-constraint/per-instance) = fresh-budget work.
