@@ -87,7 +87,17 @@ def bbox(p):
     return [float(mn[0]),float(mn[1]),float(mn[2])],[float(mx[0]),float(mx[1]),float(mx[2])]
 def cpos(p):
     bb = bbox(p); return [(bb[0][i]+bb[1][i])/2.0 for i in range(3)] if bb else None
-tl = omni.timeline.get_timeline_interface(); tl.play(); app = omni.kit.app.get_app()
+tl = omni.timeline.get_timeline_interface(); app = omni.kit.app.get_app()
+# RE-ACQUIRE (2026-06-18): a composed scene's cells each ran their own world.reset() at install, which
+# re-created the physics sim view and ORPHANED every PRIOR cell's controller (its articulation handle is
+# bound to a dead view -> frozen arm, delivers 0). The scene-reset-manager's re-acquire hooks fire ONLY
+# on a STOP->PLAY transition; a bare tl.play() never triggers them, so the earlier-built cell stays frozen.
+# Pump STOP->PLAY + settle here so the manager re-acquires EVERY cell against the final view. MEASURED
+# (cont.256): without this inst0 froze 0/4 deterministically; with it 4/4. Single-cell unaffected (harmless).
+tl.stop()
+for _ in range(10): app.update()
+tl.play()
+for _ in range(90): app.update()   # let the scene-reset-manager re-acquire every cell's controller
 for _ in range(6000 * max(1, len(INSTS))): app.update()
 for d in INSTS:
     ct = d.get("cube_targets") or dict()
