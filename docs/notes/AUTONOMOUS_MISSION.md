@@ -6141,3 +6141,16 @@ pairs needed = the breadth × robot-diversity multiplier is no longer offset-gat
 "STOP->PLAY not universally safe, gate it"). NEXT: wire this into the orchestrator (#1 compose_orchestrate
 routes sequential/diverse -> chain_xkit_gate now that arbitrary offsets work) + a genuinely non-co-designed
 Franka->UR10 chain demo + breadth.
+
+cont.262 (2026-06-18) — SEQUENTIAL robot-diversity LOOP executes end-to-end (#1+#2 wired) + #29 scoped.
+compose_orchestrate sequential branch now routes -> chain_xkit_gate (commit 2ca37f1e). Full loop run (live
+Gemini + cross-Kit chain): handoff task -> Gemini [CP-73,CP-13] structure=sequential (correct) -> chain ->
+stage0 CP-73(UR10)=3/4, stage1 CP-13(Franka)=1/4 -> honestly reported ❌ (no faked green). So the runtime-LLM
+SEQUENTIAL loop CONNECTS (classify->pick->route->cross-Kit-execute->measure); the chain now handles the
+robot-diversity offset (cont.261). #29 gap concretely characterized = TWO pieces: (a) CP-73 is a WEAK UR10
+canonical block (3/4 standalone, Cortex+conveyor multi-cube limit) -> breadth needs a robust single-cube UR10
+source the LLM can pick (CP-CHAIN-UR10-SRC is cuRobo+1-cube but not in the canonical catalog); (b) multi-cube
+HANDOFF relays only 1/N -> needs multi-cube handoff abstraction. A GREEN sequential loop = robust single-cube
+chain-ready blocks in the LLM catalog + multi-cube handoff. NEXT (#29): add verified chain-ready blocks to the
+composable catalog so the LLM picks chainable sources, and/or multi-cube relay. Budget: weekly 87% (Kit runs
+token-cheap, stable); hard-stop at 94% (feedback_stop_at_94pct_weekly).
