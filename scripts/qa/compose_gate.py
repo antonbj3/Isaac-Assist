@@ -72,7 +72,15 @@ def bbox(p):
 def cpos(p):
     bb = bbox(p)
     return [(bb[0][i]+bb[1][i])/2.0 for i in range(3)] if bb else None
-tl = omni.timeline.get_timeline_interface(); tl.play(); app = omni.kit.app.get_app()
+tl = omni.timeline.get_timeline_interface(); app = omni.kit.app.get_app()
+# RE-ACQUIRE (2026-06-18): composed cells each ran their own world.reset() at install -> the physics sim
+# view was re-created and every PRIOR cell's controller orphaned (frozen arm, delivers 0). The scene-reset-
+# manager's re-acquire hooks fire ONLY on a STOP->PLAY transition, so a bare tl.play() leaves all-but-last
+# frozen. Pump STOP->PLAY + settle so every cell re-acquires. (Same fix as compose_and_verify.py, cont.256.)
+tl.stop()
+for _ in range(10): app.update()
+tl.play()
+for _ in range(90): app.update()
 DBG = {dbg}
 N = 6000 * max(1, len(INSTS))   # concurrent cells run slower; scale budget
 # Trajectory capture (COMPOSE_TRAJ): sample every TRAJ_EVERY steps so a FLING shows
