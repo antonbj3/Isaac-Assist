@@ -6687,3 +6687,7 @@ FALSE-PASSED it as delivered) + Cube_2 grip MARGINAL (27° rot-slip). So 3 matri
 (CP-04/21/22) but CP-31 caught partial -> inferring "the matrix is all genuine" would have been a false-positive;
 per-block high-res verification is required. genuine 25, partial 6, position_honest 38. Aggregate position-gate
 lied (counted Cube_1 delivered); per-object pick-convergence + grip-slip refuted it.
+
+cont.313d — CP-23 @ dur=90 -> GENUINE(4/4 spread-grid) [genuine 26]. Matrix tally: CP-04/21/22/23 clean (4) +
+CP-31 PARTIAL-caught (1) + CP-38 clean-volume + CP-20 topple-caught. The high-res breadth pass yields BOTH promotes
+and catches — exactly the symmetric false-pos/false-neg discipline.
