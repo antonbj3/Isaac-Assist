@@ -6302,3 +6302,16 @@ radius 0.58) -> marginal cuRobo plans flail. This ALSO root-causes CP-71 + CP-NE
 PARTIAL/TRUSTED (UR10 grid-spread is marginal-IK; UR10 is single-target pick-place-capable [CP-73 4/4] but not
 grid-spread-capable). FIX HYPOTHESIS (testing): keep ALL grid slots WITHIN the proven radius (lower-x
 [0.40-0.50,-0.35..-0.25], radius 0.53-0.56 < 0.58), spacing 0.10m for gripper clearance.
+
+cont.281 (2026-06-18) — within-radius UR10 grid STILL flails (1/4: Cube_3 reached slot [0.408,-0.236]; Cube_1/2/4
+force-released mid-flail to random [0.845,0.4]/[-0.257,-0.08]/[0.706,0.122]). NOT a slot-position issue (one slot
+worked, adjacents failed = stochastic). ROOT CAUSE (controller pick_place.py:3790): on plan["total_t"] the cuRobo
+controller FORCE-RELEASES the held cube "wherever it is" even if the drop plan FAILED -> scatter. Underlying FAIL =
+cuRobo can't reliably plan to tight adjacent grid slots (marginal IK AND/OR just-placed cubes become collision
+obstacles for the next slot's plan). FIX PATH (deferred — deep SHARED cuRobo-controller change; multi-template
+no-regression CP-73/CP-01/CP-08 + FRESH context): (1) don't force-release-scatter on fail (hold/skip), (2) exclude
+just-placed cubes from the cuRobo collision world per drop, OR (3) far-to-near placement order. This is THE root
+cause of UR10 PALLETIZERS (CP-71, CP-NEW-palletizer-mixed-sku) being PARTIAL/TRUSTED. UR10 = single-target
+pick-place-capable (CP-73 4/4), NOT multi-target grid-spread-capable. Per over-invest lesson (workaround ships;
+RD-multicube non-essential — multiplier covered by parallel-Franka + 1-cube-RD-both-dirs + Franka-LINE +
+multi-cube-Franka) -> MOVE ON to higher-value. ~10 turns dug; scene_eyes-RAW root-caused; honest stop, not giving up.
