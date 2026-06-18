@@ -1,0 +1,71 @@
+{
+  "task_id": "CP-CHAIN-FLAT",
+  "goal": "Minimal Franka FLAT-SURFACE pick-place built as a clean chain RELAY stage: a Franka Panda picks ONE cube resting in FRONT of it on a flat static table top (NO conveyor, NO work-surface prop, NO extra workpiece clutter) and drops it into a shallow bin to its front-left. Authored as stage-1 of a robot-diversity SEQUENTIAL chain (#29): a prior stage (CP-84 UR10) stacks one cube at world [0.5,-0.4,0.825], and this template's PickSensor is aligned onto that landing so the Franka picks the relayed cube with the cube DIRECTLY IN FRONT of the arm (no side-reach plan-fail). The chain_gate source_override replaces the placeholder cube with the relayed prim; chain_gate deletes the stage-k placeholder so it cannot collide with the relay.",
+  "tools_used": [
+    "create_prim",
+    "set_attribute",
+    "apply_api_schema",
+    "robot_wizard",
+    "create_bin",
+    "add_proximity_sensor",
+    "set_physics_scene_config",
+    "apply_physics_material",
+    "bulk_set_attribute",
+    "setup_pick_place_controller"
+  ],
+  "thoughts": "ROOT-CAUSE FIX (2026-06-17, cont.189): the prior Approach-D author used Franka orientation [0.7071,0,0,0.7071] (+90deg about Z) so the Franka's dexterous FRONT (+X base) pointed to world +Y. But the relayed cube (CP-84 stacks at world [0.5,-0.4,0.825]) sits at world +X of the Franka base -> in base frame the cube was at (~0.0, -0.41) = the Franka's RIGHT SIDE. A side-reach top-down grasp is exactly where cuRobo returns res_None (observed: plan_calls=12, plan_fails=12, last_fail_goal world=[0.51,-0.39,1.12]). FIX: IDENTITY orientation [1,0,0,0] so +X base = +X world = straight at the cube; with the chain offset the cube lands at base (+0.45, 0) = the Franka's dexterous front. Verified-against-code (pick_place.py _build_scene_cfg): inst0/BaseCube is NOT in the Franka collision world (only the rerooted inst1/Table+inst1/Bin are), so the earlier 'BaseCube-as-obstacle' theory was REFUTED -- the plan-fail was the side-reach, not an obstacle.\nGeometry (template-local, before the chain offset [0.05,-0.4,0]):\n* Franka local [0,0,0.75], identity orientation -> faces +X.\n* Placeholder Cube_1 local [0.45,0,0.80] = IN FRONT, under the sensor (so the STANDALONE control is a real front-pick test). chain_gate deletes inst{k}/Cube_1 in the chain (it is not the source; source_override uses inst0 cubes).\n* PickSensor local [0.45,0,0.85] -> chain world [0.50,-0.40,0.85] = lands exactly on CP-84's relay [0.5,-0.4,0.825]. TALL z-extent 0.78..0.92 absorbs the rest-height delta.\n* Bin local [0.40,0.30,0.75] -> front-left, reach 0.5m, both pick(0.45,0) and place(0.40,0.30) in the front hemisphere.\n* Table local centre [0.2,0,0.375] scale [0.9,0.6,0.375] -> top z=0.75; covers Franka, pick, bin. The relay rests on inst0/BaseCube (z 0.825) ABOVE this table top -> no interpenetration.\n* belt_path=None -> no conveyor sweep; single placeholder -> no pick-zone clutter; deep walls only on the DEST bin (front-left, clear of the pick).",
+  "code": "# Flat static-surface pick cell (NO baseline call -> Table is a namespaceable create_prim).\n# cont.190: geometry REPLICATES the PROVEN CP-01 Franka pick regime exactly (orientation +90deg so\n# base +X = world +Y; pick 0.40m in FRONT; bin BEHIND). The cont.189 identity-orientation/0.45m-front\n# design was MEASURED unreachable (approach pose [.,.,1.12] res_None 12/12 even with zero obstacles);\n# CP-01 delivers at 0.40m front + the same hover height, so copy its layout and align via the chain offset.\ncreate_prim(prim_path=\"/World/DomeLight\", prim_type=\"DomeLight\")\nset_attribute(prim_path=\"/World/DomeLight\", attr_name=\"inputs:intensity\", value=1000.0)\n\ncreate_prim(prim_path=\"/World/Ground\", prim_type=\"Cube\", position=[0, 0, -0.5], scale=[20, 20, 1])\napply_api_schema(prim_path=\"/World/Ground\", schema_name=\"PhysicsCollisionAPI\")\n\nset_physics_scene_config(config={\"enable_gpu_dynamics\": False, \"broadphase_type\": \"MBP\"})\n\n# Work table: scale -> half-extents [0.6,0.9,0.375], centre [0,0,0.375] -> TOP z=0.75; covers pick(+y),\n# base(0), bin(-y). Raw create_prim -> namespaced /World/inst{k}/Table (no /World/Table clobber).\ncreate_prim(prim_path=\"/World/Table\", prim_type=\"Cube\", position=[0, 0, 0.375], scale=[0.6, 0.9, 0.375])\napply_api_schema(prim_path=\"/World/Table\", schema_name=\"PhysicsCollisionAPI\")\n\n# CP-01-PROVEN orientation: +90deg about Z so base +X = world +Y. The pick (world +Y of base) is then\n# the Franka's dexterous FRONT, 0.40m out -> the reachable regime CP-01 delivers in.\nrobot_wizard(\n    robot_name=\"franka_panda\",\n    dest_path=\"/World/Franka\",\n    position=[0, 0, 0.75],\n    orientation=[0.7071068, 0, 0, 0.7071068],\n)\n\n# ONE placeholder workpiece, 0.40m IN FRONT (local +y) under the PickSensor (so the STANDALONE control\n# is a real front-pick test). chain_gate source-overrides to the relayed cube AND deletes this prim in\n# the chain so it cannot collide with the relay landing at the same world spot.\ncreate_prim(prim_path=\"/World/Cube_1\", prim_type=\"Cube\", position=[0.0, 0.4, 0.80], size=0.05)\nfor api in (\"PhysicsRigidBodyAPI\", \"PhysicsCollisionAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n    apply_api_schema(prim_path=\"/World/Cube_1\", schema_name=api)\nbulk_set_attribute(prim_paths=[\"/World/Cube_1\"], attr=\"physxRigidBody:sleepThreshold\", value=0.0)\napply_physics_material(prim_path=\"/World/Cube_1\", material_name=\"rubber\")\n\n# Shallow drop bin BEHIND the robot (local -y = base -X), the CP-01-proven place side.\ncreate_bin(prim_path=\"/World/Bin\", position=[0.0, -0.4, 0.75], size=[0.3, 0.3, 0.12])\n\n# TALL PickSensor over the FRONT (+y) pick region: z-extent spans a table-resting cube (0.80) AND a\n# relayed cube resting on a prior stage's delivery surface (~0.825).\nadd_proximity_sensor(sensor_path=\"/World/PickSensor\", position=[0.0, 0.4, 0.85], size=[0.08, 0.08, 0.14])\n\nsetup_pick_place_controller(\n    robot_path=\"/World/Franka\",\n    target_source=\"curobo\",\n    sensor_path=\"/World/PickSensor\",\n    belt_path=None,\n    source_paths=[\"/World/Cube_1\"],\n    destination_path=\"/World/Bin\",\n    drop_targets=[[-0.07, -0.47, 0.80], [0.07, -0.47, 0.80], [-0.07, -0.33, 0.80], [0.07, -0.33, 0.80]],\n    planning_obstacles=[\"/World/Bin\"],\n)",
+  "settle_state": {
+    "cubes": {
+      "/World/Cube_1": [
+        0.0,
+        0.4,
+        0.8
+      ]
+    },
+    "conveyors": {}
+  },
+  "verify_args": {
+    "stages": [
+      {
+        "robot_path": "/World/Franka",
+        "pick_path": "/World/PickSensor",
+        "place_path": "/World/Bin",
+        "robot_kind": "franka_panda"
+      }
+    ],
+    "cube_path": "/World/Cube_1"
+  },
+  "simulate_args": {
+    "cube_path": "/World/Cube_1",
+    "target_path": "/World/Bin",
+    "duration_s": 120,
+    "xy_tolerance": 0.1
+  },
+  "intent": {
+    "pattern_hint": "pick_place",
+    "structural_features": {
+      "n_robot_stations": 1,
+      "n_handoffs": 0,
+      "destination_kind": "single_bin",
+      "uses_conveyor_transport": false,
+      "n_workpieces": 1
+    },
+    "structural_tags": [
+      "isaac:robot.fixed_base.arm",
+      "isaac:robot.franka_panda",
+      "isaac:topology.single_station",
+      "isaac:surface.flat_static",
+      "isaac:role.chain_relay_stage"
+    ]
+  },
+  "motion_controllers": {
+    "verified": [],
+    "failed": {},
+    "untested": [
+      "curobo"
+    ]
+  },
+  "verified_status": "build-spec cont.283: Franka palletize-RECEIVER = CP-CHAIN-FLAT (sensor/path-2 picks relay cubes) + LIST drop_targets (index-keyed, works for dynamic relay paths) re-palletizing into a 2x2 grid. directive (b) operation-variety: a chain ending in a GRID output, not a bin-stack. CHAIN-VERIFIED 4/4 distinct-slot 2x2 grid (cont.284, needs CHAIN_TOTAL~12000 — re-palletize's 4 distinct-slot places are ~2x binning's planning).",
+  "extension_notes": "Authored 2026-06-17 (cont.189) as the clean stage-1 for the UR10->Franka robot-diversity SEQUENTIAL chain (#29). The cont.189 redesign FIXED the side-reach plan-fail (identity orientation, pick in front). REFUTED the earlier 'inst0/BaseCube as Franka obstacle' theory by reading pick_place.py _build_scene_cfg: the Franka static obstacle world is only the rerooted inst1/Table+inst1/Bin (plus the hardcoded /World/Table|ConveyorBelt|Bin which are absent in a composed scene), so a cross-instance support cube is NEVER an obstacle. For a SINGLE source cube with belt_path=None the PickSensor is NOT a pick gate (pick_place.py:6306-6441) -- the cube is admitted by the z-window + reach gates and the sensor is only the cands.sort tie-break; so plan_calls>0 means the cube was admitted and any res_None is a PLAN issue (reach/orientation/collision), read ctrl:last_fail_goal. MULTI-SUB NOTE: CP-84 is target_source='curobo' so its _curobo_pp_sub_World_inst0_UR10 stays live across stage1 -> _sibling_keepout_cuboids() (pick_place.py:5128) auto-adds the inst0 UR10 body as a hard cuRobo cuboid for the Franka (the UR10-clip residual is auto-mitigated). Residual run-time risks: cube-on-BaseCube grip-slip (the relay is balanced on a 5cm cube) and the standard cuRobo plan/drop stochastic tail -- measure under N-of-M."
+}

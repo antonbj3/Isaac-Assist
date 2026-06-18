@@ -6338,3 +6338,12 @@ latent bugs (false-success-vakt + diagnostik-först each step):
      the gate expected the OFFSET bin -> 0/4. FIX: add "drop_targets" to POSITION_KWARGS. Unit-verified: LIST now
      offsets each [x,y,z], DICT path byte-unchanged (no regression). Re-test CP-08->CP-CHAIN-PALLETIZE-RECV in flight.
 Both are GENERAL fixes (any list-drop_targets template in a composed/chained context), not just this receiver.
+
+cont.284 (2026-06-18) — ★ palletize-RECEIVER VERIFIED (directive (b): a chain ending in a GRID output, not a
+bin-stack). CP-08 palletize(4) -> CP-CHAIN-PALLETIZE-RECV re-palletize = 4/4 + 4/4. RAW false-success-vakt:
+stage1 = distinct-slot 2x2 GRID at the OFFSET location (x-cols ~-0.14/-0.015, y-rows ~-1.35/-1.20, 1 z-level
+0.785, min-pair ~0.12m > gripper clearance) — NOT a pile. Needed CHAIN_TOTAL=12000 (re-palletize = 4 picks + 4
+DISTINCT-slot places ~2x binning's planning; 1700*N=6800 -> 3/4 with Cube_4 mid-transit; 12000 -> 4/4). chain_
+xkit_gate: + CHAIN_TOTAL env override on the window + module-scope `import os as _os` (fixed my own NameError
+regression). The dig fixed 2 GENERAL bugs en route: drop_targets schema accepts list (f292c989) + composer
+offsets LIST drop_targets (#41, f0056d2f). So palletize->re-palletize MULTI-CUBE GRID-OUTPUT chain = verified.

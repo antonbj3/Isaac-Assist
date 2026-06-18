@@ -19,7 +19,7 @@ Usage:
   python scripts/qa/chain_xkit_gate.py CP-CHAIN-UR10-SRC CP-CHAIN-FLAT
 Restart the Kit (kit_restart.sh) before invoking so stage0 starts clean; the gate restarts between stages.
 """
-import asyncio, json, sys, re, subprocess
+import asyncio, json, os as _os, sys, re, subprocess
 REPO = "/home/anton/projects/Omniverse_Nemotron_Ext"
 sys.path.insert(0, REPO)
 
@@ -108,7 +108,7 @@ async def _play_and_measure(kt, target, cubes, total=6000, chunk=1000, reacquire
     # cont.277: scale the measurement window with N — a fixed 6000 FALSE-NEGATIVES large multi-cube chains
     # (CP-08's 4 cubes used ~1500 updates each; a 6/9-cube chain would be cut off mid-delivery). max() keeps the
     # 6000 floor; only GROWS the window, and the controller idles after S["done"] -> benign for working chains.
-    total = max(total, 1700 * len(cubes))
+    total = max(total, 1700 * len(cubes), int(_os.environ.get('CHAIN_TOTAL') or 0))
     done = 0
     while done < total:
         n = min(chunk, total - done)
