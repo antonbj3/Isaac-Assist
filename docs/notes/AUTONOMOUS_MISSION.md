@@ -5887,3 +5887,19 @@ CP-CHAIN-UR10-SRC + a SHORT play, dump arm-EE motion (did the arm execute the pl
 final = distinguishes execution-not-applied vs grip-missed-under-offset. LESSON: even a multi-turn ctrl:*-based
 root cause can be a degraded-Kit phantom -- re-verify the SUSPECT diagnostic itself on a fresh Kit before
 building a narrative on it.
+
+cont.243 (2026-06-17): RE-CORRECTION of cont.242 (which OVER-corrected). Fast arm-motion probe (offset
+CP-CHAIN-UR10-SRC, FRESH Kit): the arm gets STUCK at ee=[1.683,-0.495,0.811] (CONSTANT across chunks 0-1),
+cube 0-jiggle, delivered=FALSE. So the offset failure is REAL and REPRODUCES on a fresh Kit -- NOT a "degraded
+phantom" (cont.242 was wrong). TRUE: the cuRobo GOAL is correct under offset (cont.242 goal-capture: point_world
+tracks the offset cube+tray) -> cont.234's "wrong-direction GOALS" was the IMPRECISE part. NET (careful): the
+UR10 genuinely fails as an offset receiver (zero-offset workaround GENUINELY NEEDED); the failure is in
+PLAN/EXECUTION -- cuRobo cannot bring the arm to the correct goal under origin_offset (arm sticks extended,
+never reaches the cube). Likely: start-config flagged in-collision OR robot-base-kinematics mismatch under
+offset; precise cause OPEN. cont.242's "plans succeed / phantom" RETRACTED (the goal-capture's "8 segments" was
+the controller RE-PLANNING, not execution success). LESSON (sharpened, the real value of this arc): I
+flip-flopped TWICE (234 wrong-goals[degraded ctrl:] -> 242 phantom[goal-capture only] -> 243 real-failure
+[+arm-motion]) by concluding on PARTIAL data each time. A root cause needs BOTH goal-correctness AND execution-
+outcome (arm-motion + delivered) on a FRESH Kit before it is trustworthy. The Franka->UR10 GOLD + zero-offset
+workaround STAND throughout (always genuinely delivered, RAW-audited). Closing the UR10-offset deep-dive here:
+thoroughly characterized (real failure, goals correct, plan/exec cause open), workaround proven, GOLD intact.
