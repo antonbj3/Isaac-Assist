@@ -6900,3 +6900,16 @@ restart-before-each cleared any UR10 process-corruption — confirms single-bloc
 ALL 4 GENUINE. genuine 42->46, position_honest 17->13, trusted 59. UR10 single-block IS accessible (the
 process-PhysX corruption only breaks COMPOSED multi-cell scenes, not isolated runs). batch6 = remaining 4 UR10
 (CP-82/83/86 + CP-NEW-palletizer-mixed-sku — the palletizer may hit the known UR10 grid-spread limit).
+
+cont.318h — breadth batch6 (UR10 remaining 4): CP-82 (UR10 2-cube color-routing) 2/2 routed correctly
+(Cube_1->Bin_red, Cube_2->Bin_blue), CP-83 (UR10 2-cube) 2/2 delivered, CP-86 (UR10 1-cube route) 1/1 delivered
+(moved 1.30m) -> GENUINE. ★ CP-NEW-palletizer-mixed-sku (UR10 mixed-SKU palletizer) -> FALSE (1/6): grid-spread
+BROKEN — only Box_6 gripped+moved, Box_5 THRASH-NO-CONVERGE, Box_1-4 never attempted; CONFIRMS the known UR10
+single-target-only grid-spread limit ([[project_isaac_assist_ur10_gridspread_limit]]). genuine 46->49, ph 13->9,
+false 2->3, trusted 58, total 70.
+★★ BREADTH CAMPAIGN COMPLETE (cont.318c-h): genuine 31->49 (+18 = 11 Franka + 7 UR10) across 6 batches / 21 blocks
+driven; 3 real catches (CP-44 sphere-squirt PARTIAL, CP-56 rotary-moving-target FALSE, palletizer UR10-grid-spread
+FALSE) + 1 scene_eyes TOOL-FIX (bin-aware orientation + deterministic test_bin_containment.py). Accessible
+SINGLE-BLOCK breadth (Franka + UR10, both robots) EXHAUSTED — remaining 9 position-honest = multi-robot 7 (deep
+3-gap per-instance tooling, deferred) + ~2. NEXT FRONTIER all deep/gated/big: multi-robot per-instance tooling /
+real-assets-L3 / more chain-ops (operation-variety saturated) / Gemini-LLM-flow (sparing).

@@ -457,21 +457,21 @@
     "CP-82": {
       "robot": "UR10",
       "class": "pick-place-bin",
-      "verdict": "TRUSTED(position-honest)",
+      "verdict": "GENUINE(scene_eyes UR10 2/2 color-routed: Cube_1->Bin_red[0.5,-0.30], Cube_2->Bin_blue[0.5,-0.55]; cont.318h)",
       "basis": "delivery-gate (honest for bin/sort)",
       "n_objects": 2
     },
     "CP-83": {
       "robot": "UR10",
       "class": "pick-place-bin",
-      "verdict": "TRUSTED(position-honest)",
+      "verdict": "GENUINE(scene_eyes UR10 2/2 delivered to Bin[0.5,-0.4], 2-level pile; cont.318h)",
       "basis": "delivery-gate (honest for bin/sort)",
       "n_objects": 2
     },
     "CP-86": {
       "robot": "UR10",
       "class": "other",
-      "verdict": "TRUSTED(position-honest)",
+      "verdict": "GENUINE(scene_eyes UR10 1/1 delivered to Bin[0.5,-0.4] moved 1.30m, single-cube route; cont.318h)",
       "basis": "delivery-gate (honest for bin/sort)",
       "n_objects": 1
     },
@@ -485,7 +485,7 @@
     "CP-NEW-palletizer-mixed-sku": {
       "robot": "UR10",
       "class": "color-sort",
-      "verdict": "TRUSTED(position-honest)",
+      "verdict": "FALSE(scene_eyes UR10 1/6: palletizer grid-spread BROKEN — only Box_6 gripped+moved, Box_5 THRASH-NO-CONVERGE, Box_1-4 never attempted; confirms the known UR10 single-target-only grid-spread limit; cont.318h)",
       "basis": "delivery-gate (honest for bin/sort)",
       "n_objects": 6
     },
@@ -505,11 +505,11 @@
     }
   },
   "summary": {
-    "trusted": 59,
-    "_trusted_note": "the 59 'trusted' = 46 GENUINE (execution-verified by scene_eyes) + 13 position-honest-ONLY (gate said position-ok, EXECUTION NOT verified). Compose-trust the 46 genuine; treat the 13 as candidates that still need an execution check before a GOLD composition claim.",
-    "genuine_execution_verified": 46,
-    "position_honest_only": 13,
-    "false": 2,
+    "trusted": 58,
+    "_trusted_note": "the 58 'trusted' = 49 GENUINE (execution-verified by scene_eyes) + 9 position-honest-ONLY (gate said position-ok, EXECUTION NOT verified; ~7 are multi-robot blocks needing per-instance tooling). Compose-trust the 49 genuine; the 9 still need an execution check before a GOLD claim.",
+    "genuine_execution_verified": 49,
+    "position_honest_only": 9,
+    "false": 3,
     "partial": 9,
     "pending": 0,
     "total": 70
