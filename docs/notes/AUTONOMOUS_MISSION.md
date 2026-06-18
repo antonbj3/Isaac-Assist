@@ -6418,3 +6418,9 @@ min-pair 0.137m distinct slots, ALL 4 CONVERGED+GRIPPED) — the dict-offset pat
 (palletize-receiver cont.284) + DICT form unregressed (composed CP-08 here). Directive-mandated no-regression of
 a shared change = DONE. The 3 latent bug fixes (drop_targets schema, composer list-offset, gripper_rotation
 schema) are all solid + verified. Tractable composition vein = mined; remaining = deep/fresh-context.
+
+cont.293 (2026-06-18) — PLC-export deployment-faithfulness: the emitted ST CASE now includes the controller's
+GRIP-RETRY (pick_place.py:800-818) — on grip-miss, re-descend up to 3x then abandon the cube. Verified on CP-08:
+Grip(step 3) -> grip_confirmed=step4(Lift); ELSIF grip_retry<3 -> step2(re-Descend)+retry++; ELSE -> step7
+(next cube's Approach, abandon). Correct indices for all 4 cubes. So the exported PLC has the sim's grip-miss
+robustness (not just the nominal linear cycle) = deployment-faithful. Kit-free emitter change, verified well-formed.

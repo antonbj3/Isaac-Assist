@@ -129,13 +129,21 @@ def emit_sfc(ir):
     L.append("VAR")
     L.append("    step  : INT  := 0;")
     L.append("    done  : BOOL := FALSE;")
+    L.append("    grip_retry : INT := 0;   (* grip-miss re-descend counter (controller: 3 tries then abandon) *)")
     L.append("END_VAR")
     L.append("CASE step OF")
     for i, s in enumerate(steps):
         guard = s["transition"]
         L.append(f"    {i}: (* {s['step']} *)")
         L.append(f"        {s['action']};")
-        if guard is not None and i + 1 < len(steps):
+        if "Grip" in s["step"] and guard is not None:
+            # faithful grip-retry (pick_place.py:800-818): on grip-miss, re-descend up to 3x, then abandon the cube.
+            descend, lift = i - 1, i + 1
+            skip = i + 4 if i + 4 < len(steps) else len(steps) - 1   # skip Lift/Transit/Release -> next cube's Approach
+            L.append(f"        IF {guard} THEN grip_retry := 0; step := {lift};")
+            L.append(f"        ELSIF grip_retry < 3 THEN grip_retry := grip_retry + 1; step := {descend};  (* re-descend on grip-miss *)")
+            L.append(f"        ELSE grip_retry := 0; step := {skip}; END_IF;  (* abandon cube after 3 tries *)")
+        elif guard is not None and i + 1 < len(steps):
             L.append(f"        IF {guard} THEN step := {i + 1}; END_IF;")
         else:
             L.append("        done := TRUE;")
