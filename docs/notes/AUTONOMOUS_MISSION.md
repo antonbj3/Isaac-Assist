@@ -6676,3 +6676,6 @@ advanced) -> task #44 "CP-20 belt-stall-limited" root is CORRECTED to TOPPLING, 
 (toppling) — DEFERRED (harder variant; palletize/grid covered by CP-08/10/12/19/27/30). Lesson reinforced: the
 aggregate lies BOTH ways — delivered-count false-POS caught by per-object ORIENTATION, belt-% false-NEG caught by
 per-object movement. high-res per-object is the only ground truth.
+
+cont.313b — CP-22 @ dur=95 -> 4/4 GENUINE(4/4 bin), no topple; high-res belt line live ("100% advanced -> NOT a
+stall"). genuine 24->25. 4 belt-fed single-bin blocks now confirmed (CP-38/04/21/22) + CP-20 topple-caught.
