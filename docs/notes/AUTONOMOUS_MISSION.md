@@ -6074,3 +6074,34 @@ the don't-over-invest-in-optional lesson. COMPOSITION-PIPELINE THREAD COMPLETE: 
 routing-aware measure unified, production+scene_eyes confirmed unaffected, END-GOAL Franka loop green. Next
 frontier (fresh context): sequential/robot-diversity end-to-end (#29 auto-handoff) or breadth (design-only
 templates -> verified).
+
+cont.255 (2026-06-18) — ⚠️ RETRACTION of the cont.252-254 framing. Anton challenged "composition fully
+closed". He's right; it was an OVERCLAIM (a false-positive on PROGRESS — the exact sin in
+feedback_false_positives_progress). I let "I finished a bugfix THREAD" slide into "the strategic GOAL is
+closed". Ran an adversarial 3-agent self-audit against the plan docs + code. GROUNDED status vs the plan's
+Definition-of-Done (MASTER_EXECUTION_PLAN.md:82 / IMPLEMENTATION_PLAN.md:179 / LLM_FLOW_SIMULATION_PROTOCOL.md
+:110-120 = runtime LLM, unseen multi-station spec -> decompose -> select right block (robot+op) -> classify
+seq/parallel -> compose(namespace+offset+handoff) -> build in Kit -> scene_eyes verifies EVERY robot completes,
+across BREADTH × ROBOT-DIVERSITY × CHAINING, both REASONING and DELIVERY error low):
+  • Reasoning (split b): ✅ STRONG — 9/9 decompose+select, 5/5 structure, 2/2 gap-honesty (Kit-free).
+  • Parallel exec: 🟡 works but FRANKA-ONLY — 32/32 verified_compositions are Franka, 12 distinct templates,
+    CP-13 dominates (~26/32). Not the multiplier (Anton: multiplier ≠ larger-N parallel).
+  • Robot-diversity IN composition: 🔴 ZERO mixed-robot verified comps. Same-Kit UR10+Franka HARD-BLOCKED
+    (process-global PhysX corruption). Cross-Kit proven BOTH directions but ONLY with hand-co-designed
+    zero-offset CP-CHAIN-* pairs (UR10-as-receiver fails under origin_offset; CP-CHAIN-UR10-SRC/RECV = DESIGN-ONLY).
+  • Sequential END-TO-END: 🔴 the LLM-picks-block -> chain path DOES NOT EXIST. compose_reason_eval.py is
+    reasoning-only (0 build/verify/chain calls), disconnected from chain_xkit_gate/build_composed_scene.
+  • "END-GOAL loop CLOSED" (cont.252): 🔴 NOT an integrated loop — it was TWO separate tools manually stitched
+    for ONE example (Gemini picked [CP-01,CP-03]; I carried the names into compose_and_verify's argv by hand).
+  • Breadth: 🔴 only 21/70 blocks GENUINE/scene_eyes-verified (43 are TRUSTED/position-only); canonical reps
+    fill 6/11 robot:op slots; 214/447 template files have NO verified_status.
+  • L3 (comps-of-comps): 🔴 0 records, no generator. Real assets / full North-Star self-correct loop: not started.
+  WHAT THIS SESSION ACTUALLY PROVED (honest minimum): fixed 2 REAL QA-harness bugs (bare-play freeze in
+  compose_and_verify + compose_gate; non-routing-aware sorter measure) + verified scene_eyes/production were
+  unaffected (golds stand) + ONE manually-stitched parallel-Franka demo. = a QA repair + one parallel-Franka
+  example. NOT "composition". Lesson -> memory feedback_overclaim_goal_vs_bugfix_thread. HONEST roadmap (by
+  dependency, no time-estimates): (1) WIRE the loop for real (compose_reason_eval -> build_composed_scene/
+  chain_xkit_gate -> scene_eyes; gives a true end-to-end REASONING-vs-DELIVERY measure); (2) ROBOT-DIVERSITY
+  without hand-holding = the actual multiplier (fix UR10-offset-receiver in cuRobo OR make #29 auto-handoff
+  generate the zero-offset pairs); (3) BREADTH — drive blocks to GENUINE + fill the 5 empty canonical slots;
+  (4) generalize sequential beyond a single flat-handoff cube; (5) later: L3 + real assets + full self-correct loop.
