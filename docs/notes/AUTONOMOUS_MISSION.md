@@ -6368,3 +6368,15 @@ cont.287 (2026-06-18) — palletize-receiver GENERALIZES (false-success-vakt rob
 CP-CHAIN-PALLETIZE-RECV = 3/3 + 3/3, RAW = distinct-slot grid (z=0.785). Not CP-08-specific. Pivoting to the
 breadth axis (a): scene_eyes-audit TRUSTED blocks for ACTUAL GRIP (position-honest != grip-honest; suction grips
 false-NEG on summaries -> read RAW). Auditing CP-81 (UR10 n=2 suction, TRUSTED).
+
+cont.288 (2026-06-18) — breadth-(a) TRUSTED->GENUINE audit = confirmed LOW-YIELD. CP-81 (UR10 n=2 suction)
+scene_eyes plan log shows the UR10 doing BIG wrist-sweeps (170-210°) + a res_None FAIL even for n=2-to-a-bin
+(it still delivers = TRUSTED-position-honest tolerates it) — CORROBORATES the UR10 grid-spread RCA (the IK does
+large sweeps; tight adjacent grid slots push it past flip/fail). GENUINE-status inconclusive (my wrapper piped
+scene_eyes through grep -> filtered the grip/delivered summary; wrapper-design note: save full output, grep
+separately). But promoting UR10-TRUSTED-bin blocks is LOW composition-value (bin-delivery=not chain sources;
+parallel-RD=PhysX-blocked). So breadth-(a) is genuinely low-yield (as assessed cont.265, now empirically).
+SESSION STATE: composition richly demonstrated+verified (5 chain types, 3-stage depth 4/4x3, multi-cube,
+palletize-receiver grid-output, generality CP-08/CP-12) + 2 GENERAL bug fixes (drop_targets list schema + composer
+list-offset #41) + PLC-export PoC+coverage (7 chains->deployable ST). REMAINING = DEEP/FRESH-CONTEXT: UR10
+grid-spread fix (IK, root-caused [[ur10_gridspread_limit]]), PLC consume-IR refactor, real-assets/L3.
