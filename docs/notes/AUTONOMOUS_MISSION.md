@@ -6326,3 +6326,15 @@ CP-08(4)/CP-12(3). --chain mode exports a 2-station COMPOSITION (station1 -> han
 multi-station SFC = the runtime-LLM composition's OUTPUT -> deployable PLC code. This extends composition's VALUE
 (sim-validated sequence -> IEC 61131-3) without any consume-the-IR refactor (proves capture first). NEXT (deeper):
 fuller ST bodies / consume-the-IR / real PLC toolchain.
+
+cont.283 (2026-06-18) — directive (b) palletize-RECEIVER (chain ending in a GRID, not a bin-stack). Authored
+CP-CHAIN-PALLETIZE-RECV (CP-CHAIN-FLAT + LIST drop_targets re-palletize grid). The dig surfaced + fixed TWO real
+latent bugs (false-success-vakt + diagnostik-först each step):
+  1. SCHEMA: SetupPickPlaceControllerArgs.drop_targets rejected a LIST though code (pick_place.py:4929) + the
+     field description support it -> validation 'dict_type' -> 0/4. FIX (f292c989): Union[Dict,List] / type:[object,array].
+  2. COMPOSER OFFSET (the #41 latent bug, LIST form): _transform_value offsets a DICT drop_targets ({prim:pos},
+     composer.py:98-100) so composed CP-08 works, but "drop_targets" (plural) wasn't in POSITION_KWARGS -> the
+     LIST form [[x,y,z],...] fell through UN-offset -> the receiver re-palletized to the TEMPLATE-frame grid while
+     the gate expected the OFFSET bin -> 0/4. FIX: add "drop_targets" to POSITION_KWARGS. Unit-verified: LIST now
+     offsets each [x,y,z], DICT path byte-unchanged (no regression). Re-test CP-08->CP-CHAIN-PALLETIZE-RECV in flight.
+Both are GENERAL fixes (any list-drop_targets template in a composed/chained context), not just this receiver.

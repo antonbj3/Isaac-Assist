@@ -31,7 +31,7 @@ from typing import Any, Dict, List, Tuple
 # only heuristic can't tell a position from any other 3-float list (orientation is
 # 4, but colours/scales are 3), so positions are recognised by KWARG NAME.
 POSITION_KWARGS = frozenset({
-    "position", "target_position", "target", "pick_target", "drop_target",
+    "position", "target_position", "target", "pick_target", "drop_target", "drop_targets",
     "home_target", "drop_pose", "place_position", "goal_position", "nav_goal",
     "start_position", "waypoint", "via_point",
 })
