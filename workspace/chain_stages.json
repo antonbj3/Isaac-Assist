@@ -9,7 +9,8 @@
     "CP-NEW-franka-flat-receive": {"robot": "Franka", "role": "receiver", "pick_height":      "flat",   "handoff_z": 0.825, "n_cube": 1, "verified": "chain stage1 1/1 (cont.266, auto-offset path-2 @[0.11,-0.39])"},
     "CP-CHAIN-FRANKA-SRC":        {"robot": "Franka", "role": "source",   "handoff_surface": "flat",   "handoff_z": 0.775, "n_cube": 1, "verified": "chain stage0 1/1 (cont.267, Franka->Franka line)"},
     "CP-08":                      {"robot": "Franka", "role": "source",   "handoff_surface": "flat-grid", "handoff_z": 0.825, "n_cube": 4, "verified": "MULTI-CUBE source: chain stage0 4/4 x2 (cont.269), tight 0.144m 2x2 grid handoff"},
-    "CP-12":                      {"robot": "Franka", "role": "source",   "handoff_surface": "flat-grid", "handoff_z": 0.825, "n_cube": 3, "verified": "MULTI-CUBE source: chain stage0 3/3 (cont.271, generality — not CP-08-specific), diagonal grid handoff"}
+    "CP-12":                      {"robot": "Franka", "role": "source",   "handoff_surface": "flat-grid", "handoff_z": 0.825, "n_cube": 3, "verified": "MULTI-CUBE source: chain stage0 3/3 (cont.271, generality — not CP-08-specific), diagonal grid handoff"},
+    "CP-CHAIN-PALLETIZE-RECV":    {"robot": "Franka", "role": "receiver", "pick_height":      "flat",   "handoff_z": 0.825, "n_cube": "1..N", "verified": "MULTI-CUBE re-palletize RECEIVER: picks N relay cubes + re-palletizes to a distinct-slot GRID output (not a bin-stack); 4/4 (cont.284); needs CHAIN_TOTAL~12000 (distinct-slot places ~2x binning's planning)"}
   },
   "handoff_rule": "A source delivers onto a SURFACE at handoff_z; a receiver picks at pick_height. They chain iff (a) the source delivers onto a FLAT/RAISED surface (NOT into a deep bin/container — a receiver arm cannot pick from inside a deep bin), AND (b) source.handoff_z matches receiver pick envelope: UR10 picks RAISED (~0.975 pedestal), Franka picks FLAT (~0.775). UR10 delivers flat; Franka delivers flat or raised.",
   "proven_chains": [
@@ -18,6 +19,7 @@
     {"stages": ["CP-NEW-ur10-flat-deliver", "CP-NEW-franka-flat-receive"], "dir": "UR10->Franka", "handoff": "flat 0.825 HandoffPad", "result": "1/1+1/1 (cont.266, auto-offset [0.11,-0.39] path-2)"},
     {"stages": ["CP-CHAIN-FRANKA-SRC", "CP-CHAIN-FLAT"], "dir": "Franka->Franka (same-robot LINE)", "handoff": "flat 0.775", "result": "1/1+1/1 (cont.267)"},
     {"stages": ["CP-08", "CP-CHAIN-FLAT"], "dir": "Franka(palletize)->Franka(pick) MULTI-CUBE", "handoff": "flat-grid 0.825 (4 cubes)", "result": "4/4+4/4 N-of-M=2 (cont.269) — faithful multi-cube relay, RAW: tight grid handoff + stable 4-stack collected in bin"},
-    {"stages": ["CP-12", "CP-CHAIN-FLAT"], "dir": "Franka(palletize)->Franka(pick) MULTI-CUBE", "handoff": "flat-grid 0.825 (3 cubes)", "result": "3/3+3/3 (cont.271) — generality: multi-cube works across palletizers + N (not CP-08-specific)"}
+    {"stages": ["CP-12", "CP-CHAIN-FLAT"], "dir": "Franka(palletize)->Franka(pick) MULTI-CUBE", "handoff": "flat-grid 0.825 (3 cubes)", "result": "3/3+3/3 (cont.271) — generality: multi-cube works across palletizers + N (not CP-08-specific)"},
+    {"stages": ["CP-08", "CP-CHAIN-PALLETIZE-RECV"], "dir": "Franka(palletize)->Franka(RE-PALLETIZE) MULTI-CUBE GRID-OUTPUT", "handoff": "flat-grid 0.825 (4)", "result": "4/4+4/4 (cont.284, operation-variety: chain ENDS IN A GRID not a bin; needs CHAIN_TOTAL~12000)"}
   ]
 }
