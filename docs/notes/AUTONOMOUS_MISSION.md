@@ -6424,3 +6424,11 @@ GRIP-RETRY (pick_place.py:800-818) — on grip-miss, re-descend up to 3x then ab
 Grip(step 3) -> grip_confirmed=step4(Lift); ELSIF grip_retry<3 -> step2(re-Descend)+retry++; ELSE -> step7
 (next cube's Approach, abandon). Correct indices for all 4 cubes. So the exported PLC has the sim's grip-miss
 robustness (not just the nominal linear cycle) = deployment-faithful. Kit-free emitter change, verified well-formed.
+
+cont.294 (2026-06-18) — breadth-(a) false-success-vakt on the TRICKIEST grip type (UR10 suction), CP-81 full
+RAW: suction GRIP IS REAL — Cube_2 cup-cube_d=0.026 @grip (cubeZ=0.975), Cube_1 cup-cube_d=0.031, both
+CONVERGED+GRIPPED. REFUTES the "position-honest-without-grip" false-success hypothesis (the suction physically
+grips). The lone suspect (Cube_1 SETTLED-Z=1.004, high) = almost certainly IN-TRANSIT (Cube_1 gripped only @27s;
+the slow big-sweep UR10 can't finish lift+transit+place by the 70s cutoff — same incomplete-run pattern as
+CP-08@offset 60s; NOT a stuck false-success). => breadth-(a) confirmed LOW-YIELD even on suction: grips genuine,
+no false-success. NOTE: usage hit 90% weekly (hard-stop 94%) — minding it; stop low-yield Kit re-runs near the cap.
