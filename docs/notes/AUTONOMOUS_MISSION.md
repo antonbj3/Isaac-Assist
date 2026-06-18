@@ -6720,3 +6720,13 @@ tight xy), NO topple = CONFIRMED (not refuted). CP-19 (6-cube grid GENUINE-grid)
 (min-pair 0.070m clear gaps, NOT collapsed), no topple = CONFIRMED. Both held under the high-res topple/collapse
 checks -> the GENUINE gold set is adversarially-solid (no hidden false-positives in the sampled column+grid). The
 belt high-res line fires correctly on CP-19 too ("100% advanced -> NOT a stall").
+
+cont.315 (2026-06-18) — CP-10 (n=9 grid) adversarial audit CONFIRMED: 9/9 gripped, spread grid (min-pair 0.057m
+gaps, NOT collapsed; 2 z-levels = palletize layers, fine), no topple. ★3-GOLD ADVERSARIAL-AUDIT META-RESULT:
+CP-15 (column) + CP-19 (grid) + CP-10 (big grid) ALL held under high-res topple/collapse checks -> the GENUINE
+gold set is adversarially-SOLID (0 refutations in the high-risk sampling; the high-res verification was rigorous).
+TOOL (verktygen-är-levande): FOCUS upgrade — scene_eyes now accepts EYES_FOCUS for SINGLE-template multi-robot
+scenes (not just compose/attach): EYES_FOCUS=Franka2 -> focuses /World/Franka2, unlocking per-robot verification of
+multi-robot single-templates (CP-02/07/68). ★mät-först CAUGHT an incomplete first attempt (robot-detection only
+matched UNDER FOCUS/, silently fell back to auto-detect -> still Franka1); fixed to match AT-FOCUS too; validated
+live (robot=/World/Franka2). The live-test earned its keep.

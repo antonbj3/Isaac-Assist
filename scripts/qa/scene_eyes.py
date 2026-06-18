@@ -63,7 +63,11 @@ else:
 # EYES_FOCUS stays FOCUS="" (auto-detect) -> byte-identical to v1 and to every non-attach run.
 if COMPOSE:
     FOCUS = "/World/" + os.environ.get("EYES_FOCUS", "inst1")
-elif ATTACH and os.environ.get("EYES_FOCUS"):
+elif os.environ.get("EYES_FOCUS"):
+    # cont.314 (verktygen-är-levande): allow per-robot focus on a SINGLE-template MULTI-ROBOT scene
+    # (e.g. EYES_FOCUS=Franka2 for CP-02's 2nd station, EYES_FOCUS=Franka1 for a CP-07 cell) — not just
+    # compose/attach. Subsumes the old `ATTACH and EYES_FOCUS` case. Default (no EYES_FOCUS) -> FOCUS="" ->
+    # byte-identical auto-detect, so every existing single-robot run is unchanged.
     FOCUS = "/World/" + os.environ["EYES_FOCUS"]
 else:
     FOCUS = ""
@@ -93,7 +97,10 @@ ROBOT = None
 if FOCUS:
     for pr in stage.Traverse():
         _p = str(pr.GetPath())
-        if _p.startswith(FOCUS + "/") and pr.HasAPI(UsdPhysics.ArticulationRootAPI):
+        # cont.314: match the articulation AT FOCUS (single-template multi-robot, e.g. /World/Franka2 IS the
+        # robot) OR UNDER FOCUS/ (composed/rerooted scene, e.g. /World/inst1/Franka). The old "under-only"
+        # check silently fell back to auto-detect (first robot) for single-template focus -> live-test caught it.
+        if (_p == FOCUS or _p.startswith(FOCUS + "/")) and pr.HasAPI(UsdPhysics.ArticulationRootAPI):
             ROBOT = _p; break
 if ROBOT is None:
     for cand in ("/World/UR10", "/World/UR10e", "/World/Franka", "/World/ur10", "/World/Robot"):
