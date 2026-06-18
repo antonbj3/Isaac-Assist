@@ -6389,3 +6389,11 @@ needs time); the UR10 SCATTERS regardless of window = UR10-specific IK-flail. No
 (pile[3/4], path-keyed drop_targets[broke], class-keyed[broke], within-radius[1/4], longer-window[1/4]) ->
 robot-diversity MULTI-CUBE conclusively BLOCKED on the UR10 grid-spread IK; fix = a DEEP shared cuRobo-controller
 change (wrist-constraint and/or force-release-scatter gate), FRESH-CONTEXT. Deleted the broken template.
+
+cont.290 (2026-06-18) — fixed the TWIN latent bug to drop_targets: gripper_rotation schema. The controller code
+(pick_place.py:5044-5054) supports gripper_rotation as scalar(int/float) | dict | list, and the field description
+says so, but the pydantic model + JSON schema only allowed Dict -> a scalar/list gripper_rotation (brick-pattern
+CP-20 layer-yaw, mixed-SKU per-item orientation) would be rejected by validation. Widened: _models.py ->
+Union[float,int,Dict,List]; tool_schemas.py -> type:[object,array,number]. Unit-verified scalar/list/dict all
+accept. Same pattern as the drop_targets fix (f292c989); both = the #41 'POSITION_KWARGS/args hand-maintained,
+latent non-dict mis-validation' family. No current template hit it yet (preventive, confirmed-pattern).
