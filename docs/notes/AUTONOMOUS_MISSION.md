@@ -6782,3 +6782,14 @@ cont.316f — CP-57 (parcel-singulation-from-HEAP, mislabeled color-sort) HIGH-R
 GRIP-SLIP (dxy=62mm off-center, never-lifted from the heap) + Item_4 unreached; heap-overlap -> marginal grips.
 Hard task (not the 2-color sorters CP-32/33/47 which are clean). genuine 31, partial 8. So even within 'color-sort'
 class, verify-EACH matters (sorters clean, heap-singulation hard).
+
+cont.317 (2026-06-18) — BOUNDED multi-robot tooling test (CP-65 kit-tray relay, FrankaA fills tray->FrankaB picks
+tray) RESOLVED: the FOCUS EE-focus works (robot=/World/FrankaB) + gripper-naming is clean (FrankaA/FrankaB ->
+*_ShortGripper, scoping correct-in-principle), BUT the per-robot grip-VERIFICATION is DEEP — (1) the GRIP-SLIP
+section reads scene-wide CUBE contact (reported FrankaA's Cube_3 grip @38s, not FrankaB's), needs scoping to
+_GV.get_gripped_objects() instead of scene-wide cube-contacts; (2) FrankaB picks the TRAY, which scene_eyes does
+NOT track as a grip target (tracks cubes/box-like only); (3) relay handoff timing. So multi-robot per-instance
+verification = a CAREFUL DEDICATED SESSION (3 distinct tooling gaps), NOT a quick verify -> CONFIRMED deferred
+([[feedback_phantom_rootcause_and_optional_bug_overinvest]]). The FOCUS EE-focus + gripper-scoping are committed
+(the accessible half). DECISION: accessible single-robot breadth EXHAUSTED (genuine 31, 5 catches); multi-robot,
+UR10, Gemini-LLM-flow, real-assets all = deep/complex/gated/big = Anton-steer / dedicated-session / fresh-budget.
