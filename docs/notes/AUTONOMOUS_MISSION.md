@@ -6570,3 +6570,12 @@ orchestration is now EVIDENCED (2 concrete backends: IEC 61131-3 ST + ROS2 MoveI
 VERIFICATION SCOPE (honest): emitted ROS2 nodes are ast-valid Python (test_plc_st_parses now checks both backends,
 10 ROS2 + 12 ST), NOT run against a live ROS2/MoveIt stack (no rclpy/moveit_py here) — MoveItPy calls are the
 documented API surface, integrator-bound. CLI: plc_export_poc.py <TID> --ros2 -> .ros2.py. Static suite 6/6.
+
+cont.304 (2026-06-18, Kit-free) — closed the cont.300->cont.296 loop: the 3-stage mid-stage discoverability hint
+in compose_orchestrate plan_with_gemini now reads the FORMAL registry field can_source (+ delivers_surface),
+SUPERSEDING the fragile cont.296 string-match ("re-palletize" in verified). So the planner reads the canonical
+source of truth (the registry I formalized in cont.300), and the mid-stage hint GENERALIZES to ANY can_source
+receiver, not just re-palletize templates. STATICALLY VERIFIED (no Gemini): only CP-CHAIN-PALLETIZE-RECV
+(can_source) gets the MID-stage note; pure receivers (CP-CHAIN-FLAT, UR10-RECV-NATIVE, franka-flat-receive) get
+"deposits into bin", no mid-note (MATCH vs expected). The Gemini-EFFECT (does the LLM now compose 3 stages) stays
+pending the quota reset — same as cont.296 — but the code is now registry-driven + general, not template-specific.
