@@ -40,7 +40,7 @@
     "failed": {},
     "untested": ["curobo"]
   },
-  "verified_status": "build-spec-2026-06-17 (cont.213). DESIGN ONLY until Kit-verified. Flat-tray stage-0 for the UR10->Franka robot-diversity chain; pairs with CP-CHAIN-FLAT. Canonical chain: chain_gate.py CP-CHAIN-UR10-SRC CP-CHAIN-FLAT@0.5,-0.8,0. Validate: (1) stage0 UR10 delivers Cube_1 onto the Tray (relay rests ~0.775); (2) stage1 Franka grips the flat relay (the cont.212 fix). N-of-M before GOLD.",
+  "verified_status": "build-spec-2026-06-17 (cont.213). Kit-VERIFIED chain stage0 1/1 (cont.261b no-regression + cont.264/266). Flat-tray stage-0 for the UR10->Franka robot-diversity chain; pairs with CP-CHAIN-FLAT. Canonical chain: chain_gate.py CP-CHAIN-UR10-SRC CP-CHAIN-FLAT@0.5,-0.8,0. Validate: (1) stage0 UR10 delivers Cube_1 onto the Tray (relay rests ~0.775); (2) stage1 Franka grips the flat relay (the cont.212 fix). N-of-M before GOLD.",
   "intent": {
     "pattern_hint": "pick_place",
     "structural_features": {

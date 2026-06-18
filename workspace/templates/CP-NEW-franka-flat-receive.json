@@ -48,7 +48,7 @@
     "If the relayed cube lands slightly off the pad it may roll; the pad is 0.40x0.40 (large vs 0.05 cube) so a +/-0.15 landing error stays on the slab.",
     "Cube_R coexisting with the relayed inst0 cube under chain: chain_gate's apply_source_override REPLACES source_paths with the inst0 cube list, so Cube_R is no longer a pick source and is not measured. It sits inert on the pad (harmless). If a future chain wants it gone, omit it via a param; not needed for the relay measure."
   ],
-  "verified_status": "build-spec-2026-06-17; STANDALONE function-gate EXPECTED pass (CP-01 controller path, static flat pick); CHAIN stage-1 untested (human-serial Kit run required).",
+  "verified_status": "build-spec-2026-06-17; STANDALONE function-gate EXPECTED pass (CP-01 controller path, static flat pick); CHAIN stage-1 Kit-VERIFIED 1/1 (cont.266, auto-offset [0.11,-0.39] path-2).",
   "chain_usage": {
     "role": "stage-1 of a robot-diversity sequential chain (#29)",
     "pair_with_stage0": "CP-NEW-ur10-flat-deliver",

@@ -49,7 +49,7 @@
     "Platform is a kinematic rigid body (create_conveyor applies kinematicEnabled=True) with zero surface velocity — it does NOT push the delivered cube (verified: surfaceVelocity=[0,0,0] disables the integrator's push). It just provides a flat collision surface.",
     "In a chain, stage-0's HandoffPad becomes the stage-1 pick surface ONLY if stage-1's pick zone overlaps the pad world position — handled by the chain offset (see chain usage note), not a standalone failure."
   ],
-  "verified_status": "build-spec-2026-06-17; STANDALONE function-gate EXPECTED pass (CP-70 controller path, flat target easier than deep bin); CHAIN stage-0 untested (human-serial Kit run required).",
+  "verified_status": "build-spec-2026-06-17; STANDALONE function-gate EXPECTED pass (CP-70 controller path, flat target easier than deep bin); CHAIN stage-0 Kit-VERIFIED 1/1 (cont.266, chain_xkit_gate -> CP-NEW-franka-flat-receive).",
   "chain_usage": {
     "role": "stage-0 of a robot-diversity sequential chain (#29)",
     "delivers_cube_to_world": [0.5, -0.4, 0.825],
