@@ -6045,3 +6045,17 @@ authoritative gold gate) ALREADY does STOP->PLAY (lines 251-256), so it was neve
 gated composed golds (#34 3-cell, #38 5-cell) STAND; this was a bug ONLY in the L2 verified-composition
 training-data generator, which explains the long-noted compose_and_verify-vs-scene_eyes DIVERGENCE. So the
 task->LLM->compose->Kit->verify loop is now GREEN for Franka. Memory: feedback_composed_scene_needs_stopplay.
+
+cont.253 (2026-06-18): the bare-play freeze fix EXTENDED + scaled + scoped. (1) Audited ALL callers of
+compose_canonicals/build_composed_scene -> a SECOND QA harness had the identical bare-play bug:
+compose_gate.py (the composed function-gate used by scene_eyes/chain_gate) -> fixed (20ea0763, same STOP->PLAY
+pattern). UNAFFECTED (already STOP->PLAY): scene_eyes.py (gold gate) + PRODUCTION simulate_traversal_check
+(diagnostics.py: tl.stop() main + tl.play() in _do_one_run) -> the deployed runtime composition capability was
+never broken; only the two QA gates were. (2) SCALE: clean 3-cell compose_and_verify [CP-01,CP-03,CP-28] ->
+inst0 4/4 + inst1 2/2 + inst2 1/1 -> verified=True -> FIRST multi-cell gold_kit_delivery_verified record
+appended (proves the fix re-acquires ALL earlier cells, not just one: inst0 AND inst1 both delivered, both
+would've frozen under bare-play). The CP-50 variant earlier gave inst2(CP-50)=2/4 -- a CP-50-specific partial
+(last-built, never frozen), NOT the freeze; flag as a #30 follow-up. (3) Dataset audit: verified_compositions
+.jsonl = 11 gold_kit_delivery_verified + 20 gold_scene_eyes_verified, 0 junk (the "verified=None" rows were
+just eyes_gold_gate's different schema -- verify-before-dismissing, not data poisoning). #30 L2 pipeline is
+UNBLOCKED + producing multi-cell records.
