@@ -5781,3 +5781,16 @@ diversity composition is genuine (Franka delivers to a location, UR10 picks from
 diversity now works BOTH directions: UR10->Franka (faithful, GOLD 3/3) and Franka->UR10 (location-handoff,
 GOLD 3/3). NEXT (optional, not a blocker): fix the UR10 controller instance-offset handling for literal-relay
 + UR10-in-arbitrary-stage. Committed: CP-CHAIN-UR10-RECV-NATIVE (GOLD) + chain_xkit_gate (snap + native branch).
+
+cont.236 (2026-06-17): 3-STAGE cross-Kit chain DELIVERED -- Franka(raised) -> UR10(native) -> Franka(flat-
+recv) = 1/1+1/1+1/1, demonstrating the chain GENERALIZES past 2 stages with ALTERNATING robot diversity. One
+run exercises all THREE chain_xkit_gate branch types: stage0 Franka native (run_stage0, handoff
+[-0.001,-0.386,0.975]); stage1 UR10 ZERO-OFFSET NATIVE branch (the cont.235 GOLD receiver, off snapped 0,
+delivers flat to [1.01,-1.19,0.775]); stage2 Franka SENSOR-relay branch at a LARGE offset [1.01,-1.59] (the
+sensor-driven Franka is offset-robust -- it places + grips the relayed cube -> bin [1.013,-1.982,0.785]).
+Each stage's grip mechanism is individually N-of-M + RAW-proven (Franka raised 4/4; UR10 native GOLD 3/3 RAW
+grip-audited; Franka flat-recv = the UR10->Franka GOLD receiver, 3/3 RAW-audited cont.231); the 3-stage
+INTEGRATION shown 1x (cross-Kit serial = deterministic by design; per-stage Kit restart clears the UR10
+process-PhysX corruption before stage2). So COMPOSITION = chaining robust templates is now demonstrated
+across 3 stages x 3 robots = the strategic multiplier (breadth x robot-diversity) in action. No new code/
+template -- pure use of the cont.233-235 blocks + harness.
