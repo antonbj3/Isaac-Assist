@@ -128,8 +128,8 @@
     "CP-20": {
       "robot": "Franka",
       "class": "palletize/grid",
-      "verdict": "PARTIAL(some never gripped/approached)",
-      "basis": "scene_eyes STACK-STRUCTURE",
+      "verdict": "PARTIAL(6/18 toppled — brick-layer stacking)",
+      "basis": "scene_eyes cont.313 @ dur=280: 18/18 CONVERGED+GRIPPED (NOT a reach-failure — old 'some never gripped' was WINDOW-CUT at short dur) BUT 6/18 TOPPLED >60° (Cube_2/3/4/6/12/14, brick-layer 90°-rotation stacking instability). ★HIGH-RES catch (Anton): aggregate 18/18-delivered is a FALSE-POSITIVE; per-object ORIENTATION (6 toppled) refutes it. Belt NOT stalling (high-res belt fix LIVE: movf 3% but 13 resumes -> boxes advance) -> task #44 'belt-stall-limited' root is TOPPLING not belt. Defer the stacking fix (harder variant; palletize/grid covered by CP-08/10/12/19/27/30).",
       "n_objects": 18
     },
     "CP-21": {

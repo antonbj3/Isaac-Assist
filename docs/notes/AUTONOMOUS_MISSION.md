@@ -6665,3 +6665,14 @@ belt-rarely-resumes AND <30% of boxes ever moved (high-res per-object); the fals
 boxes were processed (CP-38 movedf=100%). Verified: delivered-belt -> correct-gating (movedf 100%); true-stall
 (boxes stuck at spawn) -> STALL (movedf 0%). The aggregate belt-% lied BOTH ways (it gave my cont.307-309 false-
 NEGATIVE); the per-object movement is the ground truth for false-pos AND false-neg. compiles.
+
+cont.313 (2026-06-18, local) — CP-20 (18-cube brick-layer palletizer) decisive test @ dur=280 RESOLVED 3 things:
+(1) 18/18 CONVERGED+GRIPPED -> the old "some never gripped" basis was WINDOW-CUT at short dur (NOT a reach-failure;
+my preliminary "0 gripped" partial-eyes read was a field under-capture, as flagged). (2) ★HIGH-RES FALSE-POSITIVE
+CATCH (Anton's directive live): aggregate 18/18-delivered LOOKS complete, but per-object ORIENTATION shows 6/18
+TOPPLED >60° (brick-layer 90°-rotation stacking instability) -> the REAL partial. (3) the cont.312 HIGH-RES belt
+fix WORKED LIVE: "belt mostly-paused but RESUMES 13x = correct sensor-gating, NOT a stall" (movf 3% yet boxes
+advanced) -> task #44 "CP-20 belt-stall-limited" root is CORRECTED to TOPPLING, not belt-stall. CP-20 stays PARTIAL
+(toppling) — DEFERRED (harder variant; palletize/grid covered by CP-08/10/12/19/27/30). Lesson reinforced: the
+aggregate lies BOTH ways — delivered-count false-POS caught by per-object ORIENTATION, belt-% false-NEG caught by
+per-object movement. high-res per-object is the only ground truth.
