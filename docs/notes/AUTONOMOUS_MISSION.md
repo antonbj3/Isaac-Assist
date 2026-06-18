@@ -6703,3 +6703,8 @@ to HIGH-RES per-object (did each box move from spawn?), catches false-pos AND fa
 matrix (CP-24/26, pick-place-bin already 7-genuine-covered); distinct under-covered = MULTI-ROBOT/complex
 (CP-02/07/18/58/68 need per-instance EYES_FOCUS / inspection / assembly-constraint verification) = fresh-budget.
 Lesson: per-block high-res verify (don't infer the matrix is uniform — CP-31 proved it); aggregate lies both ways.
+
+cont.313f — CP-24 @ dur=90 -> GENUINE(4/4 spread-grid) [genuine 27]. Pick-place-bin matrix now: CP-04/21/22/23/24
+clean (5) + CP-31 PARTIAL-caught. Class is saturated (8 genuine pick-place-bin) -> remaining matrix (CP-26) is the
+last; further single-robot pick-place breadth is marginal. Next genuine value = distinct under-covered classes
+(complex/multi-robot) or the gated frontiers (LLM-flow #28 Gemini, real-assets/L3).
