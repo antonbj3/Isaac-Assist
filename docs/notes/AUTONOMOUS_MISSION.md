@@ -6182,3 +6182,13 @@ handoff-compat -> chain-ready LLM catalog -> fully LLM-driven sequential GREEN. 
 this is ONE proven UR10->Franka single-cube chain end-to-end; the MECHANISM/loop is proven, BREADTH remains
 (more chain-ready stages, more robot pairs, multi-cube handoff, the cont.262 weak-CP-73 + multi-cube-relay
 gaps). NOT "sequential composition done" — the loop works; breadth is the next axis.
+
+cont.265 (2026-06-18) — FALSE-SUCCESS-VAKT on structured compositions (proactive, scene_eyes RAW): audited
+bbox-verified stack records. CP-01+CP-13 -> CP-13 STACK STRUCTURE = COLUMN (2 z-levels [0.825,0.875], upright
+6.6°, CONVERGED+GRIPPED, RIGID HOLD). CP-13+CP-13 (two CONCURRENT stackers) -> BOTH insts COLUMN (2 z-levels,
+upright, gripped) = no topple under contention. So post-composer-dict-fix stacks HOLD under composition (single
++ concurrent) — the gold claims survive adversarial audit, no false-success. Also: parallel-breadth audit
+(TRUSTED->GENUINE) found LOW-yield (the risky structured class is ALREADY GENUINE; the 43 TRUSTED are bin/pick,
+delivery-honest) -> pivot away. #28 LLM-flow = ChromaDB-gated (retrieval harness, machine-freeze) -> not
+autonomously runnable; its Gemini reasoning half is done. NEXT genuine multiplier work = multi-cube handoff
+(chain relays 1/N; needed for stack/grid-OUTPUT chains) -> authoring a 2-cube chain-ready pair.
