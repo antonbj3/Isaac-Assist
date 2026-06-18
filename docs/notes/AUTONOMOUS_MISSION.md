@@ -6748,3 +6748,11 @@ over-investment in a REDUNDANT/deprioritized block (CP-02 in-scene 2-robot line 
 cross-Kit chains; [[feedback_phantom_rootcause_and_optional_bug_overinvest]]). The FOCUS EE-focus + gripper-scoping
 are committed (correct-in-principle, safe), but full multi-station per-robot verification is DEFERRED (fresh-budget,
 not worth deep debugging for a redundant block). Honest: NOT claiming multi-station verification works.
+
+cont.316 (2026-06-18) — CP-25 (16-cube high-density 4x4 palletizer, PARTIAL) high-res resolved @ dur=260: 8/16
+CONVERGED+GRIPPED+placed (no thrash, no topple); ROOT = THROUGHPUT not reach-fail (tight 0.07m 4x4 -> ~32s/cube,
+only 8 placed in 260s, other 8 still conveyor-feeding; needs ~512s for 16). The 8 placed are genuine; tight-density
+is the binding slowness. Basis corrected (old 'some never gripped' implied reach-fail). Stays PARTIAL (8 unverified,
+redundant harder-variant - palletize/grid covered). [Per-object disambiguation: all 16 'moved' but xy-extent
+0.28>grid 0.21 = 8 grid + 8 conveyor, not a convergence under-count.] high-res adversarial audit thoroughly worked:
+CP-15/19/10 confirmed solid, CP-20/CP-25 partials resolved (topple / throughput), CP-31 caught.

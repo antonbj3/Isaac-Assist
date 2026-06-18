@@ -163,8 +163,8 @@
     "CP-25": {
       "robot": "Franka",
       "class": "palletize/grid",
-      "verdict": "PARTIAL(some never gripped/approached)",
-      "basis": "scene_eyes STACK-STRUCTURE",
+      "verdict": "PARTIAL(8/16 - throughput-slow tight 4x4)",
+      "basis": "scene_eyes cont.316 @ dur=260: 8/16 CONVERGED+GRIPPED + placed (no thrash, no topple); root is THROUGHPUT not reach-fail - tight 0.07m 4x4 = ~32s/cube so only 8 placed in 260s, other 8 still conveyor-feeding (needs ~512s for 16). The 8 placed are genuine; high-density tight-spacing is the binding slowness. Redundant harder-variant (palletize/grid covered by CP-08/10/12/19/27/30). Old 'some never gripped' was imprecise (implies reach-fail; it is throughput).",
       "n_objects": 16
     },
     "CP-26": {
