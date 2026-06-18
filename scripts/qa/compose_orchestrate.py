@@ -40,6 +40,7 @@ sys.path.insert(0, REPO + "/scripts/qa")
 _BLOCKS = json.load(open(f"{REPO}/workspace/composable_blocks.json"))
 _ALL = _BLOCKS["all"]
 _CANON = {cp for cp in _BLOCKS["canonical_blocks"].values() if cp}
+_CHAIN = json.load(open(f"{REPO}/workspace/chain_stages.json"))["stages"]   # verified chain-ready stages (#29)
 
 
 def _verdict(cp):
@@ -47,11 +48,12 @@ def _verdict(cp):
 
 
 def _robust(cp):
-    return _verdict(cp).startswith("GENUINE")
+    # GENUINE (scene_eyes-verified canonical) OR a verified chain-ready stage (for sequential chains)
+    return _verdict(cp).startswith("GENUINE") or cp in _CHAIN
 
 
 def _robot(cp):
-    return (_ALL.get(cp) or {}).get("robot", "?")
+    return (_ALL.get(cp) or {}).get("robot") or (_CHAIN.get(cp) or {}).get("robot", "?")
 
 
 async def plan_with_gemini(task, model):
@@ -142,6 +144,18 @@ async def main():
     if p["structure"] == "sequential":
         # ROUTE sequential -> the cross-Kit chain executor (handles arbitrary-offset UR10 receivers post
         # cont.261). This is the robot-diversity path (cross-Kit sidesteps the UR10 same-Kit PhysX block).
+        # #29 HANDOFF PRE-FILTER (cont.263): check each consecutive (src,recv) pair is chain-compatible
+        # (deliver onto a pickable surface at a height the receiver robot can grasp) BEFORE the expensive
+        # cross-Kit run. This catches the cont.262 CP-73->CP-13 failure (deep-bin handoff) for free.
+        from compose_handoff import chain_compat
+        for i in range(len(p["cells"]) - 1):
+            cmp = chain_compat(p["cells"][i], p["cells"][i + 1])
+            print("E2E HANDOFF %s->%s: %s — %s" % (p["cells"][i], p["cells"][i + 1],
+                  "COMPAT" if cmp["compatible"] else "INCOMPAT", cmp["reason"]))
+            if not cmp["compatible"]:
+                print("E2E HALT(handoff-incompat): chain blocks not handoff-compatible -> not running an "
+                      "incompatible cross-Kit chain (#29 pre-filter). Needs chain-ready surface-delivering "
+                      "source + height-matched receiver."); return
         if a.dry_run:
             print("E2E DRY-RUN: would route sequential %s -> chain_xkit_gate (cross-Kit relay)." % p["cells"]); return
         print("E2E EXECUTE: sequential %s -> chain_xkit_gate (cross-Kit relay) ... [needs chain-ready blocks; "
