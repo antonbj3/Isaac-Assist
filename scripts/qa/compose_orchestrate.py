@@ -73,6 +73,11 @@ async def plan_with_gemini(task, model):
         else:
             what = (("picks parts (one OR several) off a %s handoff surface and deposits them into a bin" % h) if (multi or "N" in str(n))
                     else ("picks a part off a %s handoff surface and deposits it into a bin" % h))
+        # a re-palletize receiver also DELIVERS a flat grid -> it can be a MID-stage source for a deeper chain (cont.296)
+        if m.get("role") != "source" and "re-palletize" in (m.get("verified") or "").lower():
+            what += (" — AND it re-palletizes the parts to a flat GRID, which is itself a handoff a FURTHER pick "
+                     "cell can chain FROM (so this cell can be a MID-stage source; only add a 3rd downstream cell "
+                     "if the task explicitly asks for a final pick/sort AFTER the re-arrange)")
         _cl.append("- %s: a %s chain %s that %s" % (cp, m.get("robot"), (m.get("role") or "").upper(), what))
     aug_catalog = CATALOG + "\n\n--- chain-ready stages (use ONLY for a SEQUENTIAL handoff chain) ---\n" + "\n".join(_cl)
     aug_sys = SYS + (" For a SEQUENTIAL handoff chain, do NOT use the parallel work-cells (they deliver into "

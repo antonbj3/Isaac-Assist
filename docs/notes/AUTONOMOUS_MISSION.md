@@ -6442,3 +6442,12 @@ engine-agnostic orchestration spec (hot-swap-doctrine foundation): the PLC-expor
 VAKT on my OWN check: caught+fixed 2 false-mismatches (redundant destination_path fallback when drop_targets
 covers all cubes; LIST [pos_i] is-equivalent-to DICT {cube_i:pos_i}). Usage 90% weekly (hard-stop 94%) — Kit-free
 chosen to conserve; deep Kit builds (consume-IR run, UR10 IK) deferred to fresh budget.
+
+cont.296 (2026-06-18, Kit-free) — 3-stage LLM-planning discoverability: added a MID-STAGE note to
+plan_with_gemini's _cl — a re-palletize receiver "doubles as a MID-stage source (its grid is a handoff a further
+pick cell can chain from); only add a 3rd cell if the task explicitly asks for a final pick after the re-arrange"
+(conditional, to avoid over-composition). VERIFIED no-regression: a 2-stage "palletize then pick" task still
+plans [CP-08, CP-CHAIN-FLAT] (2 cells, gap=False) — the note did NOT over-compose. The 3-stage BENEFIT (does the
+LLM now pick 3?) is UNVERIFIED — Gemini free-tier quota exhausted (3 calls, 429); verify on quota reset. Fix is
+SAFE (additive _cl description, no-regression verified) + likely beneficial (same mechanism as the cont.274
+receiver-discoverability fix that worked). NOT claiming it works (mät-först) — safe + benefit-pending.
