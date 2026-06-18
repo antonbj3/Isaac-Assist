@@ -6534,3 +6534,10 @@ consistency gap: chain_compat used the source's INPUT handoff_z; for a MID-stage
 (output height) -- aligns with the cont.300 registry enrichment (correct verdict before only by tolerance luck).
 test_chain_compat.py locks it in. Composition machinery now has a static-verification layer: chain_registry_
 validate (registry consistency) + test_chain_compat (predictor faithfulness), both negative-control-proven.
+
+cont.301b — consolidated the 5 Kit-free guards (cont.297-301) into ONE runnable suite: run_static_checks.sh
+(explicit files, NO pytest/globs per the ChromaDB-freeze rule). 5 passed / 0 failed. The static foundation
+(PLC-export grammar+faithfulness+control-flow; composition registry+predictor) is now a one-command "verifierad
+mätväg" so the guards stay LIVE instead of bit-rotting as orphans. Net for cont.296-301: 12 commits — 1 LLM-plan
+fix + 3 PLC false-success fixes + composition mid-stage modeling fix + predictor consistency fix, ALL guarded by
+6 negative-control-proven Kit-free tests. Zero Kit, zero Gemini, weekly steady ~90%.
