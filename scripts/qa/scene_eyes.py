@@ -300,6 +300,14 @@ try:
     from isaacsim.robot.surface_gripper import GripperView as _GVcls
     _sgp = [str(pr.GetPath()) for pr in stage.Traverse() if str(pr.GetTypeName()) == "IsaacSurfaceGripper"]
     _sgp_use = [p for p in _sgp if "ShortGripper" in p] or _sgp
+    if FOCUS:
+        # cont.315: scope the gripper to the FOCUS robot (multi-robot scene). Else _sgp_use[0] is the FIRST
+        # gripper (e.g. Franka1), so a Franka2-focused run read Franka1's grip (degenerate 0@0.0s). Match a
+        # gripper UNDER FOCUS/ or FOCUS_-prefixed (e.g. /World/Franka2_ShortGripper). Completes per-robot
+        # grip-attribution so multi-station scenes can be verified per robot.
+        _foc = [p for p in _sgp_use if p.startswith(FOCUS + "/") or p.startswith(FOCUS + "_")]
+        if _foc:
+            _sgp_use = _foc
     if _sgp_use:
         _SGPATH = _sgp_use[0]; _GV = _GVcls(paths=_SGPATH)
         print("GV_OK", _SGPATH)

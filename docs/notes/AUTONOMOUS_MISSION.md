@@ -6739,3 +6739,12 @@ station scenes is a separate gap (would need to scope the grip-contact span to t
 handoff-timing/longer dur). CP-02 stays position-honest HONESTLY (Franka1 genuine RIGID HOLD; Franka2+handoff
 unverified) — don't promote on inconclusive 2nd-station data. The multi-station verification is fresh-budget
 (per-robot grip scoping). The FOCUS upgrade itself is sound + committed (unlocks the EE-focus half).
+
+cont.315c — per-robot grip-attribution: added _GV gripper-scoping to FOCUS (scope the SurfaceGripper to the FOCUS
+robot, not the first) — SAFE (FOCUS-only, single-robot runs byte-identical). But CP-02 multi-station verification
+stayed INCONCLUSIVE (grip-slip unchanged, gripped=NONE for the Franka2 gripper, focus-scoped cube-tracking murky)
+-> multiple tangled gaps (gripper-naming + handoff-timing window + focus cube-tracking). DECISION: STOP here =
+over-investment in a REDUNDANT/deprioritized block (CP-02 in-scene 2-robot line is covered by the validated
+cross-Kit chains; [[feedback_phantom_rootcause_and_optional_bug_overinvest]]). The FOCUS EE-focus + gripper-scoping
+are committed (correct-in-principle, safe), but full multi-station per-robot verification is DEFERRED (fresh-budget,
+not worth deep debugging for a redundant block). Honest: NOT claiming multi-station verification works.
