@@ -16,6 +16,7 @@ CHECKS=(
   "test_plc_controlflow.py"     # emitted ST state-machine control flow correct (grip-retry skip arithmetic)
   "chain_registry_validate.py"  # chain_stages.json internally consistent (positions, handoff reach)
   "test_chain_compat.py"        # handoff predictor agrees with proven ground truth + neg-controls
+  "test_composable_blocks.py"   # block catalog consistent + genuine/position-honest summary matches verdicts
 )
 
 pass=0; fail=0; failed=()

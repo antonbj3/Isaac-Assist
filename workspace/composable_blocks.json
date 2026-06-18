@@ -1,0 +1,517 @@
+{
+  "canonical_blocks": {
+    "Franka:color-sort": "CP-03",
+    "Franka:inspect/vision": null,
+    "Franka:kit/assembly": "CP-50",
+    "Franka:other": null,
+    "Franka:palletize/grid": "CP-08",
+    "Franka:pick-place-bin": "CP-01",
+    "Franka:stack/column": "CP-13",
+    "UR10:color-sort": null,
+    "UR10:other": null,
+    "UR10:palletize/grid": null,
+    "UR10:pick-place-bin": "CP-73"
+  },
+  "all": {
+    "CP-01": {
+      "robot": "Franka",
+      "class": "pick-place-bin",
+      "verdict": "GENUINE",
+      "basis": "scene_eyes (this session)",
+      "n_objects": 4
+    },
+    "CP-02": {
+      "robot": "Franka",
+      "class": "kit/assembly",
+      "verdict": "TRUSTED(position-honest)",
+      "basis": "delivery-gate (honest for bin/sort)",
+      "n_objects": 1
+    },
+    "CP-03": {
+      "robot": "Franka",
+      "class": "color-sort",
+      "verdict": "GENUINE",
+      "basis": "scene_eyes (this session)",
+      "n_objects": 2
+    },
+    "CP-04": {
+      "robot": "Franka",
+      "class": "pick-place-bin",
+      "verdict": "TRUSTED(position-honest)",
+      "basis": "delivery-gate (honest for bin/sort)",
+      "n_objects": 4
+    },
+    "CP-07": {
+      "robot": "Franka",
+      "class": "pick-place-bin",
+      "verdict": "TRUSTED(position-honest)",
+      "basis": "delivery-gate (honest for bin/sort)",
+      "n_objects": 1
+    },
+    "CP-08": {
+      "robot": "Franka",
+      "class": "palletize/grid",
+      "verdict": "GENUINE(grid)",
+      "basis": "scene_eyes STACK-STRUCTURE",
+      "n_objects": 4
+    },
+    "CP-09": {
+      "robot": "Franka",
+      "class": "stack/column",
+      "verdict": "FALSE(scatter)",
+      "basis": "FALSE(scatter) is HONEST not stale (cont.196 assessment): 5-high conveyor-fed tower, errors compound up the column -> topple; stack class robustly covered by CP-13 (2-high, verified). Don't re-audit (low value, genuinely hard-redundant).",
+      "n_objects": 5
+    },
+    "CP-10": {
+      "robot": "Franka",
+      "class": "palletize/grid",
+      "verdict": "GENUINE(grid)",
+      "basis": "scene_eyes STACK-STRUCTURE",
+      "n_objects": 9
+    },
+    "CP-12": {
+      "robot": "Franka",
+      "class": "palletize/grid",
+      "verdict": "GENUINE(grid)",
+      "basis": "scene_eyes STACK-STRUCTURE",
+      "n_objects": 3
+    },
+    "CP-13": {
+      "robot": "Franka",
+      "class": "stack/column",
+      "verdict": "GENUINE(column)",
+      "basis": "scene_eyes (this session)",
+      "n_objects": 2
+    },
+    "CP-14": {
+      "robot": "Franka",
+      "class": "stack/column",
+      "verdict": "GENUINE(column)",
+      "basis": "scene_eyes STACK-STRUCTURE",
+      "n_objects": 2
+    },
+    "CP-15": {
+      "robot": "Franka",
+      "class": "stack/column",
+      "verdict": "GENUINE(column)",
+      "basis": "scene_eyes STACK-STRUCTURE",
+      "n_objects": 3
+    },
+    "CP-16": {
+      "robot": "Franka",
+      "class": "color-sort",
+      "verdict": "GENUINE(routed)",
+      "basis": "scene_eyes RAW 2026-06-17 (cont.198): 4/4 cubes in COLOR-ASSIGNED bins (red x-0.45/blue -0.15/green +0.15/yellow +0.45, all <0.01 off, in-bin not floor). Routing genuinely correct, not just position-honest (xy-containment check, toward #36).",
+      "n_objects": 4
+    },
+    "CP-17": {
+      "robot": "Franka",
+      "class": "color-sort",
+      "verdict": "TRUSTED(position-honest)",
+      "basis": "delivery-gate (honest for bin/sort)",
+      "n_objects": 6
+    },
+    "CP-18": {
+      "robot": "Franka",
+      "class": "inspect/vision",
+      "verdict": "TRUSTED(position-honest)",
+      "basis": "delivery-gate (honest for bin/sort)",
+      "n_objects": 5
+    },
+    "CP-19": {
+      "robot": "Franka",
+      "class": "palletize/grid",
+      "verdict": "GENUINE(grid)",
+      "basis": "scene_eyes STACK-STRUCTURE",
+      "n_objects": 6
+    },
+    "CP-20": {
+      "robot": "Franka",
+      "class": "palletize/grid",
+      "verdict": "PARTIAL(some never gripped/approached)",
+      "basis": "scene_eyes STACK-STRUCTURE",
+      "n_objects": 18
+    },
+    "CP-21": {
+      "robot": "Franka",
+      "class": "pick-place-bin",
+      "verdict": "TRUSTED(position-honest)",
+      "basis": "delivery-gate (honest for bin/sort)",
+      "n_objects": 4
+    },
+    "CP-22": {
+      "robot": "Franka",
+      "class": "pick-place-bin",
+      "verdict": "TRUSTED(position-honest)",
+      "basis": "delivery-gate (honest for bin/sort)",
+      "n_objects": 4
+    },
+    "CP-23": {
+      "robot": "Franka",
+      "class": "pick-place-bin",
+      "verdict": "TRUSTED(position-honest)",
+      "basis": "delivery-gate (honest for bin/sort)",
+      "n_objects": 4
+    },
+    "CP-24": {
+      "robot": "Franka",
+      "class": "pick-place-bin",
+      "verdict": "TRUSTED(position-honest)",
+      "basis": "delivery-gate (honest for bin/sort)",
+      "n_objects": 4
+    },
+    "CP-25": {
+      "robot": "Franka",
+      "class": "palletize/grid",
+      "verdict": "PARTIAL(some never gripped/approached)",
+      "basis": "scene_eyes STACK-STRUCTURE",
+      "n_objects": 16
+    },
+    "CP-26": {
+      "robot": "Franka",
+      "class": "pick-place-bin",
+      "verdict": "TRUSTED(position-honest)",
+      "basis": "delivery-gate (honest for bin/sort)",
+      "n_objects": 4
+    },
+    "CP-27": {
+      "robot": "Franka",
+      "class": "palletize/grid",
+      "verdict": "GENUINE(grid)",
+      "basis": "scene_eyes STACK-STRUCTURE",
+      "n_objects": 4
+    },
+    "CP-28": {
+      "robot": "Franka",
+      "class": "pick-place-bin",
+      "verdict": "GENUINE",
+      "basis": "scene_eyes (this session)",
+      "n_objects": 1
+    },
+    "CP-29": {
+      "robot": "Franka",
+      "class": "pick-place-bin",
+      "verdict": "GENUINE",
+      "basis": "scene_eyes (this session)",
+      "n_objects": 1
+    },
+    "CP-30": {
+      "robot": "Franka",
+      "class": "palletize/grid",
+      "verdict": "GENUINE(grid)",
+      "basis": "scene_eyes STACK-STRUCTURE",
+      "n_objects": 4
+    },
+    "CP-31": {
+      "robot": "Franka",
+      "class": "pick-place-bin",
+      "verdict": "TRUSTED(position-honest)",
+      "basis": "delivery-gate (honest for bin/sort)",
+      "n_objects": 3
+    },
+    "CP-32": {
+      "robot": "Franka",
+      "class": "color-sort",
+      "verdict": "TRUSTED(position-honest)",
+      "basis": "delivery-gate (honest for bin/sort)",
+      "n_objects": 2
+    },
+    "CP-33": {
+      "robot": "Franka",
+      "class": "color-sort",
+      "verdict": "TRUSTED(position-honest)",
+      "basis": "delivery-gate (honest for bin/sort)",
+      "n_objects": 2
+    },
+    "CP-34": {
+      "robot": "Franka",
+      "class": "color-sort",
+      "verdict": "PARTIAL(stochastic blue place)",
+      "basis": "routing_validate + scene_eyes RAW 2026-06-17 (cont.199): blue STOCHASTIC to BlueBin(x+0.4) -- in-bin 1 run / floor 2 runs; red+green always CORRECT-routed. Overstated as position-honest gold; flaky far-bin place (controller stochasticity, redundant class: CP-16 4-color + CP-03 cover color-sort robustly). N-of-M needed for a rate.",
+      "n_objects": 3
+    },
+    "CP-35": {
+      "robot": "Franka",
+      "class": "color-sort",
+      "verdict": "TRUSTED(position-honest)",
+      "basis": "delivery-gate (honest for bin/sort)",
+      "n_objects": 8
+    },
+    "CP-36": {
+      "robot": "Franka",
+      "class": "pick-place-bin",
+      "verdict": "TRUSTED(position-honest)",
+      "basis": "delivery-gate (honest for bin/sort)",
+      "n_objects": 4
+    },
+    "CP-37": {
+      "robot": "Franka",
+      "class": "pick-place-bin",
+      "verdict": "TRUSTED(position-honest)",
+      "basis": "delivery-gate (honest for bin/sort)",
+      "n_objects": 4
+    },
+    "CP-38": {
+      "robot": "Franka",
+      "class": "color-sort",
+      "verdict": "TRUSTED(position-honest)",
+      "basis": "delivery-gate (honest for bin/sort)",
+      "n_objects": 12
+    },
+    "CP-41": {
+      "robot": "Franka",
+      "class": "pick-place-bin",
+      "verdict": "TRUSTED(position-honest)",
+      "basis": "delivery-gate (honest for bin/sort)",
+      "n_objects": 4
+    },
+    "CP-42": {
+      "robot": "Franka",
+      "class": "palletize/grid",
+      "verdict": "GENUINE(grid)",
+      "basis": "scene_eyes RAW 2026-06-17 (post-#45 brick-tracking): 4 bricks 2x2, min-pair-xy 0.118m, 1 z-level, none on floor",
+      "n_objects": 4
+    },
+    "CP-43": {
+      "robot": "Franka",
+      "class": "palletize/grid",
+      "verdict": "PARTIAL(some never gripped/approached)",
+      "basis": "scene_eyes STACK-STRUCTURE",
+      "n_objects": 4
+    },
+    "CP-44": {
+      "robot": "Franka",
+      "class": "pick-place-bin",
+      "verdict": "TRUSTED(position-honest)",
+      "basis": "delivery-gate (honest for bin/sort)",
+      "n_objects": 4
+    },
+    "CP-45": {
+      "robot": "Franka",
+      "class": "pick-place-bin",
+      "verdict": "TRUSTED(position-honest)",
+      "basis": "delivery-gate (honest for bin/sort)",
+      "n_objects": 4
+    },
+    "CP-46": {
+      "robot": "Franka",
+      "class": "palletize/grid",
+      "verdict": "GENUINE(grid)",
+      "basis": "scene_eyes STACK-STRUCTURE",
+      "n_objects": 6
+    },
+    "CP-47": {
+      "robot": "Franka",
+      "class": "color-sort",
+      "verdict": "TRUSTED(position-honest)",
+      "basis": "delivery-gate (honest for bin/sort)",
+      "n_objects": 2
+    },
+    "CP-49": {
+      "robot": "Franka",
+      "class": "palletize/grid",
+      "verdict": "GENUINE(grid)",
+      "basis": "scene_eyes STACK-STRUCTURE",
+      "n_objects": 4
+    },
+    "CP-50": {
+      "robot": "Franka",
+      "class": "kit/assembly",
+      "verdict": "GENUINE(kit-routed)",
+      "basis": "focused audit RAW 2026-06-17 (cont.201): vision-driven kitting 4/4 to COLOR-CORRECT trays (Cube_1/3 Red->RedTray x-0.3, Cube_2/4 Blue->BlueTray x+0.3), all in-tray settled, none floor/feeding. Kit/assembly canonical genuinely tray-routed (upgraded from position-honest).",
+      "n_objects": 4
+    },
+    "CP-51": {
+      "robot": "Franka",
+      "class": "pick-place-bin",
+      "verdict": "TRUSTED(position-honest)",
+      "basis": "delivery-gate (honest for bin/sort)",
+      "n_objects": 1
+    },
+    "CP-52": {
+      "robot": "Franka",
+      "class": "pick-place-bin",
+      "verdict": "TRUSTED(position-honest)",
+      "basis": "delivery-gate (honest for bin/sort)",
+      "n_objects": 4
+    },
+    "CP-53": {
+      "robot": "Franka",
+      "class": "pick-place-bin",
+      "verdict": "TRUSTED(position-honest)",
+      "basis": "delivery-gate (honest for bin/sort)",
+      "n_objects": 3
+    },
+    "CP-54": {
+      "robot": "Franka",
+      "class": "pick-place-bin",
+      "verdict": "TRUSTED(position-honest)",
+      "basis": "delivery-gate (honest for bin/sort)",
+      "n_objects": 4
+    },
+    "CP-56": {
+      "robot": "Franka",
+      "class": "pick-place-bin",
+      "verdict": "TRUSTED(position-honest)",
+      "basis": "delivery-gate (honest for bin/sort)",
+      "n_objects": 4
+    },
+    "CP-57": {
+      "robot": "Franka",
+      "class": "color-sort",
+      "verdict": "TRUSTED(position-honest)",
+      "basis": "delivery-gate (honest for bin/sort)",
+      "n_objects": 5
+    },
+    "CP-58": {
+      "robot": "Franka",
+      "class": "kit/assembly",
+      "verdict": "TRUSTED(position-honest)",
+      "basis": "delivery-gate (honest for bin/sort)",
+      "n_objects": 4
+    },
+    "CP-61": {
+      "robot": "Franka",
+      "class": "other",
+      "verdict": "TRUSTED(position-honest)",
+      "basis": "delivery-gate (honest for bin/sort)",
+      "n_objects": 3
+    },
+    "CP-65": {
+      "robot": "Franka",
+      "class": "kit/assembly",
+      "verdict": "TRUSTED(position-honest)",
+      "basis": "delivery-gate (honest for bin/sort)",
+      "n_objects": 4
+    },
+    "CP-66": {
+      "robot": "Franka",
+      "class": "pick-place-bin",
+      "verdict": "TRUSTED(position-honest)",
+      "basis": "delivery-gate (honest for bin/sort)",
+      "n_objects": 4
+    },
+    "CP-68": {
+      "robot": "Franka",
+      "class": "other",
+      "verdict": "TRUSTED(position-honest)",
+      "basis": "delivery-gate (honest for bin/sort)",
+      "n_objects": 1
+    },
+    "CP-69": {
+      "robot": "UR10",
+      "class": "pick-place-bin",
+      "verdict": "TRUSTED(position-honest)",
+      "basis": "delivery-gate (honest for bin/sort)",
+      "n_objects": 1
+    },
+    "CP-70": {
+      "robot": "UR10",
+      "class": "pick-place-bin",
+      "verdict": "GENUINE(grip+deliver)",
+      "basis": "scene_eyes RAW 2026-06-17 (cont.197): Cube_1 gripped + carried to bin (0.51,-0.29,0.785), not on floor, 0 grip-slip. UR10 surface_gripper genuinely robust (upgraded from position-honest).",
+      "n_objects": 1
+    },
+    "CP-71": {
+      "robot": "UR10",
+      "class": "palletize/grid",
+      "verdict": "PARTIAL(some never gripped/approached)",
+      "basis": "scene_eyes STACK-STRUCTURE",
+      "n_objects": 4
+    },
+    "CP-73": {
+      "robot": "UR10",
+      "class": "pick-place-bin",
+      "verdict": "GENUINE(grip+deliver)",
+      "basis": "scene_eyes RAW 2026-06-17 (cont.197): 4/4 cubes ever-gripped (grp) + delivered into bin (xy~0.52,-0.28; z 0.785/0.835/0.885/0.935 stacked), none on floor, 0 grip-slip, moving conveyor. UR10 canonical = genuinely robust (upgraded from position-honest).",
+      "n_objects": 4
+    },
+    "CP-75": {
+      "robot": "UR10",
+      "class": "pick-place-bin",
+      "verdict": "TRUSTED(position-honest)",
+      "basis": "delivery-gate (honest for bin/sort)",
+      "n_objects": 1
+    },
+    "CP-77": {
+      "robot": "Franka",
+      "class": "palletize/grid",
+      "verdict": "GENUINE(grid)",
+      "basis": "scene_eyes STACK-STRUCTURE",
+      "n_objects": 5
+    },
+    "CP-79": {
+      "robot": "UR10",
+      "class": "pick-place-bin",
+      "verdict": "TRUSTED(position-honest)",
+      "basis": "delivery-gate (honest for bin/sort)",
+      "n_objects": 1
+    },
+    "CP-81": {
+      "robot": "UR10",
+      "class": "pick-place-bin",
+      "verdict": "TRUSTED(position-honest)",
+      "basis": "delivery-gate (honest for bin/sort)",
+      "n_objects": 2
+    },
+    "CP-82": {
+      "robot": "UR10",
+      "class": "pick-place-bin",
+      "verdict": "TRUSTED(position-honest)",
+      "basis": "delivery-gate (honest for bin/sort)",
+      "n_objects": 2
+    },
+    "CP-83": {
+      "robot": "UR10",
+      "class": "pick-place-bin",
+      "verdict": "TRUSTED(position-honest)",
+      "basis": "delivery-gate (honest for bin/sort)",
+      "n_objects": 2
+    },
+    "CP-86": {
+      "robot": "UR10",
+      "class": "other",
+      "verdict": "TRUSTED(position-honest)",
+      "basis": "delivery-gate (honest for bin/sort)",
+      "n_objects": 1
+    },
+    "CP-NEW-kit-prep-operator": {
+      "robot": "Franka",
+      "class": "kit/assembly",
+      "verdict": "TRUSTED(position-honest)",
+      "basis": "delivery-gate (honest for bin/sort)",
+      "n_objects": 5
+    },
+    "CP-NEW-palletizer-mixed-sku": {
+      "robot": "UR10",
+      "class": "color-sort",
+      "verdict": "TRUSTED(position-honest)",
+      "basis": "delivery-gate (honest for bin/sort)",
+      "n_objects": 6
+    },
+    "CP-NEW-yrkesroll-gripper-vacuum-pick": {
+      "robot": "Franka",
+      "class": "pick-place-bin",
+      "verdict": "TRUSTED(position-honest)",
+      "basis": "delivery-gate (honest for bin/sort)",
+      "n_objects": 4
+    },
+    "CP-NEW-yrkesroll-inspector-reject-divert": {
+      "robot": "Franka",
+      "class": "color-sort",
+      "verdict": "TRUSTED(position-honest)",
+      "basis": "delivery-gate (honest for bin/sort)",
+      "n_objects": 4
+    }
+  },
+  "summary": {
+    "trusted": 64,
+    "_trusted_note": "the 64 'trusted' = 21 GENUINE (execution-verified by scene_eyes) + 43 position-honest-ONLY (gate said position-ok, EXECUTION NOT verified). Compose-trust the 21 genuine; treat the 43 as candidates that still need an execution check before a GOLD composition claim.",
+    "genuine_execution_verified": 21,
+    "position_honest_only": 43,
+    "false": 1,
+    "partial": 5,
+    "pending": 0,
+    "total": 70
+  }
+}

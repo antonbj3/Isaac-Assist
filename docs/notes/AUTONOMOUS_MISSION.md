@@ -6548,3 +6548,13 @@ and each relayed object is re-created as a hardcoded 0.05 UsdGeom.Cube. So the m
 ONLY for homogeneous 0.05-cube chains (all proven chains are) — a heterogeneous handoff (Brick/Box/other size)
 would relay a 0.05 cube at the right position but wrong shape/size. NOT a silent overclaim anymore. Deferred
 (no heterogeneous use case; carrying size+type needs a Kit-verified change = optional-feature over-investment).
+
+cont.302 (2026-06-18, Kit-free, CORE) — audited composable_blocks.json (the catalog composer/LLM draw from):
+CONSISTENT (0 canonical-rep issues, 0 trusted-blocks-missing-template, summary tallies). HONESTY fix: the summary
+lumped 'trusted: 64' = 21 GENUINE (execution-verified) + 43 position-honest-ONLY (gate said position-ok, execution
+NOT verified) -- obscuring the mission-critical 21/70 genuine metric the memory tracks. Surfaced the split in the
+summary (genuine_execution_verified: 21, position_honest_only: 43, + a _trusted_note warning not to compose-trust
+the 43 as golds) so a consumer can't over-trust position-honest blocks (the CP-08-grid-collapse/CP-54-jaw
+false-success class). test_composable_blocks.py guards it (canonical reps + templates present, summary matches
+verdicts) -> static suite now 6/6. Static-verification layer COMPLETE across both composition registries
+(chain_stages + composable_blocks) AND PLC-export (3 guards). One command: run_static_checks.sh.
