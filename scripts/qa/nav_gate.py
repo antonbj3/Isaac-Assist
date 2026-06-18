@@ -38,8 +38,25 @@ async def nav_gate(tpl_name):
     # fleet: list of {robot_path, nav_goal}; fallback to single robot (backward-compat)
     fleet = sa.get("fleet")
     if not fleet:
-        fleet = [{"robot_path": sa.get("robot_path") or "/World/Carter",
-                  "nav_goal": sa.get("nav_goal") or sa.get("target_position") or [0.0, 0.0]}]
+        # Discover the robot path(s)+goal(s) from the template's navigate_to() calls (templates often omit
+        # simulate_args.fleet/robot_path -> the old /World/Carter fallback false-negatives a robot spawned at
+        # e.g. /World/AMR, cont.247). Fall back to /World/Carter only if no navigate_to is found.
+        import re as _re
+        _code = (tpl.get("code", "") or "") + "\n" + (tpl.get("code_template", "") or "")
+        _navs = _re.findall(
+            r'navigate_to\(\s*robot_path\s*=\s*["\']([^"\']+)["\'][^)]*?target_position\s*=\s*\[([^\]]+)\]',
+            _code, _re.S)
+        if _navs:
+            fleet = []
+            for _rp, _tp in _navs:
+                try:
+                    _xy = [float(x.strip()) for x in _tp.split(",")][:2]
+                except Exception:
+                    _xy = [0.0, 0.0]
+                fleet.append({"robot_path": _rp, "nav_goal": _xy})
+        else:
+            fleet = [{"robot_path": sa.get("robot_path") or "/World/Carter",
+                      "nav_goal": sa.get("nav_goal") or sa.get("target_position") or [0.0, 0.0]}]
     fleet_arg = [[f["robot_path"], float(f["nav_goal"][0]), float(f["nav_goal"][1])] for f in fleet]
 
     await kit_tools.exec_sync("import omni.usd; omni.usd.get_context().new_stage()", timeout=25)
@@ -56,9 +73,13 @@ FLEET = _j.loads({json.dumps(fleet_arg)!r}); TOL = {tol}; N = {nsteps}
 def _artroot(rp):
     pr = stage.GetPrimAtPath(rp)
     if pr and pr.IsValid():
-        if pr.HasAPI(UsdPhysics.ArticulationRootAPI): return rp
-        for c in Usd.PrimRange(pr):
-            if c.HasAPI(UsdPhysics.ArticulationRootAPI): return c.GetPath().pathString
+        # Prefer a prim PHYSICS actually translates (a rigid-body link) over a bare Xform that merely carries
+        # ArticulationRootAPI -- some spawns put ArticulationRootAPI on BOTH the parent Xform AND the root
+        # link (chassis_link); measuring the non-translating parent = false disp=0 (cont.247).
+        _cands = [c for c in Usd.PrimRange(pr) if c.HasAPI(UsdPhysics.ArticulationRootAPI)]
+        for c in _cands:
+            if c.HasAPI(UsdPhysics.RigidBodyAPI): return c.GetPath().pathString
+        if _cands: return _cands[0].GetPath().pathString
     return rp
 def bpos(body):
     pr = stage.GetPrimAtPath(body)

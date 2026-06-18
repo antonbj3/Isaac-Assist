@@ -1013,6 +1013,12 @@ async def execute_template_canonical(
         if t == "teleport_prim" and a.get("prim_path") in _ur10_pp_paths and a.get("position")
     }
     _sg_robots = {a.get("robot_path") for (t, a) in captured if t == "surface_gripper"}
+    # Carter/wheeled auto-repair (cont.247): create_wheeled_robot only makes a CONTROLLER, not a robot. A
+    # template that calls it for a path NOT spawned by robot_wizard/add_reference -> no robot -> nav fails
+    # (nav_gate spawned=False, e.g. CP-NEW-cart-handoff-amr). Inject a robot_wizard('carter') SPAWN before
+    # such calls (the create_wheeled_robot controller is kept; navigate_to also installs its own).
+    _spawned_paths = ({a.get("dest_path") for (t, a) in captured if t == "robot_wizard"} |
+                      {a.get("prim_path") for (t, a) in captured if t == "add_reference"})
     _repaired: List[tuple] = []
     for tool_name, args in captured:
         # (1) Drop the raw create_prim / teleport_prim for a UR10 pp robot; replace its add_reference(ur10.usd)
@@ -1070,6 +1076,17 @@ async def execute_template_canonical(
             }))
             _sg_robots.add(_rp)
             logger.info(f"[CanonicalInst] {task_id} AUTO-REPAIR: injected surface_gripper for UR10 cuRobo {_rp} (template had none)")
+        # Carter spawn repair: an unspawned create_wheeled_robot path -> inject a robot_wizard('carter') spawn
+        # first (the create_wheeled_robot controller is kept; navigate_to installs its own WheeledRobot).
+        if (tool_name == "create_wheeled_robot" and args.get("robot_path")
+                and args["robot_path"] not in _spawned_paths):
+            _rp = args["robot_path"]
+            _cp = args.get("position") or [0.0, 0.0, 0.30]
+            _wpos = [float(_cp[0]) if len(_cp) > 0 else 0.0, float(_cp[1]) if len(_cp) > 1 else 0.0, 0.30]
+            _repaired.append(("robot_wizard", {"robot_name": "carter", "dest_path": _rp,
+                                               "position": _wpos, "orientation": [1.0, 0.0, 0.0, 0.0]}))
+            _spawned_paths.add(_rp)
+            logger.info(f"[CanonicalInst] {task_id} AUTO-REPAIR: injected robot_wizard('carter') spawn for unspawned create_wheeled_robot {_rp}")
         _repaired.append((tool_name, args))
     captured = _repaired
 

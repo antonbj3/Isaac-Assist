@@ -5954,3 +5954,24 @@ deprecated no-op, disp byte-identical before/after = refuted; removed as harmles
 handler mechanism instead of guessing again -> grounded fix worked first try. NEXT (nav, separate): amr-pickup-
 handoff overshoot/convergence (#2, single-AMR controller-tuning); nav_gate longer-window to confirm multi-amr
 reach.
+
+cont.247 (2026-06-17): NAV TRACK — 3 more grounded/generalizing fixes (+ the cont.246 multi-AMR drive-stub =
+4 total this nav push). All diagnostik-foerst (traced the actual handler/tool mechanism; prim-checked DIRECTLY
+when nav_gate readings were ambiguous = false-success-vakt cutting at the TOOL's own negatives).
+(1) HANDLER auto-repair (canonical_instantiator): create_wheeled_robot only makes a CONTROLLER, not a robot
+(robot.py:7036) -> templates calling it WITHOUT robot_wizard/add_reference spawn NO robot (CP-NEW-cart-handoff-
+amr, forklift-amr-pallet: robot_wizard=0 create_wheeled=1). FIX: inject robot_wizard('carter') SPAWN before any
+unspawned create_wheeled_robot path (gated to unspawned -> no regression; keeps the controller). Mirrors the
+existing UR10 add_reference->robot_wizard auto-repair; generalizes to ALL such templates.
+(2) nav_gate path-discovery: fell back to /World/Carter when simulate_args.fleet/robot_path absent -> false-
+NEGATIVE for a robot at /World/AMR. FIX: discover robot path+goal from navigate_to(robot_path=,target_position
+=) in the template code (/World/Carter only as last resort).
+(3) nav_gate _artroot: returned the FIRST ArticulationRootAPI prim; for a dual-root spawn (ArticulationRootAPI
+on BOTH the parent Xform /World/AMR AND the chassis_link) that was the non-translating PARENT -> false disp=0.
+FIX: prefer the RIGID-BODY articulation-root link (the part physics moves).
+CONFIRMED end-to-end: CP-NEW-cart-handoff-amr -> /World/AMR spawns + DRIVES (chassis_link disp 1.008m, body now
+correctly resolved; reached 0/1 = goal further than the window, same window/distance secondary as multi-amr);
+CP-64 control reached 1/1 disp 2.852 IDENTICAL = NO REGRESSION. The disp=0.0 false-0 was caught by a direct
+/World/AMR/chassis_link prim-measurement (ARTROOT_API_ON showed it on BOTH parent + link) -> dont trust a
+tool's NEGATIVE when its body-resolution/path-discovery is suspect. Nav track = the right fresh non-flaky vein
+after the arm-composition veins were harvested; 4 generalizing fixes this push.
