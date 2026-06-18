@@ -5975,3 +5975,14 @@ CP-64 control reached 1/1 disp 2.852 IDENTICAL = NO REGRESSION. The disp=0.0 fal
 /World/AMR/chassis_link prim-measurement (ARTROOT_API_ON showed it on BOTH parent + link) -> dont trust a
 tool's NEGATIVE when its body-resolution/path-discovery is suspect. Nav track = the right fresh non-flaky vein
 after the arm-composition veins were harvested; 4 generalizing fixes this push.
+
+cont.248 (2026-06-17): NAV auto-repair GENERALIZATION confirmed (banks the cont.247 fixes' full value). The
+create_wheeled_robot spawn auto-repair (canonical_instantiator) + nav_gate path-discovery + _artroot fixes,
+verified on a 2ND create_wheeled_robot template: CP-NEW-yrkesroll-forklift-amr-pallet -> /World/Forklift SPAWNS
+(auto-repair injected robot_wizard) + DRIVES (disp 2.897m; body chassis_link via the _artroot rigid-body
+preference; path /World/Forklift discovered from navigate_to). So ONE handler auto-repair + 2 nav_gate fixes
+unblock the WHOLE create_wheeled_robot template CLASS (cart-handoff-amr + forklift-amr-pallet both confirmed
+spawn+drive; occupancy-map-nav stays env-blocked on isaacsim.asset.gen). reached=0/1 = goal-beyond-window
+(secondary, same as multi-amr). This nav push = a generalizing CLASS-fix (not per-template). NET nav-track
+state: CARTER/wheeled drive works for CP-64 + multi-amr 3/3 + the create_wheeled_robot class (spawn+drive);
+REMAINING = obstacle/fleet REACH (head-on coordination, a feature) + jetbot WheeledRobot.init (deep).
