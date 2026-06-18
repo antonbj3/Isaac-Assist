@@ -18,7 +18,7 @@ Per spec/IA_FULL_SPEC_2026-05-10.md Phase 10.
 """
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -1765,7 +1765,7 @@ class SetupPickPlaceControllerArgs(BaseModel):
     curobo_world_yml: Optional[str] = Field(None, description="curobo mode: path to cuRobo world_config YAML (cuboid/mesh obstacles). If omitted, the live USD stage is used to auto-build a Cuboid scene for collision checking.")
     planning_obstacles: Optional[List[str]] = Field(None, description="curobo mode: list of USD paths to include as collision obstacles during planning. Each prim's world-bound is converted to a Cuboid. Use to avoid the conveyor/table/walls during transit.")
     color_routing: Optional[Dict[str, Any]] = Field(None, description="curobo mode (SORT-01 enabler): dict mapping semantic class_name → destination prim path. When present, the controller looks up each picked cube's Semantics_color (or Semantics_class) class_name and ro")
-    drop_targets: Optional[Dict[str, Any]] = Field(None, description="curobo mode (stack-placement enabler): dict mapping cube_path → world drop position [x,y,z], OR list of [x,y,z] parallel to source_paths. When set, each cube is dropped at its specified position inste")
+    drop_targets: Optional[Union[Dict[str, Any], List[Any]]] = Field(None, description="curobo mode (stack-placement enabler): dict mapping cube_path → world drop position [x,y,z], OR list of [x,y,z] parallel to source_paths. When set, each cube is dropped at its specified position inste")
     gripper_rotation: Optional[Dict[str, Any]] = Field(None, description="curobo mode (Tier B brick-pattern enabler): dict mapping cube_path → yaw_deg (degrees), OR list of yaw_deg parallel to source_paths, OR scalar yaw_deg for all cubes. Rotates gripper around world Z-axi")
     robot_family: Optional[str] = Field(None, description="curobo mode: which robot family the controller targets. 'franka' (default) — 7-DOF Franka Panda + ParallelGripper, panda_hand tool frame, franka.yml cuRobo config. 'ur10'/'ur10e' — 6-DOF Universal Rob")
     arm_scope: Optional[str] = Field(None, description="curobo + g1_arm only: which G1 arm the planner controls. Required when robot_family='g1_arm'; auto-set when robot_family is 'g1_left_arm'/'g1_right_arm'. Per-arm planners are cached separately under b")
