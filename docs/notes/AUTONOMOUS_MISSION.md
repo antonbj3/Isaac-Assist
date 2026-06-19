@@ -6913,3 +6913,18 @@ FALSE) + 1 scene_eyes TOOL-FIX (bin-aware orientation + deterministic test_bin_c
 SINGLE-BLOCK breadth (Franka + UR10, both robots) EXHAUSTED — remaining 9 position-honest = multi-robot 7 (deep
 3-gap per-instance tooling, deferred) + ~2. NEXT FRONTIER all deep/gated/big: multi-robot per-instance tooling /
 real-assets-L3 / more chain-ops (operation-variety saturated) / Gemini-LLM-flow (sparing).
+
+cont.318i — ★ FIXED the cont.318h bin-aware ORIENTATION suppression, which NEVER FIRED at run-time (CP-52 refuted
+it via RAW = the build->adversarial-audit->fix cycle on my OWN tool). ROOT CAUSE = 3 layered errors masked by a
+bare `except: pass`: scene_eyes' ANALYSIS runs in a CLIENT python with NO omni/stage (only the MEASURE block runs
+in the Kit), so the in-analysis stage.Traverse+BBoxCache raised NameError('UsdGeom') -> NameError('stage') ->
+ModuleNotFoundError('omni'), ALL SWALLOWED -> _in_deep_container silently returned False -> bin never detected ->
+bin-collection topples STILL emitted "*** ORIENTATION FAIL ***". The deterministic test PASSED (a scope WITH pxr)
++ the standalone probe worked (set up stage+pxr) = DOUBLE FALSE CONFIDENCE. FIX (correct architecture): record
+COLLECTION-bin world bboxes in the KIT (MEASURE -> eyes.json["bin_bboxes"]) + the client _in_deep_container does a
+pure list-containment check; name-based (only *Bin/Tote/Hopper/Bucket recorded -> surfaces never in the list ->
+stay rejects -> no false-negative). VERIFIED run-time: CP-52 SharedBin's 2 toppled cubes now tagged "(in bin —
+collection)" + NO FAIL; eyes.json carries bin_bboxes=[[-0.15,-0.65,0.75,0.15,-0.35,0.90]]. test_bin_containment.py
+rewritten to the list shape (8/8, pure python = the shape it SHIPS). ★ LESSON: a bare except:pass masked 3 errors
+across the Kit/client boundary; I burned several re-runs GUESSING (floor-only bbox) before INSTRUMENTING the error
+path — instrument-FIRST, and test in the execution shape it ships, not a convenient one. Static 7/7.

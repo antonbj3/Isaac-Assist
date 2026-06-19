@@ -386,8 +386,22 @@ for i in range(N):
 import builtins as _ebd
 _plan_log = list(getattr(_ebd, "_eyes_plan_log", []) or [])
 _plan_fields = list(getattr(_ebd, "_eyes_plan_fields", []) or [])
+# cont.318i: record COLLECTION-bin world bboxes HERE (in the Kit, where stage+UsdGeom exist) so the CLIENT-side
+# analysis (a clean python namespace WITHOUT omni/stage) can suppress bin-collection topples. The bin is static.
+_bin_bboxes_rec = []
+try:
+    _bcrec = UsdGeom.BBoxCache(0, [UsdGeom.Tokens.default_])
+    for _prrec in stage.Traverse():
+        if any(_k in _prrec.GetName() for _k in ("Bin", "Tote", "Hopper", "Bucket")):
+            _rrec = _bcrec.ComputeWorldBound(_prrec).ComputeAlignedRange()
+            if not _rrec.IsEmpty():
+                _mnr = _rrec.GetMin(); _mxr = _rrec.GetMax()
+                _bin_bboxes_rec.append([float(_mnr[0]), float(_mnr[1]), float(_mnr[2]), float(_mxr[0]), float(_mxr[1]), float(_mxr[2])])
+except Exception as _bre:
+    print("BIN_BBOX_REC_EXC", repr(_bre))
 json.dump({"template": "__TPL__", "robot": ROBOT, "ee": EE, "cone": CONE, "follower": FOLL,
            "tool": TOOL, "dof_names": DOFN, "rows": rows, "nframes": fi, "gripper_props": gprops(), "sg_path": _SGPATH,
+           "bin_bboxes": _bin_bboxes_rec,
            "plan_log": _plan_log, "plan_fields": _plan_fields}, open(OUT + "/eyes.json", "w"))
 print("EYES_DONE rows=%d frames=%d robot=%s tool=%s foll=%s dofs=%d" % (len(rows), fi, ROBOT, TOOL, FOLL, len(DOFN)))
 '''
@@ -433,6 +447,8 @@ def _rel_q(qee, qobj):                  # object orientation IN the EE frame = c
 
 def _analyse(js):
     rows = js.get("rows", [])
+    _BIN_BBOXES = js.get("bin_bboxes", [])   # cont.318i: COLLECTION-bin world bboxes recorded in the Kit (this
+    # analysis runs in a CLIENT python WITHOUT omni/stage, so it cannot query the live stage for them).
     if not rows:
         return "no rows"
     dofn = js.get("dof_names") or []
@@ -847,25 +863,20 @@ def _analyse(js):
             _l = _n.lower()
             return _l.startswith(("cube", "item", "brick")) or any(_k in _l for _k in ("box", "crate", "package", "block", "carton", "parcel", "brick"))
         # DESTINATION-AWARE (2026-06-19, Anton symmetric false-positive directive): a cube TOPPLED but resting
-        # INSIDE a deep walled CONTAINER (bin/tote/hopper) is normal COLLECTION, NOT a placement defect — the
-        # orientation reject must not fire for it (else a genuine bin delivery false-FAILs, and the gold-gate
-        # parsing this text false-rejects a real bin gold; CP-41 mixed-mass->Bin was the catch: 4/4 delivered,
-        # 2 cubes tipped in the bin = fine). Surface/grid/shelf/pallet topples STAY rejects (those need upright);
-        # the wall-height>0.08 guard keeps a flat surface from ever counting as a container -> NO false-negative.
+        # INSIDE a COLLECTION container (a prim NAMED Bin/Tote/Hopper/Bucket) is normal COLLECTION, NOT a placement
+        # defect -> the reject must not fire (else a genuine bin delivery false-FAILs + the gold-gate parsing this
+        # text false-rejects a real bin gold; CP-41 mixed-mass->Bin / CP-52 SharedBin were the catches). Surfaces
+        # (Pallet/Shelf/Table) aren't NAMED *Bin -> never recorded -> their topples STAY rejects -> no false-negative.
+        # The bin world-bboxes are recorded in the KIT (js["bin_bboxes"]) because THIS analysis runs in a CLIENT
+        # python with NO omni/stage (cont.318i: a prior in-analysis stage.Traverse silently NameError'd under a bare
+        # except -> the fix never fired -> CP-52 refuted it via RAW; record-in-Kit + a list check is the right shape).
         def _in_deep_container(_pos):
             if not _pos: return False
-            try:
-                _bc = UsdGeom.BBoxCache(0, [UsdGeom.Tokens.default_])
-                for _pr in stage.Traverse():
-                    if not any(_k in _pr.GetName() for _k in ("Bin", "Tote", "Hopper", "Bucket")): continue
-                    _rng = _bc.ComputeWorldBound(_pr).ComputeAlignedRange()
-                    if _rng.IsEmpty(): continue
-                    _mn = _rng.GetMin(); _mx = _rng.GetMax()
-                    if float(_mx[2] - _mn[2]) < 0.08: continue   # flat plate/lid, not a walled container
-                    if (_mn[0] - 0.03 <= _pos[0] <= _mx[0] + 0.03 and _mn[1] - 0.03 <= _pos[1] <= _mx[1] + 0.03
-                            and _pos[2] <= _mx[2] + 0.03):
-                        return True
-            except Exception: pass
+            for _bb in _BIN_BBOXES:
+                _x0, _y0, _z0, _x1, _y1, _z1 = _bb
+                if (_x0 - 0.05 <= _pos[0] <= _x1 + 0.05 and _y0 - 0.05 <= _pos[1] <= _y1 + 0.05
+                        and _z0 - 0.08 <= _pos[2] <= _z0 + 0.40):
+                    return True
             return False
         _binned = {n for n, t in _ori if t > 60 and _boxlike(n) and _in_deep_container(_finals.get(n))}
         _topp = [(n, t) for n, t in _ori if t > 60 and _boxlike(n) and n not in _binned]
