@@ -37,3 +37,6 @@ if [ "$fail" -ne 0 ]; then
   exit 1
 fi
 echo "ALL STATIC CHECKS GREEN."
+
+# dimension-handling recipe must keep matching the hand-tuned cont.319 real-asset templates
+python3 scripts/qa/real_asset_spawn.py --selftest || exit 1

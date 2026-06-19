@@ -7089,3 +7089,15 @@ was one instance), HUMANOIDS, FORKLIFT, LARGER/complex SCENES. The system must h
 complexity. Anton ENDORSED descend-to-place ("förmodligen ingen dålig ide") + the multi-cell + "du hittar saker att
 göra definitivt". NEXT real-asset frontiers (task #51): real conveyor integration, dimension-normalization layer,
 humanoid robots, forklift/vehicle, warehouse-scale scenes, + descend-to-place (endorsed). Commit per item.
+
+cont.319e — DIMENSION-HANDLING helper (Anton's emphasized cross-cutting real-asset theme #2). I'd computed
+per-object spawn params BY HAND 4x (bbox -> base-z-on-surface, narrowest-horizontal-axis -> jaw close-axis
+world-Y, object-aware drop_height, tall/topple flag, child-mesh leaf for the collider). Encapsulated as
+scripts/qa/real_asset_spawn.py:compute_spawn_recipe(usd) -> the full spawn recipe for ANY real asset
+(verktygen-är-levande: hand-derived -> first-class tool). SELFTEST PASS: reproduces the 3 hand-tuned cont.319
+choices (foam_brick native, gelatin_box native, tomato_can stood upright+tall) -> added to run_static_checks.sh
+as a regression. Honest edge-handling on untested objects: mustard_bottle -> stand-up + TALL(19cm, descend-place);
+mug/master_chef_can/sugar_box -> graspable=False (min-horiz exceeds 7.5cm jaw, flagged 'scale or different grasp');
+banana -> graspable(3.9cm). bbox-based so blind to curvature/concavity (banana/mug grasp optimistic — complex-mesh
+grasp is the noted deeper gap). This makes ANY graspable real asset auto-spawnable into a pick-place template ->
+the foundation for real-asset scene-generation at scale. Commit. Files: scripts/qa/real_asset_spawn.py.
