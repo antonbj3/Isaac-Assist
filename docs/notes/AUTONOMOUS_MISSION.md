@@ -7404,3 +7404,11 @@ controller. STOPPED at 5 Kit iterations per the over-investment lesson (acute 'h
 Focused FOLLOW-UP = task #52: LOWERED-conveyor approach (floor Franka + belt -0.98m to the proven ~0.8m pick height
 = proven floor-base controller path). Belt-motion (CP-CONV-01) + feeder (CP-CONV-01b) remain independently GENUINE.
 File: workspace/templates/CP-CONV-02.json (PARTIAL), MEGA_DIRECTION_TRIAGE.md.
+
+cont.319w-b — CP-CONV-02 diagnosis REFINED via Kit-free code read (no more Kit iterations): the pick gates on the
+proximity-sensor isaac_sensor:triggered (pick_place.py:1900), set by an overlap_box physics-step callback
+(sensors.py:339-399). The controller IS base-aware (pick_place.py:2679 'elevated base' + set_robot_base_pose) ->
+floor-base suspect WEAKENED. Real gate = isaac_sensor:triggered never True = the sensor overlap_box doesn't fire for
+my cube despite geometry analogous to the proven CP-CHAIN-FLAT sensor. Focused root-cause = live-instrument the
+sensor triggered/last_triggered_path each step. This is the diagnostik-forst payoff: READ the mechanism instead of a
+6th Kit guess. Task #52 updated.
