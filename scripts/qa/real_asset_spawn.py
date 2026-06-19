@@ -167,6 +167,41 @@ def emit_template(asset_usd, task_id, prim_name="Item_1", x=0.2, y=0.4,
     return t, r
 
 
+def container_recipe(usd_path, surface_z=0.75, clearance=0.003):
+    """DESTINATION recipe for a real-asset CONTAINER (tote/bin/crate) — the analog of compute_spawn_recipe for
+    destinations (cont.319n: hand-found via the KLT tote, now first-class). Real containers ship with a SOLID
+    collision approximation (boundingCube / convexHull) so a delivered object PERCHES on top instead of entering;
+    to use one as a destination its collision mesh must be overridden to 'none' (triangle mesh = the actual HOLLOW
+    interior). Returns the spawn pose (base on the surface) + the collision-mesh paths needing the hollow fix."""
+    from pxr import Usd, UsdGeom, UsdPhysics
+    s = Usd.Stage.Open(usd_path)
+    dp = s.GetDefaultPrim()
+    bb = UsdGeom.BBoxCache(0, [UsdGeom.Tokens.default_])
+    rng = bb.ComputeWorldBound(dp).ComputeAlignedRange()
+    mn, mx = rng.GetMin(), rng.GetMax()
+    ext = [mx[i] - mn[i] for i in range(3)]
+    base_off = mn[2]                                  # asset base relative to origin (native)
+    spawn_z = round(surface_z + (-base_off) + clearance, 3)   # so the container bottom rests on the surface
+    SOLID = ("boundingCube", "boundingSphere", "convexHull", "convexDecomposition")
+    col_meshes = []
+    for p in s.Traverse():
+        if p.HasAPI(UsdPhysics.MeshCollisionAPI):
+            ap = UsdPhysics.MeshCollisionAPI(p).GetApproximationAttr().Get()
+            rel = str(p.GetPath()).replace(str(dp.GetPath()), "").lstrip("/")
+            col_meshes.append({"rel_path": rel, "approximation": ap, "needs_hollow_fix": ap in SOLID})
+    needs_fix = any(m["needs_hollow_fix"] for m in col_meshes)
+    return {
+        "asset": os.path.basename(usd_path),
+        "extent_cm": [round(e * 100, 1) for e in ext],
+        "spawn_z": spawn_z,
+        "interior_floor_z": round(surface_z + clearance, 3),
+        "collision_meshes": col_meshes,
+        "needs_hollow_collision_fix": needs_fix,
+        "fix": ("for each collision mesh, simplify_collision(prim_path=<dest>/<rel_path>, approximation='none') "
+                "so the container is HOLLOW and objects ENTER it") if needs_fix else "collision already non-solid",
+    }
+
+
 def _selftest():
     # reproduce the 3 hand-tuned cont.319 choices
     cases = {
@@ -182,6 +217,13 @@ def _selftest():
         match = got == exp
         ok &= match
         print(("OK  " if match else "FAIL") + f" {obj:22} got={got}  exp={exp}  spawn_z={r['spawn_z']}")
+    # container_recipe regression: the KLT tote (cont.319n) must flag its SOLID boundingCube collision + find the /Visuals/ mesh path
+    KLT = "/mnt/shared_data/isaac-sim-assets-complete-5.0.0/Assets/Isaac/5.0/Isaac/Props/KLT_Bin/small_KLT_visual_collision.usd"
+    if os.path.exists(KLT):
+        cr = container_recipe(KLT)
+        cok = cr["needs_hollow_collision_fix"] and any(m["rel_path"] == "Visuals/FOF_Mesh_Magenta_Box" for m in cr["collision_meshes"])
+        ok &= cok
+        print(("OK   " if cok else "FAIL ") + "container KLT_tote      needs_hollow_fix=%s meshes=%s" % (cr["needs_hollow_collision_fix"], [m["rel_path"] for m in cr["collision_meshes"]]))
     print("SELFTEST", "PASS" if ok else "FAIL — recipe diverges from hand-tuned templates")
     sys.exit(0 if ok else 1)
 
