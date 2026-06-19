@@ -7101,3 +7101,19 @@ mug/master_chef_can/sugar_box -> graspable=False (min-horiz exceeds 7.5cm jaw, f
 banana -> graspable(3.9cm). bbox-based so blind to curvature/concavity (banana/mug grasp optimistic — complex-mesh
 grasp is the noted deeper gap). This makes ANY graspable real asset auto-spawnable into a pick-place template ->
 the foundation for real-asset scene-generation at scale. Commit. Files: scripts/qa/real_asset_spawn.py.
+
+cont.319f — DESCEND-TO-PLACE diagnostik-först + a FALSE-SUCCESS-VAKT CATCH ON MY OWN cont.319b CLAIM.
+Traced the curobo controller (_gen_pick_place_curobo @ pick_place.py:3885, the one CP-YCB runs — target_source
+curobo). Its JAW release happens at drop_pos[2] + _drop_tip (_drop_tip = FL + EE_OFFSET[2], ~bin_top+0.15) in the
+S5 descend+open segment (~lines 2746-2842). The `drop_height` arg I changed in cont.319b feeds a DIFFERENT
+controller (the DROP_H one @613/834) — it is NOT passed to _gen_pick_place_curobo. => my "drop_height 0.22 vs 0.12
+both topple (barely different)" was TESTING AN IGNORED ARG; the release height never actually changed (the 158.9
+vs 139.5 delta was stochastic, not the arg). HONEST CORRECTION: the can topple is real (fixed high jaw release),
+but I cannot claim "lowering drop_height doesn't help" — I never actually lowered the release.
+  DESCEND-TO-PLACE DESIGN (de-risked, for a FRESH focused session per the curobo-f-string-edit trap): the SUCTION
+branch ALREADY releases floor-aware (_floor_z = bin bbox min-z; _sg_release_target = _floor_z + 0.165 -> tiny fall,
+no topple). The fix = give the JAW branch the same floor-aware release: release at _floor_z + object_half_height +
+clearance instead of drop_pos[2] + _drop_tip. Gated (default = current behavior -> cube golds byte-identical),
+read object half-height live (ComputeWorldBound of the held prim). Location: _gen_pick_place_curobo S5 release
+(~pick_place.py:2746-2842), model on the _SG_IS_SUCTION _floor_z branch. Test: CP-01 cube no-regression + CP-YCB-02
+can upright. Task #50. (Real-object collection delivery is UNAFFECTED + still works — this is upright-precision only.)
