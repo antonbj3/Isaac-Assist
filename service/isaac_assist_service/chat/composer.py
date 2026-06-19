@@ -180,7 +180,13 @@ def template_footprint(template, axis="x"):
     geometry is parseable (legacy roles={} / absolute-path templates) so the caller can flag the
     spacing as a guess rather than trust it."""
     ai = {"x": 0, "y": 1, "z": 2}.get(axis, 0)
-    code = (template or {}).get("code") or ""
+    # cont.319hh audit #14 (mirror of #7): role-based CPs author their geometry in code_template
+    # (not code), so a footprint parsed from `code` alone returns known=False -> compute_layout_offsets
+    # lays those cells out on the conservative GUESS (_FALLBACK_FOOT) instead of their real extent.
+    # Parse BOTH fields. A {{placeholder}} position fails the float-parse below and is skipped (no
+    # false footprint), so only LITERAL authored geometry contributes -> no regression for templates
+    # whose code_template is fully placeholder-driven (still known=False, as before).
+    code = ((template or {}).get("code") or "") + "\n" + ((template or {}).get("code_template") or "")
     lo = hi = None
     for fn in _GEOM_FNS:
         for m in _re.finditer(_re.escape(fn) + r"\(([^)]*(?:\([^)]*\)[^)]*)*)\)", code):
