@@ -7490,3 +7490,19 @@ prismatic, CP-FORK-01=fork-lift first proof), warehouse (envs load, floor z=0, 3
 scoping is the challenge), humanoid (10 GR00T templates = unverified scaffolding, not in catalog -> confirmed DEEP).
 docs/notes/MEGA_DIRECTION_TRIAGE.md is the full grounded plan. Two workflows (composition-system audit w0vv9u21c +
 conveyor pick-cell solution wtcaom7sy) still running -> act on results when they land.
+
+cont.319cc — ★ROOT CAUSE of CP-CONV-02 CORRECTED by the conveyor-solution workflow (my Kit-free 'high-z sensor
+mechanism' conclusion was WRONG — I was reading the WRONG code path). The cell uses target_source='curobo'; the
+curobo controller NEVER reads isaac_sensor:triggered (sensor reads at pick_place.py:2242/2930 are the native/
+sensor_gated paths, dead here). The real breaker = the curobo _cube_to_pick 3D REACH GATE (pick_place.py:6355-6364)
+which tests the +0.20-INFLATED pre-grasp approach point: pedestal base[0,-0.7,1.4] + cube[-0.005,0,1.804] ->
+approach3d=sqrt(0.700^2+0.604^2)=0.925 > 0.80 gated reach -> cube REJECTED every tick -> plan_pose never called ->
+pc=0. ★Why reach_validate said REACHABLE 3/3: it probes only the GRASP pose (0.809<0.85), NOT the +0.20 approach
+(reach_validate.py:12-18 documents this exact gap, CP-81 precedent). ★LESSON: my 6 Kit-free narrowings traced the
+sensor mechanism — the WRONG path; the multi-agent workflow read the ACTUAL curobo code path + computed the gate
+arithmetic. Even careful Kit-free RAW analysis bites when it instruments the wrong mechanism; trace the code path the
+controller ACTUALLY takes. FIX (pure DSL, no handler edit): LOWERED-conveyor regime — real A09 translated
+[0,0.45,-1.0] (belt-top 0.781, cube rides y=0.45 = proven 0.45m front), Franka base 0.75 +90deg = CP-CHAIN-FLAT
+regime -> gate 3d=0.518. CP-CONV-02 rewritten; CP-CONV-02-GEN kept as diagnostic. Verifying next (STEP0 positive
+control CP-CHAIN-FLAT first). Also two completed workflows: composition-audit (18 confirmed findings, see
+AUDIT_FINDINGS_cont319.md) + this conveyor-solution.
