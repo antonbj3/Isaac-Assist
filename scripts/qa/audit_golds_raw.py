@@ -91,6 +91,13 @@ def main():
     for cid, info in cat.items():
         if "genuine" not in str(info.get("verdict", "")).lower():
             continue
+        # cont.319hh: ACTUATION blocks (forklift-lift, humanoid-arm) are verified via a JOINT-DOF trajectory,
+        # NOT cube delivery -- any cube in the scene is a WITNESS (e.g. a zero-G testbench cube drifts forever).
+        # The cube-structure checks below don't apply, so skip them (the DOF proof is in the verdict/basis, not
+        # re-derivable from eyes.json cube positions here).
+        if any(k in str(info.get("class", "")).lower() for k in ("lift", "arm", "actuat")):
+            no_raw.append(cid + "(actuation-block)")
+            continue
         f = _find_eyes(cid)
         if not f:
             no_raw.append(cid); continue
