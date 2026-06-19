@@ -7130,3 +7130,18 @@ compact box-like (brick/gelatin/can) stay graspable=True. Also added emit_templa
 asset->working-template generator for bulk real-asset scene-gen. Honest reach: real-object manipulation is RELIABLE
 for box-like objects; elongated/curved/round-flat/concave need complex-mesh grasp (task #50). Commit. Files:
 scripts/qa/real_asset_spawn.py, workspace/templates/CP-YCB-BANANA.json.
+
+cont.319h — REAL CONVEYOR feasibility (Anton frontier #1, Kit-free probe). Isaac Props/Conveyors/ConveyorBelt_A01..A15
+are VISUAL + COLLISION only: applied schemas = MaterialBindingAPI/PhysicsCollisionAPI/PhysicsMeshCollisionAPI/
+PhysicsRigidBodyAPI/ShadowAPI — NO conveyor/belt/surface-velocity schema. So a real conveyor does NOT carry objects
+(our generated create_conveyor adds the surface_velocity belt-drive). To USE a real conveyor in pick-place: either
+(a) RETROFIT the surface_velocity mechanism onto its top belt mesh (moderate — find the belt surface, apply
+create_conveyor's drive), or (b) use it as static structure + spawn objects at the pick zone. Recorded in task #51.
+  SESSION SUMMARY (cont.319-319h, ~9 commits, real-asset MEGA-direction kickoff): real-object manipulation PROVEN +
+breadth (box-like reliable: brick/gelatin/can) + mixed-cell (3/3) + 21-object LLM-discoverable manifest (honest,
+audited) + dimension-handling helper (real_asset_spawn.py, selftest-guarded, build->adversarial-audit->fix cycle
+caught my own over-claim via the CP-YCB-BANANA audit) + emit_template (bulk asset->template) + conveyor feasibility.
+3 self-corrections (assets-false-neg, drop_height-ignored-arg, banana-graspability). Reach HONESTLY bounded: reliable
+for BOX-LIKE objects; curved/elongated/round-flat/concave -> complex-mesh grasp (deep). Deep frontiers teed up with
+DESIGNS (tasks #50/#51): descend-to-place (curobo jaw floor-aware release, bin-wall challenge), complex-mesh grasp,
+real-object precision composition, conveyor belt-physics retrofit, humanoids, forklift, warehouse-scale scenes.
