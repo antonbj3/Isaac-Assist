@@ -155,8 +155,8 @@
     "CP-20": {
       "robot": "Franka",
       "class": "palletize/grid",
-      "verdict": "PARTIAL(6/18 toppled — brick-layer stacking)",
-      "basis": "scene_eyes cont.313 @ dur=280: 18/18 CONVERGED+GRIPPED (NOT a reach-failure — old 'some never gripped' was WINDOW-CUT at short dur) BUT 6/18 TOPPLED >60° (Cube_2/3/4/6/12/14, brick-layer 90°-rotation stacking instability). ★HIGH-RES catch (Anton): aggregate 18/18-delivered is a FALSE-POSITIVE; per-object ORIENTATION (6 toppled) refutes it. Belt NOT stalling (high-res belt fix LIVE: movf 3% but 13 resumes -> boxes advance) -> task #44 'belt-stall-limited' root is TOPPLING not belt. Defer the stacking fix (harder variant; palletize/grid covered by CP-08/10/12/19/27/30).",
+      "verdict": "PARTIAL(6/18 toppled \u2014 brick-layer stacking)",
+      "basis": "scene_eyes cont.313 @ dur=280: 18/18 CONVERGED+GRIPPED (NOT a reach-failure \u2014 old 'some never gripped' was WINDOW-CUT at short dur) BUT 6/18 TOPPLED >60\u00b0 (Cube_2/3/4/6/12/14, brick-layer 90\u00b0-rotation stacking instability). \u2605HIGH-RES catch (Anton): aggregate 18/18-delivered is a FALSE-POSITIVE; per-object ORIENTATION (6 toppled) refutes it. Belt NOT stalling (high-res belt fix LIVE: movf 3% but 13 resumes -> boxes advance) -> task #44 'belt-stall-limited' root is TOPPLING not belt. Defer the stacking fix (harder variant; palletize/grid covered by CP-08/10/12/19/27/30).",
       "n_objects": 18
     },
     "CP-21": {
@@ -170,21 +170,21 @@
       "robot": "Franka",
       "class": "pick-place-bin",
       "verdict": "GENUINE(4/4 bin)",
-      "basis": "scene_eyes cont.313 @ dur=95: 4/4 CONVERGED+GRIPPED + stacked in bin (RIGID HOLD, rot-slip 0°), NO topple; high-res belt 100% advanced -> NOT a stall; 4th belt-fed single-bin confirm",
+      "basis": "scene_eyes cont.313 @ dur=95: 4/4 CONVERGED+GRIPPED + stacked in bin (RIGID HOLD, rot-slip 0\u00b0), NO topple; high-res belt 100% advanced -> NOT a stall; 4th belt-fed single-bin confirm",
       "n_objects": 4
     },
     "CP-23": {
       "robot": "Franka",
       "class": "pick-place-bin",
       "verdict": "GENUINE(4/4 spread-grid)",
-      "basis": "scene_eyes cont.313 @ dur=90: 4/4 CONVERGED+GRIPPED (RIGID HOLD 11° slip), spread to a FLAT grid with gaps (gripper-clearance ok, not a pile), no topple; belt MOVING 32% no stall",
+      "basis": "scene_eyes cont.313 @ dur=90: 4/4 CONVERGED+GRIPPED (RIGID HOLD 11\u00b0 slip), spread to a FLAT grid with gaps (gripper-clearance ok, not a pile), no topple; belt MOVING 32% no stall",
       "n_objects": 4
     },
     "CP-24": {
       "robot": "Franka",
       "class": "pick-place-bin",
       "verdict": "GENUINE(4/4 spread-grid)",
-      "basis": "scene_eyes cont.313 @ dur=90: 4/4 CONVERGED+GRIPPED (RIGID HOLD 2° slip), flat spread-grid (gaps ok), no topple; belt MOVING 35% no stall",
+      "basis": "scene_eyes cont.313 @ dur=90: 4/4 CONVERGED+GRIPPED (RIGID HOLD 2\u00b0 slip), flat spread-grid (gaps ok), no topple; belt MOVING 35% no stall",
       "n_objects": 4
     },
     "CP-25": {
@@ -232,8 +232,8 @@
     "CP-31": {
       "robot": "Franka",
       "class": "pick-place-bin",
-      "verdict": "PARTIAL(2/3 — Cube_1 thrash-no-converge + Cube_2 marginal grip)",
-      "basis": "scene_eyes cont.313 @ dur=75 HIGH-RES CATCH: Cube_2+Cube_3 gripped but Cube_1 THRASH-NO-CONVERGE (154mm, never approached -> reach/IK fail; settled 0.830 = on conveyor, position-gate FALSE-PASSED it as delivered) AND Cube_2 grip MARGINAL (27° rotation-slip, not rigid). NOT a clean promote unlike CP-04/21/22/38 -> verifying each matters (don't infer from the matrix). Redundant class (pick-place-bin covered) -> defer the Cube_1 reach fix.",
+      "verdict": "GENUINE(3/3 pick-from-pile -> Bin; N-of-3 re-verify post rest_speed-fix, cont.319jj-5)",
+      "basis": "scene_eyes N-of-3 @ dur=75 (cont.319jj-5, re-verify of a STALE pre-fix PARTIAL): all 3 runs delivered 3/3 cubes to the Bin (xy~[0,-0.39], stacked z 0.785/0.835/0.885), upright (tilts 2-5deg), plan_fails=0, Cube_1 RIGID HOLD. The old PARTIAL ('Cube_1 thrash-no-converge 154mm') was a PRE-FIX run ('re-verify pending -- rest_speed standardised 2026-05-18'); the fix worked + is now robust. Deterministic 3/3 across 3 fresh-Kit runs.",
       "n_objects": 3
     },
     "CP-32": {
@@ -282,7 +282,7 @@
       "robot": "Franka",
       "class": "color-sort",
       "verdict": "GENUINE(volume-bin 12/12)",
-      "basis": "scene_eyes cont.310: 12/12 CONVERGED+GRIPPED + delivered to bin (RIGID HOLD) @ dur=200; was window-limited at short dur (7/12 @ dur=110), NOT belt-stalled — scene_eyes belt 'conveyor-stall' false-alarm fixed same commit (belt correctly sensor-gates, 7 resume events)",
+      "basis": "scene_eyes cont.310: 12/12 CONVERGED+GRIPPED + delivered to bin (RIGID HOLD) @ dur=200; was window-limited at short dur (7/12 @ dur=110), NOT belt-stalled \u2014 scene_eyes belt 'conveyor-stall' false-alarm fixed same commit (belt correctly sensor-gates, 7 resume events)",
       "n_objects": 12
     },
     "CP-41": {
@@ -512,7 +512,7 @@
     "CP-NEW-palletizer-mixed-sku": {
       "robot": "UR10",
       "class": "color-sort",
-      "verdict": "FALSE(scene_eyes UR10 1/6: palletizer grid-spread BROKEN — only Box_6 gripped+moved, Box_5 THRASH-NO-CONVERGE, Box_1-4 never attempted; confirms the known UR10 single-target-only grid-spread limit; cont.318h)",
+      "verdict": "FALSE(scene_eyes UR10 1/6: palletizer grid-spread BROKEN \u2014 only Box_6 gripped+moved, Box_5 THRASH-NO-CONVERGE, Box_1-4 never attempted; confirms the known UR10 single-target-only grid-spread limit; cont.318h)",
       "basis": "delivery-gate (honest for bin/sort)",
       "n_objects": 6
     },
@@ -541,7 +541,7 @@
       "robot": "G1-humanoid",
       "class": "humanoid-stand-reach",
       "verdict": "GENUINE(rung 2: STANDING G1 arm-actuation UNDER GRAVITY via a root-weld FixedJoint(world->pelvis); pelvis held 0.793 while the arm reached 50/60deg, cont.319ii-3)",
-      "basis": "RAW via the INSTANTIATOR path (g1_inst_probe.py, same path scene_eyes uses): the root-weld FixedJoint holds the base under real gravity -- pelvis-z 0.793 across 90 ACTIVE steps (arm moved, not asleep), shoulder_pitch->50deg + elbow->60deg reached+held, posture UPRIGHT (head z=0.793, torso z=0.837, far above ground), sane joint ranges (no explosion). Found the WORKING fixed-base mechanism after 3 RAW-refuted ones (fixedBase attr INERT/A-B-identical, plant_feet 2-ankle-weld EXPLODES, FixedJointAPI-schema-on-root NaN). CAVEAT: legs+waist free (pelvis-only weld) so waist flops + the cube was knocked not grasped (clean grasp = rung 2b finger DOFs). ⚠️ scene_eyes false 'head_link|Ground' contact here -- trust the direct link-z.",
+      "basis": "RAW via the INSTANTIATOR path (g1_inst_probe.py, same path scene_eyes uses): the root-weld FixedJoint holds the base under real gravity -- pelvis-z 0.793 across 90 ACTIVE steps (arm moved, not asleep), shoulder_pitch->50deg + elbow->60deg reached+held, posture UPRIGHT (head z=0.793, torso z=0.837, far above ground), sane joint ranges (no explosion). Found the WORKING fixed-base mechanism after 3 RAW-refuted ones (fixedBase attr INERT/A-B-identical, plant_feet 2-ankle-weld EXPLODES, FixedJointAPI-schema-on-root NaN). CAVEAT: legs+waist free (pelvis-only weld) so waist flops + the cube was knocked not grasped (clean grasp = rung 2b finger DOFs). \u26a0\ufe0f scene_eyes false 'head_link|Ground' contact here -- trust the direct link-z.",
       "n_objects": 0
     },
     "CP-G1-STAND-02": {
@@ -553,12 +553,12 @@
     }
   },
   "summary": {
-    "trusted": 63,
+    "trusted": 64,
     "_trusted_note": "trusted = 57 cube-GENUINE + 1 real-object-GENUINE (CP-YCB-01C) + 1 real-conveyor-GENUINE (CP-CONV-02) + 1 forklift-GENUINE (CP-FORK-01) + 3 humanoid-GENUINE (CP-G1-ARM-01 arm-actuation zero-G, CP-G1-STAND-01 STANDING arm-actuation under gravity via root-weld FixedJoint, CP-G1-STAND-02 BIMANUAL standing reach, cont.319ii-5). cont.319cc: CP-10 downgraded GENUINE->PARTIAL by the adversarial audit (stochastic n=9 grid, saved RAW 8/9 off-pallet). META-RISK RESOLVED (cont.319dd): re-verified ALL 12 structure-class GENUINE blocks (palletize/grid + stack/column) vs their saved eyes.json -> 11 RAW-CONFIRM their verdict; CP-10 was the ONLY stale-lucky false GENUINE. Not systemic.",
-    "genuine_execution_verified": 63,
+    "genuine_execution_verified": 64,
     "position_honest_only": 0,
     "false": 3,
-    "partial": 10,
+    "partial": 9,
     "pending": 0,
     "total": 76
   }
