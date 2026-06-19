@@ -1,0 +1,288 @@
+{
+  "task_id": "CP-YCB-01C",
+  "goal": "Composition-ready real-object pick-place (role-based path): tests whether add_reference + the YCB asset + physics survive the composer namespacing -> enables real-object COMPOSITION (strategy multiplier x real objects).",
+  "tools_used": [
+    "create_prim",
+    "set_attribute",
+    "apply_api_schema",
+    "robot_wizard",
+    "create_conveyor",
+    "create_bin",
+    "add_proximity_sensor",
+    "set_physics_scene_config",
+    "apply_physics_material",
+    "bulk_set_attribute",
+    "setup_pick_place_controller"
+  ],
+  "thoughts": "Nine non-obvious patterns for CP-01:\n1) Table top at z=0.75 anchors all heights (Franka base, belt, cubes, bin floor).\n2) Franka orientation [0.7071068, 0, 0, 0.7071068] (90\u00b0 around Z) so cube/belt at world +Y is in robot's natural pick direction. Without this the wrist bumps cube during descent.\n3) PhysicsScene MUST use CPU dynamics: enable_gpu_dynamics=False + broadphase_type='MBP'. PhysxSurfaceVelocityAPI is silently ignored under GPU broadphase \u2014 belt won't move cubes.\n4) Surface velocity carries cubes ~3\u00d7 the configured nominal due to PhysX stick-slip with high-friction material. Set surface_velocity to ~1/3 of desired apparent speed.\n5) Cubes need physxRigidBody:sleepThreshold=0. Without this PhysX deactivates resting cubes when belt is paused, surface velocity skips sleeping bodies \u2192 cube stuck on resume. Apply PhysxRigidBodyAPI then bulk_set_attribute.\n6) Cubes start OUTSIDE robot's 0.70m horizontal pick reach so belt has visible work carrying each into the pick zone sequentially.\n7) Apply 'rubber' physics material to cubes ONLY \u2014 NOT to fingers. Binding to fingers fires PhysX 'triangle mesh on dynamic body' warnings that pop modal-style on every Play and block the viewport. Combined-friction rubber-cube vs default-mu fingers gives ~0.75 effective grip \u2014 sufficient.\n8) DomeLight required: viewport renders black after new_stage() without one. Set inputs:intensity=1000.\n9) target_source='curobo' for smoothest motion + scene-collision-aware planning.",
+  "code": "# Pick-and-place cell with a REAL YCB asset (foam_brick) instead of a primitive cube.\n# Proves the referenced-USD-asset manipulation, COMPOSITION-READY (role-based path namespaces under the composer): add_reference loader +\n# mesh convex-hull collider + bbox-driven cuRobo grasp. [real-object manipulation]\ncreate_scene_baseline(include_ground=False, table_size=[2.0, 1.0])\n\nrobot_wizard(\n    robot_name={{primary_robot.class}},\n    dest_path={{primary_robot.path}},\n    position={{primary_robot.position}},\n    orientation={{primary_robot.orientation}},\n)\n\ncreate_conveyor(\n    prim_path={{input_conveyor.path}},\n    position={{input_conveyor.position}},\n    size={{input_conveyor.size}},\n    surface_velocity={{input_conveyor.surface_velocity}},\n)\n\n# Workpiece: a real YCB foam brick referenced from the local Isaac 5.0 asset library.\n# Native Axis_Aligned extent x=7.8 y=5.1 z=5.3 cm; grasp q=[0,1,0,0] closes the jaw along\n# world-Y -> grips the 5.1cm narrow axis (cube-like, fits the ~8cm Franka jaw). No rotation.\ncreate_prim(prim_path={{workpieces[0].path}}, prim_type=\"Xform\", position=[0.2, 0.4, 0.835])\nadd_reference(prim_path={{workpieces[0].path}}, reference_path=\"/mnt/shared_data/isaac-sim-assets-complete-5.0.0/Assets/Isaac/5.0/Isaac/Props/YCB/Axis_Aligned/061_foam_brick.usd\")\nfor api in (\"PhysicsRigidBodyAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n    apply_api_schema(prim_path={{workpieces[0].path}}, schema_name=api)\napply_api_schema(prim_path=\"{{workpieces[0].path}}/_61_foam_brick\", schema_name=\"PhysicsCollisionAPI\")\nsimplify_collision(prim_path=\"{{workpieces[0].path}}/_61_foam_brick\", approximation=\"convexHull\")\nbulk_set_attribute(prim_paths=[{{workpieces[0].path}}], attr=\"physxRigidBody:sleepThreshold\", value=0.0)\napply_physics_material(prim_path=\"{{workpieces[0].path}}/_61_foam_brick\", material_name=\"rubber\")\n\ncreate_bin(prim_path={{primary_destination.path}}, position={{primary_destination.position}}, size={{primary_destination.size}})\n\nadd_proximity_sensor(sensor_path={{pick_sensor.path}}, position={{pick_sensor.position}}, size={{pick_sensor.size}})\n\nsetup_pick_place_controller(\n    robot_path={{primary_robot.path}},\n    target_source=\"curobo\",\n    sensor_path={{pick_sensor.path}},\n    belt_path={{input_conveyor.path}},\n    source_paths=[{{workpieces[0].path}}],\n    destination_path={{primary_destination.path}},\n    planning_obstacles=[\"/World/Table\", {{input_conveyor.path}}, {{primary_destination.path}}],\n)\n",
+  "intent": {
+    "pattern_hint": "pick_place",
+    "structural_features": {
+      "n_robot_stations": 1,
+      "n_handoffs": 0,
+      "destination_kind": "single_bin",
+      "uses_conveyor_transport": true
+    },
+    "structural_tags": [
+      "isaac:transport.conveyor",
+      "isaac:robot.fixed_base.arm",
+      "isaac:topology.single_station"
+    ]
+  },
+  "roles": {
+    "primary_robot": {
+      "constraints": [
+        "franka_panda",
+        "ur5e",
+        "kinova_gen3"
+      ],
+      "expected_count": 1,
+      "required": true,
+      "disambiguator": "smaller_x_first"
+    },
+    "input_conveyor": {
+      "constraints": [
+        "conveyor"
+      ],
+      "expected_count": 1,
+      "required": true
+    },
+    "primary_destination": {
+      "constraints": [
+        "bin"
+      ],
+      "expected_count": 1,
+      "required": true
+    },
+    "workpieces": {
+      "constraints": [
+        "cube"
+      ],
+      "min": 1,
+      "max": 4,
+      "param_name": "n_cubes",
+      "unordered": true
+    }
+  },
+  "role_defaults": {
+    "primary_robot": {
+      "path": "/World/Franka",
+      "class": "franka_panda",
+      "position": [
+        0,
+        0,
+        0.75
+      ],
+      "orientation": [
+        0.7071068,
+        0,
+        0,
+        0.7071068
+      ]
+    },
+    "input_conveyor": {
+      "path": "/World/ConveyorBelt",
+      "position": [
+        0.0,
+        0.4,
+        0.78
+      ],
+      "size": [
+        3.0,
+        0.4,
+        0.05
+      ],
+      "surface_velocity": [
+        0.2,
+        0,
+        0
+      ]
+    },
+    "primary_destination": {
+      "path": "/World/Bin",
+      "position": [
+        0,
+        -0.4,
+        0.75
+      ],
+      "size": [
+        0.3,
+        0.3,
+        0.15
+      ]
+    },
+    "pick_sensor": {
+      "path": "/World/PickSensor",
+      "position": [
+        0.4,
+        0.4,
+        0.835
+      ],
+      "size": [
+        0.06,
+        0.06,
+        0.06
+      ]
+    },
+    "workpieces": [
+      {
+        "path": "/World/Cube_1",
+        "position": [
+          -1.4,
+          0.4,
+          0.835
+        ]
+      },
+      {
+        "path": "/World/Cube_2",
+        "position": [
+          -1.15,
+          0.4,
+          0.835
+        ]
+      },
+      {
+        "path": "/World/Cube_3",
+        "position": [
+          -0.9,
+          0.4,
+          0.835
+        ]
+      },
+      {
+        "path": "/World/Cube_4",
+        "position": [
+          -0.65,
+          0.4,
+          0.835
+        ]
+      }
+    ]
+  },
+  "code_template": "# Pick-and-place cell with a REAL YCB asset (foam_brick) instead of a primitive cube.\n# Proves the referenced-USD-asset manipulation, COMPOSITION-READY (role-based path namespaces under the composer): add_reference loader +\n# mesh convex-hull collider + bbox-driven cuRobo grasp. [real-object manipulation]\ncreate_scene_baseline(include_ground=False, table_size=[2.0, 1.0])\n\nrobot_wizard(\n    robot_name={{primary_robot.class}},\n    dest_path={{primary_robot.path}},\n    position={{primary_robot.position}},\n    orientation={{primary_robot.orientation}},\n)\n\ncreate_conveyor(\n    prim_path={{input_conveyor.path}},\n    position={{input_conveyor.position}},\n    size={{input_conveyor.size}},\n    surface_velocity={{input_conveyor.surface_velocity}},\n)\n\n# Workpiece: a real YCB foam brick referenced from the local Isaac 5.0 asset library.\n# Native Axis_Aligned extent x=7.8 y=5.1 z=5.3 cm; grasp q=[0,1,0,0] closes the jaw along\n# world-Y -> grips the 5.1cm narrow axis (cube-like, fits the ~8cm Franka jaw). No rotation.\ncreate_prim(prim_path={{workpieces[0].path}}, prim_type=\"Xform\", position=[0.2, 0.4, 0.835])\nadd_reference(prim_path={{workpieces[0].path}}, reference_path=\"/mnt/shared_data/isaac-sim-assets-complete-5.0.0/Assets/Isaac/5.0/Isaac/Props/YCB/Axis_Aligned/061_foam_brick.usd\")\nfor api in (\"PhysicsRigidBodyAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n    apply_api_schema(prim_path={{workpieces[0].path}}, schema_name=api)\napply_api_schema(prim_path=\"{{workpieces[0].path}}/_61_foam_brick\", schema_name=\"PhysicsCollisionAPI\")\nsimplify_collision(prim_path=\"{{workpieces[0].path}}/_61_foam_brick\", approximation=\"convexHull\")\nbulk_set_attribute(prim_paths=[{{workpieces[0].path}}], attr=\"physxRigidBody:sleepThreshold\", value=0.0)\napply_physics_material(prim_path=\"{{workpieces[0].path}}/_61_foam_brick\", material_name=\"rubber\")\n\ncreate_bin(prim_path={{primary_destination.path}}, position={{primary_destination.position}}, size={{primary_destination.size}})\n\nadd_proximity_sensor(sensor_path={{pick_sensor.path}}, position={{pick_sensor.position}}, size={{pick_sensor.size}})\n\nsetup_pick_place_controller(\n    robot_path={{primary_robot.path}},\n    target_source=\"curobo\",\n    sensor_path={{pick_sensor.path}},\n    belt_path={{input_conveyor.path}},\n    source_paths=[{{workpieces[0].path}}],\n    destination_path={{primary_destination.path}},\n    planning_obstacles=[\"/World/Table\", {{input_conveyor.path}}, {{primary_destination.path}}],\n)\n",
+  "verify_args_template": {
+    "stages": [
+      {
+        "robot_path": "{{primary_robot.path}}",
+        "pick_path": "{{input_conveyor.path}}",
+        "place_path": "{{primary_destination.path}}",
+        "robot_kind": "{{primary_robot.class}}"
+      }
+    ],
+    "cube_path": "/World/Brick_1"
+  },
+  "simulate_args_template": {
+    "cube_path": "/World/Brick_1",
+    "target_path": "/World/Bin",
+    "duration_s": 40,
+    "cube_paths": [
+      "/World/Brick_1"
+    ],
+    "completeness": "all"
+  },
+  "settle_state": {
+    "cubes": {
+      "/World/Cube_1": [
+        -1.4,
+        0.4,
+        0.835
+      ],
+      "/World/Cube_2": [
+        -1.15,
+        0.4,
+        0.835
+      ],
+      "/World/Cube_3": [
+        -0.9,
+        0.4,
+        0.835
+      ],
+      "/World/Cube_4": [
+        -0.65,
+        0.4,
+        0.835
+      ]
+    },
+    "conveyors": {
+      "/World/ConveyorBelt": [
+        0.2,
+        0,
+        0
+      ]
+    }
+  },
+  "failure_modes": [
+    "PhysicsScene without enable_gpu_dynamics=False \u2192 PhysxSurfaceVelocityAPI silently ignored, belt doesn't move cubes.",
+    "Cubes without physxRigidBody:sleepThreshold=0 \u2192 PhysX sleeps them when belt is paused (between picks); surface velocity is friction-mediated and skips sleeping bodies \u2192 cube stuck even when belt resumes. Apply PhysxRigidBodyAPI then bulk_set_attribute.",
+    "Cubes inside robot's 0.70m horizontal reach at start \u2192 controller pauses belt immediately for the closest cube and never resumes between picks \u2192 belt never visibly moves.",
+    "No friction material anywhere \u2192 cube slips during lift. Apply rubber to cubes only (NOT fingers \u2014 that fires PhysX triangle-mesh-on-dynamic-body warnings that block the viewport on Play). Combined-friction rubber-cube vs default-mu finger gives ~0.75 effective which is sufficient.",
+    "Reading cube position before pause+settle \u2192 trajectory aims behind where cube ends up resting \u2192 fingers grip back edge of cube. cuRobo handler does this internally via 'settling' state (8 ticks).",
+    "Robot orientation = identity instead of [0.7071, 0, 0, 0.7071] \u2192 cube at world +Y is at 90 to robot's natural pick direction \u2192 wrist bumps cube during descent.",
+    "Setting EE_INITIAL_HEIGHT manually below robot base \u2192 IK target below base \u2192 arm folds. Auto-compute is correct.",
+    "Using target_source='spline' on a GPU-equipped machine \u2014 older default; cuRobo gives smoother motion."
+  ],
+  "verify_args": {
+    "stages": [
+      {
+        "robot_path": "/World/Franka",
+        "pick_path": "/World/ConveyorBelt",
+        "place_path": "/World/Bin",
+        "robot_kind": "franka_panda"
+      }
+    ],
+    "cube_path": "/World/Brick_1"
+  },
+  "simulate_args": {
+    "cube_path": "/World/Brick_1",
+    "target_path": "/World/Bin",
+    "duration_s": 40,
+    "cube_paths": [
+      "/World/Brick_1"
+    ],
+    "completeness": "all"
+  },
+  "verified_status": "GENUINE + COMPOSITION-VERIFIED (cont.319k): composition-ready real-object pick-place (role-based path). Standalone delivers (Cube_1 in-bin, refactor no-regression). 2-CELL COMPOSE: composer builds 2 instances (add_reference+YCB asset survive namespacing), observed inst1 cell picks+delivers its real brick to inst1 offset bin [2.51,-0.39,0.79] CONVERGED+GRIPPED RIGID-HOLD upright 0 plan_fails. Real-object cells compose like cube cells. (inst0 symmetric, not separately observed this run.)",
+  "motion_controllers": {
+    "verified": [
+      "curobo"
+    ],
+    "untested": [
+      "rmpflow",
+      "moveit2",
+      "admittance"
+    ]
+  },
+  "diagnose_args": {
+    "robot_path": "/World/Franka",
+    "sensor_path": "/World/PickSensor",
+    "robot_base": [
+      0.0,
+      0.0,
+      0.75
+    ],
+    "drop_pose": [
+      0,
+      -0.4,
+      0.75
+    ]
+  },
+  "verification": {
+    "function_gate": {
+      "status": "pass",
+      "n": 7,
+      "m": 7,
+      "wilson_lower": 0.6457,
+      "last_run_sha": "8a1118e6",
+      "last_run_at": "2026-06-13T10:29:34+00:00"
+    },
+    "faithfulness": {
+      "status": "pass",
+      "n": 5,
+      "m": 5,
+      "wilson_lower": 0.5655,
+      "last_run_sha": "8108e660",
+      "last_run_at": "2026-06-11T04:19:41+00:00"
+    }
+  }
+}

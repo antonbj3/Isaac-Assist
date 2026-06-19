@@ -7173,3 +7173,16 @@ controller) + collider stability -> CONTROLLER work, focused session (task #50).
 refuted. NET: ALL real-asset deep frontiers now exhaustively diagnostik-först'd (descend-place=bin-wall, complex-
 grasp=grasp-point+collider, conveyor=structured-asset) — every BOUNDED path tested+refuted, deep paths scoped with
 designs. Pivoting to a track with remaining bounded work (cube-composition false-success-vakt).
+
+cont.319k — ★ REAL-OBJECT COMPOSITION PROVEN (strategy multiplier x real-objects) — and the keepalive caught a
+premature "bounded work exhausted" conclusion (I was about to dismiss this). The bounded fix: CP-YCB-01 hardcoded
+/World/Brick_1 -> collides across composed instances. CP-YCB-01C = role-based path {{workpieces[0].path}} (composer
+namespaces it -> /World/instN/Cube_1). RESULT (run_ycb_compose.sh): (1) standalone CP-YCB-01C delivers (Cube_1
+in-bin -> refactor no-regression); (2) 2-CELL COMPOSE: COMPOSE_BUILT instances=2 (add_reference + the YCB asset
+SURVIVE the composer namespacing — the real unknown, RESOLVED), observed inst1 cell picks+delivers its real
+referenced brick /World/inst1/Cube_1 -> inst1 offset bin [2.51,-0.39,0.79], CONVERGED+GRIPPED, RIGID HOLD, tilt 8.3
+upright, 0 plan_fails. So real-object cells compose like cube cells -> the runtime-LLM can build multi-cell
+real-object scenes. LESSON: don't prematurely conclude "bounded work exhausted" — verify-before-dismissing + the
+keepalive's relentlessness surfaced a genuine high-value win (a 1-line composition-ready refactor unlocked
+real-object composition). Files: workspace/templates/CP-YCB-01C.json, scripts/qa/run_ycb_compose.sh. NEXT (bounded):
+observe inst0 for full 2/2; add CP-YCB-01C to composable_blocks as a GENUINE real-object composable block.
