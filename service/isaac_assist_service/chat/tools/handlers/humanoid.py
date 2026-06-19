@@ -126,6 +126,21 @@ def _gen_setup_bimanual_pick_place_controller(args: Dict) -> str:
     # by treating the humanoid lower body as a fixed-base anchor.
     # If the ankle prims don't exist (placeholder G1 USD), the snippet
     # logs a warning and continues — left/right arm installers still run.
+    #
+    # ⚠️ TWO FINDINGS from a RAW standalone reproduction (cont.319ii, CP-G1-STAND-01,
+    # G1 g1_29dof_with_hand on a healthy Kit; positive control CP-CHAIN-FLAT 1/1):
+    #   (1) LATENT BUG: the FixedJoint below sets ONLY GetBody1Rel (the ankle) and NO
+    #       localPos0/localRot0 on the world side -> UsdPhysics welds the ankle frame to
+    #       the WORLD ORIGIN (0,0,0), yanking the foot there instead of pinning it where
+    #       it stands. The correct authoring captures the ankle's CURRENT world transform
+    #       (ComputeLocalToWorldTransform) into CreateLocalPos0Attr/CreateLocalRot0Attr.
+    #   (2) DEEPER: even with localPos0 corrected, welding the LEAF ankle links to world
+    #       OVER-CONSTRAINS the free-floating-base articulation -> the solver explodes
+    #       (hip/shoulder joints ~1e10 deg). And the alternative, physxArticulation:fixedBase=True
+    #       set POST-add_reference, does NOT convert the already-referenced floating root (the G1
+    #       just falls). The G1 standing base needs a LOAD-TIME fixed base (Isaac core Articulation
+    #       fix_root_link / a pre-parse USD layer / the WBC runtime deferred to scope-doc P3) -- a
+    #       post-hoc plant_feet is insufficient on its own. See CP-G1-STAND-01.verified_status.
     if plant_feet:
         plant_feet_code = f'''\
 # ── Plant feet: USD FixedJoint between ankle_roll_link and ground ──
