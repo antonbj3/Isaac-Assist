@@ -7280,3 +7280,15 @@ or release-height tweak solves a high-CG narrow object. NET descend-place this s
 (partial: reduces open-destination fall-topple, cube byte-identical) + EXHAUSTIVE experimental confirmation that the
 full fix (place-to-contact for high-CG-tip + bin-wall for deep containers) is genuinely deep -> focused session,
 now mapped by experiment not assumption. Files: workspace/templates/CP-YCB-02-TIGHT.json.
+
+cont.319q(b) — FALSE-SUCCESS-VAKT: "the jaw lever should drive cube topple-partials (CP-20/26) toward genuine" =
+REFUTED. CP-26 + JAWDROPTIP=0.08: Cube_3/4 STILL toppled (90deg) AND fell LOW (z=0.635-0.685, below working height
+0.70 = scatter/off-surface), Cube_1 never-gripped. So CP-26's failure is SCATTER/fall-low (a placement/stacking
+cause), NOT release-fall-topple -> the lever doesn't help it (and a lower release may worsen scatter). HONEST
+SCOPE of the gated jaw release-lever (final): it marginally reduces OPEN-destination FALL-topple of a single tall
+object (the can 158->94) and is cube byte-identical by default — but it does NOT help (a) deep-container placement
+(rim-catch/bin-wall), (b) high-CG tall-object UPRIGHT (tips regardless, reach-limited), (c) scatter-prone cube
+topple-partials (different cause). NARROW + selectively-applicable, NOT a broad descend-place fix. The genuinely-
+valuable descend-place (upright + into-container + topple-partials) all need the DEEP place-to-floor-contact ->
+focused session. Net: exhaustive, honest descend-place exploration; a narrow committed lever; the full fix mapped
+by experiment. 7th self-correction this session (verify-before-dismissing / false-success-vakt).
