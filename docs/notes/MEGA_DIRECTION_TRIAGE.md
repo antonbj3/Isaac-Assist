@@ -17,9 +17,19 @@ depth so the focused Kit sessions go in value/risk order (NOT effort — per Ant
 No built-in node → retrofit surface velocity on `/World/Belt`. Full plan + `conveyor_recipe`:
 **docs/notes/CONVEYOR_INTEGRATION.md**. ✅ CP-CONV-01 GENUINE: real A09 belt + 3-API surface-velocity retrofit on /World/Belt carries cubes +2.5m along the belt (RAW-verified, 0.2 m/s, end-first arrival). CP-CONV-02 (pedestal-Franka pick): reach VALIDATED but the pick-controller does NOT engage (5 grounded variants, all plan_calls=0, arm never moves). PRIME SUSPECT = pedestal base z=1.4 (every proven pick gold is FLOOR-base z=0; setup_pick_place_controller likely has a floor-base assumption). FOCUSED FOLLOW-UP (task #52): try the LOWERED-conveyor approach (floor Franka + belt translated to the proven ~0.8m pick height = proven floor-base controller path).
 
-### 2. Forklift — MODERATE, clear path (REUSES nav)
-`Isaac/Robots/IsaacSim/ForkliftB/forklift_b.usd`: 8 rigidbody links, **6 revolute (wheels+steering) + 1
-PRISMATIC (the fork lift)**. bbox 3.0×1.1×2.9 m (tall mast).
+### 2. Forklift — MODERATE (CORRECTED cont.319aa: TRICYCLE drive, NOT Carter-differential)
+`Isaac/Robots/IsaacSim/ForkliftB/forklift_b.usd`: 8 rigidbody links. ★Joint structure (Kit-free pxr):
+- `lift_joint` Prismatic-Z (body->lift) = the FORK actuator (set joint position to raise/lower).
+- `back_wheel_drive` Revolute-X (back_wheel) = the single DRIVE wheel (set angular velocity).
+- `back_wheel_swivel` Revolute-Z (back_wheel_swivel->body) = the STEERING (set swivel angle).
+- 4× `*_roller` Revolute-X = PASSIVE support rollers (front+back, not driven).
+So it is a 3-wheel TRICYCLE forklift (one rear driven+steered wheel + passive front rollers) — ★my earlier
+"reuses Carter nav" was WRONG: Carter is DIFFERENTIAL (two driven wheels); the forklift needs a
+steer-angle + drive-velocity (tricycle/Ackermann-ish) controller, NOT differential. bbox 3.0×1.1×2.9 m.
+- ★FIRST PROOF (simplest, bounded) = CP-FORK-01 FORK LIFT only: stationary forklift, set `lift_joint`
+  position to raise the fork under/with a pallet, scene_eyes-verify the pallet rises with the fork. No drive.
+- DRIVE (CP-FORK-02) = tricycle control (back_wheel_drive velocity + back_wheel_swivel steer); navigate to a
+  pallet. More involved than Carter (steering, not differential); own focused session. nav_gate displacement applies.
 - Drive: reuse the **SOLVED Carter nav** (`navigate_to` closed-loop drives Carter end-to-end — see
   project_isaac_assist_nav_stub). Open Q: is forklift_b a WheeledRobot the nav machinery initializes (like
   Carter, works) or does it fail articulation-init (like jetbot)? → 1 Kit probe answers it.

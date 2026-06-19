@@ -7475,3 +7475,11 @@ isaac_sensor:triggered each step at high-z to split sensor-overlap-fails vs cont
 LOWERED-conveyor (low-z floor-base = proven sensor regime) is the robust completion. METHOD WIN: narrowed two more
 steps Kit-FREE from existing data (vs the 6 cont.319w guess-runs). Conveyor: motion+feeder GENUINE, pick-cell
 root-caused to the high-z sensor mechanism.
+
+cont.319aa — FORKLIFT de-risk DEEPENED + triage CORRECTED (Kit-free pxr joint inspection, in parallel with the audit
++ conveyor-solution workflows). ForkliftB joints: lift_joint(Prismatic-Z, the FORK) + back_wheel_drive(Revolute-X,
+the 1 DRIVE wheel) + back_wheel_swivel(Revolute-Z, STEERING) + 4 passive rollers. => it is a 3-wheel TRICYCLE
+forklift, NOT Carter-differential. ★CORRECTED my earlier "reuses Carter nav" claim (false-success-vakt on my own
+triage): Carter=differential(2 driven wheels), forklift=steer-angle+drive-velocity tricycle -> different controller.
+CP-FORK-01 simplest first proof = FORK LIFT only (stationary, set lift_joint to raise a pallet, scene_eyes-verify).
+CP-FORK-02 = tricycle drive (own session). docs/notes/MEGA_DIRECTION_TRIAGE.md updated.
