@@ -156,7 +156,7 @@
       "robot": "Franka",
       "class": "palletize/grid",
       "verdict": "PARTIAL(9/18 toppled @ full dur \u2014 brick-layer rotated stacking genuinely unstable, cont.319jj-12)",
-      "basis": "scene_eyes cont.319jj-12 @ dur=360 (the FULL template dur): 18/18 PLACED but 9/18 TOPPLED >60deg -- WORSE than the old basis's 6/18 @ dur=280 (more settle time -> MORE topple). So NOT a window-cut: the rotated brick-layer (layer_rotation_deg=90, 0.07m) is genuinely UNSTABLE -- the top-layer cubes tip over as they settle on the gaps of the offset bottom layer. Real stacking-dynamics PARTIAL (a fix needs aligned layers or a settle-then-clamp). Confirmed.",
+      "basis": "scene_eyes cont.319jj-13 @ dur=360 + RAW per-cube analysis (CORRECTS the jj-12 mechanism guess): 18/18 placed but 9/18 TOPPLED. The RAW REFUTES 'top-layer cubes tip over gaps': the 9 toppled cubes are ALL on the BOTTOM level (z=0.82); only 2/18 reached the top layer (z=0.88). Precise cause = NEIGHBOR-COLLISION during tight placement: at 0.07m spacing (0.05m cube -> 0.02m gap) placing each new cube bumps already-placed neighbors -> they tip (late topples t=197-260s = knocked when an adjacent cube is placed; early t=10s = during own placement). The top layer barely builds (only 2 up) because you cannot stack on a disturbed bottom. NOT placement-precision, NOT gap-bridging -- tight-pack neighbor-collision. Real PARTIAL; fix = wider spacing / collision-aware place order / lower release.",
       "n_objects": 18
     },
     "CP-21": {
