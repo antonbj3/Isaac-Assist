@@ -1,0 +1,45 @@
+# Real-asset MEGA-direction — depth triage (cont.319t, 2026-06-19)
+
+Anton's directive: "Den ska hantera en enorm komplexitet i scen-genereringen" — conveyors, differing
+dimensions, humanoids, forklift, larger scenes. All assets surveyed **Kit-free via pxr** (no Kit boot needed
+for the survey half — `from pxr import Usd`; see reference_isaac_assets_downloaded memory). Triaged by build
+depth so the focused Kit sessions go in value/risk order (NOT effort — per Anton's no-time-estimates rule).
+
+## Done
+- **Real objects** (YCB) — PROVEN (CP-YCB-*, box-like reliable). `compute_spawn_recipe`.
+- **Real containers** (KLT tote) — PROVEN (CP-KLT-BIN, hollow-collision fix). `container_recipe`.
+- **Dimension-handling** — `real_asset_spawn.py` recipes compute spawn-z / orientation / reach per asset.
+
+## Triaged — next builds (value/risk order)
+
+### 1. Conveyors — DE-RISKED, build-ready (MODERATE)
+31 `ConveyorBelt_A*.usd`. Belt rides at **1.781 m** (vs generated ~0.8 m) → floor-Franka can't reach → pedestal.
+No built-in node → retrofit surface velocity on `/World/Belt`. Full plan + `conveyor_recipe`:
+**docs/notes/CONVEYOR_INTEGRATION.md** (CP-CONV-01: A09 straight belt + pedestal Franka).
+
+### 2. Forklift — MODERATE, clear path (REUSES nav)
+`Isaac/Robots/IsaacSim/ForkliftB/forklift_b.usd`: 8 rigidbody links, **6 revolute (wheels+steering) + 1
+PRISMATIC (the fork lift)**. bbox 3.0×1.1×2.9 m (tall mast).
+- Drive: reuse the **SOLVED Carter nav** (`navigate_to` closed-loop drives Carter end-to-end — see
+  project_isaac_assist_nav_stub). Open Q: is forklift_b a WheeledRobot the nav machinery initializes (like
+  Carter, works) or does it fail articulation-init (like jetbot)? → 1 Kit probe answers it.
+- Lift: actuate the single prismatic joint to raise/lower the fork under a pallet (Props has pallets).
+- Build: CP-FORK-01 = forklift drives to a pallet + forks lift it. Distinct value: a MOBILE manipulator that
+  isn't an arm. `Props/Forklift/forklift.usd` is a static PROP (scene decoration, trivial) — the ROBOT is ForkliftB/C.
+
+### 3. Larger scenes — COMPOSITION/decoration (MODERATE, mostly assembly)
+`Isaac/Environments/Simple_Warehouse/warehouse_with_forklifts.usd`, `Modular_Warehouse/*` (h10m straight/corner
+tiles), `Simple_Warehouse/full_warehouse.usd`. Animated **Biped characters** (`Isaac/People/Characters`) = scene
+ACTORS (animated, not physics manipulators) → populate scenes. Build: spawn an environment USD as the stage
+backdrop + place work-cells in it. Mostly add_reference + layout; the cells already work. The "enorm komplexitet"
+is the cell-in-environment composition + collision against real warehouse geometry.
+
+### 4. Humanoid — DEEP (GR00T policy domain), focused session
+Unitree **G1** (`Isaac/Robots/Unitree/G1`, 44 links / 43 revolute / 29-dof+hands), **H1**, classic Humanoid
+(16-link mujoco RL body). Manipulation ≠ cuRobo arm planning → **whole-body / GR00T policy**. The codebase
+already has a GR00T path (CP-NEW-groot-load-eval-live, groot-eval-harness, g1 GR00T asset
+`Isaac/Samples/Groot/Robots/g1_*.usd`). Defer to a focused GR00T session; not blocking the moderate items above.
+
+## Order recommendation
+CP-CONV-01 (conveyor) → CP-FORK-01 (forklift, reuses nav) → warehouse-scene composition → humanoid/GR00T.
+Each is a fresh-context Kit session (avoid stacking deep builds in one fatigued session — over-investment lesson).

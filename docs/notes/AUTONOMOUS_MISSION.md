@@ -7360,3 +7360,13 @@ real_asset_spawn.conveyor_recipe(usd) -> ride-z, feed axis+extent, belt prim, ex
 selftest-guarded on A09 (6/6 PASS). ★Kit-free pxr inspection WORKS (from pxr import Usd in plain python3) -> survey
 ANY Isaac asset structure/dims with NO Kit boot (big lever for humanoids/forklift/large-scenes survey half).
 docs/notes/CONVEYOR_INTEGRATION.md has the focused-build plan (CP-CONV-01). Files: real_asset_spawn.py + note.
+
+cont.319t-b — MEGA-direction asset triage (Kit-free pxr survey of ALL remaining items). FORKLIFT (ForkliftB):
+8 links, 6 revolute (wheels+steering) + 1 PRISMATIC (fork lift), bbox 3.0×1.1×2.9m → MODERATE, reuses SOLVED
+Carter nav (navigate_to) + 1 prismatic fork actuator; CP-FORK-01 = drive-to-pallet+lift; open-Q = is forklift_b
+a WheeledRobot nav inits (Carter-like) or fails (jetbot-like) → 1 probe. HUMANOID (Unitree G1): 44 links/43
+revolute/29-dof+hands → DEEP, whole-body = GR00T policy domain (existing CP-NEW-groot-* path + g1 GROOT asset),
+focused session. LARGER SCENES: warehouse_with_forklifts.usd + Modular_Warehouse tiles + animated Biped chars
+(scene actors) → composition/decoration (spawn env backdrop + place cells). ORDER: CP-CONV-01 → CP-FORK-01 →
+warehouse-scene → humanoid/GROOT, each a fresh-context Kit session (don't stack deep builds when fatigued).
+docs/notes/MEGA_DIRECTION_TRIAGE.md = durable plan (task #51).
