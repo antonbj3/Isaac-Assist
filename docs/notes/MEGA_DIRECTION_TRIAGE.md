@@ -58,6 +58,12 @@ Unitree **G1** (`Isaac/Robots/Unitree/G1`, 44 links / 43 revolute / 29-dof+hands
 already has a GR00T path (CP-NEW-groot-load-eval-live, groot-eval-harness, g1 GR00T asset
 `Isaac/Samples/Groot/Robots/g1_*.usd`). Defer to a focused GR00T session; not blocking the moderate items above.
 
+**Humanoid status (cont.319aa)**: ~10 CP-NEW-groot-* templates exist (load-eval-live, eval-harness-ntask,
+finetune, teleop-record, export-hdf5, attention-maps, ...) but are UNVERIFIED SCAFFOLDING — NONE are in
+composable_blocks.json (not scene_eyes-GENUINE). GR00T = a policy-eval/finetune domain, not cuRobo manipulation;
+verifying it needs a loaded g1 GR00T policy + Kit. Confirmed DEEP / focused session; the scaffolding is a starting
+point, not a working capability.
+
 ## Order recommendation
 CP-CONV-01 (conveyor) → CP-FORK-01 (forklift, reuses nav) → warehouse-scene composition → humanoid/GR00T.
 Each is a fresh-context Kit session (avoid stacking deep builds in one fatigued session — over-investment lesson).

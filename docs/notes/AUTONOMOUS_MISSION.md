@@ -7483,3 +7483,10 @@ forklift, NOT Carter-differential. ★CORRECTED my earlier "reuses Carter nav" c
 triage): Carter=differential(2 driven wheels), forklift=steer-angle+drive-velocity tricycle -> different controller.
 CP-FORK-01 simplest first proof = FORK LIFT only (stationary, set lift_joint to raise a pallet, scene_eyes-verify).
 CP-FORK-02 = tricycle drive (own session). docs/notes/MEGA_DIRECTION_TRIAGE.md updated.
+
+cont.319aa(cont) — MEGA de-risk pass COMPLETE (all 4 items, Kit-free, parallel with the audit+conveyor-solution
+workflows): conveyor (motion+feeder GENUINE, pick-cell root-caused), forklift (tricycle drive corrected, fork=
+prismatic, CP-FORK-01=fork-lift first proof), warehouse (envs load, floor z=0, 3473 colliders -> cuRobo obstacle-
+scoping is the challenge), humanoid (10 GR00T templates = unverified scaffolding, not in catalog -> confirmed DEEP).
+docs/notes/MEGA_DIRECTION_TRIAGE.md is the full grounded plan. Two workflows (composition-system audit w0vv9u21c +
+conveyor pick-cell solution wtcaom7sy) still running -> act on results when they land.
