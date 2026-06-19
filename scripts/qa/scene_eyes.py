@@ -171,7 +171,10 @@ try:
         _pth = str(_pr.GetPath()); _lo = _pr.GetName().lower()
         if _pth in CUBES: continue
         if ROBOT and _pth.startswith(ROBOT): continue
-        if any(_t in _lo for _t in _GRASP_TOK) and (_pr.HasAPI(UsdPhysics.RigidBodyAPI) or _pr.HasAPI(UsdPhysics.CollisionAPI)):
+        # require a DYNAMIC rigid body (a manipulable/delivery object). CollisionAPI-ONLY = static scenery or a
+        # referenced CONTAINER mesh (e.g. a real KLT tote whose mesh is named *_Box) -> NOT a delivery object.
+        # cont.319n: the old `or CollisionAPI` false-tracked a static KLT destination tote as a delivered item.
+        if any(_t in _lo for _t in _GRASP_TOK) and _pr.HasAPI(UsdPhysics.RigidBodyAPI):
             CUBES.append(_pth)
 except Exception: pass
 # 2026-06-15 COMPOSE OBJECT-SCOPING FIX: in a composed multi-instance scene the SAME leaf

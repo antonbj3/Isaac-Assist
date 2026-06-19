@@ -7221,3 +7221,12 @@ inside, [0,-0.31] + [0.02,-0.43]). (Path gotcha: the mesh is /Root/Visuals/FOF_M
 to triangle-mesh ('none') collision (static objects support triangle meshes). VERKTYGEN GAP (noted, fix next):
 scene_eyes false-tracks the destination tote MESH (FOF_Mesh_Magenta_Box) as a delivery object via the 'Box' in its
 name -> exclude prims under DEST_PATH from the CUBES tracking. Files: workspace/templates/CP-KLT-BIN.json.
+
+cont.319n(b) — VERKTYGEN-ÄR-LEVANDE fix (the KLT destination exposed it). scene_eyes grasp-token tracking
+(line 174) matched any prim whose name carries a grasp token (incl. "box") with RigidBodyAPI OR CollisionAPI
+-> a STATIC referenced CONTAINER mesh (the KLT tote, named FOF_Mesh_Magenta_Box, CollisionAPI-only) was
+FALSE-TRACKED as a delivered item (inflates the delivery count for any real-asset-container destination). FIX:
+require RigidBodyAPI (a delivery/manipulable object is a DYNAMIC rigid body; CollisionAPI-only = static
+scenery/container). KONTROLL-FIRST VERIFIED via CP-KLT-BIN re-run: KLT tote mesh now EXCLUDED + the cubes still
+tracked + deliver inside the tote (no regression; cubes are tracked at line 156 by name-prefix, unaffected).
+Byte-identical for real objects (all manipulables are rigid bodies). File: scripts/qa/scene_eyes.py.
