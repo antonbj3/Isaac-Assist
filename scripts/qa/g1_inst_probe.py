@@ -52,7 +52,7 @@ out["pelvis_z_final"]=pz()
 try:
     names=list(getattr(art,"dof_names",[]) or []); q=art.get_joint_positions()
     ql=[float(x) for x in list(q)] if q is not None else []
-    for s in ("left_shoulder_pitch_joint","left_elbow_joint"):
+    for s in ("left_shoulder_pitch_joint","left_elbow_joint","right_shoulder_pitch_joint","right_elbow_joint"):
         if s in names and len(ql)==len(names): out["arm_"+s]=round(math.degrees(ql[names.index(s)]),1)
 except Exception as e: out["arm_err"]=repr(e)
 # POSTURE: read key link world-z to confirm standing vs face-plant (false-success guard)
@@ -76,7 +76,8 @@ print("INST_PROBE "+json.dumps(out))
 async def main():
     from service.isaac_assist_service.chat.tools import kit_tools
     from service.isaac_assist_service.chat.canonical_instantiator import execute_template_canonical
-    tpl = json.load(open(f"{REPO}/workspace/templates/CP-G1-STAND-01.json"))
+    tname = sys.argv[1] if len(sys.argv) > 1 else "CP-G1-STAND-01"
+    tpl = json.load(open(f"{REPO}/workspace/templates/{tname}.json"))
     await kit_tools.exec_sync("import omni.usd\nomni.usd.get_context().new_stage()\n", timeout=20)
     r = await asyncio.wait_for(execute_template_canonical(tpl), timeout=300)
     print("INSTANTIATED:", {k: r.get(k) for k in ("n_calls", "instantiated", "errors")})

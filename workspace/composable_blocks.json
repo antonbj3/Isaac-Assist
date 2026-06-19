@@ -12,6 +12,7 @@
     "ForkliftB:forklift-lift": "CP-FORK-01",
     "G1-humanoid:humanoid-arm": "CP-G1-ARM-01",
     "G1-humanoid:humanoid-stand-reach": "CP-G1-STAND-01",
+    "G1-humanoid:humanoid-bimanual-reach": "CP-G1-STAND-02",
     "UR10:color-sort": null,
     "UR10:other": null,
     "UR10:palletize/grid": null,
@@ -542,16 +543,23 @@
       "verdict": "GENUINE(rung 2: STANDING G1 arm-actuation UNDER GRAVITY via a root-weld FixedJoint(world->pelvis); pelvis held 0.793 while the arm reached 50/60deg, cont.319ii-3)",
       "basis": "RAW via the INSTANTIATOR path (g1_inst_probe.py, same path scene_eyes uses): the root-weld FixedJoint holds the base under real gravity -- pelvis-z 0.793 across 90 ACTIVE steps (arm moved, not asleep), shoulder_pitch->50deg + elbow->60deg reached+held, posture UPRIGHT (head z=0.793, torso z=0.837, far above ground), sane joint ranges (no explosion). Found the WORKING fixed-base mechanism after 3 RAW-refuted ones (fixedBase attr INERT/A-B-identical, plant_feet 2-ankle-weld EXPLODES, FixedJointAPI-schema-on-root NaN). CAVEAT: legs+waist free (pelvis-only weld) so waist flops + the cube was knocked not grasped (clean grasp = rung 2b finger DOFs). ⚠️ scene_eyes false 'head_link|Ground' contact here -- trust the direct link-z.",
       "n_objects": 0
+    },
+    "CP-G1-STAND-02": {
+      "robot": "G1-humanoid",
+      "class": "humanoid-bimanual-reach",
+      "verdict": "GENUINE(BIMANUAL standing reach: root-weld + BOTH arms reach 50/60deg while the biped stands, cont.319ii-5)",
+      "basis": "RAW via the INSTANTIATOR path (g1_inst_probe.py CP-G1-STAND-02): pelvis held 0.793 (ACTIVE) while BOTH arms reached+held their targets (left_shoulder_pitch=50, left_elbow=60, right_shoulder_pitch=50, right_elbow=60 deg); posture UPRIGHT (head 0.793, torso 0.837). Extends CP-G1-STAND-01 to bimanual via the same proven root-weld, drive-based (no cuRobo) -> high-certainty. CAVEAT: reach only; clean dex grasp (16 finger DOFs) + cuRobo bimanual = rung 2b.",
+      "n_objects": 0
     }
   },
   "summary": {
-    "trusted": 62,
-    "_trusted_note": "trusted = 57 cube-GENUINE + 1 real-object-GENUINE (CP-YCB-01C) + 1 real-conveyor-GENUINE (CP-CONV-02) + 1 forklift-GENUINE (CP-FORK-01) + 2 humanoid-GENUINE (CP-G1-ARM-01 arm-actuation zero-G, CP-G1-STAND-01 STANDING arm-actuation under gravity via root-weld FixedJoint, cont.319ii-3). cont.319cc: CP-10 downgraded GENUINE->PARTIAL by the adversarial audit (stochastic n=9 grid, saved RAW 8/9 off-pallet). META-RISK RESOLVED (cont.319dd): re-verified ALL 12 structure-class GENUINE blocks (palletize/grid + stack/column) vs their saved eyes.json -> 11 RAW-CONFIRM their verdict; CP-10 was the ONLY stale-lucky false GENUINE. Not systemic.",
-    "genuine_execution_verified": 62,
+    "trusted": 63,
+    "_trusted_note": "trusted = 57 cube-GENUINE + 1 real-object-GENUINE (CP-YCB-01C) + 1 real-conveyor-GENUINE (CP-CONV-02) + 1 forklift-GENUINE (CP-FORK-01) + 3 humanoid-GENUINE (CP-G1-ARM-01 arm-actuation zero-G, CP-G1-STAND-01 STANDING arm-actuation under gravity via root-weld FixedJoint, CP-G1-STAND-02 BIMANUAL standing reach, cont.319ii-5). cont.319cc: CP-10 downgraded GENUINE->PARTIAL by the adversarial audit (stochastic n=9 grid, saved RAW 8/9 off-pallet). META-RISK RESOLVED (cont.319dd): re-verified ALL 12 structure-class GENUINE blocks (palletize/grid + stack/column) vs their saved eyes.json -> 11 RAW-CONFIRM their verdict; CP-10 was the ONLY stale-lucky false GENUINE. Not systemic.",
+    "genuine_execution_verified": 63,
     "position_honest_only": 0,
     "false": 3,
     "partial": 10,
     "pending": 0,
-    "total": 75
+    "total": 76
   }
 }
