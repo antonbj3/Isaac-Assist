@@ -7269,3 +7269,14 @@ the tote = the bin-wall problem. So the honest scope of the lever:
   descend into deep containers. The gated lever (cube byte-identical) is a useful PARTIAL to build on, NOT a
   solution. Net of cont.319p: real, honest, partial; the keepalive's push found a bounded lever + clarified the two
   remaining deep blockers.
+
+cont.319q — DESCEND-PLACE can-upright EXHAUSTIVELY confirmed deep (the keepalive's push fully explored it). All
+scene/lever approaches to the tall-can-upright tried + REFUTED: (1) lever 0.08 -> 158->94deg (reduced, plateaus);
+(2) lever 0.04 -> still 94 + plan_fails (reach-limited); (3) tight-TALL bin 12cm -> WEDGED 0.907 (approach hits the
+15cm walls); (4) tight-SHALLOW bin 10x10x6cm + lever -> still 94.6deg (6cm walls can't constrain a 10cm can, 0
+plan_fails). => the tall-can UPRIGHT genuinely needs the DEEP place-to-floor-contact (descend until base contacts,
+release at contact, never free-fall), which is REACH-LIMITED at the low goal (cuRobo plan_fails). No scene-geometry
+or release-height tweak solves a high-CG narrow object. NET descend-place this session: a committed gated lever
+(partial: reduces open-destination fall-topple, cube byte-identical) + EXHAUSTIVE experimental confirmation that the
+full fix (place-to-contact for high-CG-tip + bin-wall for deep containers) is genuinely deep -> focused session,
+now mapped by experiment not assumption. Files: workspace/templates/CP-YCB-02-TIGHT.json.
