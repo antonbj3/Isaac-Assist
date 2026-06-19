@@ -158,6 +158,11 @@ def xform(p):
 # risk tracking a non-delivery prim into the structure verdict = a false-positive). Add those case-by-case.
 _DELIV_PREFIX = ("Cube", "Item", "Brick", "Carton", "Crate", "Package", "Parcel")
 CUBES = [str(pr.GetPath()) for pr in stage.Traverse() if pr.GetName().startswith(_DELIV_PREFIX)]
+# 2026-06-19 (cont.319jj): DEX-HAND palm tracking for the dexterous-grasp detector. A humanoid 3-finger hand has
+# NO SurfaceGripper/suction-cup, so the gripper-based grip logic (gripped-set / cup-slip) reads 'never-gripped'
+# on the G1 even with real finger->cube contacts. Track the *_hand_palm_link prims so the analyser can test
+# cube-FOLLOWS-palm (a dex grip = the cube moves rigidly WITH the palm), the dex analogue of cup-slip.
+PALMS = [str(pr.GetPath()) for pr in stage.Traverse() if pr.GetName().endswith("_hand_palm_link")]
 # 2026-06-13: also track non-cube MANIPULABLE objects (broom handle, faucet handle, drawer knob, blanks) so
 # GRIP-SLIP can measure them. Additive (cubes already matched above) -> cube cases unaffected. A rigid-body
 # prim whose name carries a graspable token; exclude the robot subtree and obvious scene-floor.
@@ -373,6 +378,7 @@ for i in range(N):
                      "cup_p": (cupx[0] if cupx else None), "cup_q": (cupx[1] if cupx else None),
                      "foll_p": (foll[0] if foll else None), "elong_mm": elong,
                      "j": jpos(), "jv": jvel(), "gv": gstat(), "grp": gripped(), "cubes": cubes, "cubes_q": cubes_q,
+                     "palm": {("left" if "left" in p else "right"): (xform(p)[0] if xform(p) else None) for p in PALMS},
                      "pc": int(cattr("ctrl:plan_calls", 0)), "pf": int(cattr("ctrl:plan_fails", 0)),
                      "pick": str(cattr("ctrl:picked_path", "")), "err": str(cattr("ctrl:last_error", "")),
                      "fgoal": str(cattr("ctrl:last_fail_goal", "")),
@@ -731,6 +737,68 @@ def _analyse(js):
             out.append("GRIP-SLIP: '%s' identified but no finger/cup-contact rows captured" % held)
     else:
         out.append("GRIP-SLIP: no grasped object identified (no finger/cup contact, no gripped-set)")
+    # DEX-HAND FRICTION GRASP (cont.319jj) — the GRIP-SLIP logic above is blind to a 3-finger humanoid hand
+    # (no cup/gripped-set -> 'no grasped object'). This detects an HONEST FRICTION grasp from raw signals: a cube
+    # is DEX-GRIPPED iff over a sustained window >=2 OPPOSING finger groups (thumb + index/middle) of the SAME
+    # hand contact it AND the cube tracks that hand's palm rigidly (cube-minus-palm ~constant) AND it does not
+    # fall. Friction-only BY CONSTRUCTION: a FixedJoint cheat holds the cube WITHOUT needing finger contacts, so a
+    # FJ-held cube (<2 finger contacts) never registers -> the detector ENFORCES Anton's no-FJ-grip rule.
+    _FGROUPS = ("thumb", "index", "middle")
+    def _finger_groups(_contacts, _cube, _side):
+        _g = set()
+        for _c in (_contacts or []):
+            if "|" not in _c: continue
+            _a, _b = _c.split("|", 1)
+            if _cube not in (_a, _b): continue
+            _link = (_a if _b == _cube else _b).lower()
+            if (_side + "_hand_") in _link:
+                for _fg in _FGROUPS:
+                    if _fg in _link: _g.add(_fg)
+        return _g
+    import statistics as _stx
+    _dex_cubes = sorted({_nm for _r in rows for _nm in (_r.get("cubes") or {})})
+    _dex_any_palm = any((_r.get("palm") or {}) for _r in rows)
+    if _dex_cubes and _dex_any_palm:
+        for _cube in _dex_cubes:
+            _best = None
+            for _side in ("left", "right"):
+                _caged = []
+                for _r in rows:
+                    _g = _finger_groups(_r.get("contacts"), _cube, _side)
+                    _caged.append(("thumb" in _g) and (("index" in _g) or ("middle" in _g)))
+                _bi0 = _bi1 = -1; _k = 0
+                while _k < len(_caged):
+                    if _caged[_k]:
+                        _j = _k
+                        while _j < len(_caged) and _caged[_j]: _j += 1
+                        if (_j - 1 - _k) > (_bi1 - _bi0): _bi0, _bi1 = _k, _j - 1
+                        _k = _j
+                    else: _k += 1
+                if _bi0 < 0: continue
+                _span = rows[_bi1]["t"] - rows[_bi0]["t"]
+                _rels = []
+                for _r in rows[_bi0:_bi1 + 1]:
+                    _cp = (_r.get("cubes") or {}).get(_cube); _pm = (_r.get("palm") or {}).get(_side)
+                    if _cp and _pm: _rels.append([_cp[_a] - _pm[_a] for _a in range(3)])
+                _follow = (round(1000 * max(_stx.pstdev([_r[_a] for _r in _rels]) for _a in range(3)), 1)
+                           if len(_rels) >= 2 else None)
+                _zs = [(_r.get("cubes") or {}).get(_cube)[2] for _r in rows[_bi0:_bi1 + 1] if (_r.get("cubes") or {}).get(_cube)]
+                _minz = round(min(_zs), 3) if _zs else None
+                _cand = {"side": _side, "span": round(_span, 1), "follow": _follow, "minz": _minz}
+                if _best is None or _cand["span"] > _best["span"]: _best = _cand
+            if _best is None:
+                out.append("DEX-GRASP %s: no opposing-finger cage (need thumb + index/middle contact) -> NOT dex-gripped" % _cube)
+                continue
+            _held = (_best["span"] >= 1.0 and _best["follow"] is not None and _best["follow"] < 30
+                     and (_best["minz"] is None or _best["minz"] > 0.5))
+            _vd = ("DEX-GRIP (friction, rigid cube-follows-palm)" if _held else
+                   ("CAGE-SLIP (caged but cube drifts %smm from palm = friction lost)" % _best["follow"]
+                    if (_best["follow"] is not None and _best["follow"] >= 30) else
+                    ("CAGE-BRIEF (cage-span %.1fs <1s)" % _best["span"] if _best["span"] < 1.0 else
+                     "CAGE-DROP (cube fell to z=%s during cage)" % _best["minz"])))
+            out.append("DEX-GRASP %s [%s hand]: cage-span=%.1fs follow=%smm minz=%s -> %s"
+                       % (_cube, _best["side"], _best["span"], _best["follow"], _best["minz"], _vd))
+
     # GRIP FORCE (contact impulse) — a firm 2-finger/cup couple vs a grazing single touch
     _cf = {}
     for r in rows:
