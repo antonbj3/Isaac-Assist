@@ -16,11 +16,40 @@ chain (`scripts/qa/chain_xkit_gate.py`) **redefines** the blocker:
 
 So record → re-instantiate → source_override → measure are all N-capable. The plumbing is done.
 
-## The real bottleneck: proven chain RECEIVERS are SINGLE-PICK
-The proven chain receivers (CP-CHAIN-FLAT, sensor path; CP-CHAIN-UR10-SRC, source_paths path)
-pick **one** cube at their single pick-zone → deliver to one target. Even with N cubes
-source_override'd, a single-pick controller picks 1. "Relays 1/N" = single-pick receiver, not a
-relay defect.
+## ⚠️ EMPIRICAL CORRECTION (cont.319hh, Kit-verified) — multi-pick receivers EXIST and WORK
+The hypothesis below ("proven receivers are single-pick") is **REFUTED** by the registered stages
++ Kit runs. `chain_stages.json` already has **CP-CHAIN-STACK-RECV** (n=1..N, cap=3) and
+**CP-CHAIN-PALLETIZE-RECV** (n=1..N, flat-grid) — multi-pick receivers. Prior + new cross-Kit runs:
+- **CP-12 (3) → CP-CHAIN-STACK-RECV: 3/3 + 3/3 ALL DELIVERED** (reproducible 2×; relay cubes
+  stacked z 0.825→0.875→0.925 on one xy = a real column). Multi-cube handoff is PROVEN for N=3.
+- **CP-08 (4) → CP-CHAIN-STACK-RECV: 4/4 + 3/4** = CAPACITY overflow (cap=3), not a relay defect —
+  exactly what compose_handoff's capacity pre-filter catches.
+- **CP-08 (4) → CP-CHAIN-PALLETIZE-RECV: 4/4 + 3/4** (cont.319hh, cap=None so NOT overflow). RAW:
+  3 cubes form a genuine grid (all z=0.785, pitch ~0.13, single layer); **Cube_4 at [-0.368,-0.833,
+  0.775]** = z 10mm BELOW the grid → dropped on the bare TABLE off the pallet footprint, settled
+  (not carried at window-end → not a window cutoff). A genuine **early-drop of the 4th pick**.
+
+So NULÄGE's "relays 1/N" is OUTDATED: the relay infra is N-capable AND multi-pick receivers work
+for N=3. The open frontier is the **4th cube in a palletize sequence drops off-pallet** (3/4).
+
+### Original hypothesis (kept for the record — partly wrong)
+Earlier I read chain_xkit_gate and guessed the proven receivers were single-pick (CP-CHAIN-FLAT,
+CP-CHAIN-UR10-SRC are). That was true for those two but missed the STACK/PALLETIZE multi-pick
+receivers already registered. Lesson: a code-read across one slice of the harness under-counted the
+capability — the Kit run corrected it.
+
+## The remaining gap: the 4th palletize pick drops off-pallet (3/4)
+Candidate causes (need a chain-measure trajectory upgrade to disambiguate — the current
+_play_and_measure logs only FINAL poses, no per-object trajectory/grip/plan_fail):
+- **offset-from-X0**: run_stage_k derives the receiver origin_offset from X0 (first relayed cube,
+  line 151-153). The 4 relayed cubes sit at their scattered stage-(k-1) grid positions; the
+  receiver's pick is aligned to X0, so the 4th cube (farthest from X0) may be at the edge of the
+  reach/grip envelope → early release.
+- **4th-pick IK/reach degradation** at the far grid cell (a known palletize tail-off; cf. CP-25
+  PARTIAL 8/16 tight-grid, CP-20 PARTIAL 6/18).
+Focused follow-up (Kit-bound, deferred per be-sparing/diagnose-once): upgrade chain_xkit_gate's
+MEASURE to log per-object trajectory + grip + plan_fails (like scene_eyes), re-run, read which of
+the two causes fires for Cube_4, then fix (re-target the 4th pick, or per-cube offset).
 
 ## To unblock stack/palletize-receivers (the BREADTH work)
 Author + Kit-verify a **chain-ready MULTI-PICK receiver** whose controller iterates picks over
