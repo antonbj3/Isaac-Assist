@@ -253,8 +253,8 @@
     "CP-34": {
       "robot": "Franka",
       "class": "color-sort",
-      "verdict": "PARTIAL(stochastic blue place)",
-      "basis": "routing_validate + scene_eyes RAW 2026-06-17 (cont.199): blue STOCHASTIC to BlueBin(x+0.4) -- in-bin 1 run / floor 2 runs; red+green always CORRECT-routed. Overstated as position-honest gold; flaky far-bin place (controller stochasticity, redundant class: CP-16 4-color + CP-03 cover color-sort robustly). N-of-M needed for a rate.",
+      "verdict": "GENUINE(3-color sorter 3/3 routed; N-of-4 re-verify, the 'stochastic' was window-cut, cont.319jj-9)",
+      "basis": "scene_eyes N-of-4 (cont.319jj-9): 2x dur=180 + 2x dur=90, ALL 3/3 cubes routed to their color bins (blue x~0.39, green x~0, red x~-0.40, all settled z~0.79, no topple, plan_fails=0). The catalog 'stochastic blue place' was a WINDOW-CUT artifact: at the short dur=90 a late-placed cube (picked t~67) had not settled (read z=1.04 mid-drop); at the template's proper dur=180 all 3 settle in-bin deterministically. Distinct per-color final x = correct routing.",
       "n_objects": 3
     },
     "CP-35": {
@@ -553,12 +553,12 @@
     }
   },
   "summary": {
-    "trusted": 64,
+    "trusted": 65,
     "_trusted_note": "trusted = 57 cube-GENUINE + 1 real-object-GENUINE (CP-YCB-01C) + 1 real-conveyor-GENUINE (CP-CONV-02) + 1 forklift-GENUINE (CP-FORK-01) + 3 humanoid-GENUINE (CP-G1-ARM-01 arm-actuation zero-G, CP-G1-STAND-01 STANDING arm-actuation under gravity via root-weld FixedJoint, CP-G1-STAND-02 BIMANUAL standing reach, cont.319ii-5). cont.319cc: CP-10 downgraded GENUINE->PARTIAL by the adversarial audit (stochastic n=9 grid, saved RAW 8/9 off-pallet). META-RISK RESOLVED (cont.319dd): re-verified ALL 12 structure-class GENUINE blocks (palletize/grid + stack/column) vs their saved eyes.json -> 11 RAW-CONFIRM their verdict; CP-10 was the ONLY stale-lucky false GENUINE. Not systemic.",
-    "genuine_execution_verified": 64,
+    "genuine_execution_verified": 65,
     "position_honest_only": 0,
     "false": 3,
-    "partial": 9,
+    "partial": 8,
     "pending": 0,
     "total": 76
   }
