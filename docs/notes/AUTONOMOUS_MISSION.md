@@ -7447,3 +7447,13 @@ as the breaker, independent of the belt asset). Focused #52: live-instrument isa
 pick-phase state at z~1.8 vs the working z~0.85 baseline (CP-YCB-01C). Conveyor investigation analytically COMPLETE:
 belt-motion + feeder GENUINE; pick-cell breaker isolated + all geometric resolutions assessed -> one clear focused
 path. (Also: a few variants are elevated/inclined at ride-z 2.55/4.09/6.4m -- even higher.)
+
+cont.319y — pivoted off the conveyor to VERIFY the END-GOAL LLM compose-reasoning layer (Kit-free + ChromaDB-free =
+autonomous-safe; the retrieval half stays watched-window-only). compose_reason_eval.py = 14/15, and the 1 MISS
+(op-discrim) is FLAKY not a gap: 3/3 PASS on re-run (LLM nondeterminism, occasional empty pick). ★The real-object
+case PASSES (LLM routes 'real meshed product items / cracker boxes / soup cans / foam bricks' -> CP-YCB-01C, NOT the
+generic cube CP-01) -> the cont.319 catalog addition is verified end-to-end at the reasoning layer. All structure
+cases (sequential/parallel, implied + explicit) + gap-honesty + robot-ambiguity PASS. False-success-vakt applied:
+checked the miss (re-ran) rather than dismissing it -> confirmed flakiness. NOTE: per-case single-shot eval can
+flaky-miss ~1/4 on op-discrim; a majority-of-N wrapper would harden it (refinement, non-urgent). LLM-reasoning =
+runtime-composition END-GOAL = solid.
