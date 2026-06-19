@@ -489,7 +489,7 @@
     "Cube 8-16 start within Franka reach (|x|<0.7 for some) \u2014 picked out of belt order. drop_targets dispatches by cube_path so order doesn't matter.",
     "Pallet 40\u00d740cm \u2014 within robot reach (max diagonal sqrt(0.105^2 + 0.505^2)=0.516m from base)."
   ],
-  "verified_status": "build-spec-2026-04-XX; form-gate \u2713; function-gate \u2713 (multi-cube cube_paths \u2014 2/16 cubes delivered to Pallet)",
+  "verified_status": "PARTIAL 15/16 (cont.319jj-10, scene_eyes @ dur=540): 16/16 PLACED in a flat 4x4 grid (z~0.825, throughput resolved at the proper dur -- the old '2/16'/'8/16' were WINDOW-CUTS), but 1/16 toppled (Cube_13 95.6deg) in the tight 0.07m spacing. Stays PARTIAL on the topple; throughput is NOT the issue.",
   "diagnose_args": {
     "robot_path": "/World/Franka",
     "obstacles": [
@@ -511,5 +511,23 @@
       "moveit2"
     ]
   },
-  "verification": {"function_gate": {"status": "pass", "n": 7, "m": 7, "wilson_lower": 0.6457, "last_run_sha": "8a1118e6", "last_run_at": "2026-06-13T10:29:34+00:00", "legacy_claim": "pass"}, "faithfulness": {"status": "pass", "n": 3, "m": 3, "wilson_lower": 0.4385, "last_run_sha": "e1ee3bf5", "last_run_at": "2026-06-12T02:12:02+00:00"}}
+  "verification": {
+    "function_gate": {
+      "status": "pass",
+      "n": 7,
+      "m": 7,
+      "wilson_lower": 0.6457,
+      "last_run_sha": "8a1118e6",
+      "last_run_at": "2026-06-13T10:29:34+00:00",
+      "legacy_claim": "pass"
+    },
+    "faithfulness": {
+      "status": "pass",
+      "n": 3,
+      "m": 3,
+      "wilson_lower": 0.4385,
+      "last_run_sha": "e1ee3bf5",
+      "last_run_at": "2026-06-12T02:12:02+00:00"
+    }
+  }
 }
