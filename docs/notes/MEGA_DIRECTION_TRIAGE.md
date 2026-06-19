@@ -44,6 +44,14 @@ ACTORS (animated, not physics manipulators) → populate scenes. Build: spawn an
 backdrop + place work-cells in it. Mostly add_reference + layout; the cells already work. The "enorm komplexitet"
 is the cell-in-environment composition + collision against real warehouse geometry.
 
+### 3b. Warehouse scenes — de-risked (cont.319aa): envs LOAD, floor z=0, but BIG + heavy-collider
+`Simple_Warehouse/full_warehouse.usd` 36x75x9.3m / 3475 meshes / 3473 colliders; `warehouse.usd` +
+`warehouse_with_forklifts.usd` 24x39x9.3m / ~790 colliders. Floor at z~0, so a cell sits on it directly
+(add_reference the env as a backdrop + place the cell). ★INTEGRATION CHALLENGE = cuRobo obstacle SCOPING: do
+NOT feed 3473 warehouse colliders to the planner (would break/slow it, same class as the conveyor-mesh-obstacle
+cont.319w). The warehouse is mostly VISUAL backdrop; cuRobo needs only the cell's local obstacles (table/bin) +
+maybe nearby shelves. Build: env backdrop + cell on floor + planning_obstacles scoped to the cell's local region.
+
 ### 4. Humanoid — DEEP (GR00T policy domain), focused session
 Unitree **G1** (`Isaac/Robots/Unitree/G1`, 44 links / 43 revolute / 29-dof+hands), **H1**, classic Humanoid
 (16-link mujoco RL body). Manipulation ≠ cuRobo arm planning → **whole-body / GR00T policy**. The codebase
