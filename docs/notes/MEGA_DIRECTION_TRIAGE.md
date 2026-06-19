@@ -15,7 +15,7 @@ depth so the focused Kit sessions go in value/risk order (NOT effort — per Ant
 ### 1. Conveyors — BELT-MOTION PROVEN (CP-CONV-01, cont.319u); pick-cell = CP-CONV-02
 31 `ConveyorBelt_A*.usd`. Belt rides at **1.781 m** (vs generated ~0.8 m) → floor-Franka can't reach → pedestal.
 No built-in node → retrofit surface velocity on `/World/Belt`. Full plan + `conveyor_recipe`:
-**docs/notes/CONVEYOR_INTEGRATION.md**. ✅ CP-CONV-01 GENUINE: real A09 belt + 3-API surface-velocity retrofit on /World/Belt carries cubes +2.5m along the belt (RAW-verified, 0.2 m/s, end-first arrival). NEXT = CP-CONV-02: end-stop/pick-zone at the belt end + pedestal Franka (~1.13m base) to pick off the moving belt.
+**docs/notes/CONVEYOR_INTEGRATION.md**. ✅ CP-CONV-01 GENUINE: real A09 belt + 3-API surface-velocity retrofit on /World/Belt carries cubes +2.5m along the belt (RAW-verified, 0.2 m/s, end-first arrival). CP-CONV-02 (pedestal-Franka pick): reach VALIDATED but the pick-controller does NOT engage (5 grounded variants, all plan_calls=0, arm never moves). PRIME SUSPECT = pedestal base z=1.4 (every proven pick gold is FLOOR-base z=0; setup_pick_place_controller likely has a floor-base assumption). FOCUSED FOLLOW-UP (task #52): try the LOWERED-conveyor approach (floor Franka + belt translated to the proven ~0.8m pick height = proven floor-base controller path).
 
 ### 2. Forklift — MODERATE, clear path (REUSES nav)
 `Isaac/Robots/IsaacSim/ForkliftB/forklift_b.usd`: 8 rigidbody links, **6 revolute (wheels+steering) + 1

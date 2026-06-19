@@ -7391,3 +7391,16 @@ the unguarded end), upright 0deg. So the real conveyor now PRESENTS an object at
 pickzone (CP-CONV-01b), both real-asset + RAW-verified. NEXT CP-CONV-02 = pedestal Franka (reach_validate-grounded
 base ~1.4-1.5m for a natural down-reach onto the 1.781m belt) picks from the pick-zone -> complete pick cell.
 File: workspace/templates/CP-CONV-01b.json.
+
+cont.319w — CP-CONV-02 (complete real-conveyor pick CELL) = HONEST PARTIAL, controller-engagement gap (NOT claimed
+as working). reach_validate REACHABLE (pedestal Franka base z=1.4 reaches the belt pick-zone 3/3 IK), but scene_eyes
+5 GROUNDED variants ALL plan_calls=0 / never-gripped / tool stuck ~441-444mm from home = the arm issues NO motion,
+the pick-controller never engages. REFUTED hypotheses (false-success-vakt working — I did NOT overclaim): belt_path
+real (v1/v2), belt_path=None + proven CP-CHAIN-FLAT cube setup (v3), conveyor-mesh-removed-from-cuRobo-obstacles (v4),
+home-pose panda_leftfinger|EndStop collision cleared via low+narrow lip (v5, contact gone but still plan_calls=0).
+★PRIME SUSPECT: every proven pick gold has a FLOOR base (z=0); the PEDESTAL base (z=1.4) is the one untested
+variable -> setup_pick_place_controller likely has a floor-base assumption silently failing to register/tick the
+controller. STOPPED at 5 Kit iterations per the over-investment lesson (acute 'hand to fresh session' signal).
+Focused FOLLOW-UP = task #52: LOWERED-conveyor approach (floor Franka + belt -0.98m to the proven ~0.8m pick height
+= proven floor-base controller path). Belt-motion (CP-CONV-01) + feeder (CP-CONV-01b) remain independently GENUINE.
+File: workspace/templates/CP-CONV-02.json (PARTIAL), MEGA_DIRECTION_TRIAGE.md.
