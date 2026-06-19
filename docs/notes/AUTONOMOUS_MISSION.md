@@ -7306,3 +7306,19 @@ chain INFRA now handles real objects on the SOURCE + RELAY sides; the RECEIVER-g
 remaining piece (likely the cube-tuned receiver vs the bigger brick OR the chain-offset alignment; needs stage1
 scene_eyes RAW -> focused follow-up, each chain run ~10min). NET 1/1 + 0/1 INCOMPLETE: genuine partial, the
 YCB-relay capability proven + gated. Files: chain_xkit_gate.py, CP-CHAIN-FRANKA-SRC-YCB.json, run_ycb_chain.sh.
+
+cont.319r-b — REAL-OBJECT CHAIN fully DIAGNOSED (diagnostik-först, 2 light isolations + a false-success-vakt
+correction). The chain receiver 0/1 (cont.319r) is NOT the grasp and NOT the z-clamp:
+  (1) RECEIVER-GRASP ISOLATION (single-Kit, light): CP-CHAIN-FLAT-YCB picks a REAL brick at its OWN pick position
+  (delivered to bin [0,-0.40,0.79], RIGID HOLD, upright, 0 plan_fails) -> the chain receiver GRASPS a brick fine.
+  (2) So the chain 0/1 = the RELAYED brick DRIFTS ~5cm during settle ([0.001,-0.391] placed -> [0.031,-0.437]
+  settled) -> out of the receiver's offset sensor zone (8cm). A cube doesn't drift, so cube chains work.
+  (3) FALSE-SUCCESS-VAKT: hypothesized the drift = the relay's cube z-clamp (max(X[2],0.78)) lifting the brick ->
+  fall -> drift. FIXED relay to place at delivered z (X[2]) -> RE-RAN -> STILL drifts to [0.031,-0.437] = REFUTED.
+  The drift is inherent to the RELAY-RECREATED brick (it drifts in the chain but NOT standalone -> the relay's
+  DefinePrim+AddReference re-creation gives the brick an unstable initial state vs a native create_prim).
+  REMAINING (focused follow-up): make the relay-recreated YCB object STABLE (sleepThreshold/zero-velocity/settle-
+  before-offset) OR have the receiver re-read the LIVE object position (sensor follows the drift) OR enlarge the
+  sensor. Kept the z=X[2] relay placement (more correct, gated YCB-relay, ast-clean) though it didn't fix the drift.
+  NET: real-object chain source+relay+receiver-grasp ALL proven; completion gated on the relay-recreate stability
+  (a focused follow-up, each chain run ~10min). Files: chain_xkit_gate.py, CP-CHAIN-FLAT-YCB.json.

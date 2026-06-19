@@ -212,7 +212,9 @@ async def run_stage_k(k, name, handoff):
         for cp, X in zip(measure_cubes, handoff_cubes):
             if _RELAY_ASSET:  # cont.319r YCB-aware relay: re-create the real referenced asset, not a 0.05 cube
                 dl += (f"p=stage.DefinePrim('{cp}','Xform'); p.GetReferences().AddReference('{_RELAY_ASSET}')\n"
-                       f"x=UsdGeom.Xformable(p); x.ClearXformOpOrder(); x.AddTranslateOp().Set(Gf.Vec3d({X[0]},{X[1]},{max(X[2],0.78)}))\n"
+                       # cont.319r-b: place at the DELIVERED z (not the cube's 0.78 clamp) so a non-cube object
+                       # rests on the handoff without a fall -> no settle-drift out of the receiver's sensor zone.
+                       f"x=UsdGeom.Xformable(p); x.ClearXformOpOrder(); x.AddTranslateOp().Set(Gf.Vec3d({X[0]},{X[1]},{X[2]}))\n"
                        "for _api in (UsdPhysics.RigidBodyAPI, UsdPhysics.MassAPI):\n    _api.Apply(p)\nPhysxSchema.PhysxRigidBodyAPI.Apply(p)\n"
                        f"_mp=stage.GetPrimAtPath('{cp}/{_RELAY_MESH}')\nif _mp.IsValid():\n    UsdPhysics.CollisionAPI.Apply(_mp)\n    UsdPhysics.MeshCollisionAPI.Apply(_mp).GetApproximationAttr().Set('convexHull')\n"
                        f"_rel=p.CreateRelationship('physics:materialBinding', custom=False); _rel.SetTargets([Sdf.Path('/World/PhysicsMaterials/rubber_natural')])\n")
