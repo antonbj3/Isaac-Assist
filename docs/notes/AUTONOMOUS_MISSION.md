@@ -6988,3 +6988,15 @@ Gemini-prompt-tuning problem with cascading regressions -> reverted to the clean
 immediate output) — a green dry-run pick is NOT a green composition. The LLM-flow composes the STRUCTURE correctly
 (sequential, source+receiver); exact CARDINALITY is a DEFERRED gap for a focused session (A/B + stochasticity
 handling + execution-verification, not incremental hint-tweaking). compose_orchestrate.py + chain_stages.json reverted.
+
+cont.318o — DETERMINISTIC follow-up to the cont.318n capacity finding (the RIGHT kind of fix vs the reverted
+finicky LLM-prompt-tuning): added a CAPACITY-overflow check to compose_handoff.chain_compat (the Kit-free
+fail-closed pre-filter). A fixed-capacity receiver (STACK-RECV capacity=3, added to the chain_stages registry)
+cannot absorb a source delivering MORE parts (CP-08=4) — the extra parts have no slot and fall (verified
+CP-08->STACK-RECV = 3/4). Now chain_compat(CP-08, STACK-RECV) = INCOMPAT (overflow) -> the orchestrator's
+handoff-compat pre-filter HALTs the overflow pairing instead of executing a doomed 3/4. test_chain_compat.py:
++1 neg-control (CP-08->STACK-RECV INCOMPAT by capacity; the proven CP-12->STACK-RECV stays COMPAT = no
+false-negative). Static 7/7. NET: the LLM cardinality PICK stays a deferred finicky gap, but the
+EXECUTION-overflow it would cause is now caught DETERMINISTICALLY + fail-closed (the directive's FAIL-CLOSED +
+"härleder du för hand -> first-class-detektor"). Files: workspace/chain_stages.json (capacity),
+scripts/qa/compose_handoff.py (check), scripts/qa/test_chain_compat.py (neg-control).

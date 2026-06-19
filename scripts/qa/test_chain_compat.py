@@ -52,6 +52,15 @@ def main():
     else:
         print(f"  flat->UR10-raised: INCOMPAT ok ({neg['reason'][:60]})")
 
+    # 4: CAPACITY overflow neg-control (cont.318n) -- CP-08 (4 parts) -> STACK-RECV (capacity 3) MUST be INCOMPAT
+    # (verified: the chain executes 3/4, extra part falls). Distinct from height/deep-bin = capacity branch works.
+    cap = ch.chain_compat("CP-08", "CP-CHAIN-STACK-RECV")
+    if cap["compatible"]:
+        print("  CP-08->STACK-RECV: COMPAT (WRONG -- 4 parts overflow a 3-slot stacker)")
+        fails.append("CP-08 (4) -> STACK-RECV (cap 3) should be INCOMPAT by capacity but predicted COMPAT")
+    else:
+        print(f"  CP-08->STACK-RECV: INCOMPAT ok ({cap['reason'][:60]})")
+
     print(f"\n{n_pairs} proven pairs checked.")
     if fails:
         print("REGRESSION:")

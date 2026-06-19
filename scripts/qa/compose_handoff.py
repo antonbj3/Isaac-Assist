@@ -47,6 +47,15 @@ def chain_compat(src_name, recv_name):
     if deliver_z is not None and abs(deliver_z - pick_z) > 0.08:
         return {"compatible": False,
                 "reason": f"handoff HEIGHT mismatch: source delivers at z={deliver_z}, but {recv_robot} receiver picks at z~{pick_z} (UR10 raised / Franka flat)"}
+    # CAPACITY overflow (cont.318n): a FIXED-capacity receiver (e.g. a 3-slot stacker) cannot absorb a source
+    # that delivers MORE parts than it has slots — the extra parts have no target and fall. VERIFIED: CP-08(4)
+    # -> CP-CHAIN-STACK-RECV(cap 3) executes at 3/4 (3 not even stacked + 1 fell). Fail-closed pre-filter so the
+    # orchestrator HALTs an overflow pairing instead of running a doomed chain.
+    recv_cap = (_STAGES.get(recv_name) or {}).get("capacity")
+    src_n = (_STAGES.get(src_name) or {}).get("n_cube")
+    if isinstance(recv_cap, int) and isinstance(src_n, int) and src_n > recv_cap:
+        return {"compatible": False,
+                "reason": f"CAPACITY overflow: source {src_name} delivers {src_n} parts but receiver {recv_name} holds only {recv_cap} (extra parts have no slot and fall — verified CP-08->STACK-RECV = 3/4)"}
     return {"compatible": True,
             "reason": f"source delivers onto a pickable surface (z~{deliver_z}) matching {recv_robot} pick z~{pick_z}"}
 
