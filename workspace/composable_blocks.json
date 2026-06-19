@@ -73,8 +73,8 @@
     "CP-10": {
       "robot": "Franka",
       "class": "palletize/grid",
-      "verdict": "GENUINE(grid)",
-      "basis": "scene_eyes STACK-STRUCTURE",
+      "verdict": "PARTIAL(stochastic n=9 grid NOT reproducible)",
+      "basis": "audit cont.319cc: saved RAW = 8/9 (9th cube off-pallet, still-gripped/dragging at final frame, +0.116m above grid -> scene_eyes z-levels=2 = gate would REJECT); reverify runs 1/9 x2; one lucky sweep run was 9/9. NOT a robust n=9 palletizer; do NOT compose-trust as 9-cube. Re-run until a 9/9 flat-grid RAW reproducibly saves before re-promoting.",
       "n_objects": 9
     },
     "CP-12": {
@@ -513,12 +513,12 @@
     }
   },
   "summary": {
-    "trusted": 59,
-    "_trusted_note": "59 'trusted' = 58 cube-GENUINE (breadth campaign complete) + 1 real-object-GENUINE (CP-YCB-01C, compose-verified cont.319k). Compose-trust all 59.",
-    "genuine_execution_verified": 59,
+    "trusted": 58,
+    "_trusted_note": "58 'trusted' = 57 cube-GENUINE + 1 real-object-GENUINE (CP-YCB-01C). cont.319cc: CP-10 downgraded GENUINE->PARTIAL by the adversarial audit (stochastic n=9 grid, saved RAW 8/9 off-pallet). META-RISK (task: re-verify-grid-RAW): other palletize/grid GENUINE blocks (CP-08/12/19/27/30/42/46/49/77) were verdicted from sweep runs; re-check each against its saved eyes.json for the same stale-lucky-run hole.",
+    "genuine_execution_verified": 58,
     "position_honest_only": 0,
     "false": 3,
-    "partial": 9,
+    "partial": 10,
     "pending": 0,
     "total": 71
   }

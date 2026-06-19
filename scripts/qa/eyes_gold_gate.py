@@ -25,9 +25,15 @@ def _class(template):
     except Exception:
         return "unknown"
     g = (t.get("goal") or "").lower()
+    # cont.319cc audit #2: a PALLETIZER is a structured flat grid -> the structure gate, even if its goal also
+    # says "sorted"/"sku" (e.g. CP-NEW-palletizer-mixed-sku). Check pallet/palletiz BEFORE "sort", else a sorted
+    # palletizer routes to the lenient color-sort branch and a collapsed grid false-passes. A pure colour-sort
+    # (into bins, no pallet) has no "pallet" token -> still color-sort. Routing a sort-onto-pallet here is only
+    # STRICTER (flat-grid check), never a false-negative.
+    if any(w in g for w in ["pallet", "palletiz"]): return "palletize/grid"
     if "sort" in g: return "color-sort"
     if any(w in g for w in ["tower", "column", "cube-on-cube", "graduated"]): return "stack/column"
-    if any(w in g for w in ["pallet", "palletiz", "grid", "2x2", "3x3"]): return "palletize/grid"
+    if any(w in g for w in ["grid", "2x2", "3x3"]): return "palletize/grid"
     return "pick-place-bin"
 
 

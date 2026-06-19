@@ -395,7 +395,7 @@ _bin_bboxes_rec = []
 try:
     _bcrec = UsdGeom.BBoxCache(0, [UsdGeom.Tokens.default_])
     for _prrec in stage.Traverse():
-        if any(_k in _prrec.GetName() for _k in ("Bin", "Tote", "Hopper", "Bucket")):
+        if any(_k in _prrec.GetName().lower() for _k in ("bin", "tote", "hopper", "bucket", "crate")):   # cont.319cc audit #4: case-INSENSITIVE (was 'Bin' only -> a 'dropbin'/lowercase container went unrecorded) + 'crate' (deep collection container). Flat surfaces (pallet/tray/shelf) deliberately EXCLUDED so their topples stay rejects.
             _rrec = _bcrec.ComputeWorldBound(_prrec).ComputeAlignedRange()
             if not _rrec.IsEmpty():
                 _mnr = _rrec.GetMin(); _mxr = _rrec.GetMax()
