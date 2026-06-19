@@ -7076,3 +7076,16 @@ grip NOT the issue; mesh-aware-close + Axis_Aligned_Physics gaps noted) + 21 obj
 real-object work = deep/controller (descend-to-place precision placement, complex-mesh grasp e.g. mug/drill,
 mesh-aware adaptive close) -> FRESH DEDICATED SESSIONS per the hand-edit-at-fatigue lesson; + end-to-end LLM
 asset-pick (separate stack). Files: workspace/knowledge/asset_manifest.jsonl, CP-YCB-0{1,2,3}.json.
+
+cont.319d — MIXED multi-real-object cell GENUINE (Anton: tests "skiljande dimensioner"). CP-YCB-MULTI: Franka
+picks a HETEROGENEOUS set (foam_brick + gelatin_box + tomato_can, 3 different sizes/shapes) off the belt into one
+bin -> 3/3 delivered (brick+box UPRIGHT, can collection), 24 plan_calls 0 plan_fails, picked sequentially as each
+arrived. The bbox-driven controller handles mixed dimensions WITHOUT per-object tuning (reads each object's own
+ComputeWorldBound). Step toward real-object composition.
+  ★ ANTON RESCOPE (2026-06-19): real-assets is a MEGA-direction, NOT a near-done milestone (I under-scoped).
+"mycket mycket kvar": real CONVEYORS (vs our generated box conveyors — and do they carry the belt-physics?),
+handling real assets' DIFFERING DIMENSIONS vs our generated primitives (a core cross-cutting theme — drop/placement
+was one instance), HUMANOIDS, FORKLIFT, LARGER/complex SCENES. The system must handle ENORMOUS scene-generation
+complexity. Anton ENDORSED descend-to-place ("förmodligen ingen dålig ide") + the multi-cell + "du hittar saker att
+göra definitivt". NEXT real-asset frontiers (task #51): real conveyor integration, dimension-normalization layer,
+humanoid robots, forklift/vehicle, warehouse-scale scenes, + descend-to-place (endorsed). Commit per item.
