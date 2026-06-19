@@ -7254,3 +7254,18 @@ plan_fails (the bin-wall). So the lever helps the FALL but a tall UNSTABLE objec
 (descend until base contacts, then release) — the deeper fix. The lever SHOULD solve STABLE-object cases (brick on a
 deep-tote rim, cube topple-partials CP-20/26 — they don't tip, just need a lower release) — testing next. NET: a real
 gated tool (default byte-identical), partial descend-place. Files: pick_place.py, scene_eyes.py.
+
+cont.319p(b) — FALSE-SUCCESS-VAKT correction on cont.319p. I claimed the jaw release-lever "should solve stable
+cases (brick-on-tote-rim)". TESTED CP-YCB-KLT + JAWDROPTIP=0.08 -> REFUTED: the brick STILL perches at 0.925
+(unchanged, 0 plan_fails). Root: the lever is a POSITIVE offset above the destination center, so for a DEEP tote it
+still releases the brick ABOVE the rim (0.896); to get a larger object BELOW the rim the flange must descend INTO
+the tote = the bin-wall problem. So the honest scope of the lever:
+  - HELPS: OPEN/shallow destinations — reduces the fall-induced topple (tall can in the open generated bin 158->94).
+  - DOES NOT solve: (a) tall-can UPRIGHT (plateaus 94deg — a high-CG narrow can tips once released regardless of
+    height; needs place-to-floor-CONTACT-and-hold, not just a lower drop); (b) larger object into a DEEP container
+    (flange can't descend below the deep rim without the bin-wall plan-fail).
+  => Full descend-place still needs TWO deep things for a focused session: (1) place-to-floor-contact (descend until
+  the object base contacts, THEN release — for high-CG-tip objects); (2) solve the bin-wall so the flange can
+  descend into deep containers. The gated lever (cube byte-identical) is a useful PARTIAL to build on, NOT a
+  solution. Net of cont.319p: real, honest, partial; the keepalive's push found a bounded lever + clarified the two
+  remaining deep blockers.
