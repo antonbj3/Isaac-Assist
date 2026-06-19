@@ -7382,3 +7382,12 @@ not slide/roll/noise. Cubes then fall off the UNGUARDED end (z1.78->0.78, the 3.
 <8 m/s not ejection). ★kinematicEnabled=True was the key (the #1 'belt configured but cubes just sit' fix). scene_eyes
 handled robot=None gracefully. NEXT CP-CONV-02 = end-stop/pick-zone + pedestal Franka (~1.13m base) to pick off the
 1.781m belt. Files: workspace/templates/CP-CONV-01.json, MEGA_DIRECTION_TRIAGE.md.
+
+cont.319v — ★CP-CONV-01b GENUINE: real-conveyor FEEDER primitive. CP-CONV-01 + a static END-STOP wall at the belt
+downstream end. scene_eyes 40s RAW: Cube_1 starts on Belt (t=0), RIDES +x and contacts EndStop at t=8.3s (x=-1.8
+-> ~0, ~1.8m @ 0.2 m/s), SETTLED-Z=1.804 = STAYS on the belt at the pick-zone (vs CP-CONV-01's fall-to-0.78 off
+the unguarded end), upright 0deg. So the real conveyor now PRESENTS an object at a fixed/reachable/upright pick-zone
+= the composable feeder block other cells consume. Conveyor capability now: belt-motion (CP-CONV-01) + feeder-with-
+pickzone (CP-CONV-01b), both real-asset + RAW-verified. NEXT CP-CONV-02 = pedestal Franka (reach_validate-grounded
+base ~1.4-1.5m for a natural down-reach onto the 1.781m belt) picks from the pick-zone -> complete pick cell.
+File: workspace/templates/CP-CONV-01b.json.
