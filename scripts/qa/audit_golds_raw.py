@@ -17,6 +17,13 @@ It reuses the SAME thresholds as eyes_gold_gate / scene_eyes:
   - settle: a cube still drifting >30mm in the last 8 frames = not settled (being carried/dragged).
 
 Exit 0 = all audited golds RAW-consistent; exit 1 = at least one flagged (a candidate false-success).
+
+⚠️ LIMITATION (cont.319hh): this audits the SAVED run's structure -- it catches a structurally-bad
+saved run, but CANNOT detect STOCHASTICITY. A flaky block whose saved eyes.json happens to be a LUCKY
+clean run passes here even though it fails most runs. Proven: CP-09 (FALSE, top cube topples) has a
+saved RAW that is a perfect 5-column; this tool would clear it. The complement is N-of-M re-verification
+(re-run K times, require a clean structure every time) -- see _reverify_cp09.sh for the pattern. Use this
+tool for the cheap saved-RAW pass; use N-of-M for blocks whose robustness (not just one run) is in doubt.
 """
 import json, glob, sys, os
 

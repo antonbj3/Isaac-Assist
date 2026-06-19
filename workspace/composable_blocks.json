@@ -67,7 +67,7 @@
       "robot": "Franka",
       "class": "stack/column",
       "verdict": "FALSE(scatter)",
-      "basis": "FALSE(scatter) is HONEST not stale (cont.196 assessment): 5-high conveyor-fed tower, errors compound up the column -> topple; stack class robustly covered by CP-13 (2-high, verified). Don't re-audit (low value, genuinely hard-redundant).",
+      "basis": "FALSE(scatter) is HONEST not stale -- N-of-M RE-VERIFIED (cont.319hh): 3 fresh runs = 0/3 clean columns (RUN1+2 built a 5-high aligned column but the TOP cube toppled 92deg; RUN3 = 2/5, 3 never-gripped, scattered 1.54m). The saved eyes.json (a perfect 5-column, 2026-06-16) was a LUCKY outlier. Confirms cont.196: errors compound up the column -> the top cube topples reliably. Stack class robustly covered by CP-13/14/15 (2-3 high, verified). 5-high is genuinely hard; deferred.",
       "n_objects": 5
     },
     "CP-10": {
