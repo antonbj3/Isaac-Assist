@@ -123,7 +123,11 @@ async def _eval_once(prov, c):
     else:
         forbid_hit = picks & c.get("forbid", set())
         must_ok = c["gt"] <= picks
-        anyof_ok = all(bool(picks & grp) for grp in c.get("any_of", []))
+        # any_of = OR over acceptable answer-SETS: PASS if picks satisfy AT LEAST ONE group
+        # (e.g. humanoid-reach accepts CP-G1-ARM-01 OR CP-G1-STAND-01). cont.319ii-7 BUGFIX:
+        # was all(picks & grp) -> required EVERY group matched (AND), which false-MISSed a
+        # correct single pick (the LLM picked CP-G1-ARM-01, scored MISS). Empty any_of -> True.
+        anyof_ok = (not c.get("any_of")) or any(grp <= picks for grp in c["any_of"])
         struct_ok = (c.get("exp_structure") is None) or (struct == c["exp_structure"])
         blocks_ok = must_ok and anyof_ok and not forbid_hit
         ok = blocks_ok and struct_ok
