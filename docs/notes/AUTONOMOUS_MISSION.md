@@ -7117,3 +7117,16 @@ clearance instead of drop_pos[2] + _drop_tip. Gated (default = current behavior 
 read object half-height live (ComputeWorldBound of the held prim). Location: _gen_pick_place_curobo S5 release
 (~pick_place.py:2746-2842), model on the _SG_IS_SUCTION _floor_z branch. Test: CP-01 cube no-regression + CP-YCB-02
 can upright. Task #50. (Real-object collection delivery is UNAFFECTED + still works — this is upright-precision only.)
+
+cont.319g — BUILD->ADVERSARIAL-AUDIT->FIX on my OWN dimension-helper (false-success-vakt, proactive). I'd
+claimed real_asset_spawn flags graspability correctly (cont.319e) but noted it bbox-blind to curvature. AUDIT:
+generated CP-YCB-BANANA FROM the helper (curved object the helper flagged graspable on 3.9cm min-width) and ran
+scene_eyes -> REFUTED: the banana was NOT delivered — bbox-center grasp NEVER SEATED (seat dz=123mm, grip-slip
+26deg, toppled, final≈start). The curved body sits OFF the bbox center. FIX (verktygen-är-levande): graspable now
+= jaw_fits AND box_like (horiz_aspect<2.0 AND z/grip-ratio<1.8), not just min-width<jaw. Added jaw_fits/horiz_aspect/
+z_grip_ratio fields + the banana as a selftest regression (graspable=False). Re-checked: banana/mustard_bottle/
+large_marker/tuna_fish_can now correctly graspable=False (jaw_fits but elongated/curved/flat -> unreliable); only
+compact box-like (brick/gelatin/can) stay graspable=True. Also added emit_template(asset_usd, task_id) = the
+asset->working-template generator for bulk real-asset scene-gen. Honest reach: real-object manipulation is RELIABLE
+for box-like objects; elongated/curved/round-flat/concave need complex-mesh grasp (task #50). Commit. Files:
+scripts/qa/real_asset_spawn.py, workspace/templates/CP-YCB-BANANA.json.
