@@ -33,7 +33,10 @@ def chain_compat(src_name, recv_name):
     if s_stage:                                            # known chain-ready source
         # a MID-stage source delivers at its OUTPUT height (delivers_z, e.g. a re-palletized grid), which can
         # differ from its INPUT handoff_z; fall back to handoff_z for a pure source.
-        deliver_z = s_stage.get("delivers_z", s_stage.get("handoff_z")); kind = "surface"; leaf = "(catalog)"
+        # cont.319cc audit #12: do NOT hardcode kind='surface' for a catalog source -- a chain-ready source can
+        # deliver into a deep container; read delivers_surface from the registry (default True for back-compat).
+        deliver_z = s_stage.get("delivers_z", s_stage.get("handoff_z")); leaf = "(catalog)"
+        kind = "surface" if s_stage.get("delivers_surface", True) else "deep_container"
     else:                                                  # infer from the template's delivery target
         tgt = (src.get("simulate_args") or {}).get("target_path") or ""
         leaf = tgt.rsplit("/", 1)[-1].lower()
@@ -53,6 +56,13 @@ def chain_compat(src_name, recv_name):
     # orchestrator HALTs an overflow pairing instead of running a doomed chain.
     recv_cap = (_STAGES.get(recv_name) or {}).get("capacity")
     src_n = (_STAGES.get(src_name) or {}).get("n_cube")
+    # cont.319cc audit #12: src_n may be a STRING ('4' or a '1..N' range). Parse a concrete int so a string count
+    # is NOT silently bypassed (the isinstance(int) check skipped it); a variable range stays None = unparseable
+    # (a best-effort pre-filter cannot statically check a runtime-variable count).
+    if isinstance(src_n, str):
+        import re as _re12
+        _m12 = _re12.fullmatch(r"\s*(\d+)\s*", src_n)
+        src_n = int(_m12.group(1)) if _m12 else None
     if isinstance(recv_cap, int) and isinstance(src_n, int) and src_n > recv_cap:
         return {"compatible": False,
                 "reason": f"CAPACITY overflow: source {src_name} delivers {src_n} parts but receiver {recv_name} holds only {recv_cap} (extra parts have no slot and fall — verified CP-08->STACK-RECV = 3/4)"}
