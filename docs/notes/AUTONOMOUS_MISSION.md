@@ -6928,3 +6928,13 @@ collection)" + NO FAIL; eyes.json carries bin_bboxes=[[-0.15,-0.65,0.75,0.15,-0.
 rewritten to the list shape (8/8, pure python = the shape it SHIPS). ★ LESSON: a bare except:pass masked 3 errors
 across the Kit/client boundary; I burned several re-runs GUESSING (floor-only bbox) before INSTRUMENTING the error
 path — instrument-FIRST, and test in the execution shape it ships, not a convenient one. Static 7/7.
+
+cont.318j — breadth batch7 (PARALLEL multi-robot via the scene-wide delivery-check): CP-07 (4 parallel Franka
+cells) 16/16 — scene_eyes tracked ALL 16 cubes (Cube_0_1..Cube_3_4), each cell built a clean 4-high column
+(z 0.79/0.83/0.89/0.94 at a distinct y), no topple -> GENUINE; CP-52 (parallel duo, shared conveyor) 4/4 delivered
+to SharedBin, toppled-in-bin = collection (correctly suppressed by the now-working bin-aware fix) -> GENUINE.
+★ The scene-wide DELIVERY-CHECK works for multi-robot (verify-before-dismissing: PARALLEL multi-robot blocks ARE
+accessible via cube-delivery + structure RAW — no per-robot grip-slip tooling needed; the 3-gap tooling is only
+for DEEP per-instance diagnosis). genuine 49->51, position_honest 9->7, trusted 58, total 70. Remaining ph=7 =
+handoff multi-robot 5 (CP-02/51/53/65/68 — likely ALSO delivery-check-classifiable, the cube reaches its final
+destination through the handoff regardless of which robot gripped) + 2. BREADTH CAMPAIGN genuine 31->51 (+20).
