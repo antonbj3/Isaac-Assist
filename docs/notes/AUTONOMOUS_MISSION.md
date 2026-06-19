@@ -7208,3 +7208,16 @@ after 3 cases — the 3 that ran (het-2stn/franka-2op/sort+kit) PASSED = my cata
 (partial regression check OK); the real-object case + rest got empty 429 responses (untested, NOT refuted). The
 full real-object-reasoning run waits for Gemini quota (watched window / reset) — the case + fix are committed +
 ready. Files: scripts/qa/compose_reason_eval.py.
+
+cont.319n — REAL-ASSET DESTINATION proven (Anton mega-direction: real assets vs generated). CP-KLT-BIN: a Franka
+delivers cubes INTO a REAL industrial KLT tote (Isaac Props/KLT_Bin/small_KLT_visual_collision.usd, static
+collision-only variant) referenced as the destination instead of our generated create_bin. BUILD->DIAGNOSE->FIX:
+first run cubes PERCHED on top (z0.92-0.97, above the 0.896 rim). Diagnostik-först: the tote's MeshCollisionAPI
+approximation = 'boundingCube' (a SOLID box -> objects can't enter). FIX: simplify_collision(prim_path=tote_mesh,
+approximation='none') = triangle-mesh = the actual HOLLOW tote -> cubes ENTER (both picked cubes settled z=0.78
+inside, [0,-0.31] + [0.02,-0.43]). (Path gotcha: the mesh is /Root/Visuals/FOF_Mesh_Magenta_Box, not a direct child
+-> first fix used the wrong path, silently no-op; corrected to /Visuals/.) GENERAL FINDING: real-asset CONTAINERS
+(totes/bins/crates) ship with convex/boundingCube collision (solid) — to use one as a delivery destination, override
+to triangle-mesh ('none') collision (static objects support triangle meshes). VERKTYGEN GAP (noted, fix next):
+scene_eyes false-tracks the destination tote MESH (FOF_Mesh_Magenta_Box) as a delivery object via the 'Box' in its
+name -> exclude prims under DEST_PATH from the CUBES tracking. Files: workspace/templates/CP-KLT-BIN.json.
