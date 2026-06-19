@@ -49,7 +49,11 @@ def main():
         sigs = []
         if bdur is not None and tdur is not None and bdur < tdur:
             sigs.append(f"WINDOW-CUT(basis@{bdur}s < template@{tdur}s)")
-        if re.search(r"re-verify pending|pre-fix", status, re.I):
+        # Match the ACTIVE bracketed stale-marker the gate emits, e.g.
+        # "[pre-fix; re-verify pending — rest_speed standardised ...]", NOT loose mentions
+        # of the words in prose (a cleaned status that explains the marker is SUPERSEDED
+        # would otherwise re-trigger this — cont.319jj-11b).
+        if re.search(r"\[\s*pre-fix\s*;\s*re-verify pending", status, re.I):
             sigs.append("STALE-PRE-FIX(status)")
         if sigs:
             cands.append((cid, info.get("verdict", "")[:48], sigs, tdur))

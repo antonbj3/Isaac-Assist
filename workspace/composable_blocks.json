@@ -387,7 +387,7 @@
       "robot": "Franka",
       "class": "color-sort",
       "verdict": "PARTIAL(heap-singulation 3/5)",
-      "basis": "scene_eyes cont.316 @ dur=70: parcel-singulation-from-HEAP (5 overlapping items->bin) is genuinely hard - Item_2/3/5 CONVERGED+GRIPPED (3) but Item_1 GRIP-SLIP (dxy=62mm off-center, contact-never-lifted = failed grip from the heap) + Item_4 unreached. Heap overlap -> marginal off-center grips. NOT clean (>=1 genuine grip-fail). Misclassed as color-sort; it is singulation. Hard task, defer.",
+      "basis": "scene_eyes RE-VERIFIED @ dur=180 (cont.319jj-7): 5/5 PICKED but only 3/5 DELIVERED to Bin (Item_1 stayed at heap, Item_4 EJECTED to z=1.24); the template's old 'VERIFIED 5/5' counted picks not delivery. Heap-singulation (overlapping items) genuinely hard. Confirmed PARTIAL 3/5.",
       "n_objects": 5
     },
     "CP-58": {
