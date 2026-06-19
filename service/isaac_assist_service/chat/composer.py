@@ -34,6 +34,10 @@ POSITION_KWARGS = frozenset({
     "position", "target_position", "target", "pick_target", "drop_target", "drop_targets",
     "home_target", "drop_pose", "place_position", "goal_position", "nav_goal",
     "start_position", "waypoint", "via_point",
+    # cont.319cc audit #13: hand-maintained list was missing world-position kwargs real handlers use as spawn
+    # anchors -> the prim spawned at the UN-offset origin across instances. 'center' (create_heap_zone /
+    # zone spawns), 'target_xy' (2-vec, the len in (2,3) check at :80 handles it), 'camera_position'.
+    "center", "target_xy", "camera_position",
 })
 
 # Filesystem-path kwargs that look path-like but must NEVER be re-rooted. (Belt-and-
