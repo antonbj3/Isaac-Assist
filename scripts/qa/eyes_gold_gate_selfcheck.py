@@ -99,12 +99,21 @@ GRID_PILE = """    Cube_1         closest= 104mm  -> CONVERGED + GRIPPED
 STACK STRUCTURE (4 objs): 2 z-level(s) [0.825, 0.875] | xy-extent=0.05x0.07m | min-pair-xy=0.027m
 """
 
+# A "column" that is NOT vertically aligned (#48, cont.319hh): 2 z-levels (passes the z>=2 check) and both
+# cubes upright (passes the tilt-topple check) BUT the upper cube is displaced a full width off the base
+# axis (xy-extent 0.12m >> the ~0.011m of a real column) = cubes at two heights but not stacked on each other.
+DISPLACED_COLUMN = """    Cube_1         closest= 104mm  -> CONVERGED + GRIPPED
+    Cube_2         closest= 104mm  -> CONVERGED + GRIPPED
+STACK STRUCTURE (2 objs): 2 z-level(s) [0.825, 0.875] | xy-extent=0.12x0.05m | min-pair-xy=0.040m
+"""
+
 CASES = [
     # (name, text, class, expect_genuine, reason_substr)
     ("clean column -> GOLD",            CLEAN_COLUMN,   "stack/column",   True,  "column verified"),
     ("toppled cube -> REJECT",          TOPPLED_COLUMN, "stack/column",   False, "TOPPLED"),
     ("toppled in a BIN task -> REJECT", TOPPLED_COLUMN, "pick-place-bin", False, "TOPPLED"),   # class-independent
     ("tilted (warn) -> GOLD",           TILTED_COLUMN,  "stack/column",   True,  "column verified"),
+    ("displaced off-axis column -> REJECT", DISPLACED_COLUMN, "stack/column", False, "NOT vertically aligned"),
     ("non-box flat (scoped out) -> OK", NONBOX_FLAT,    "palletize/grid", True,  "grid verified"),
     ("never-gripped -> REJECT",         NEVER_GRIPPED,  "stack/column",   False, "NEVER approached"),
     ("fell to ground -> REJECT",        LOW_Z,          "stack/column",   False, "below 0.6m"),

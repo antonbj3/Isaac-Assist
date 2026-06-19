@@ -82,6 +82,11 @@ def verdict_for_instance(text, cls):
     # 2 z-levels + min-pair << cube-width = a PILE the lenient gate used to false-pass (cont.150).
     mpmatch = re.search(r"min-pair-xy=([\d.]+)m", text)
     minpair = float(mpmatch.group(1)) if mpmatch else None
+    # xy-EXTENT (#48, cont.319hh): the bbox of all delivered cubes in the plane. A real COLUMN is xy-aligned
+    # (cubes stacked on each other) -> tiny extent; a "2 z-level" set with a LARGE extent = cubes at different
+    # heights but NOT vertically stacked (an UPRIGHT-but-displaced cube the tilt-topple check above misses).
+    xematch = re.search(r"xy-extent=([\d.]+)x([\d.]+)m", text)
+    xyext = max(float(xematch.group(1)), float(xematch.group(2))) if xematch else None
     # ORIENTATION/TOPPLE (2026-06-16, Anton false-success): a cube delivered to the right XY/Z but resting on
     # its SIDE is not correctly placed. scene_eyes now emits a settled-tilt ORIENTATION block; a >60° topple is
     # a hard reject (mirrors the Modal `vec` TOPPLED that the position gate is blind to — CP-09 lesson). TILTED
@@ -107,7 +112,14 @@ def verdict_for_instance(text, cls):
     if cls == "stack/column":
         if zlevels is None or zlevels < 2:
             return False, f"stacker but {zlevels} z-level(s) = FLAT SCATTER, not a column"
-        return True, f"column verified ({zlevels} z-levels, {gripped} gripped)"
+        # #48 (cont.319hh): >=2 z-levels alone passes a set of cubes that are at different heights but NOT
+        # vertically stacked (an upright cube displaced off the column axis -- the tilt-topple check misses an
+        # untilted-but-misplaced cube). A real column is xy-ALIGNED. Calibrated on the known-good columns
+        # CP-13/14/15 (max-xy-extent <=0.011m); reject >0.06m = a 5.5x margin so a valid/graduated/settle-
+        # jittered column never false-refuses, while a cube displaced a full width off the axis is caught.
+        if xyext is not None and xyext > 0.06:
+            return False, f"stacker {zlevels} z-levels but xy-extent {xyext*1000:.0f}mm (>60mm) = cubes NOT vertically aligned (displaced off the column axis, not a real stack)"
+        return True, f"column verified ({zlevels} z-levels, {gripped} gripped" + (f", xy-extent {xyext*1000:.0f}mm aligned)" if xyext is not None else ")")
     if cls == "palletize/grid":
         # A 2x2/grid palletizer must end as a FLAT (1 z-level) SPREAD grid. cont.150: a composed CP-08 whose
         # drop_targets collapsed to the pallet centre reads 2 z-levels + min-pair-xy 12-27mm (< the 50mm cube
