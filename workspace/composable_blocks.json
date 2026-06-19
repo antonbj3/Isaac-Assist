@@ -155,8 +155,8 @@
     "CP-20": {
       "robot": "Franka",
       "class": "palletize/grid",
-      "verdict": "PARTIAL(6/18 toppled \u2014 brick-layer stacking)",
-      "basis": "scene_eyes cont.313 @ dur=280: 18/18 CONVERGED+GRIPPED (NOT a reach-failure \u2014 old 'some never gripped' was WINDOW-CUT at short dur) BUT 6/18 TOPPLED >60\u00b0 (Cube_2/3/4/6/12/14, brick-layer 90\u00b0-rotation stacking instability). \u2605HIGH-RES catch (Anton): aggregate 18/18-delivered is a FALSE-POSITIVE; per-object ORIENTATION (6 toppled) refutes it. Belt NOT stalling (high-res belt fix LIVE: movf 3% but 13 resumes -> boxes advance) -> task #44 'belt-stall-limited' root is TOPPLING not belt. Defer the stacking fix (harder variant; palletize/grid covered by CP-08/10/12/19/27/30).",
+      "verdict": "PARTIAL(9/18 toppled @ full dur \u2014 brick-layer rotated stacking genuinely unstable, cont.319jj-12)",
+      "basis": "scene_eyes cont.319jj-12 @ dur=360 (the FULL template dur): 18/18 PLACED but 9/18 TOPPLED >60deg -- WORSE than the old basis's 6/18 @ dur=280 (more settle time -> MORE topple). So NOT a window-cut: the rotated brick-layer (layer_rotation_deg=90, 0.07m) is genuinely UNSTABLE -- the top-layer cubes tip over as they settle on the gaps of the offset bottom layer. Real stacking-dynamics PARTIAL (a fix needs aligned layers or a settle-then-clamp). Confirmed.",
       "n_objects": 18
     },
     "CP-21": {
