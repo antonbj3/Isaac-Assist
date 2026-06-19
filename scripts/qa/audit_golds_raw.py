@@ -95,7 +95,7 @@ def main():
         # NOT cube delivery -- any cube in the scene is a WITNESS (e.g. a zero-G testbench cube drifts forever).
         # The cube-structure checks below don't apply, so skip them (the DOF proof is in the verdict/basis, not
         # re-derivable from eyes.json cube positions here).
-        if any(k in str(info.get("class", "")).lower() for k in ("lift", "arm", "actuat")):
+        if any(k in str(info.get("class", "")).lower() for k in ("lift", "arm", "actuat", "stand", "reach")):
             no_raw.append(cid + "(actuation-block)")
             continue
         f = _find_eyes(cid)
