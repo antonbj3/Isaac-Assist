@@ -6950,3 +6950,18 @@ UR10-palletizer FALSE). KEY META-FINDING: the multi-robot 3-gap per-instance too
 CLASSIFICATION — the cube-DELIVERY RAW (scene-wide final positions + structure) is the bar; per-robot grip-slip
 attribution is only for DEEP per-instance DIAGNOSIS. "Multi-robot is deep" was true only for the latter.
 Remaining 2 ph = CP-35 (industrial 10-cube sort, noted stochastic-blue) + CP-NEW-vacuum-pick (niche suction).
+
+cont.318l — breadth batch9 (the last 2 position-honest, BOTH genuine): CP-35 (industrial 10-cube sorter) 10/10
+sorted into 5 distinct color zones (x -0.48/-0.23/0.00/0.24/0.48, 2 cubes each — refutes the prior stochastic-blue
+note for THIS run); CP-NEW-vacuum-pick 4/4 delivered to a dest zone (moved 0.85-1.08m, upright at settle; the
+"suction gripped-set empty" is a scene_eyes DISPLAY gap like CP-54, delivery RAW = ground truth). genuine 56->58,
+ph 2->0.
+★★★ BREADTH CAMPAIGN COMPLETE (cont.318c-l): genuine **31 -> 58** (+27); ALL 30 originally-position-honest blocks
+driven (27 GENUINE + CP-44 PARTIAL sphere-squirt + CP-56/UR10-palletizer FALSE). composable_blocks.json:
+genuine=58, position_honest=0, partial=9, false=3, trusted=58, total=70. The robust-block foundation is now BROAD:
+58 genuine across operations (bin / grid / stack / sort / inspect / kit / peg-insert / shelf / rotary-attempted) ×
+BOTH robots (Franka + UR10) × single / parallel-multi-cell / handoff-multi-robot. 2 scene_eyes tool-fixes en
+route (bin-aware orientation via Kit-recorded bboxes [cont.318i]; non-Cube tracking [earlier]). META: the
+multi-robot 3-gap per-instance tooling was NOT needed for breadth classification — scene-wide cube-DELIVERY RAW is
+the bar. NEXT FRONTIER all deep/big: real-assets/L3, Gemini LLM-flow refinements, more chain-ops (operation-variety
+saturated) — Anton-steer or dedicated push; accessible SINGLE-BLOCK breadth is EXHAUSTED (verified, 0 ph remain).
