@@ -7145,3 +7145,19 @@ caught my own over-claim via the CP-YCB-BANANA audit) + emit_template (bulk asse
 for BOX-LIKE objects; curved/elongated/round-flat/concave -> complex-mesh grasp (deep). Deep frontiers teed up with
 DESIGNS (tasks #50/#51): descend-to-place (curobo jaw floor-aware release, bin-wall challenge), complex-mesh grasp,
 real-object precision composition, conveyor belt-physics retrofit, humanoids, forklift, warehouse-scale scenes.
+
+cont.319i — REAL CONVEYOR structure probe (diagnostik-först for the retrofit). ConveyorBelt_A01 = a COMPLEX
+structured asset: overall 2.07x2.10x2.31m (square footprint + 2.3m tall = a curved/spiral conveyor, NOT a flat
+belt), meshes = SM_..._Belt (belt surface, 194x205x4cm at top_z=1.78m) + 13 rollers (top_z=0.77m) + Decal + body.
+So real conveyors are STRUCTURED multi-mesh assets at arbitrary heights/types — using one for a Franka pick cell
+needs: (a) pick a STRAIGHT FLAT low variant (A01 is spiral/tall — wrong), (b) scale+position so the _Belt surface
+is at table height ~0.8m, (c) apply the 3-API belt-drive (CollisionAPI + KINEMATIC RigidBodyAPI +
+PhysxSurfaceVelocityAPI) to the _Belt mesh, (d) align Franka/sensor/spawn to the scaled belt, (e) verify the object
+rides + is picked. = a genuine dimension-handling frontier effort (reinforces Anton's "enorm komplexitet"), NOT a
+swap. Design + the _Belt-mesh-name pattern captured in task #51 for a focused conveyor session.
+  SESSION CLOSE (cont.319-319i): real-asset MEGA-direction FOUNDATION laid + hard-audited (10 commits): manipulation
+proven, box-like breadth, mixed-cell, dimension-helper (build->adversarial-audit->fix), honest LLM manifest,
+conveyor+descend-place fully diagnosed with designs. 3 self-corrections. Every deep frontier (complex-mesh grasp =
+biggest unlock, descend-to-place, conveyor retrofit, humanoids, forklift, large scenes, real-object composition) is
+SCOPED with a concrete design in tasks #50/#51 — each a focused effort to execute with fresh context (not rushed at
+session-end per the fatigue-trap lesson).
