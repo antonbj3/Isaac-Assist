@@ -6975,3 +6975,16 @@ source); NO regression — single-part UR10->Franka still picks [CP-CHAIN-UR10-S
 additive/scoped (only triggers on count words). FINER (noted, not chased — sparing Gemini): the LLM picks CP-08=4
 but STACK-RECV is 3-high -> a source-N vs receiver-capacity N-match refinement remains (the catalog doesn't expose
 receiver capacity); the core 1-cube triviality is resolved. 2 Gemini calls.
+
+cont.318n — ★ REVERTED the cont.318m cardinality fix (PREMATURE — I verified the LLM's dry-run PICK, NOT that the
+picked chain EXECUTES). The execution AUDIT refuted it: the cardinality hint made the LLM pick CP-08 (4-cube) for
+the 3-capacity STACK-RECV, and CP-08(4)->STACK-RECV(3) executes at 3/4 (3 cubes stuck at base z=0.825 NOT stacked +
+Cube_2 fell to z=0.525) = a FAILING composition, worse than the pre-fix 1-cube-trivial-1-high. The N-match fix
+(expose receiver CAPACITY + a count-match hint) DID make the LLM pick the right CP-12 (3-cube) BUT caused a GEMINI
+REGRESSION: the multi-cube BIN task then picked NOTHING (HALT empty), and a reworded scoped hint made BOTH stack+bin
+empty (LLM-prompt sensitivity + known structure-stochasticity). So the cardinality/N-match is a FINICKY
+Gemini-prompt-tuning problem with cascading regressions -> reverted to the clean breadth-complete state (33175843).
+★ LESSON: verify the LLM-composed chain EXECUTES (the downstream effect), not just that the LLM PICKS it (the
+immediate output) — a green dry-run pick is NOT a green composition. The LLM-flow composes the STRUCTURE correctly
+(sequential, source+receiver); exact CARDINALITY is a DEFERRED gap for a focused session (A/B + stochasticity
+handling + execution-verification, not incremental hint-tweaking). compose_orchestrate.py + chain_stages.json reverted.

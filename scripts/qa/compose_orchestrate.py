@@ -91,10 +91,7 @@ async def plan_with_gemini(task, model):
     aug_sys = SYS + (" For a SEQUENTIAL handoff chain, do NOT use the parallel work-cells (they deliver into "
                      "bins and can't be picked from); instead pick a chain SOURCE then a chain RECEIVER from the "
                      "chain-ready stages, whose handoff heights MATCH (flat-source->flat-receiver, raised-source"
-                     "->raised-receiver; UR10 delivers flat + picks raised, Franka delivers flat/raised + picks flat)."
-                     " MATCH the part COUNT: if the task says SEVERAL / multiple / N parts, pick a SOURCE that"
-                     " delivers MULTIPLE parts (one that 'palletizes N parts into a grid handoff'), NOT a single-part"
-                     " 'delivers a part' source; the downstream receiver then stacks/grids/bins all N.")
+                     "->raised-receiver; UR10 delivers flat + picks raised, Franka delivers flat/raised + picks flat).")
     prov = GeminiProvider(api_key=os.environ["GEMINI_API_KEY"], model=model)
     r = await prov.complete([{"role": "user", "content": f"Available work-cells:\n{aug_catalog}\n\nTask: {task}"}],
                             {"system_override": aug_sys})
