@@ -85,7 +85,7 @@
     "Bin too far downstream \u2014 cube falls off Conv2 end (x=+1.5) before reaching Bin (x=+1.7). 0.2m gap; cube falls 5cm onto Ground. Acceptable.",
     "Sensor on Conv1 only \u2014 no pick decision needed for Conv2 (cube just rides). Standard CP-01 sensor pattern."
   ],
-  "verified_status": "PARTIAL stochastic (cont.319jj-8 N-of-M RE-VERIFIED: run1 4/4-in-bin, run2 3/4 with Cube_1 not delivered [-0.59,0.4] = stochastic belt-to-belt). The old 'pre-fix/re-verify pending \u2014 rest_speed' marker is SUPERSEDED: re-verified, genuinely stochastic. (scene_eyes OFF-SURFACE low-bin false-positive on this scene fixed in jj-8.)",
+  "verified_status": "GENUINE (cont.319jj-14, scene_eyes N-of-3 @ dur=180): all 3 runs 4/4 to the Bin. The catalog PARTIAL was 3 artifacts: (a) '3/4' = a dur=90 WINDOW-CUT (Cube_1 picked t~89, no delivery time); (b) 'scattered low' = OFF-SURFACE low-bin false-positive (fixed jj-8); (c) 'toppled' = in-bin collection. Robust at the proper dur=180.",
   "diagnose_args": {
     "robot_path": "/World/Franka",
     "sensor_path": "/World/PickSensor",

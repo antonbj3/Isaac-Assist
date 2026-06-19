@@ -197,8 +197,8 @@
     "CP-26": {
       "robot": "Franka",
       "class": "pick-place-bin",
-      "verdict": "PARTIAL(3/4 toppled + scattered low)",
-      "basis": "scene_eyes cont.316 HIGH-RES CATCH @ dur=90: 4/4 CONVERGED+GRIPPED but 3/4 TOPPLED (Cube_1/3/4 tilt 90-136 deg) + cubes scattered LOW (z 0.635-0.685, Cube_3/4 fell 0.19m to x=1.62/1.68 far-out). Gate FALSE-PASSED it as 4/4-delivered; per-object ORIENTATION refutes (grip works, DELIVERY fails). Real not degradation (CP-25 clean on same fresh Kit). Likely scene/target-placement issue (diagnostik-forst: cubes released off-surface). Redundant class (pick-place-bin 8-genuine-covered) -> defer the scene fix. Validates verify-EACH: matrix is NOT uniform.",
+      "verdict": "GENUINE(belt-to-belt handoff 4/4 to Bin; N-of-3 @ dur=180, the 'stochastic/toppled/low' were artifacts, cont.319jj-14)",
+      "basis": "scene_eyes N-of-3 @ dur=180 (cont.319jj-14): all 3 runs delivered 4/4 cubes to the Bin (plan_fails=0). The catalog PARTIAL had THREE artifact reasons, all refuted: (a) the '3/4' was a WINDOW-CUT -- at the old dur=90 Cube_1 was picked at t~89 with no time to deliver before the window ended; at the template's dur=180 it delivers (3/3). (b) 'scattered low z~0.635' was the OFF-SURFACE low-bin false-positive (Bin floor=0.6; fixed jj-8). (c) the 2 'toppled' are IN the collection Bin (scene_eyes: 'in bin = collection, not a reject'). Belt-to-belt-to-collection-Bin: 4/4 delivered. Surfaced by stale_partial_finder (window-cut: basis@90 < template@180) which caught my own jj-8 dur=90 window-cut.",
       "n_objects": 4
     },
     "CP-27": {
@@ -553,12 +553,12 @@
     }
   },
   "summary": {
-    "trusted": 65,
+    "trusted": 66,
     "_trusted_note": "trusted = 57 cube-GENUINE + 1 real-object-GENUINE (CP-YCB-01C) + 1 real-conveyor-GENUINE (CP-CONV-02) + 1 forklift-GENUINE (CP-FORK-01) + 3 humanoid-GENUINE (CP-G1-ARM-01 arm-actuation zero-G, CP-G1-STAND-01 STANDING arm-actuation under gravity via root-weld FixedJoint, CP-G1-STAND-02 BIMANUAL standing reach, cont.319ii-5). cont.319cc: CP-10 downgraded GENUINE->PARTIAL by the adversarial audit (stochastic n=9 grid, saved RAW 8/9 off-pallet). META-RISK RESOLVED (cont.319dd): re-verified ALL 12 structure-class GENUINE blocks (palletize/grid + stack/column) vs their saved eyes.json -> 11 RAW-CONFIRM their verdict; CP-10 was the ONLY stale-lucky false GENUINE. Not systemic.",
-    "genuine_execution_verified": 65,
+    "genuine_execution_verified": 66,
     "position_honest_only": 0,
     "false": 3,
-    "partial": 8,
+    "partial": 7,
     "pending": 0,
     "total": 76
   }
