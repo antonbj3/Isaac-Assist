@@ -22,6 +22,8 @@ Restart the Kit (kit_restart.sh) before invoking so stage0 starts clean; the gat
 import asyncio, json, os as _os, sys, re, subprocess
 REPO = "/home/anton/projects/Omniverse_Nemotron_Ext"
 sys.path.insert(0, REPO)
+_RELAY_ASSET = _os.environ.get("RELAY_ASSET")    # cont.319r: real-object chain — re-create the relayed object as THIS referenced asset (not a 0.05 cube); unset => byte-identical cube relay
+_RELAY_MESH = _os.environ.get("RELAY_MESH", "")  # the asset's child mesh leaf for the convexHull collider
 
 
 def _pick_xy(tpl):
@@ -208,6 +210,13 @@ async def run_stage_k(k, name, handoff):
         # handoff dict, and re-create with that type/size here. Deferred (no heterogeneous chain use case yet;
         # per feedback_phantom_rootcause_and_optional_bug_overinvest — don't Kit-invest in an optional feature).
         for cp, X in zip(measure_cubes, handoff_cubes):
+            if _RELAY_ASSET:  # cont.319r YCB-aware relay: re-create the real referenced asset, not a 0.05 cube
+                dl += (f"p=stage.DefinePrim('{cp}','Xform'); p.GetReferences().AddReference('{_RELAY_ASSET}')\n"
+                       f"x=UsdGeom.Xformable(p); x.ClearXformOpOrder(); x.AddTranslateOp().Set(Gf.Vec3d({X[0]},{X[1]},{max(X[2],0.78)}))\n"
+                       "for _api in (UsdPhysics.RigidBodyAPI, UsdPhysics.MassAPI):\n    _api.Apply(p)\nPhysxSchema.PhysxRigidBodyAPI.Apply(p)\n"
+                       f"_mp=stage.GetPrimAtPath('{cp}/{_RELAY_MESH}')\nif _mp.IsValid():\n    UsdPhysics.CollisionAPI.Apply(_mp)\n    UsdPhysics.MeshCollisionAPI.Apply(_mp).GetApproximationAttr().Set('convexHull')\n"
+                       f"_rel=p.CreateRelationship('physics:materialBinding', custom=False); _rel.SetTargets([Sdf.Path('/World/PhysicsMaterials/rubber_natural')])\n")
+                continue
             dl += (f"c=UsdGeom.Cube.Define(stage,'{cp}'); c.GetSizeAttr().Set(0.05)\n"
                    f"x=UsdGeom.Xformable(c.GetPrim()); x.ClearXformOpOrder(); x.AddTranslateOp().Set(Gf.Vec3d({X[0]},{X[1]},{max(X[2],0.78)}))\n"
                    "for api in (UsdPhysics.RigidBodyAPI, UsdPhysics.CollisionAPI, UsdPhysics.MassAPI):\n    api.Apply(c.GetPrim())\n"

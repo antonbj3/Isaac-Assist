@@ -7292,3 +7292,17 @@ topple-partials (different cause). NARROW + selectively-applicable, NOT a broad 
 valuable descend-place (upright + into-container + topple-partials) all need the DEEP place-to-floor-contact ->
 focused session. Net: exhaustive, honest descend-place exploration; a narrow committed lever; the full fix mapped
 by experiment. 7th self-correction this session (verify-before-dismissing / false-success-vakt).
+
+cont.319r — REAL-OBJECT CHAINS: source + YCB-aware relay PROVEN; receiver-grasp the remaining piece (PARTIAL).
+The keepalive pushed me to the chain axis (the chain-structure analog of the proven parallel real-object
+composition). Built: (1) CP-CHAIN-FRANKA-SRC-YCB (a Franka picks a REAL foam_brick -> flat handoff tray); (2) a
+GATED YCB-aware relay in chain_xkit_gate (_RELAY_ASSET/_RELAY_MESH env -> re-create the relayed object as the
+referenced YCB asset + convexHull collider instead of a 0.05 cube; UNSET => byte-identical cube relay, so cube
+chains provably safe; ast-parse clean). RESULT (cross-Kit chain CP-CHAIN-FRANKA-SRC-YCB -> CP-CHAIN-FLAT,
+RELAY_ASSET=foam_brick): stage0 delivered the real brick 1/1 to the handoff [0,-0.39,0.776]; the YCB-relay
+RE-CREATED the brick at the handoff (relay1/Cube_1 rests at 0.776 WITH a collider -> the relay code WORKS); BUT
+stage1 receiver delivered 0/1 (the relayed brick stayed at the relay pose — the receiver didn't pick it). So the
+chain INFRA now handles real objects on the SOURCE + RELAY sides; the RECEIVER-grasp on the relayed brick is the
+remaining piece (likely the cube-tuned receiver vs the bigger brick OR the chain-offset alignment; needs stage1
+scene_eyes RAW -> focused follow-up, each chain run ~10min). NET 1/1 + 0/1 INCOMPLETE: genuine partial, the
+YCB-relay capability proven + gated. Files: chain_xkit_gate.py, CP-CHAIN-FRANKA-SRC-YCB.json, run_ycb_chain.sh.
