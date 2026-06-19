@@ -7463,3 +7463,15 @@ per-case logic into _eval_once(prov,c) + added --retries N: a single-shot MISS i
 FLAKY-PASS (a REAL gap fails ALL retries). Stops LLM-nondeterminism (op-discrim ~1/4 empty-pick) being misread as a
 reasoning regression. ast-clean, op-discrim sanity-run PASS via the new path. Default retries=0 (byte-compatible with
 prior single-shot use). Recommended: --retries 2 for a trustworthy suite verdict.
+
+cont.319z — CP-CONV-02 root cause SHARPENED Kit-free (the right way, from eyes.json — no more guess-runs): in v6 the
+cube is INSIDE the (repositioned) sensor box for ALL 400 rows at high-z (x=-0.005 in [-0.055,0.045], z=1.804 in
+[1.79,1.87]) yet the sensor-gated pick NEVER fires (plan_calls=0). So the proximity-sensor overlap mechanism
+(PhysxTriggerAPI + overlap_box step-callback -> isaac_sensor:triggered, sensors.py:339-452) FAILS at z~1.8 with the
+object correctly positioned in the box — it works at z~0.85 (CP-YCB-01C control). Combined with cont.319x (generated
+belt at high-z also fails) the picture is complete: the breaker is HIGH-Z, and specifically the sensor-gated pick
+mechanism at z~1.8, NOT the belt/positioning/reach. #52 FINAL STEP (one diagnostic, not a fix-spiral): live-probe
+isaac_sensor:triggered each step at high-z to split sensor-overlap-fails vs controller-never-polls; FIX path = the
+LOWERED-conveyor (low-z floor-base = proven sensor regime) is the robust completion. METHOD WIN: narrowed two more
+steps Kit-FREE from existing data (vs the 6 cont.319w guess-runs). Conveyor: motion+feeder GENUINE, pick-cell
+root-caused to the high-z sensor mechanism.
