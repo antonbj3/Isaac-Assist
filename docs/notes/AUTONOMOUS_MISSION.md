@@ -7000,3 +7000,13 @@ false-negative). Static 7/7. NET: the LLM cardinality PICK stays a deferred fini
 EXECUTION-overflow it would cause is now caught DETERMINISTICALLY + fail-closed (the directive's FAIL-CLOSED +
 "härleder du för hand -> first-class-detektor"). Files: workspace/chain_stages.json (capacity),
 scripts/qa/compose_handoff.py (check), scripts/qa/test_chain_compat.py (neg-control).
+
+cont.318p — PROACTIVE adversarial audit (false-success-vakt, build->adversarial-audit standardcykel) of the
+batch8 HANDOFF multi-robot golds — try to REFUTE: did the handoff A->B actually happen, or did ONE robot do it
+all? scene_eyes' CONTACTS use LEAF names (panda_leftfinger, NOT FrankaA/FrankaB-namespaced) so grip-attribution to
+A vs B is BLIND (the deferred per-instance gap). BUT the refutation FAILS on a stronger KINEMATIC argument: the
+cube MOVE DISTANCES (CP-02 3.38m, CP-51 2.73m, CP-68 2.76m, CP-53 ~2.4m, CP-65 up to 2.45m) all EXCEED a single
+Franka's pick+place span (~1.7m) -> a single robot CANNOT span them -> the 2-robot handoff MUST have occurred. So
+the GENUINE handoff classifications STAND + are STRENGTHENED (move-distance proves the handoff, independent of the
+contact-attribution gap). The leaf-name contact collision is moot for handoff-CONFIRMATION (kinematic span is the
+proof); it would only matter for per-robot grip-SLIP diagnosis. Net: batch8 golds adversarially re-confirmed.
