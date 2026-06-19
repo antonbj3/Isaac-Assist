@@ -7058,3 +7058,21 @@ surfaced (noted, build-when-needed): (1) object-aware close only detects IsA(Usd
 round MESHES (mug/bowl/bottle) never hit it; extend to meshes (bbox-aspect) WHEN a round object's grip actually
 fails; (2) YCB/Axis_Aligned_Physics/ variant has baked colliders (I used visual Axis_Aligned + hand-applied
 convexHull, which worked) -> switch for canonical physics. Commit 6fb61c75 + this. Files: CP-YCB-0{1,2,3}.json.
+
+cont.319c — REAL OBJECTS now DISCOVERABLE by the runtime-LLM (asset-index integration, the strategy's
+runtime-LLM-capability half). Generated workspace/knowledge/asset_manifest.jsonl = 21 YCB objects (name,
+usd_path [physics-baked variant where it exists, 4/21], measured native size_m, tags ycb/real_object/category/
+graspable-or-oversized/tall, note). The manifest is loaded UNCONDITIONALLY by _build_asset_index (no
+ASSETS_ROOT_PATH needed). VERIFIED Kit-free: _build_asset_index() includes all 21 (searchable by tag — e.g.
+can->[master_chef/tomato_soup/tuna_fish/potted_meat], graspable->[tomato_soup_can,tuna_fish_can,gelatin_box,
+banana,bowl,large_marker,foam_brick]). So the runtime-LLM can now FIND real graspable objects + spawn them via
+the proven add_reference+physics recipe (CP-YCB-01). NOT yet exercised end-to-end through an actual LLM call
+(separate chat-service+Gemini stack, free-tier 429-prone) — index-level data path is confirmed.
+  REAL-OBJECT MILESTONE SUMMARY (this session, from 'I wrongly called it infra-blocked' -> working capability):
+manipulation PROVEN (CP-YCB-01 foam_brick) + breadth 3/3 delivered (brick+gelatin_box UPRIGHT, tomato_can
+collection) + honest placement diagnosis (tall-narrow upright needs descend-to-place = DEFERRED controller work
+for a fresh session) + Anton grip-recognition (can=cylinder line-contact, gripped clean; sphere-style adaptive
+grip NOT the issue; mesh-aware-close + Axis_Aligned_Physics gaps noted) + 21 objects discoverable. Remaining
+real-object work = deep/controller (descend-to-place precision placement, complex-mesh grasp e.g. mug/drill,
+mesh-aware adaptive close) -> FRESH DEDICATED SESSIONS per the hand-edit-at-fatigue lesson; + end-to-end LLM
+asset-pick (separate stack). Files: workspace/knowledge/asset_manifest.jsonl, CP-YCB-0{1,2,3}.json.
