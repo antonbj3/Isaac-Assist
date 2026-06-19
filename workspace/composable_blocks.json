@@ -514,7 +514,7 @@
   },
   "summary": {
     "trusted": 58,
-    "_trusted_note": "58 'trusted' = 57 cube-GENUINE + 1 real-object-GENUINE (CP-YCB-01C). cont.319cc: CP-10 downgraded GENUINE->PARTIAL by the adversarial audit (stochastic n=9 grid, saved RAW 8/9 off-pallet). META-RISK (task: re-verify-grid-RAW): other palletize/grid GENUINE blocks (CP-08/12/19/27/30/42/46/49/77) were verdicted from sweep runs; re-check each against its saved eyes.json for the same stale-lucky-run hole.",
+    "_trusted_note": "58 'trusted' = 57 cube-GENUINE + 1 real-object-GENUINE (CP-YCB-01C). cont.319cc: CP-10 downgraded GENUINE->PARTIAL by the adversarial audit (stochastic n=9 grid, saved RAW 8/9 off-pallet). META-RISK RESOLVED (cont.319dd): re-verified ALL 12 structure-class GENUINE blocks (palletize/grid + stack/column) vs their saved eyes.json -> 11 RAW-CONFIRM their verdict (grids z=1 + spread min-pair>45mm; columns z>=2; 0 never-gripped, 0 topple); CP-10 was the ONLY stale-lucky false GENUINE. Not systemic.",
     "genuine_execution_verified": 58,
     "position_honest_only": 0,
     "false": 3,
