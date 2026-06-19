@@ -7412,3 +7412,15 @@ floor-base suspect WEAKENED. Real gate = isaac_sensor:triggered never True = the
 my cube despite geometry analogous to the proven CP-CHAIN-FLAT sensor. Focused root-cause = live-instrument the
 sensor triggered/last_triggered_path each step. This is the diagnostik-forst payoff: READ the mechanism instead of a
 6th Kit guess. Task #52 updated.
+
+cont.319w-c — CP-CONV-02 POSITIVE CONTROL (memory-mandated: verify fresh-Kit positive before trusting a negative).
+CP-YCB-01C (known-GENUINE sensor-gated belt pick) under the SAME scene_eyes harness = plan_calls=8 / PICKED /
+CONVERGED+GRIPPED / delivered xy-in-bin=yes. => scene_eyes DRIVES sensor-gated picks fine => CP-CONV-02's 6x
+plan_calls=0 is a REAL scene bug (wrong-harness hypothesis REFUTED). En route, v6 fixed a REAL bug found Kit-free
+from eyes.json (the sensor box was x[-0.09,-0.01] but the belt pushes the cube to x=-0.005 against the end-stop =>
+cube 0/400 rows inside the sensor => never triggered); moved sensor onto x=-0.005 z=1.83 -> still plan_calls=0 =>
+more than the sensor position. Breaking diff vs the working CP-YCB-01C baseline = pedestal base z=1.4 / high-z(~1.8)
+sensor+pick / real-belt (vs floor / ~0.8 / generated). Focused step = single-variable diff from CP-YCB-01C. ★LESSON
+RE-LEARNED THE HARD WAY: instrument/measure the gate FIRST (the 5mm sensor miss was findable from eyes.json after
+v1) + run the POSITIVE CONTROL before trusting 6 negatives. STOPPED at 7 Kit runs (extreme over-investment). Belt-
+motion (CP-CONV-01) + feeder (CP-CONV-01b) remain GENUINE; pick-cell = control-anchored diagnosed partial.
