@@ -91,49 +91,66 @@ CASES = [
 ]
 
 
-async def _run(model, only=None):
+async def _eval_once(prov, c):
+    """One LLM attempt at one case -> a result dict (id/verdict/picks/structure/ok)."""
+    prompt = f"Available work-cells:\n{CATALOG}\n\nTask: {c['task']}"
+    try:
+        resp = await prov.complete([{"role": "user", "content": prompt}], {"system_override": SYS})
+        txt = (resp.text or "").strip()
+    except Exception as e:
+        txt = f"ERROR {e}"
+    picks = set(re.findall(r"CP-[A-Z0-9][A-Z0-9-]*", txt.split('"reasoning"')[0] if '"reasoning"' in txt else txt))
+    picks &= _AVAIL  # only count real catalog ids
+    flagged_gap = '"gaps"' in txt and bool(re.search(r'"gaps"\s*:\s*\[\s*"[^"]', txt))
+    _sm = re.search(r'"structure"\s*:\s*"(sequential|parallel)"', txt)
+    struct = _sm.group(1) if _sm else None
+    if c.get("gap", False):
+        # PASS = flagged the gap AND did NOT confidently pick a (necessarily wrong) cell
+        ok = flagged_gap and not picks
+        verdict = "PASS" if ok else ("FALSE-PICK" if picks else "NO-GAP-FLAG")
+    else:
+        forbid_hit = picks & c.get("forbid", set())
+        must_ok = c["gt"] <= picks
+        anyof_ok = all(bool(picks & grp) for grp in c.get("any_of", []))
+        struct_ok = (c.get("exp_structure") is None) or (struct == c["exp_structure"])
+        blocks_ok = must_ok and anyof_ok and not forbid_hit
+        ok = blocks_ok and struct_ok
+        allowed = set(c["gt"])
+        for grp in c.get("any_of", []):
+            allowed |= grp
+        extras = picks - allowed
+        verdict = (("FORBID-HIT" if forbid_hit else ("STRUCT-MISS" if (blocks_ok and not struct_ok) else "MISS"))
+                   if not ok else ("PASS" if not extras else "OK+EXTRA"))
+    return {"id": c["id"], "verdict": verdict, "picks": sorted(picks),
+            "gt": sorted(c["gt"]), "gap_flag": flagged_gap, "structure": struct, "ok": ok}
+
+
+async def _run(model, only=None, retries=0):
     prov = GeminiProvider(api_key=os.environ["GEMINI_API_KEY"], model=model)
     rows = []
     for c in CASES:
         if only and not c["id"].startswith(only):
             continue
-        prompt = f"Available work-cells:\n{CATALOG}\n\nTask: {c['task']}"
-        try:
-            resp = await prov.complete([{"role": "user", "content": prompt}], {"system_override": SYS})
-            txt = (resp.text or "").strip()
-        except Exception as e:
-            txt = f"ERROR {e}"
-        picks = set(re.findall(r"CP-[A-Z0-9][A-Z0-9-]*", txt.split('"reasoning"')[0] if '"reasoning"' in txt else txt))
-        picks &= _AVAIL  # only count real catalog ids
-        flagged_gap = '"gaps"' in txt and bool(re.search(r'"gaps"\s*:\s*\[\s*"[^"]', txt))
-        _sm = re.search(r'"structure"\s*:\s*"(sequential|parallel)"', txt)
-        struct = _sm.group(1) if _sm else None
-        if c.get("gap", False):
-            # PASS = flagged the gap AND did NOT confidently pick a (necessarily wrong) cell
-            ok = flagged_gap and not picks
-            verdict = "PASS" if ok else ("FALSE-PICK" if picks else "NO-GAP-FLAG")
-        else:
-            forbid_hit = picks & c.get("forbid", set())
-            must_ok = c["gt"] <= picks
-            anyof_ok = all(bool(picks & grp) for grp in c.get("any_of", []))
-            struct_ok = (c.get("exp_structure") is None) or (struct == c["exp_structure"])
-            blocks_ok = must_ok and anyof_ok and not forbid_hit
-            ok = blocks_ok and struct_ok
-            allowed = set(c["gt"])
-            for grp in c.get("any_of", []):
-                allowed |= grp
-            extras = picks - allowed
-            verdict = (("FORBID-HIT" if forbid_hit else ("STRUCT-MISS" if (blocks_ok and not struct_ok) else "MISS"))
-                       if not ok else ("PASS" if not extras else "OK+EXTRA"))
-        rows.append({"id": c["id"], "verdict": verdict, "picks": sorted(picks),
-                     "gt": sorted(c["gt"]), "gap_flag": flagged_gap, "structure": struct, "ok": ok})
+        r = await _eval_once(prov, c)
+        flaky = False
+        # LLM nondeterminism: a single-shot MISS can be FLAKINESS not a real gap (op-discrim flaky-misses ~1/4,
+        # cont.319y — an occasional empty/malformed pick). Retry a MISS up to `retries` times; if ANY retry passes
+        # it is FLAKY-PASS. A REAL gap fails all retries. This stops a flaky-miss being misread as a regression.
+        if (not r["ok"]) and retries > 0:
+            for _ in range(retries):
+                r2 = await _eval_once(prov, c)
+                if r2["ok"]:
+                    r = r2; flaky = True; break
+        r["flaky"] = flaky
+        rows.append(r)
         _exp = ("gap" if c.get("gap", False) else f"gt={sorted(c['gt'])}"
                 + (f" any{[sorted(g) for g in c['any_of']]}" if c.get("any_of") else "")
                 + (f" forbid={sorted(c['forbid'])}" if c.get("forbid") else "")
-                + (f" struct={c['exp_structure']}(got={struct})" if c.get("exp_structure") else ""))
-        print(f"  {c['id']:16s} {verdict:12s} picks={sorted(picks)}  {_exp}")
-    n_ok = sum(r["ok"] for r in rows)
-    print(f"\nCOMPOSE-REASON: {n_ok}/{len(rows)} cases OK (model={model})")
+                + (f" struct={c['exp_structure']}(got={r['structure']})" if c.get("exp_structure") else ""))
+        print(f"  {c['id']:16s} {r['verdict']:12s} picks={r['picks']}  {_exp}{' (FLAKY-PASS on retry)' if flaky else ''}")
+    n_ok = sum(x["ok"] for x in rows)
+    n_flaky = sum(x.get("flaky") for x in rows)
+    print(f"\nCOMPOSE-REASON: {n_ok}/{len(rows)} cases OK (model={model})" + (f"  [{n_flaky} flaky-pass on retry]" if n_flaky else ""))
     return rows
 
 
@@ -141,6 +158,7 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--model", default="gemini-robotics-er-1.6-preview")
     ap.add_argument("--only", default=None, help="run only cases whose id startswith this (e.g. 'struct-')")
+    ap.add_argument("--retries", type=int, default=0, help="retry a MISSED case up to N times; any pass -> FLAKY-PASS (filters LLM nondeterminism, e.g. op-discrim ~1/4 flaky-miss)")
     a = ap.parse_args()
     print(f"catalog: {sorted(_AVAIL)}")
-    asyncio.run(_run(a.model, a.only))
+    asyncio.run(_run(a.model, a.only, a.retries))

@@ -7457,3 +7457,9 @@ cases (sequential/parallel, implied + explicit) + gap-honesty + robot-ambiguity 
 checked the miss (re-ran) rather than dismissing it -> confirmed flakiness. NOTE: per-case single-shot eval can
 flaky-miss ~1/4 on op-discrim; a majority-of-N wrapper would harden it (refinement, non-urgent). LLM-reasoning =
 runtime-composition END-GOAL = solid.
+
+cont.319y-b — VERKTYGEN: hardened compose_reason_eval against the flaky-miss gap found in cont.319y. Refactored the
+per-case logic into _eval_once(prov,c) + added --retries N: a single-shot MISS is retried up to N times; any pass ->
+FLAKY-PASS (a REAL gap fails ALL retries). Stops LLM-nondeterminism (op-discrim ~1/4 empty-pick) being misread as a
+reasoning regression. ast-clean, op-discrim sanity-run PASS via the new path. Default retries=0 (byte-compatible with
+prior single-shot use). Recommended: --retries 2 for a trustworthy suite verdict.
