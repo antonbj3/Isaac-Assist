@@ -7230,3 +7230,15 @@ require RigidBodyAPI (a delivery/manipulable object is a DYNAMIC rigid body; Col
 scenery/container). KONTROLL-FIRST VERIFIED via CP-KLT-BIN re-run: KLT tote mesh now EXCLUDED + the cubes still
 tracked + deliver inside the tote (no regression; cubes are tracked at line 156 by name-prefix, unaffected).
 Byte-identical for real objects (all manipulables are rigid bodies). File: scripts/qa/scene_eyes.py.
+
+cont.319o — FULLY REAL-ASSET cell (culmination): real YCB foam_brick + real KLT tote in ONE cell (CP-YCB-KLT,
+zero generated primitives). Brick picked + delivered to the tote xy [0,-0.38], UPRIGHT (4.9deg), RIGID HOLD, 0
+plan_fails, scene_eyes correctly excludes the tote mesh (the cont.319n-b fix holds). PARTIAL: the brick PERCHES
+on the tote RIM (z=0.925, base ~0.896 = rim) instead of entering. Diagnostik-först: the hollow-collision fix IS
+applied (correct /Visuals/ path, same as the working cube CP-KLT-BIN); the cause is OBJECT SIZE — the small 5cm
+cube clears the tote opening + falls to the floor (0.78), but the bigger 8x5cm brick released at rim level catches
+the rim. = the SAME descend-place class as the can-topple. ★ REINFORCES descend-place as the highest-leverage
+deep frontier: ONE controller fix (jaw floor-aware release, lower the object into the container before release)
+would fix real-object UPRIGHT placement + cube topple-partials CP-20/26/31 + brick-INTO-container placement. The
+real-asset WORKFLOW (real object -> real container) WORKS for delivery-to-location; precise containerization of a
+larger object is descend-place-gated (task #50). Files: workspace/templates/CP-YCB-KLT.json.
