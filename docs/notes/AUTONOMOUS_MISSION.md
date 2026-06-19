@@ -6965,3 +6965,13 @@ route (bin-aware orientation via Kit-recorded bboxes [cont.318i]; non-Cube track
 multi-robot 3-gap per-instance tooling was NOT needed for breadth classification — scene-wide cube-DELIVERY RAW is
 the bar. NEXT FRONTIER all deep/big: real-assets/L3, Gemini LLM-flow refinements, more chain-ops (operation-variety
 saturated) — Anton-steer or dedicated push; accessible SINGLE-BLOCK breadth is EXHAUSTED (verified, 0 ph remain).
+
+cont.318m — LLM-flow CARDINALITY refinement (option c, the END-GOAL = runtime-LLM faithful composition): the
+cont.318 finer-obs (the LLM picked a 1-cube source CP-CHAIN-FRANKA-SRC for a "several parts" stack task = a trivial
+1-high tower) is FIXED. Added a part-COUNT-matching hint to compose_orchestrate's aug_sys ("SEVERAL/multiple/N
+parts -> pick a MULTI-part source that palletizes N, not a single-part deliver-a-part source"). VERIFIED: the
+"several parts -> stack" task now picks [CP-08 (4-cube source), CP-CHAIN-STACK-RECV] sequential (was the 1-cube
+source); NO regression — single-part UR10->Franka still picks [CP-CHAIN-UR10-SRC, CP-CHAIN-FLAT]. The hint is
+additive/scoped (only triggers on count words). FINER (noted, not chased — sparing Gemini): the LLM picks CP-08=4
+but STACK-RECV is 3-high -> a source-N vs receiver-capacity N-match refinement remains (the catalog doesn't expose
+receiver capacity); the core 1-cube triviality is resolved. 2 Gemini calls.
