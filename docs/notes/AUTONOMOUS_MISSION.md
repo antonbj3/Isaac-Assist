@@ -7348,3 +7348,15 @@ main() via asyncio.run stub, ran _analyse on saved eyes.json): real bin golds CP
 [-0.15,0.15] bin, 3 m/s < eject-thr, z+quat intact so never/floor/topple all pass) is caught by MY xy-check ->
 REJECT. eyes_gold_gate_selfcheck.py +2 cases (13/13 PASS). Files: scene_eyes.py, eyes_gold_gate.py,
 eyes_gold_gate_selfcheck.py.
+
+cont.319t — CONVEYOR MEGA-direction DE-RISKED (static, Kit-free) + conveyor_recipe first-class. Anton's first
+real-asset call-out (conveyors + skiljande dimensioner). Findings: (1) 31 ConveyorBelt_A*.usd exist (UNBLOCKED);
+A09=clean straight 4.0×0.9m. (2) Structure: static frame /World/SM_* (collision) + /World/Belt (RigidBody+Collision,
+the moving surface) + /World/Rollers. (3) ★THE SKILJANDE DIMENSION: belt rides at z≈1.781m (on a tall frame) vs our
+generated belts ~0.8m -> objects spawn at belt_top+half_h (1.811 for a 5cm cube) AND a FLOOR Franka (reach ~0.85m)
+CANNOT reach it -> needs a ~1.13m PEDESTAL (recommended) / lowered conveyor / feeder-chute. (4) No built-in
+ConveyorNode/velocity -> RETROFIT surface velocity onto /World/Belt (reuse generated-belt material, proven). NEW:
+real_asset_spawn.conveyor_recipe(usd) -> ride-z, feed axis+extent, belt prim, exceeds_floor_reach + reach_note;
+selftest-guarded on A09 (6/6 PASS). ★Kit-free pxr inspection WORKS (from pxr import Usd in plain python3) -> survey
+ANY Isaac asset structure/dims with NO Kit boot (big lever for humanoids/forklift/large-scenes survey half).
+docs/notes/CONVEYOR_INTEGRATION.md has the focused-build plan (CP-CONV-01). Files: real_asset_spawn.py + note.

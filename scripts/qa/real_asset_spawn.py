@@ -202,6 +202,54 @@ def container_recipe(usd_path, surface_z=0.75, clearance=0.003):
     }
 
 
+def conveyor_recipe(usd_path, floor_reach_z=0.85):
+    """REAL-CONVEYOR recipe (cont.319t, MEGA-direction — Anton's first conveyor call-out). A real
+    ConveyorBelt_A*.usd is a TALL static frame (collision on /World/SM_ConveyorBelt_*) + a dedicated
+    /World/Belt Xform that ALREADY has RigidBody+Collision (the moving surface) + /World/Rollers. Two things
+    differ hard from our GENERATED belts: (1) the belt SURFACE rides ~1.78m up (on the frame), NOT ~0.8m —
+    the 'skiljande dimension' — so an object must spawn at belt_top+half_h and a FLOOR-mounted arm CANNOT reach
+    it (needs a pedestal / the conveyor lowered); (2) the asset ships NO ConveyorNode/authored velocity, so
+    belt motion must be RETROFITTED onto the belt rigidbody. Returns ride-height, feed axis+extent, the belt
+    prim to drive, and the reach flag — the Kit build then drives the belt + spawns onto the surface."""
+    from pxr import Usd, UsdGeom, UsdPhysics
+    s = Usd.Stage.Open(usd_path)
+    dp = s.GetDefaultPrim(); droot = str(dp.GetPath())
+    bc = UsdGeom.BBoxCache(0, [UsdGeom.Tokens.default_])
+    belt = None
+    for p in s.Traverse():
+        n = p.GetName()
+        if p.GetTypeName() == "Mesh" and n.startswith("SM_") and n.endswith("_Belt"):
+            belt = p; break
+    if belt is None:
+        belt = s.GetPrimAtPath(droot + "/Belt")
+    rng = bc.ComputeWorldBound(belt).ComputeAlignedRange(); mn, mx = rng.GetMin(), rng.GetMax()
+    ext = [mx[i] - mn[i] for i in range(3)]
+    ride_z = round(mx[2], 3)                              # belt-surface top = where objects ride
+    fa = 0 if ext[0] >= ext[1] else 1                     # longer horizontal extent = travel direction
+    belt_rb = next((str(p.GetPath()) for p in s.Traverse()
+                    if p.HasAPI(UsdPhysics.RigidBodyAPI) and "Belt" in p.GetName()), None)
+    has_node = any("Conveyor" in (p.GetTypeName() or "") for p in s.Traverse())
+    return {
+        "asset": os.path.basename(usd_path),
+        "belt_prim_rel": str(belt.GetPath()).replace(droot, "").lstrip("/"),
+        "belt_ride_z_m": ride_z,
+        "feed_axis": "x" if fa == 0 else "y",
+        "belt_length_m": round(ext[fa], 3),
+        "belt_width_m": round(ext[1 - fa], 3),
+        "spawn_z_5cm_cube": round(ride_z + 0.025 + 0.005, 3),
+        "belt_rigidbody_rel": (belt_rb.replace(droot, "").lstrip("/") if belt_rb else None),
+        "has_builtin_conveyor_node": has_node,
+        "belt_physics": ("RETROFIT: no built-in ConveyorNode/velocity -> drive the belt rigidbody with surface "
+                         "velocity along the feed axis (omni.isaac.conveyor ConveyorNode on the belt prim, or a "
+                         "kinematic surface-velocity material like the generated belts use)"),
+        "reach_z_m": floor_reach_z,
+        "exceeds_floor_reach": ride_z > floor_reach_z,
+        "reach_note": (f"belt rides at {ride_z}m > floor-arm reach ~{floor_reach_z}m -> raise the arm base on a "
+                       f"pedestal (~{round(ride_z - floor_reach_z + 0.2, 2)}m) OR lower/reposition the conveyor "
+                       "so the pick zone is reachable") if ride_z > floor_reach_z else "within floor-arm reach",
+    }
+
+
 def _selftest():
     # reproduce the 3 hand-tuned cont.319 choices
     cases = {
@@ -224,6 +272,16 @@ def _selftest():
         cok = cr["needs_hollow_collision_fix"] and any(m["rel_path"] == "Visuals/FOF_Mesh_Magenta_Box" for m in cr["collision_meshes"])
         ok &= cok
         print(("OK   " if cok else "FAIL ") + "container KLT_tote      needs_hollow_fix=%s meshes=%s" % (cr["needs_hollow_collision_fix"], [m["rel_path"] for m in cr["collision_meshes"]]))
+    # conveyor_recipe regression (cont.319t): A09 = a clean straight belt; ride height ~1.78m (above floor-arm
+    # reach), feed axis = x (the long axis), no built-in conveyor node -> retrofit flagged.
+    CONV = "/mnt/shared_data/isaac-sim-assets-complete-5.0.0/Assets/Isaac/5.0/Isaac/Props/Conveyors/ConveyorBelt_A09.usd"
+    if os.path.exists(CONV):
+        cv = conveyor_recipe(CONV)
+        cvok = (1.7 < cv["belt_ride_z_m"] < 1.85 and cv["feed_axis"] == "x" and cv["belt_length_m"] > 3.0
+                and cv["exceeds_floor_reach"] and not cv["has_builtin_conveyor_node"] and cv["belt_rigidbody_rel"])
+        ok &= bool(cvok)
+        print(("OK   " if cvok else "FAIL ") + "conveyor A09           ride_z=%sm feed=%s len=%sm exceeds_reach=%s node=%s" % (
+            cv["belt_ride_z_m"], cv["feed_axis"], cv["belt_length_m"], cv["exceeds_floor_reach"], cv["has_builtin_conveyor_node"]))
     print("SELFTEST", "PASS" if ok else "FAIL — recipe diverges from hand-tuned templates")
     sys.exit(0 if ok else 1)
 
