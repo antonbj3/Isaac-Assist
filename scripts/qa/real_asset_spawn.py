@@ -83,6 +83,11 @@ def compute_spawn_recipe(usd_path, surface_z=0.805, clearance=0.005):
     # base sits on the surface: spawn the wrapping Xform so the asset's lowest point clears the surface.
     # (min_z is the asset's base relative to its origin in the NATIVE frame; for a standing rotation the half
     # height is ez/2, origin-centered, so base offset = -ez/2.)
+    # cont.319cc audit #17 (DEFERRED, latent): the rotated path assumes ORIGIN-CENTERED geometry. Correct for the
+    # YCB Axis_Aligned family (centers ~[0,0,0], selftest-verified) but a non-centered asset standing up would
+    # mis-place. The robust value is the native bbox extreme that rotates to -Z (for [90,0,0] -> -max_y). Not
+    # changed here: no non-YCB non-centered asset is in use, and altering the verified YCB spawn-z without a test
+    # asset risks a regression. Revisit with a non-centered standing asset + selftest case.
     base_off = (-ez / 2.0) if rotation else min_z
     spawn_z = surface_z + (-base_off) + clearance
     # object-aware drop: release just enough to clear a typical bin rim; tall objects can't be made upright by
@@ -215,20 +220,40 @@ def conveyor_recipe(usd_path, floor_reach_z=0.85):
     s = Usd.Stage.Open(usd_path)
     dp = s.GetDefaultPrim(); droot = str(dp.GetPath())
     bc = UsdGeom.BBoxCache(0, [UsdGeom.Tokens.default_])
-    belt = None
-    for p in s.Traverse():
-        n = p.GetName()
-        if p.GetTypeName() == "Mesh" and n.startswith("SM_") and n.endswith("_Belt"):
-            belt = p; break
+    # cont.319cc audit #8/#15: robustly resolve the belt SURFACE. The family does NOT use a clean SM_*_Belt suffix
+    # (A09's mesh = SM_..._Belt_02; only A01/A07 end exactly in _Belt) and ~half the family has NO /World/Belt prim
+    # -> the old endswith('_Belt')+fallback either silently fell through OR let BBoxCache THROW on an invalid prim.
+    # Prefer the RigidBody-bearing 'belt' prim, then a 'belt' mesh, then /World/Belt; if none resolves to a valid
+    # bbox, return an HONEST {supported: False} instead of crashing.
+    belt = next((p for p in s.Traverse() if p.HasAPI(UsdPhysics.RigidBodyAPI) and "belt" in p.GetName().lower()), None)
     if belt is None:
-        belt = s.GetPrimAtPath(droot + "/Belt")
-    rng = bc.ComputeWorldBound(belt).ComputeAlignedRange(); mn, mx = rng.GetMin(), rng.GetMax()
+        belt = next((p for p in s.Traverse() if p.GetTypeName() == "Mesh" and "belt" in p.GetName().lower()), None)
+    if belt is None:
+        _b = s.GetPrimAtPath(droot + "/Belt"); belt = _b if (_b and _b.IsValid()) else None
+    if belt is None or not belt.IsValid():
+        return {"asset": os.path.basename(usd_path), "supported": False,
+                "reason": "no belt surface (no RigidBody/mesh named 'belt', no /World/Belt) -- unsupported conveyor asset"}
+    rng = bc.ComputeWorldBound(belt).ComputeAlignedRange()
+    if rng.IsEmpty():
+        return {"asset": os.path.basename(usd_path), "supported": False, "reason": "belt prim has empty world bbox"}
+    mn, mx = rng.GetMin(), rng.GetMax()
     ext = [mx[i] - mn[i] for i in range(3)]
     ride_z = round(mx[2], 3)                              # belt-surface top = where objects ride
     fa = 0 if ext[0] >= ext[1] else 1                     # longer horizontal extent = travel direction
     belt_rb = next((str(p.GetPath()) for p in s.Traverse()
                     if p.HasAPI(UsdPhysics.RigidBodyAPI) and "Belt" in p.GetName()), None)
-    has_node = any("Conveyor" in (p.GetTypeName() or "") for p in s.Traverse())
+    # cont.319cc audit #16: a conveyor DRIVER is an OmniGraph node (node:type omni.isaac.conveyor.IsaacConveyor),
+    # NOT a USD typeName 'Conveyor' (the old check never matched ANY prim -> structurally unable to detect a driven
+    # asset -> would tell the build to retrofit velocity onto an already-driven belt = double-drive). Detect (a) an
+    # authored surface-velocity already on the belt, or (b) an OmniGraph node whose node:type mentions conveyor.
+    _sv = belt.GetAttribute("physxSurfaceVelocity:surfaceVelocity")
+    has_node = bool(_sv and _sv.HasAuthoredValue())
+    if not has_node:
+        for p in s.Traverse():
+            if "OmniGraph" in (p.GetTypeName() or ""):
+                _nt = p.GetAttribute("node:type")
+                if _nt and _nt.HasAuthoredValue() and "onveyor" in str(_nt.Get() or ""):
+                    has_node = True; break
     return {
         "asset": os.path.basename(usd_path),
         "belt_prim_rel": str(belt.GetPath()).replace(droot, "").lstrip("/"),
