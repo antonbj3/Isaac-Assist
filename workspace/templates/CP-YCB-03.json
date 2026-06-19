@@ -242,7 +242,7 @@
     ],
     "completeness": "all"
   },
-  "verified_status": "UNVERIFIED (breadth, awaiting scene_eyes)",
+  "verified_status": "GENUINE (real-object breadth cont.319): YCB 009_gelatin_box (thin 3cm flat box) picked off belt + delivered UPRIGHT to bin (RAW [0.01,-0.381,0.775], tilt 4.6deg, RIGID HOLD, 0 plan_fails).",
   "motion_controllers": {
     "verified": [
       "curobo"
