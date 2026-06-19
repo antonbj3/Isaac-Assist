@@ -76,6 +76,24 @@ def reroot_prim_path(path: str, instance_root: str) -> str:
     return f"{_WORLD}{instance_root}/{rest}"
 
 
+def reroot_embedded_prim_paths(code: str, instance_root: str) -> str:
+    """Namespace /World/<seg> prim paths EMBEDDED inside a larger string (e.g. a
+    run_usd_script ``code`` body), which reroot_prim_path skips because it only
+    re-roots a WHOLE-string path. Without this, a composed run_usd_script that
+    hardcodes an absolute path (e.g. the G1 root-weld's '/World/G1/pelvis')
+    looks up the UN-namespaced path and silently no-ops under composition — the
+    humanoid root-weld FELL when composed (cont.319ii-6). Idempotent: a path
+    already under instance_root is left alone. Only matches /World/ followed by
+    an identifier (a real prim segment), so a bare '/World/' or '/World/' + quote
+    passes through.
+    """
+    import re as _re2
+    if not instance_root or not isinstance(code, str):
+        return code
+    pat = _re2.compile(r"/World/(?!" + _re2.escape(instance_root) + r"/)([A-Za-z_][A-Za-z0-9_]*)")
+    return pat.sub(lambda m: _WORLD + instance_root + "/" + m.group(1), code)
+
+
 def _transform_value(key: str, value: Any, instance_root: str, offset) -> Any:
     """Re-root any /World/ prim paths anywhere in the value (str / list / dict),
     and offset the value if `key` is a position kwarg."""
@@ -124,6 +142,12 @@ def namespace_and_offset_calls(
         # of the same template don't share subscription/state keys (2nd one stalls).
         if tool in PHASE_ID_TOOLS or "phase_id" in nk:
             nk["phase_id"] = instance_root
+        # run_usd_script's `code` is opaque to reroot_prim_path (whole-string paths only),
+        # so namespace /World/ paths EMBEDDED in the code -> a composed run_usd_script (e.g.
+        # the G1 root-weld FixedJoint targeting '/World/G1/pelvis') hits THIS instance's prims,
+        # not the un-namespaced originals (cont.319ii-6: the humanoid fell when composed).
+        if tool == "run_usd_script" and isinstance(nk.get("code"), str):
+            nk["code"] = reroot_embedded_prim_paths(nk["code"], instance_root)
         # NOTE (2026-06-15): a per-instance planner-scope injection (arm_scope=instance_root
         # -> separate cuRobo MotionPlanner per cell) was tried + REVERTED — MEASURED to give
         # ZERO benefit (the 2nd-arm fling persisted identically with separate planners). The
