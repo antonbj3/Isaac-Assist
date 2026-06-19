@@ -7322,3 +7322,16 @@ correction). The chain receiver 0/1 (cont.319r) is NOT the grasp and NOT the z-c
   sensor. Kept the z=X[2] relay placement (more correct, gated YCB-relay, ast-clean) though it didn't fix the drift.
   NET: real-object chain source+relay+receiver-grasp ALL proven; completion gated on the relay-recreate stability
   (a focused follow-up, each chain run ~10min). Files: chain_xkit_gate.py, CP-CHAIN-FLAT-YCB.json.
+
+cont.319r-c — REAL-OBJECT CHAIN: receiver-pick on the RELAYED referenced object is genuinely DEEP (3 hypotheses
+refuted) + I OVER-INVESTED (caught it — ~4 heavy ~10min chain runs). Refuted: (1) NOT the grasp (CP-CHAIN-FLAT-YCB
+picks a brick standalone, cont.319r-b); (2) NOT the relay z-clamp (placed at delivered z -> still drifts/0/1); (3)
+NOT the sensor zone (CP-CHAIN-FLAT-YCB-RECV with an 18x18cm tolerant sensor -> STILL 0/1, brick at [0.033,-0.438]
+well within ±9cm). So the relay->receiver hand-off of a REFERENCED object (DefinePrim+AddReference relay re-creation
++ source_override targeting) has a deeper issue that needs the STAGE1 scene_eyes RAW (which chain_xkit_gate does NOT
+dump) — a focused follow-up (instrument chain_xkit_gate stage1 with the full per-object grip/plan trace, OR a
+single-Kit relay->receiver bench). NET real-object chains: SOURCE + RELAY + standalone-GRASP all PROVEN; the
+relay->receiver referenced-object pick is the deep remaining piece. STOPPING the chain debug per the
+over-investment lesson (feedback_phantom_rootcause_and_optional_bug_overinvest / fleet_sweep_cost_cap): expensive
+heavy-run hypothesis-chasing on an optional second composition structure (parallel real-object composition is
+already PROVEN). Focused follow-up. Files: CP-CHAIN-FLAT-YCB-RECV.json (tolerant-sensor variant, kept).
