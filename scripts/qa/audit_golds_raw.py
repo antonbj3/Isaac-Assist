@@ -89,7 +89,10 @@ def main():
     flags = []
     no_raw = []
     for cid, info in cat.items():
-        if "genuine" not in str(info.get("verdict", "")).lower():
+        # cont.319jj-15: match the GENUINE verdict PREFIX, not a loose substring -- a PARTIAL verdict
+        # that contains the word 'genuinely' (e.g. CP-20 "PARTIAL(... genuinely unstable)") otherwise
+        # matched "genuine" and got audited + FALSE-flagged. GENUINE verdicts start with "GENUINE".
+        if not str(info.get("verdict", "")).strip().lower().startswith("genuine"):
             continue
         # cont.319hh: ACTUATION blocks (forklift-lift, humanoid-arm) are verified via a JOINT-DOF trajectory,
         # NOT cube delivery -- any cube in the scene is a WITNESS (e.g. a zero-G testbench cube drifts forever).
