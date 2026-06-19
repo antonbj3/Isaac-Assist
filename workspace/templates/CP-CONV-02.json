@@ -1,6 +1,6 @@
 {
   "task_id": "CP-CONV-02",
-  "goal": "COMPLETE real-A09 conveyor pick cell (LOWERED regime): real conveyor translated [0,0.45,-1.0] so belt-top=0.781 and the cube rides at y=0.45; a floor-regime Franka (base 0.75, +90deg) picks it into a bin. Resolves the pedestal failure (curobo _cube_to_pick +0.20 reach gate, not the sensor).",
+  "goal": "COMPLETE real-A09 conveyor pick cell (LOWERED regime): real conveyor translated [0,0,-1.0] so belt-top=0.781; a moving belt (surfaceVelocity 0.2 +X) feeds the cube into an EndStop pick-zone at y=0, and a floor-regime Franka (base 0.75, +90deg) picks it into a bin. Resolves the pedestal failure (curobo _cube_to_pick +0.20 reach gate, not the sensor).",
   "tools_used": [
     "create_scene_baseline",
     "create_prim",
