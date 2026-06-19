@@ -7197,3 +7197,14 @@ CP-YCB-01C into workspace/composable_blocks.json as a GENUINE real-object compos
 Franka:pick-place-real-object -> CP-YCB-01C; all + summary genuine 58->59, total 70->71; test_composable_blocks
 GREEN). Real objects are now first-class in the composition catalog the runtime-LLM composes from. Files:
 workspace/composable_blocks.json, scripts/qa/run_ycb_compose_inst0.sh.
+
+cont.319m — LLM-flow REASONING extended to real-objects (END-GOAL connection) + a verktygen-är-levande fix.
+Now that CP-YCB-01C is in the canonical catalog, the compose-REASONING eval (compose_reason_eval.py, Kit-free +
+ChromaDB-free) can test whether the runtime-LLM picks the real-object cell for a real-object task. GAP FOUND: the
+eval's pick-regex was r"CP-\d+" — it MISSES "CP-YCB-01C" (letters after CP-). FIXED -> r"CP-[A-Z0-9][A-Z0-9-]*"
+(captures both CP-<digit> and CP-YCB-* ids; verified locally). Added a 'real-object' case (gt {CP-YCB-01C}: a task
+explicitly about real meshed product items vs primitive blocks). RUN: hit Gemini free-tier 429 (quota exceeded)
+after 3 cases — the 3 that ran (het-2stn/franka-2op/sort+kit) PASSED = my catalog addition did NOT regress them
+(partial regression check OK); the real-object case + rest got empty 429 responses (untested, NOT refuted). The
+full real-object-reasoning run waits for Gemini quota (watched window / reset) — the case + fix are committed +
+ready. Files: scripts/qa/compose_reason_eval.py.

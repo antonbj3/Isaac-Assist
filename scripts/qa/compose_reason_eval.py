@@ -81,6 +81,13 @@ CASES = [
     {"id": "imp-par-elsew", "gt": {"CP-03", "CP-08"}, "exp_structure": "parallel",
      "task": "A Franka colour-sorts loose widgets at the inspection bay; elsewhere on the floor another Franka "
              "palletizes finished crates into a grid."},
+    # ---- REAL-OBJECT reasoning (cont.319m): the catalog now has a real-object cell (CP-YCB-01C) distinct from
+    # the generic primitive-cube pick-place (CP-01). Does the LLM pick the real-object cell when the task is
+    # explicitly about real meshed product items (not primitive blocks)? ----
+    {"id": "real-object", "gt": {"CP-YCB-01C"},
+     "task": "A single Franka station that picks REAL meshed product items off a conveyor — actual cracker "
+             "boxes, soup cans and foam bricks (scanned/meshed warehouse objects, NOT primitive cube blocks) — "
+             "and drops them into a bin."},
 ]
 
 
@@ -96,7 +103,7 @@ async def _run(model, only=None):
             txt = (resp.text or "").strip()
         except Exception as e:
             txt = f"ERROR {e}"
-        picks = set(re.findall(r"CP-\d+", txt.split('"reasoning"')[0] if '"reasoning"' in txt else txt))
+        picks = set(re.findall(r"CP-[A-Z0-9][A-Z0-9-]*", txt.split('"reasoning"')[0] if '"reasoning"' in txt else txt))
         picks &= _AVAIL  # only count real catalog ids
         flagged_gap = '"gaps"' in txt and bool(re.search(r'"gaps"\s*:\s*\[\s*"[^"]', txt))
         _sm = re.search(r'"structure"\s*:\s*"(sequential|parallel)"', txt)
