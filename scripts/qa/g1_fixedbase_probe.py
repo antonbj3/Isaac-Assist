@@ -67,6 +67,22 @@ if rj.IsValid():
     stage.RemovePrim("/World/G1/rootJoint")
     out["rootjoint_deleted"] = True
 
+# WELD ROOT: a single UsdPhysics.FixedJoint PRIM world->pelvis at the pelvis's current pose
+# (the canonical "bolt the base to world" — one anchor on the ROOT, not the FixedJointAPI schema
+# that exploded, not two leaf-ankle welds that over-constrained). This is the most-likely working
+# load-time fixed base for a floating articulation.
+WELD_ROOT = __WELD_ROOT__
+if WELD_ROOT:
+    mw = UsdGeom.Xformable(pelvis).ComputeLocalToWorldTransform(Usd.TimeCode.Default())
+    wp = mw.ExtractTranslation(); wr = mw.ExtractRotationQuat()
+    fj = UsdPhysics.FixedJoint.Define(stage, "/World/G1_RootWeld")
+    fj.GetBody1Rel().SetTargets([Sdf.Path("/World/G1/pelvis")])
+    fj.CreateLocalPos0Attr(Gf.Vec3f(float(wp[0]), float(wp[1]), float(wp[2])))
+    fj.CreateLocalRot0Attr(Gf.Quatf(float(wr.GetReal()), Gf.Vec3f(*[float(x) for x in wr.GetImaginary()])))
+    fj.CreateLocalPos1Attr(Gf.Vec3f(0.0, 0.0, 0.0))
+    fj.CreateLocalRot1Attr(Gf.Quatf(1.0, 0.0, 0.0, 0.0))
+    out["root_weld"] = True
+
 # ARM DRIVE targets (degrees) -- same as CP-G1-ARM-01, set on the USD before play
 for jp, tgt in (("/World/G1/torso_link/left_shoulder_pitch_joint", 50.0),
                 ("/World/G1/left_shoulder_yaw_link/left_elbow_joint", 60.0)):
@@ -141,8 +157,10 @@ open("/tmp/g1_fixedbase_probe_result.json", "w").write(json.dumps(out, indent=2)
 print("FB_PROBE_RESULT " + json.dumps(out))
 '''.replace("__ASSET__", ASSET)
 
-FB_ON = "0" if (len(sys.argv) > 1 and sys.argv[1] == "off") else "1"
-CODE = CODE.replace("__FB_ON__", "True" if FB_ON == "1" else "False")
+MODE = sys.argv[1] if len(sys.argv) > 1 else "fb"   # fb | off | weld
+FB_ON = "True" if MODE == "fb" else "False"
+WELD = "True" if MODE == "weld" else "False"
+CODE = CODE.replace("__FB_ON__", FB_ON).replace("__WELD_ROOT__", WELD)
 
 
 async def main():
