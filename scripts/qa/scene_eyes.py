@@ -170,6 +170,13 @@ try:
     for _pr in stage.Traverse():
         _pth = str(_pr.GetPath()); _lo = _pr.GetName().lower()
         if _pth in CUBES: continue
+        # cont.319cc audit #9: DE-DUP a child mesh of an already-tracked delivery object. A YCB asset referenced
+        # UNDER a Cube/Item Xform (e.g. /World/Item_1/_09_gelatin_box) matched a grasp-token ('box') + RB and was
+        # tracked a SECOND time -> a 0mm-separation duplicate that (a) false-NEGATIVES the pick (the child leaf reads
+        # 'never-gripped' since the grip contact/gripped-set key on the PARENT leaf), and (b) inflates grid/stack
+        # object counts + min-pair-xy=0 -> false structure verdicts (bidirectional poison). The parent _DELIV_PREFIX
+        # prim is authoritative; skip any prim that is a DESCENDANT of an already-tracked prim.
+        if any(_pth.startswith(_c.rstrip("/") + "/") for _c in CUBES): continue
         if ROBOT and _pth.startswith(ROBOT): continue
         # require a DYNAMIC rigid body (a manipulable/delivery object). CollisionAPI-ONLY = static scenery or a
         # referenced CONTAINER mesh (e.g. a real KLT tote whose mesh is named *_Box) -> NOT a delivery object.

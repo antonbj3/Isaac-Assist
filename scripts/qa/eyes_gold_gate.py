@@ -43,6 +43,12 @@ def verdict_for_instance(text, cls):
     # ("NEVER approached") AND the close-but-no-grasp case ("approached but not gripped") — match the
     # common token, not just "NEVER approached" (that hole passed a 3/4 CP-08 partial as GOLD, cont.108).
     never = len(re.findall(r"never-gripped", text, re.I))
+    # cont.319cc audit #5: a per-object 'GRIP-SLIP (... object NEVER LIFTED, not held)' (scene_eyes PICK-CONVERGENCE
+    # 1086/1090) = the gripper contacted the cube but it never came off the surface = NOT transported. That token is
+    # neither 'never-gripped' nor 'CONVERGED + GRIPPED', so the gate was BLIND to it: a partial where one cube
+    # slipped while another succeeded false-passed the bin/grid branch. Treat 'never lifted' as a reject (same class
+    # as never-gripped). Matches ONLY the per-object slip verdict (not the EE-relative GRIP-SLIP section header).
+    slipped = len(re.findall(r"never lifted", text, re.I))
     gripped = len(re.findall(r"(?<!never-)CONVERGED \+ GRIPPED", text))
     real_explosion = "*** EXPLODED/EJECTED ***" in text   # offset-invariant in current scene_eyes
     # FELL-TO-GROUND: a cube ending well below any target surface (<0.6m; targets sit ~0.75-0.90 on the
@@ -83,6 +89,8 @@ def verdict_for_instance(text, cls):
     toppled = re.search(r"\*\*\* ORIENTATION FAIL: \d+ object\(s\) TOPPLED[^:]*: ([^*]+?) \*\*\*", text)
     if never:
         return False, f"{never} cube(s) NEVER approached (not transported/grasped)"
+    if slipped:
+        return False, f"{slipped} cube(s) GRIP-SLIPPED (finger-contact but the object never lifted off the surface = not transported)"
     if gripped == 0 and zlevels is None:
         return False, "no CONVERGED+GRIPPED and no structure data (likely no grasp / no rows)"
     if real_explosion:
