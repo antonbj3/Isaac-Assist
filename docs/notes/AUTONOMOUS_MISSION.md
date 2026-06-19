@@ -7038,3 +7038,23 @@ TALLER -> drop_height 0.22) + CP-YCB-03 (009_gelatin_box, thin 3cm flat box -> h
 0.18). Each on its own fresh Kit. Commit 6fb61c75 (feat/foundation-build). Files: workspace/templates/CP-YCB-0{1,2,3}.json,
 scripts/qa/run_ycb_{proof,batch}.sh. NEXT: read breadth RAW; if general -> more YCB shapes + real-object composition/chains
 + wire ASSETS_ROOT_PATH for LLM asset search. Memory: reference_isaac_assets_downloaded.md.
+
+cont.319b — REAL-OBJECT BREADTH (3 YCB shapes) + honest placement diagnosis + Anton grip-recognition.
+BREADTH: CP-YCB-03 gelatin_box (thin 3cm flat box) -> delivered UPRIGHT (tilt 4.6, RIGID HOLD, 0 plan_fails) =
+GENUINE. CP-YCB-02 tomato_soup_can (stood upright via rotation_euler=[90,0,0]) -> delivered INTO bin but TOPPLES
+on landing. So real-object manipulation generalizes 3/3 delivered (brick+box upright, can collection).
+  CAN-TOPPLE DIAGNOSIS (honest, all negatives): drop_height 0.22 -> tilt 158.9; drop_height 0.12 -> tilt 139.5
+(barely better); tight 12x12cm bin -> WORSE, wedged on rim z=0.907 + 32deg grip-slip (the 15cm-tall walls collide
+with the place approach). Root: a 10cm tall 6.8cm narrow can (high CG, small base) released from ABOVE tips on
+landing in ANY bin. Robust fix = descend-to-place (lower held object to base-contact, release gently) = CONTROLLER
+change. DEFERRED per feedback_phantom_rootcause_and_optional_bug_overinvest (collection delivery ships + golds
+stand -> upright precision placement = LOW priority until real-object palletize/stack is built).
+  ANTON GRIP-RECOGNITION ("adaptiv grepphårdhet på icke-flat objekt?"): YES = the object-aware _grip_close work
+(project_isaac_assist_sphere_grip_explosion, 2026-06-14: IsA(Sphere)+PRELOAD, cubes tight vs round light-at-radius).
+But RAW-verified it is NOT the can's failure: the can is a CYLINDER (line contact) -> gripped CLEAN (max|pos|=1.3m
+NO ejection, z stayed lifted NO roll-out, RIGID HOLD, force 0.82) = identical profile to the brick. The sphere fix
+was for POINT-contact over-close explosion; the can never over-closes. TWO genuine living-tools gaps Anton's pointer
+surfaced (noted, build-when-needed): (1) object-aware close only detects IsA(UsdGeom.Sphere) -> referenced YCB
+round MESHES (mug/bowl/bottle) never hit it; extend to meshes (bbox-aspect) WHEN a round object's grip actually
+fails; (2) YCB/Axis_Aligned_Physics/ variant has baked colliders (I used visual Axis_Aligned + hand-applied
+convexHull, which worked) -> switch for canonical physics. Commit 6fb61c75 + this. Files: CP-YCB-0{1,2,3}.json.
