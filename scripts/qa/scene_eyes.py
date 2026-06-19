@@ -844,12 +844,23 @@ def _analyse(js):
     # normal pick-place (the arm lifts the cube to transit height ~1.07 then places it lower = a 0.25m drop
     # from peak on a perfectly good delivery). Use NET descent from START instead; a placed/stacked cube ends
     # at ~start or higher (net <=0), only a real fall ends well below start.
+    def _in_any_bin(_p):
+        # cont.319jj-8: a cube resting in a recorded COLLECTION bin is NOT knocked-off, even if the bin
+        # floor is below the 0.70 working-height (CP-26: Bin floor=0.6 -> cubes settle at z~0.635 and were
+        # FALSE-flagged 'fell to floor', while the ORIENTATION detector correctly said 'in bin — collection').
+        # Mirror that in-bin logic here so OFF-SURFACE agrees and does not false-negative a low-bin delivery.
+        for _bb in _BIN_BBOXES:
+            if (_bb[0] - 0.03 <= _p[0] <= _bb[3] + 0.03 and _bb[1] - 0.03 <= _p[1] <= _bb[4] + 0.03
+                    and _bb[2] - 0.06 <= _p[2] <= _bb[5] + 0.06):
+                return True
+        return False
     _off = []
     for _nm in sorted(_ej_objs):
         _zs = [(_r.get("cubes") or {}).get(_nm) for _r in rows if (_r.get("cubes") or {}).get(_nm)]
         if len(_zs) < 3: continue
         _zmax = max(p[2] for p in _zs); _fp = _zs[-1]; _z0 = _zs[0][2]
         _drop = _z0 - _fp[2]   # NET descent from start, not from transit peak
+        if _in_any_bin(_fp): continue   # collected in a bin (even a low one) = not knocked-off
         # FIX 2026-06-17 (cont.232): ALSO require the cube to end BELOW working-surface height (~0.70m) to
         # flag. A genuine knock-off falls to a LOWER LEVEL / the ground (e.g. off a pallet -> 0.54, or floor
         # ~0.03). A pick-HIGH/deliver-LOW delivery (pedestal 0.975 -> tray 0.775, or de-palletize) ends DOWN
