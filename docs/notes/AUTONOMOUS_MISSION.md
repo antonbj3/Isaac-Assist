@@ -7186,3 +7186,14 @@ real-object scenes. LESSON: don't prematurely conclude "bounded work exhausted" 
 keepalive's relentlessness surfaced a genuine high-value win (a 1-line composition-ready refactor unlocked
 real-object composition). Files: workspace/templates/CP-YCB-01C.json, scripts/qa/run_ycb_compose.sh. NEXT (bounded):
 observe inst0 for full 2/2; add CP-YCB-01C to composable_blocks as a GENUINE real-object composable block.
+
+cont.319l — REAL-OBJECT COMPOSITION full 2/2 + catalog integration. inst0 re-run delivered (Cube_1 ->
+[0.02,-0.38,0.79] inst0 bin); inst1 delivered earlier ([2.51,-0.39,0.79] inst1 bin) -> FULL 2/2 parallel
+real-object composition (both composed cells pick+deliver their real referenced bricks to their own offset bins).
+(NOTE: the FIRST inst0 run's Kit crashed mid-measurement — 8001 disconnect, NO_EYES_JSON — after COMPOSE_BUILT
+succeeded; the fresh-Kit re-run delivered. So real-object 2-cell compose is occasionally Kit-stability-marginal
+(2 add_reference'd YCB meshes + 2 cuRobo controllers); re-run on crash. Build always succeeded.) INTEGRATED
+CP-YCB-01C into workspace/composable_blocks.json as a GENUINE real-object composable block (canonical_blocks
+Franka:pick-place-real-object -> CP-YCB-01C; all + summary genuine 58->59, total 70->71; test_composable_blocks
+GREEN). Real objects are now first-class in the composition catalog the runtime-LLM composes from. Files:
+workspace/composable_blocks.json, scripts/qa/run_ycb_compose_inst0.sh.

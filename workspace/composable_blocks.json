@@ -6,6 +6,7 @@
     "Franka:other": null,
     "Franka:palletize/grid": "CP-08",
     "Franka:pick-place-bin": "CP-01",
+    "Franka:pick-place-real-object": "CP-YCB-01C",
     "Franka:stack/column": "CP-13",
     "UR10:color-sort": null,
     "UR10:other": null,
@@ -19,6 +20,13 @@
       "verdict": "GENUINE",
       "basis": "scene_eyes (this session)",
       "n_objects": 4
+    },
+    "CP-YCB-01C": {
+      "robot": "Franka",
+      "class": "pick-place-real-object",
+      "verdict": "GENUINE",
+      "basis": "scene_eyes compose-verified (cont.319k): real YCB foam_brick via add_reference; standalone + 2-cell compose deliver",
+      "n_objects": 1
     },
     "CP-02": {
       "robot": "Franka",
@@ -505,13 +513,13 @@
     }
   },
   "summary": {
-    "trusted": 58,
-    "_trusted_note": "the 58 'trusted' = 58 GENUINE (execution-verified by scene_eyes) + 0 position-honest. BREADTH CAMPAIGN COMPLETE: all 30 originally-position-honest blocks driven (27 GENUINE + CP-44 PARTIAL + CP-56/UR10-palletizer FALSE). Compose-trust all 58 genuine.",
-    "genuine_execution_verified": 58,
+    "trusted": 59,
+    "_trusted_note": "59 'trusted' = 58 cube-GENUINE (breadth campaign complete) + 1 real-object-GENUINE (CP-YCB-01C, compose-verified cont.319k). Compose-trust all 59.",
+    "genuine_execution_verified": 59,
     "position_honest_only": 0,
     "false": 3,
     "partial": 9,
     "pending": 0,
-    "total": 70
+    "total": 71
   }
 }
