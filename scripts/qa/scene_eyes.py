@@ -894,6 +894,28 @@ def _analyse(js):
             out.append("*** ORIENTATION FAIL: %d object(s) TOPPLED (delivered but tipped >60° from upright = not correctly placed): %s ***" % (
                 len(_topp), ", ".join(n for n, _ in _topp)))
 
+        # XY-CONTAINMENT (#36, 2026-06-19, Anton false-success discipline): the gold-gate's bin/sort branch had
+        # NO check that a delivered object actually ended INSIDE the bin's xy footprint — an object dropped NEXT
+        # TO the bin (upright, at floor-z) passed BOTH the floor-guard (it's at floor-z) and the topple-check
+        # (upright). Report per box-like delivery object whether its final xy is within a recorded collection-bin
+        # footprint (±0.05m, the same margin _in_deep_container uses). INFORMATIONAL only (NO *** FAIL *** marker
+        # that other gates auto-consume): the REJECT is CLASS-AWARE and lives in eyes_gold_gate's bin/sort branch
+        # — a COMPOSED bin+pallet scene legitimately has the pallet cell's objects OUTSIDE the bin, and scene_eyes
+        # tracks ALL cells' objects with no way to tell which cell owns which, so it must NOT auto-reject here.
+        if _BIN_BBOXES:
+            def _xy_in_bin(_pos):
+                if not _pos: return False
+                for _bb in _BIN_BBOXES:
+                    _x0, _y0, _z0, _x1, _y1, _z1 = _bb
+                    if _x0 - 0.05 <= _pos[0] <= _x1 + 0.05 and _y0 - 0.05 <= _pos[1] <= _y1 + 0.05:
+                        return True
+                return False
+            _bl_deliv = [n for n in sorted(_finals) if _boxlike(n)]
+            if _bl_deliv:
+                out.append("XY-CONTAINMENT (box-like delivery objects vs %d recorded bin footprint(s); 'NO' = settled outside every bin xy):" % len(_BIN_BBOXES))
+                for _nm in _bl_deliv:
+                    out.append("    %-14s xy-in-bin=%s" % (_nm, "yes" if _xy_in_bin(_finals.get(_nm)) else "NO"))
+
     # BELT TIMELINE (2026-06-14): belt surface-velocity over the run — pins the PAUSE/RESUME behaviour
     # behind the conveyor-stall class. A belt that stays at 0 most of the run = boxes never advance to the
     # pick zone (the controller pauses the belt during pick phases / while a cube is "imminent"; if it

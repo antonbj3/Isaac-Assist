@@ -7335,3 +7335,16 @@ relay->receiver referenced-object pick is the deep remaining piece. STOPPING the
 over-investment lesson (feedback_phantom_rootcause_and_optional_bug_overinvest / fleet_sweep_cost_cap): expensive
 heavy-run hypothesis-chasing on an optional second composition structure (parallel real-object composition is
 already PROVEN). Focused follow-up. Files: CP-CHAIN-FLAT-YCB-RECV.json (tolerant-sensor variant, kept).
+
+cont.319s — #36 CLOSED: eyes_gold_gate bin/sort had NO xy-containment check (FALSE-SUCCESS hole). A cube that was
+gripped + transported but settled NEXT TO the bin (upright, at floor-z) passed never-gripped + the floor-guard +
+the topple-check -> false GOLD. FIX (verktygen, hand-derived from the KLT inklt -> first-class): scene_eyes emits an
+informational XY-CONTAINMENT line per box-like delivery object vs the recorded collection-bin footprints (reuses
+_BIN_BBOXES, ±0.05m); eyes_gold_gate's bin/sort branch REJECTS if any settled 'NO' (outside). Reject is CLASS-AWARE
++ lives in the gate (NOT scene_eyes) so a COMPOSED bin+pallet scene — pallet objects legitimately outside the bin,
+graded by compose_and_verify — is NOT false-rejected. VERIFIED Kit-free (neutralized scene_eyes' module-level
+main() via asyncio.run stub, ran _analyse on saved eyes.json): real bin golds CP-YCB-01C + CP-69(UR10) stay GENUINE
+(xy-in-bin=yes, no false-reject); an isolated converged-but-outside object (final x shoved to 0.31, outside the
+[-0.15,0.15] bin, 3 m/s < eject-thr, z+quat intact so never/floor/topple all pass) is caught by MY xy-check ->
+REJECT. eyes_gold_gate_selfcheck.py +2 cases (13/13 PASS). Files: scene_eyes.py, eyes_gold_gate.py,
+eyes_gold_gate_selfcheck.py.

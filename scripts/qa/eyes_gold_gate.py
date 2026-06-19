@@ -105,7 +105,17 @@ def verdict_for_instance(text, cls):
         if minpair is not None and minpair < 0.045:
             return False, f"palletizer grid CLUSTERED (min-pair-xy {minpair*1000:.0f}mm < cube-width) = piled, not a spread grid"
         return True, f"grid verified ({gripped} gripped, {zlevels} z-level, min-pair {minpair*1000:.0f}mm spread)" if minpair is not None else f"grid verified ({gripped} gripped, {zlevels} z-level)"
-    # bin/place/sort: transport+grasp is enough, no structure requirement
+    # bin/place/sort: transport+grasp is enough, no structure requirement — BUT (#36, 2026-06-19) the object
+    # must also end INSIDE the bin's xy FOOTPRINT. scene_eyes now emits XY-CONTAINMENT lines (per box-like
+    # delivery object vs the recorded collection-bin footprints) whenever a bin is present. A cube that was
+    # gripped + transported but settled NEXT TO the bin (upright, at floor-z) passed never-gripped, the floor
+    # guard AND the topple check — this closes that last hole. Fires ONLY when bins were recorded (a 'place on
+    # a table/surface' task emits no XY-CONTAINMENT block -> no check -> unchanged). The reject lives HERE (not
+    # in scene_eyes) because it is class-aware: a composed bin+pallet scene has pallet objects legitimately
+    # outside the bin, and that path is graded by compose_and_verify, never this single-instance bin branch.
+    outside = re.findall(r"xy-in-bin=NO", text)
+    if outside:
+        return False, f"{len(outside)} delivery object(s) settled OUTSIDE the bin xy footprint (transported+gripped but dropped next to the bin, not IN it)"
     return True, f"delivery verified ({gripped} gripped)"
 
 

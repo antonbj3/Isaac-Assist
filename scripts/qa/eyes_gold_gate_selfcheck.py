@@ -79,6 +79,18 @@ SETTLED-Z (box-like delivery cubes, final z m): Cube_1=0.785
 # Guards the 2026-06-17 false-POSITIVE closure (the grip fix would otherwise pass a floor-drop).
 SINGLE_CUBE_FLOORDROP = SINGLE_CUBE_BIN.replace("Cube_1=0.785", "Cube_1=0.100")
 
+# #36 (2026-06-19): a 1-cube bin delivery that settled INSIDE the bin's xy footprint -> GOLD (no false-reject).
+SINGLE_CUBE_BIN_INSIDE = SINGLE_CUBE_BIN + (
+    "XY-CONTAINMENT (box-like delivery objects vs 1 recorded bin footprint(s); 'NO' = settled outside every bin xy):\n"
+    "    Cube_1         xy-in-bin=yes\n")
+
+# Same grip + above-floor settle, but the cube ended NEXT TO the bin (outside the xy footprint): the floor-guard
+# AND the topple check both PASS, only the xy-containment catches it -> REJECT. Guards the 2026-06-19 false-
+# POSITIVE closure (a gripped+transported cube dropped beside the bin must not pass as a bin delivery).
+SINGLE_CUBE_BIN_OUTSIDE = SINGLE_CUBE_BIN + (
+    "XY-CONTAINMENT (box-like delivery objects vs 1 recorded bin footprint(s); 'NO' = settled outside every bin xy):\n"
+    "    Cube_1         xy-in-bin=NO\n")
+
 # A palletizer "grid" that COLLAPSED to a pile (composed CP-08, cont.150): 2 z-levels + cubes overlapping.
 GRID_PILE = """    Cube_1         closest= 104mm  -> CONVERGED + GRIPPED
     Cube_2         closest= 104mm  -> CONVERGED + GRIPPED
@@ -100,6 +112,8 @@ CASES = [
     ("grid collapsed to pile -> REJECT",GRID_PILE,      "palletize/grid", False, "PILE/STACK"),
     ("1-cube suction bin -> GOLD",      SINGLE_CUBE_BIN,       "pick-place-bin", True,  "delivery verified"),
     ("1-cube grip+floordrop -> REJECT", SINGLE_CUBE_FLOORDROP, "pick-place-bin", False, "below 0.6m"),
+    ("1-cube IN bin footprint -> GOLD", SINGLE_CUBE_BIN_INSIDE,  "pick-place-bin", True,  "delivery verified"),
+    ("1-cube beside bin -> REJECT",     SINGLE_CUBE_BIN_OUTSIDE, "pick-place-bin", False, "OUTSIDE the bin"),
 ]
 
 
