@@ -142,11 +142,14 @@ def namespace_and_offset_calls(
         # of the same template don't share subscription/state keys (2nd one stalls).
         if tool in PHASE_ID_TOOLS or "phase_id" in nk:
             nk["phase_id"] = instance_root
-        # run_usd_script's `code` is opaque to reroot_prim_path (whole-string paths only),
-        # so namespace /World/ paths EMBEDDED in the code -> a composed run_usd_script (e.g.
-        # the G1 root-weld FixedJoint targeting '/World/G1/pelvis') hits THIS instance's prims,
-        # not the un-namespaced originals (cont.319ii-6: the humanoid fell when composed).
-        if tool == "run_usd_script" and isinstance(nk.get("code"), str):
+        # A `code` kwarg is an opaque Python body run in Kit (the 3 exec tools: run_usd_script,
+        # queue_write_locked_patch, execute_with_retry) -> reroot_prim_path skips it (whole-string
+        # paths only), so namespace /World/ paths EMBEDDED in the code. Without this a composed
+        # exec-code template (e.g. the G1 root-weld FixedJoint targeting '/World/G1/pelvis') hits
+        # the un-namespaced originals and silently no-ops (cont.319ii-6: the humanoid fell when
+        # composed; ii-7 audit: generalized from run_usd_script to ALL `code` kwargs). Field name
+        # is exactly `code` only for these exec tools (RL `reward_code` / USD `time_code` differ).
+        if isinstance(nk.get("code"), str):
             nk["code"] = reroot_embedded_prim_paths(nk["code"], instance_root)
         # NOTE (2026-06-15): a per-instance planner-scope injection (arm_scope=instance_root
         # -> separate cuRobo MotionPlanner per cell) was tried + REVERTED — MEASURED to give
