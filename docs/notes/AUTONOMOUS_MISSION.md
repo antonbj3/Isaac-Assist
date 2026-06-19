@@ -7161,3 +7161,15 @@ conveyor+descend-place fully diagnosed with designs. 3 self-corrections. Every d
 biggest unlock, descend-to-place, conveyor retrofit, humanoids, forklift, large scenes, real-object composition) is
 SCOPED with a concrete design in tasks #50/#51 — each a focused effort to execute with fresh context (not rushed at
 session-end per the fatigue-trap lesson).
+
+cont.319j — COMPLEX-MESH GRASP bounded-hypothesis test (diagnostik-först) -> REFUTED, frontier confirmed deep.
+Hypothesis: the banana grasp failed on the convexHULL collider (fills the concave side). Test CP-YCB-BANANA2 =
+convexDecomposition collider -> WORSE: PhysX EXPLOSION on grip (banana ejected to z=-491m; seat dz=105mm contact
+then blow-up). So curved-object grasp fails BOTH ways (convexHull never-seats=grasp-point off the curved body;
+convexDecomposition explodes=thin-decomposed-collider PhysX instability). ROOT confirmed: the curobo grasp uses
+cube_top = bbox_center_z + 0.025 (HARDCODED cube half-height) + bbox-center xy -> for a curved/elongated body that
+point is OFF the object. FIX = grasp-SYNTHESIS (antipodal/surface-normal grasp point from the MESH, fed to the
+controller) + collider stability -> CONTROLLER work, focused session (task #50). The bounded collider swap is
+refuted. NET: ALL real-asset deep frontiers now exhaustively diagnostik-först'd (descend-place=bin-wall, complex-
+grasp=grasp-point+collider, conveyor=structured-asset) — every BOUNDED path tested+refuted, deep paths scoped with
+designs. Pivoting to a track with remaining bounded work (cube-composition false-success-vakt).
