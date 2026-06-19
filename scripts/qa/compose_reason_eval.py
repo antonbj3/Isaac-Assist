@@ -88,6 +88,15 @@ CASES = [
      "task": "A single Franka station that picks REAL meshed product items off a conveyor — actual cracker "
              "boxes, soup cans and foam bricks (scanned/meshed warehouse objects, NOT primitive cube blocks) — "
              "and drops them into a bin."},
+    # ---- NEW REAL-ASSET / ROBOT-CLASS blocks (cont.319hh): does the LLM compose the new conveyor / forklift /
+    # humanoid blocks that just entered canonical_blocks? (the strategy END GOAL extended to the new blocks) ----
+    {"id": "real-conveyor", "any_of": [{"CP-CONV-02"}, {"CP-01"}], "gt": set(),
+     "task": "A station where a Franka robot picks parts off a MOVING REAL conveyor belt (an actual Isaac "
+             "ConveyorBelt asset) as they arrive at a pick-zone, and drops them into a bin."},
+    {"id": "forklift-lift", "gt": {"CP-FORK-01"},
+     "task": "A materials-handling station where a FORKLIFT truck raises its fork (lift mast) to lift a load."},
+    {"id": "humanoid-reach", "gt": {"CP-G1-ARM-01"},
+     "task": "A station where a HUMANOID robot actuates its arm to reach out toward an object."},
 ]
 
 

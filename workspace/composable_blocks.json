@@ -1,6 +1,7 @@
 {
   "canonical_blocks": {
     "Franka:color-sort": "CP-03",
+    "Franka:conveyor-pick": "CP-CONV-02",
     "Franka:inspect/vision": "CP-18",
     "Franka:kit/assembly": "CP-50",
     "Franka:other": null,
@@ -8,6 +9,8 @@
     "Franka:pick-place-bin": "CP-01",
     "Franka:pick-place-real-object": "CP-YCB-01C",
     "Franka:stack/column": "CP-13",
+    "ForkliftB:forklift-lift": "CP-FORK-01",
+    "G1-humanoid:humanoid-arm": "CP-G1-ARM-01",
     "UR10:color-sort": null,
     "UR10:other": null,
     "UR10:palletize/grid": null,
