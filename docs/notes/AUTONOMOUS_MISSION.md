@@ -7010,3 +7010,31 @@ Franka's pick+place span (~1.7m) -> a single robot CANNOT span them -> the 2-rob
 the GENUINE handoff classifications STAND + are STRENGTHENED (move-distance proves the handoff, independent of the
 contact-attribution gap). The leaf-name contact collision is moot for handoff-CONFIRMATION (kinematic span is the
 proof); it would only matter for per-robot grip-SLIP diagnosis. Net: batch8 golds adversarially re-confirmed.
+
+
+cont.319 — ★ REAL-OBJECT MANIPULATION PROVEN (biggest capability frontier, UNBLOCKED + working). Anton asked
+"har jag väl alla assets nerladdade?" — which caught a FALSE-NEGATIVE I'd made: I'd called real-assets
+"infra-blocked" after checking only that ASSETS_ROOT_PATH env was unset, NEVER the filesystem. The full Isaac
+5.0 asset library (176GB, incl Isaac/Props/YCB = 50 graspable objects) is on disk at
+/mnt/shared_data/isaac-sim-assets-complete-5.0.0 (+ kimate_assets SimReady, modal_migration/qa_assets). Symmetric
+gate: verify STOP-claims against the actual state as hard as success-claims.
+  BUILD: CP-YCB-01 = CP-01's Franka belt pick-place, but the workpiece is a REAL YCB 061_foam_brick loaded via
+add_reference (absolute local .usd, no Nucleus) + RigidBodyAPI on the wrapping Xform + simplify_collision(convexHull)
+on the child mesh. The UNMODIFIED controller works because the grasp is bbox-driven (_bbox_center_np reads
+ComputeWorldBound, not a hardcoded 5cm cube). Grasp orientation q=[0,1,0,0] closes the jaw along world-Y, so the
+brick's 5.1cm narrow axis (native Axis_Aligned) fits the ~8cm jaw — no rotation needed.
+  RESULT (scene_eyes RAW, fresh Kit): Brick_1 belt[0.201,0.4,0.831] -> Bin[0.005,-0.388,0.786], held stable 20s,
+RIGID HOLD (2deg slip), grip forces 0.82/0.80, 0 plan_fails, upright 4.4deg = DELIVERED. CP-01 cube control (same
+fresh-Kit recipe) healthy (Cube_4 delivered, 0 plan_fails) -> brick behaves IDENTICALLY to a primitive cube.
+Adversarial check (false-success-vakt): the brick MOVED ~0.8m to the bin + finger contacts + grip forces +
+RIGID HOLD + a real collider (didn't fall through) -> genuine, not a phantom; "Brick_1|Floor" contact is benign
+(cube control shows identical Cube_4|Floor yet delivered; it's the bin-interior body, RAW final pos confirms in-bin).
+  ANTON STEER (bin/drop): bin is the SAME as CP-01 (30x30x15cm) — LARGE vs the 8x5cm brick, so forgiving not too
+small (brick landed 4mm from center, upright, on the bin floor). Release is tgt=bin_center+DROP_H with DROP_H a
+FIXED default (0.18) = NOT object-aware -> Anton's instinct is right for breadth. BUT drop_height IS a per-template
+setup_pick_place_controller arg -> object-aware drop without touching the shared controller.
+  BREADTH (running): CP-YCB-02 (tomato_soup_can stood upright via rotation_euler=[90,0,0], 6.8 dia symmetric grasp,
+TALLER -> drop_height 0.22) + CP-YCB-03 (009_gelatin_box, thin 3cm flat box -> harder thin-object grasp, drop_height
+0.18). Each on its own fresh Kit. Commit 6fb61c75 (feat/foundation-build). Files: workspace/templates/CP-YCB-0{1,2,3}.json,
+scripts/qa/run_ycb_{proof,batch}.sh. NEXT: read breadth RAW; if general -> more YCB shapes + real-object composition/chains
++ wire ASSETS_ROOT_PATH for LLM asset search. Memory: reference_isaac_assets_downloaded.md.
