@@ -7424,3 +7424,15 @@ sensor+pick / real-belt (vs floor / ~0.8 / generated). Focused step = single-var
 RE-LEARNED THE HARD WAY: instrument/measure the gate FIRST (the 5mm sensor miss was findable from eyes.json after
 v1) + run the POSITIVE CONTROL before trusting 6 negatives. STOPPED at 7 Kit runs (extreme over-investment). Belt-
 motion (CP-CONV-01) + feeder (CP-CONV-01b) remain GENUINE; pick-cell = control-anchored diagnosed partial.
+
+cont.319x — ★CP-CONV-02 BREAKER ISOLATED via a CONTROLLED single-variable diff (the RIGHT method, finally): authored
+CP-CONV-02-GEN = CP-CONV-02 v6 but the real A09 belt swapped for a GENERATED create_conveyor belt at the SAME
+belt-top (1.781), everything else identical (pedestal Franka z=1.4, high-z sensor/cube/end-stop). Result: STILL
+plan_calls=0 / never-gripped / tool 434mm. => the REAL CONVEYOR ASSET is NOT the breaker; a generated belt at high-z
+fails identically => the breaker is the PEDESTAL BASE z=1.4 / HIGH-Z (~1.8m) pick geometry, independent of the belt.
+One controlled run isolated what 6 guesses (cont.319w) could not. REDIRECTS #52: the LOWERED-CONVEYOR approach (floor
+Franka + conveyor translated so the belt is at the proven ~0.8m pick height = the proven low-z floor-base config) is
+the validated completion path; the pedestal/high-z config is the thing that breaks the sensor-gated pick (likely a
+low-z assumption in the sensor-overlap or approach-pose path despite the controller's nominal base-awareness).
+Belt-motion (CP-CONV-01) + feeder (CP-CONV-01b) stay GENUINE. STOPPING the conveyor: decisive isolation reached,
+completion is de-risked #52 (fresh context). File: CP-CONV-02-GEN.json (diagnostic artifact).

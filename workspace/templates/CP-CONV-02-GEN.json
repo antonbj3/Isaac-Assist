@@ -1,0 +1,18 @@
+{
+  "task_id": "CP-CONV-02-GEN",
+  "goal": "CONTROLLED single-variable diff of CP-CONV-02: identical pedestal-Franka + high-z sensor/cube/end-stop, but a GENERATED create_conveyor belt (top 1.781) instead of the real A09 asset. Isolates whether the real-asset belt vs the pedestal/high-z is the breaker of the pick-controller.",
+  "tools_used": [
+    "create_scene_baseline",
+    "create_conveyor",
+    "create_prim",
+    "apply_api_schema",
+    "robot_wizard",
+    "create_bin",
+    "add_proximity_sensor",
+    "setup_pick_place_controller"
+  ],
+  "thoughts": "If this generated-belt variant PICKS -> the real A09 asset belt was the breaker. If it ALSO fails (plan_calls=0) -> the pedestal base z=1.4 / high-z (~1.8m) pick+sensor is the breaker, independent of the belt asset. Either way isolates CP-CONV-02 #52 in ONE controlled run.",
+  "code": "# CP-CONV-02 v3: COMPLETE real-conveyor PICK CELL. Real A09 belt (motion + end-stop pick-zone, both proven) +\n# a PEDESTAL Franka (base z=1.4, reach_validate REACHABLE) picking the presented cube into a bin. v3 matches the\n# PROVEN CP-CHAIN-FLAT sensor-pick EXACTLY: belt_path=None (a STATIC sensor-triggered pick on the cube the belt\n# holds against the end-stop; v1/v2 set belt_path to the REAL belt -> plan_calls=0, the belt-pick code path does\n# not trigger off a raw conveyor asset) + size=0.05 + sleepThreshold=0 + rubber. The belt still carries the cube\n# (surface-velocity is independent of belt_path). cont.319w.\ncreate_scene_baseline(include_ground=True, table_size=[2.0, 1.0])\n\ncreate_conveyor(prim_path=\"/World/GenBelt\", position=[-0.5, 0.0, 1.756], size=[3.0, 0.9, 0.05], surface_velocity=[0.2, 0.0, 0.0])\ncreate_prim(prim_path=\"/World/EndStop\", prim_type=\"Cube\", position=[0.03, 0.0, 1.80], scale=[0.01, 0.1, 0.02])\napply_api_schema(prim_path=\"/World/EndStop\", schema_name=\"PhysicsCollisionAPI\")\n\ncreate_prim(prim_path=\"/World/Pedestal\", prim_type=\"Cube\", position=[0.0, -0.7, 0.7], scale=[0.25, 0.25, 0.7])\napply_api_schema(prim_path=\"/World/Pedestal\", schema_name=\"PhysicsCollisionAPI\")\n\nrobot_wizard(robot_name=\"Franka\", dest_path=\"/World/Franka\", position=[0.0, -0.7, 1.4], orientation=[0.7071, 0.0, 0.0, 0.7071])\n\n# Cube at the pick-zone (the belt holds it against the end-stop = effectively static). Proven cube setup.\ncreate_prim(prim_path=\"/World/Cube_1\", prim_type=\"Cube\", position=[-0.05, 0.0, 1.806], size=0.05)\nfor api in (\"PhysicsRigidBodyAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n    apply_api_schema(prim_path=\"/World/Cube_1\", schema_name=api)\napply_api_schema(prim_path=\"/World/Cube_1\", schema_name=\"PhysicsCollisionAPI\")\nbulk_set_attribute(prim_paths=[\"/World/Cube_1\"], attr=\"physxRigidBody:sleepThreshold\", value=0.0)\napply_physics_material(prim_path=\"/World/Cube_1\", material_name=\"rubber\")\n\ncreate_bin(prim_path=\"/World/Bin\", position=[0.0, -1.25, 1.45], size=[0.3, 0.3, 0.12])\n\nadd_proximity_sensor(sensor_path=\"/World/PickSensor\", position=[-0.005, 0.0, 1.83], size=[0.10, 0.10, 0.08])\n\nsetup_pick_place_controller(\n    robot_path=\"/World/Franka\",\n    target_source=\"curobo\",\n    sensor_path=\"/World/PickSensor\",\n    belt_path=None,\n    source_paths=[\"/World/Cube_1\"],\n    destination_path=\"/World/Bin\",\n    planning_obstacles=[\"/World/EndStop\", \"/World/Pedestal\", \"/World/Bin\"],\n)\n",
+  "intent": "controlled_diff_real_vs_generated_belt",
+  "verified_status": "DIAGNOSTIC (controlled diff, cont.319x): generated belt at high-z ALSO fails -> breaker = pedestal/high-z, NOT the real belt"
+}
