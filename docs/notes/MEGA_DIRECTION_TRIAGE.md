@@ -12,10 +12,10 @@ depth so the focused Kit sessions go in value/risk order (NOT effort — per Ant
 
 ## Triaged — next builds (value/risk order)
 
-### 1. Conveyors — DE-RISKED, build-ready (MODERATE)
+### 1. Conveyors — BELT-MOTION PROVEN (CP-CONV-01, cont.319u); pick-cell = CP-CONV-02
 31 `ConveyorBelt_A*.usd`. Belt rides at **1.781 m** (vs generated ~0.8 m) → floor-Franka can't reach → pedestal.
 No built-in node → retrofit surface velocity on `/World/Belt`. Full plan + `conveyor_recipe`:
-**docs/notes/CONVEYOR_INTEGRATION.md** (CP-CONV-01: A09 straight belt + pedestal Franka).
+**docs/notes/CONVEYOR_INTEGRATION.md**. ✅ CP-CONV-01 GENUINE: real A09 belt + 3-API surface-velocity retrofit on /World/Belt carries cubes +2.5m along the belt (RAW-verified, 0.2 m/s, end-first arrival). NEXT = CP-CONV-02: end-stop/pick-zone at the belt end + pedestal Franka (~1.13m base) to pick off the moving belt.
 
 ### 2. Forklift — MODERATE, clear path (REUSES nav)
 `Isaac/Robots/IsaacSim/ForkliftB/forklift_b.usd`: 8 rigidbody links, **6 revolute (wheels+steering) + 1

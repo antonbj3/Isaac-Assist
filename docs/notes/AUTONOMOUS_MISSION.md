@@ -7370,3 +7370,15 @@ focused session. LARGER SCENES: warehouse_with_forklifts.usd + Modular_Warehouse
 (scene actors) → composition/decoration (spawn env backdrop + place cells). ORDER: CP-CONV-01 → CP-FORK-01 →
 warehouse-scene → humanoid/GROOT, each a fresh-context Kit session (don't stack deep builds when fatigued).
 docs/notes/MEGA_DIRECTION_TRIAGE.md = durable plan (task #51).
+
+cont.319u — ★CP-CONV-01 GENUINE: real-conveyor belt-MOTION proven on real Isaac assets. Authored CP-CONV-01 (real
+ConveyorBelt_A09 via add_reference + the 3-API surface-velocity retrofit — Collision + KINEMATIC RigidBody +
+PhysxSurfaceVelocityAPI[vel,enabled,localSpace] from robot.py:1880 — onto /World/Conveyor/Belt; 3 cubes on the
+belt, NO robot to isolate the belt mechanism). scene_eyes 40s RAW: all 3 cubes start in contact with Belt and
+RIDE +x from x=-2.0/-2.4/-2.8 -> +0.29/+0.17/+0.27 (=+2.3..3.1m @ 0.2 m/s over ~10-13s); STAGGERED belt-end
+arrival (closest @9.8s, furthest @13.6s) = belt-carry signature (a collision-fail would drop them at START x, not
+the belt END). Adversarially checked: uniform +2.5m at exactly the set velocity + end-first timing = belt-carry,
+not slide/roll/noise. Cubes then fall off the UNGUARDED end (z1.78->0.78, the 3.4 m/s + Cube_1 topple = that fall,
+<8 m/s not ejection). ★kinematicEnabled=True was the key (the #1 'belt configured but cubes just sit' fix). scene_eyes
+handled robot=None gracefully. NEXT CP-CONV-02 = end-stop/pick-zone + pedestal Franka (~1.13m base) to pick off the
+1.781m belt. Files: workspace/templates/CP-CONV-01.json, MEGA_DIRECTION_TRIAGE.md.
