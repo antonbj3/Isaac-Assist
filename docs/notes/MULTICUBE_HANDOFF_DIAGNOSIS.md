@@ -32,6 +32,19 @@ The hypothesis below ("proven receivers are single-pick") is **REFUTED** by the 
 So NULÄGE's "relays 1/N" is OUTDATED: the relay infra is N-capable AND multi-pick receivers work
 for N=3. The open frontier is the **4th cube in a palletize sequence drops off-pallet** (3/4).
 
+### ⚠️ N=4 palletize is STOCHASTIC, not a 4/4 gold (cont.319hh, CHAIN_TRAJ tool)
+A 2nd CP-08(4)->PALLETIZE-RECV run (with the new env-gated CHAIN_TRAJ trajectory capture) delivered
+**4/4 + 4/4** — vs the 1st run's 3/4. Same template, same harness, DIFFERENT outcome => the 4-cube
+palletize handoff is **STOCHASTIC** (deterministic chains give identical poses, as CP-12->STACK did
+twice). The trajectory shows Cube_4 picked + placed this time (t=3000 lifted z=0.91 -> t=4000 grid
+cell [-0.06,-1.24,0.79]); last time it grip-slipped mid-carry. So a single 4/4 run would be a
+STALE-LUCKY FALSE GOLD. **Honest verdict: multi-cube handoff is deterministically reliable for N=3
+(CP-12->STACK 3/3+3/3 identical 2x); N=4-palletize is stochastic (3/4 ~ 4/4, the 4th pick
+occasionally grip-slips) -- same class as CP-10's stochastic palletize.** Recorded STOCHASTIC, NOT a
+4/4 gold (no partial/lucky-run-as-pass). The 4th-pick reliability is a deep controller/grip-robustness
+issue (the stochastic-palletize class), deferred. Diagnostic tool: run with `CHAIN_TRAJ=1` -> per-chunk
+poses dumped to /tmp/chain_traj.json (default-off, zero regression on normal runs).
+
 ### Original hypothesis (kept for the record — partly wrong)
 Earlier I read chain_xkit_gate and guessed the proven receivers were single-pick (CP-CHAIN-FLAT,
 CP-CHAIN-UR10-SRC are). That was true for those two but missed the STACK/PALLETIZE multi-pick

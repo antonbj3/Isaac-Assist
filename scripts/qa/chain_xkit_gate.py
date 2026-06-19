@@ -111,18 +111,33 @@ async def _play_and_measure(kt, target, cubes, total=6000, chunk=1000, reacquire
     # (CP-08's 4 cubes used ~1500 updates each; a 6/9-cube chain would be cut off mid-delivery). max() keeps the
     # 6000 floor; only GROWS the window, and the controller idles after S["done"] -> benign for working chains.
     total = max(total, 1700 * len(cubes), int(_os.environ.get('CHAIN_TOTAL') or 0))
+    # cont.319hh: optional per-chunk pose trajectory for diagnosing WHICH cube drops WHEN (e.g. the 4th
+    # palletize pick). ENV-GATED + default-off (CHAIN_TRAJ unset) so normal chain runs are byte-identical
+    # (no extra RPCs, no behaviour change) -> zero regression on the proven gate. Only a diagnostic run
+    # (CHAIN_TRAJ=1) pays the per-chunk MEASURE cost and gets res["traj"] = [{t, poses}, ...].
+    _cap = bool(_os.environ.get("CHAIN_TRAJ"))
+    _mcode = MEASURE.replace("__TARGET__", repr(target)).replace("__CUBES__", repr(cubes)).replace("__PLAY__", "False")
+    traj = []
     done = 0
     while done < total:
         n = min(chunk, total - done)
         await kt.exec_sync(PLAY_CHUNK.replace("__N__", str(n)), timeout=200)
         done += n
-    code = MEASURE.replace("__TARGET__", repr(target)).replace("__CUBES__", repr(cubes)).replace("__PLAY__", "False")
-    out = (await kt.exec_sync(code, timeout=120)).get("output", "").strip()
+        if _cap:
+            _o = (await kt.exec_sync(_mcode, timeout=120)).get("output", "").strip()
+            _l = [l for l in _o.splitlines() if l.startswith("MEASURE")]
+            if _l:
+                try: traj.append({"t": done, "poses": json.loads(_l[-1][8:]).get("poses", {})})
+                except Exception: pass
+    out = (await kt.exec_sync(_mcode, timeout=120)).get("output", "").strip()
     lines = [l for l in out.splitlines() if l.startswith("MEASURE")]
     if not lines:
         return {"target": target, "delivered": 0, "total": len(cubes), "poses": {},
                 "measure_error": out[-400:]}
-    return json.loads(lines[-1][8:])
+    res = json.loads(lines[-1][8:])
+    if _cap:
+        res["traj"] = traj
+    return res
 
 
 async def run_stage0(name):
@@ -276,6 +291,9 @@ async def main():
     print("CHAIN_XKIT SUMMARY: %d stage(s), %s — %s" % (
         len(results), " + ".join("%d/%d" % (r.get("delivered", 0), r.get("total", 1)) for r in results),
         "ALL DELIVERED (faithful cross-Kit relay)" if all_ok else "INCOMPLETE"))
+    if _os.environ.get("CHAIN_TRAJ"):                         # cont.319hh diagnostic dump
+        json.dump(results, open("/tmp/chain_traj.json", "w"), indent=1)
+        print("CHAIN_TRAJ dumped -> /tmp/chain_traj.json")
 
 if __name__ == "__main__":
     asyncio.run(main())
