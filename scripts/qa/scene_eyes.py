@@ -62,7 +62,11 @@ else:
 # EYES_FOCUS (observe inst0 then inst1 of the LLM's OWN composed scene); a bare --attach with no
 # EYES_FOCUS stays FOCUS="" (auto-detect) -> byte-identical to v1 and to every non-attach run.
 if COMPOSE:
-    FOCUS = "/World/" + os.environ.get("EYES_FOCUS", "inst1")
+    # cont.319hh footgun fix: default to inst1 (the 2nd cell that degrades) only for a MULTI-instance
+    # compose; a SINGLE-instance compose has only inst0, so defaulting to inst1 silently tracks NOTHING
+    # (cubes={} -> a false "delivery failed" artifact, which mis-graded a CP-CONV-02 compose probe).
+    _default_focus = "inst1" if len(COMPOSE_SPECS) >= 2 else "inst0"
+    FOCUS = "/World/" + os.environ.get("EYES_FOCUS", _default_focus)
 elif os.environ.get("EYES_FOCUS"):
     # cont.314 (verktygen-är-levande): allow per-robot focus on a SINGLE-template MULTI-ROBOT scene
     # (e.g. EYES_FOCUS=Franka2 for CP-02's 2nd station, EYES_FOCUS=Franka1 for a CP-07 cell) — not just
