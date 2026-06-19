@@ -156,7 +156,7 @@ async def _run(model, only=None, retries=0):
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("--model", default="gemini-robotics-er-1.6-preview")
+    ap.add_argument("--model", default="gemini-2.5-flash")  # cont.319hh: robotics-er-1.6-preview + 2.0-flash quotas EXHAUSTED; gemini-2.5-flash has its own working quota (15/15 verified). Pass --model gemini-robotics-er-1.6-preview when its quota resets.
     ap.add_argument("--only", default=None, help="run only cases whose id startswith this (e.g. 'struct-')")
     ap.add_argument("--retries", type=int, default=0, help="retry a MISSED case up to N times; any pass -> FLAKY-PASS (filters LLM nondeterminism, e.g. op-discrim ~1/4 flaky-miss)")
     a = ap.parse_args()
