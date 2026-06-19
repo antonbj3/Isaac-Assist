@@ -243,11 +243,16 @@ def precondition_check(templates, layout="parallel"):
     for i, t in enumerate(templates or []):
         code = (t or {}).get("code") or ""
         tid = (t or {}).get("task_id")
+        # cont.319cc audit #7: role-based CPs BUILD the scene from code_template (not code), so a run_usd_script +
+        # /World/ namespacing-escape baked ONLY in code_template bypassed this SAFETY gate (it read 'code' alone).
+        # Check BOTH fields. A code_template with {{placeholder}} paths (re-rooted, safe) has no literal /World/, so
+        # this only catches REAL baked-absolute escapes -> no false refuse.
+        _esc_src = code + "\n" + ((t or {}).get("code_template") or "")
         mc = ((t or {}).get("motion_controllers") or {}).get("verified") or []
         # (a) NAMESPACING-ESCAPE: run_usd_script bakes absolute /World/ paths inside a body string
         # that namespace_and_offset_calls (which only re-roots captured kwargs) cannot reach ->
         # template A's /World/Cube_1 clobbers template B's. (CP-07/08/22 class.)
-        if "run_usd_script" in code and _WORLD in code:
+        if "run_usd_script" in _esc_src and _WORLD in _esc_src:
             issues.append({"severity": "refuse", "kind": "namespacing_escape", "template": tid,
                            "detail": "run_usd_script bakes absolute %s paths -> not re-rooted -> prim collision across instances" % _WORLD})
         # (b) EXCLUSIVE cuRobo planner: the plan/move locks are process-global (per-instance scope
