@@ -11,6 +11,7 @@
     "Franka:stack/column": "CP-13",
     "ForkliftB:forklift-lift": "CP-FORK-01",
     "G1-humanoid:humanoid-arm": "CP-G1-ARM-01",
+    "G1-humanoid:humanoid-stand-reach": "CP-G1-STAND-01",
     "UR10:color-sort": null,
     "UR10:other": null,
     "UR10:palletize/grid": null,

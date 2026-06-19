@@ -95,8 +95,11 @@ CASES = [
              "ConveyorBelt asset) as they arrive at a pick-zone, and drops them into a bin."},
     {"id": "forklift-lift", "gt": {"CP-FORK-01"},
      "task": "A materials-handling station where a FORKLIFT truck raises its fork (lift mast) to lift a load."},
-    {"id": "humanoid-reach", "gt": {"CP-G1-ARM-01"},
+    {"id": "humanoid-reach", "any_of": [{"CP-G1-ARM-01"}, {"CP-G1-STAND-01"}], "gt": set(),
      "task": "A station where a HUMANOID robot actuates its arm to reach out toward an object."},
+    {"id": "humanoid-stand", "gt": {"CP-G1-STAND-01"},
+     "task": "A station where a HUMANOID robot STANDS UPRIGHT under gravity (fixed base) and reaches its arm "
+             "toward an object on a table in front of it."},
 ]
 
 
