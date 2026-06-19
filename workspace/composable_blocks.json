@@ -380,7 +380,7 @@
       "robot": "Franka",
       "class": "pick-place-bin",
       "verdict": "FALSE(scene_eyes 0/4: rotary disc 30deg/s friction-drives cubes during pick -> THRASH(Cube_1)+GRIP-SLIP(Cube_2/3/4 contact-never-lifted)+3 toppled; moving-target defeats grip; belt-pause may not pause a rotary disc; cont.318e)",
-      "basis": "delivery-gate (honest for bin/sort)",
+      "basis": "scene_eyes RAW @ dur=300 (cont.319jj-16, replaces the thin 'delivery-gate 0/4' basis): the robot DOES engage -- all 4 cubes PICKED (plan_calls=32, plan_fails=0) + 3 saw finger contact. But 0/4 reach the Bin (at x=0): the picked cubes end clustered at x~0.5 z~0.88 (the rotary-table / pick-zone region, NOT the Bin). PRECISE cause: picking off a ROTATING turntable (30deg/s) gives a marginal/off-center grip on a MOVING cube -> it slips out of the jaw during transit to the Bin -> lands back near the table. Genuinely hard (moving-target pick), NOT 'robot never engages'. A fix needs a stop-detent / index-stop at the pick zone (changes the continuous-rotary demo) or moving-target grasp control. Stays FALSE but precisely diagnosed.",
       "n_objects": 4
     },
     "CP-57": {
