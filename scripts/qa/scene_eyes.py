@@ -1232,7 +1232,7 @@ async def main():
         if os.environ.get("MULTIOBS") == "0":
             await kit_tools.exec_sync("import builtins\nbuiltins._ur10_multicube_obs=False\n", timeout=10)
             print("FLAG_SET _ur10_multicube_obs=False")
-        for _ev,_bn in (("IKSEEDS","_ur10_ik_seeds"),("TRAJSEEDS","_ur10_trajopt_seeds"),("GRIPZOFF","_sg_nvidia_grip_z_off"),("CUPBELOW","_sg_nvidia_cup_below_ee"),("ORITOL","_ur10_ori_tol"),("ZOFF","_reach_probe_z_off"),("CHAINSEED","_ur10_chained_drop_seed"),("CSPACE","_ur10_plan_cspace"),("DROPPIN","_ur10_drop_branch_pin"),("JOINTSPACE","_ur10_jointspace_transit"),("JSIGN","_ur10_jointspace_sign"),("POSONLY","_ur10_transit_posonly")):
+        for _ev,_bn in (("IKSEEDS","_ur10_ik_seeds"),("TRAJSEEDS","_ur10_trajopt_seeds"),("GRIPZOFF","_sg_nvidia_grip_z_off"),("CUPBELOW","_sg_nvidia_cup_below_ee"),("ORITOL","_ur10_ori_tol"),("ZOFF","_reach_probe_z_off"),("CHAINSEED","_ur10_chained_drop_seed"),("CSPACE","_ur10_plan_cspace"),("DROPPIN","_ur10_drop_branch_pin"),("JOINTSPACE","_ur10_jointspace_transit"),("JSIGN","_ur10_jointspace_sign"),("POSONLY","_ur10_transit_posonly"),("JAWDROPTIP","_jaw_drop_tip_release")):
             _vv=os.environ.get(_ev)
             if _vv:
                 await kit_tools.exec_sync("import builtins\nbuiltins.%s=%s\n" % (_bn,_vv), timeout=10)

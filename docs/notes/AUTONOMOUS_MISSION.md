@@ -7242,3 +7242,15 @@ deep frontier: ONE controller fix (jaw floor-aware release, lower the object int
 would fix real-object UPRIGHT placement + cube topple-partials CP-20/26/31 + brick-INTO-container placement. The
 real-asset WORKFLOW (real object -> real container) WORKS for delivery-to-location; precise containerization of a
 larger object is descend-place-gated (task #50). Files: workspace/templates/CP-YCB-KLT.json.
+
+cont.319p — DESCEND-TO-PLACE partially CRACKED via a gated jaw release-lever (the keepalive pushed me past
+over-conservatism — there WAS a bounded lever). Added _jaw_drop_tip_release (pick_place.py:6641, default = _drop_tip
+=> byte-identical; scene_eyes JAWDROPTIP env hook). It LOWERS the cuRobo S5 release GOAL while KEEPING the cuRobo
+descend's XY convergence (the reverted _ur10_telescope_descend's mistake was a straight-down telescope that bypassed
+XY -> cubes dropped short; this does NOT). MEASURED (fresh Kit): CP-01 cube DELIVERS at JAWDROPTIP=0.08 AND 0.04 (no
+XY-short, controller f-string edit clean). CP-YCB-02 tall can: topple 158deg(default) -> 94deg(0.08/0.04) — a real
+reduction but PLATEAUS (a 10cm high-CG narrow can tips once released regardless of height); 0.04 starts hitting
+plan_fails (the bin-wall). So the lever helps the FALL but a tall UNSTABLE object needs true place-to-floor-CONTACT
+(descend until base contacts, then release) — the deeper fix. The lever SHOULD solve STABLE-object cases (brick on a
+deep-tote rim, cube topple-partials CP-20/26 — they don't tip, just need a lower release) — testing next. NET: a real
+gated tool (default byte-identical), partial descend-place. Files: pick_place.py, scene_eyes.py.

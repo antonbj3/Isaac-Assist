@@ -6638,7 +6638,7 @@ def _build_segments(cube_pos, drop_pos, current_q):
     # grip ~0.05), so descend the flange to drop_z+0.16 (=~0.91, just above the bin top 0.80) -> cube at ~0.78
     # just above the bin floor -> tiny fall on release (no overshoot/bounce). The bin is excluded from cuRobo
     # collision for S5 (below) so the planner can descend over it. Transit/mid stay high (_drop_tip=0.45).
-    _drop_tip_release = (float(getattr(__import__("builtins"), "_sg_drop_tip_release", 0.16)) if _SG_IS_SUCTION else _drop_tip)  # 2026-06-09 GATED z-raise lever: default 0.16 = byte-identical; raise (e.g. 0.19) to lift the S5 descend goal ~3cm where a down-IK EXISTS for low-bin close picks (CP-75 bin 3cm below CP-69) -> clean down descend, release the small gap.
+    _drop_tip_release = (float(getattr(__import__("builtins"), "_sg_drop_tip_release", 0.16)) if _SG_IS_SUCTION else float(getattr(__import__("builtins"), "_jaw_drop_tip_release", _drop_tip)))  # 2026-06-09 suction z-raise lever; 2026-06-19 JAW lever _jaw_drop_tip_release (default _drop_tip => byte-identical) -> descend-place sweep: LOWER it to release the jaw closer to the surface; the cuRobo S5 descend still converges XY to drop_xy (unlike the reverted straight-down telescope).
     # SUCTION soft-place target (anti-topple): the S5 planner goal stays SAFE at drop_z+0.16 (cuRobo-reachable, no
     # bin-wall plan-fail), but the step-loop tool-extend telescopes the cup+cube down to ~3cm above the bin FLOOR
     # before releasing. drop_pos[2] is bin_top+0.05 (an ON-TOP ref) so the cube would otherwise release ~18cm high
