@@ -23,7 +23,7 @@
     "CP-02": {
       "robot": "Franka",
       "class": "kit/assembly",
-      "verdict": "TRUSTED(position-honest)",
+      "verdict": "GENUINE(scene_eyes assembly-line handoff: Cube_1 delivered to Bin[1.0,0.4], moved 3.38m through stations; cont.318k)",
       "basis": "delivery-gate (honest for bin/sort)",
       "n_objects": 1
     },
@@ -324,7 +324,7 @@
     "CP-51": {
       "robot": "Franka",
       "class": "pick-place-bin",
-      "verdict": "TRUSTED(position-honest)",
+      "verdict": "GENUINE(scene_eyes robot-to-robot handoff: Cube_1 -> Bin[0.7,-0.5], moved 2.73m = handoff A->B->dest completed; cont.318k)",
       "basis": "delivery-gate (honest for bin/sort)",
       "n_objects": 1
     },
@@ -338,7 +338,7 @@
     "CP-53": {
       "robot": "Franka",
       "class": "pick-place-bin",
-      "verdict": "TRUSTED(position-honest)",
+      "verdict": "GENUINE(scene_eyes producer/consumer 3/3 -> OutBin[0.6,-0.6], moved 1.95-2.48m; cont.318k)",
       "basis": "delivery-gate (honest for bin/sort)",
       "n_objects": 3
     },
@@ -380,7 +380,7 @@
     "CP-65": {
       "robot": "Franka",
       "class": "kit/assembly",
-      "verdict": "TRUSTED(position-honest)",
+      "verdict": "GENUINE(scene_eyes kit-tray relay 4/4 -> OutBin[0.6,-0.5], moved 1.64-2.45m; toppled-in-bin = collection (suppressed by bin-aware fix); cont.318k)",
       "basis": "delivery-gate (honest for bin/sort)",
       "n_objects": 4
     },
@@ -394,7 +394,7 @@
     "CP-68": {
       "robot": "Franka",
       "class": "other",
-      "verdict": "TRUSTED(position-honest)",
+      "verdict": "GENUINE(scene_eyes handoff+dynamic-obstacle: Cube_1 -> Bin[0.7,-0.5], moved 2.76m; cont.318k)",
       "basis": "delivery-gate (honest for bin/sort)",
       "n_objects": 1
     },
@@ -506,9 +506,9 @@
   },
   "summary": {
     "trusted": 58,
-    "_trusted_note": "the 58 'trusted' = 51 GENUINE (execution-verified by scene_eyes) + 7 position-honest-ONLY (the remaining ~5 are handoff multi-robot blocks needing per-instance tooling). Compose-trust the 51 genuine; the 7 still need an execution check before a GOLD claim.",
-    "genuine_execution_verified": 51,
-    "position_honest_only": 7,
+    "_trusted_note": "the 58 'trusted' = 56 GENUINE (execution-verified by scene_eyes incl. parallel AND handoff multi-robot via the scene-wide delivery-check) + 2 position-honest-ONLY remaining. The breadth campaign drove 28/30 position-honest blocks; compose-trust the 56 genuine.",
+    "genuine_execution_verified": 56,
+    "position_honest_only": 2,
     "false": 3,
     "partial": 9,
     "pending": 0,

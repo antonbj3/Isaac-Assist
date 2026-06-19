@@ -6938,3 +6938,15 @@ accessible via cube-delivery + structure RAW — no per-robot grip-slip tooling 
 for DEEP per-instance diagnosis). genuine 49->51, position_honest 9->7, trusted 58, total 70. Remaining ph=7 =
 handoff multi-robot 5 (CP-02/51/53/65/68 — likely ALSO delivery-check-classifiable, the cube reaches its final
 destination through the handoff regardless of which robot gripped) + 2. BREADTH CAMPAIGN genuine 31->51 (+20).
+
+cont.318k — breadth batch8 (HANDOFF multi-robot, ALL GENUINE via the delivery-check — ★ verify-before-dismissing:
+the handoff blocks I'd deferred as "deep 3-gap per-instance tooling" are classifiable via scene-wide cube
+DELIVERY): CP-02 (assembly-line) Cube_1->Bin moved 3.38m; CP-51 (robot-to-robot handoff) ->Bin moved 2.73m;
+CP-53 (producer/consumer) 3/3->OutBin; CP-65 (kit-tray relay) 4/4->OutBin (toppled-in-bin SUPPRESSED by the
+now-working bin-aware fix — the fix generalizes); CP-68 (handoff+obstacle) ->Bin moved 2.76m. The big moves
+(1.6-3.4m) confirm the cubes traversed source->A->handoff->B->dest. genuine 51->56, ph 7->2, trusted 58.
+★★ BREADTH CAMPAIGN genuine 31->56 (+25): 28/30 position-honest driven (25 GENUINE + CP-44 PARTIAL + CP-56/
+UR10-palletizer FALSE). KEY META-FINDING: the multi-robot 3-gap per-instance tooling was NOT needed for
+CLASSIFICATION — the cube-DELIVERY RAW (scene-wide final positions + structure) is the bar; per-robot grip-slip
+attribution is only for DEEP per-instance DIAGNOSIS. "Multi-robot is deep" was true only for the latter.
+Remaining 2 ph = CP-35 (industrial 10-cube sort, noted stochastic-blue) + CP-NEW-vacuum-pick (niche suction).
