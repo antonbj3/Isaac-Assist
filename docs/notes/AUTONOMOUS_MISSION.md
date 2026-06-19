@@ -7436,3 +7436,14 @@ the validated completion path; the pedestal/high-z config is the thing that brea
 low-z assumption in the sensor-overlap or approach-pose path despite the controller's nominal base-awareness).
 Belt-motion (CP-CONV-01) + feeder (CP-CONV-01b) stay GENUINE. STOPPING the conveyor: decisive isolation reached,
 completion is de-risked #52 (fresh context). File: CP-CONV-02-GEN.json (diagnostic artifact).
+
+cont.319x-b — conveyor pick-cell: reach-vs-sensor tension RESOLVED to a single #52 path (Kit-free belt survey). All
+31 ConveyorBelt_A* belts are >=0.9m wide (narrowest 0.9m; then 1.94/2.45/3.96m). A floor Franka (reach ~0.85m) CANNOT
+reach the centre of ANY belt from beside it (0.45m half-width + footprint clearance => >0.85m), and even a near-edge
+pick is marginal (~0.86m, at the limit). So the 'narrow-belt / floor-Franka low-z' resolution is OUT -> a PEDESTAL
+(reach from above) is REQUIRED for every real conveyor -> #52's path = ROOT-CAUSE & FIX the high-z sensor break (the
+pedestal reaches fine per reach_validate; the sensor-gated pick doesn't trigger at z~1.8 -- cont.319x isolated this
+as the breaker, independent of the belt asset). Focused #52: live-instrument isaac_sensor:triggered + the controller
+pick-phase state at z~1.8 vs the working z~0.85 baseline (CP-YCB-01C). Conveyor investigation analytically COMPLETE:
+belt-motion + feeder GENUINE; pick-cell breaker isolated + all geometric resolutions assessed -> one clear focused
+path. (Also: a few variants are elevated/inclined at ride-z 2.55/4.09/6.4m -- even higher.)
