@@ -3,12 +3,14 @@
     "Franka:color-sort": "CP-03",
     "Franka:barcode-sort": "CP-NEW-barcode-scanner-divert",
     "Franka:material-sort": "CP-NEW-nir-material-divert",
+    "Franka:size-weight-sort": "CP-NEW-sorter-size-weight",
     "Franka:conveyor-pick": "CP-CONV-02",
     "Franka:inspect/vision": "CP-18",
     "Franka:kit/assembly": "CP-50",
     "Franka:other": null,
     "Franka:palletize/grid": "CP-08",
     "Franka:pick-place-bin": "CP-01",
+    "Franka:precision-pick": "CP-PRECISION-3CUBE",
     "Franka:pick-place-real-object": "CP-YCB-01C",
     "Franka:stack/column": "CP-13",
     "ForkliftB:forklift-lift": "CP-FORK-01",
@@ -41,6 +43,20 @@
       "verdict": "GENUINE(round-object COLLECTION: YCB tomato_soup_can clean cylinder line-contact grasp RIGID HOLD + CONVERGED + delivered xy-in-bin; toppled-in-bin on landing = collection-acceptable NOT a reject; upright precision needs descend-to-place, deferred). DISTINCT round/cylinder grasp vs the box grasps of CP-YCB-01/03.",
       "basis": "scene_eyes RAW cont.319kk N-of-2 @ dur=40 (both RIGID HOLD rot-slip 4deg + in-bin; re-verify of cont.319 DELIVERED-COLLECTION).",
       "n_objects": 1
+    },
+    "CP-PRECISION-3CUBE": {
+      "robot": "Franka",
+      "class": "precision-pick",
+      "verdict": "GENUINE(neighbor-non-disturbance precision pick: picks the MIDDLE of 3 tight-packed cubes + delivers Cube_M into a ~6.5cm tight bin (xy-in-bin), N-of-2 fresh-Kit robust; BOTH neighbors Cube_L/R undisturbed (stay at spawn z=0.775, upright) across both runs. Cube_M leans ~27-29deg against the tight-bin wall = under-threshold settling, consistent, RIGID HOLD grip rot-slip 1-2deg. DISTINCT neighbor-safe precision op, no canonical match).",
+      "basis": "scene_eyes RAW cont.319ll N-of-2 fresh-Kit (run1 Cube_M [0.267,-0.337,0.821] tilt28.9 + run2 [0.265,-0.338,0.821] tilt27.1, both xy-in-bin + Cube_L/R undisturbed identical); earlier FROZEN-0/3 was a stale-Kit false-negative (no restart-between-runs), refuted by fresh-Kit re-run + CP-01 control.",
+      "n_objects": 3
+    },
+    "CP-NEW-sorter-size-weight": {
+      "robot": "Franka",
+      "class": "physical-property-sort",
+      "verdict": "GENUINE(physical size+weight sort -> 2 bins; the DISTINCT physical-property routing modality vs all catalogued sorters which route on SEMANTIC color/SKU/material. Fresh-Kit belt-fed dur=360: 9/9 cubes CORRECTLY CLASSIFIED (0 misrouted) -- all 6 light (size0.05/mass0.2) -> LightBin x+0.35, all 3 heavy (size0.06/mass0.5) -> HeavyBin x-0.35; 8/9 settled xy-in-bin (Cube_2 light overshot the bin y-edge to -0.685 = a delivery-precision scatter, NOT a mis-route). plan_fails=0, arm 1.955 m/s).",
+      "basis": "scene_eyes RAW cont.319ll fresh-Kit dur=360 (per-cube final pos vs Heavy/Light bin_bboxes + template workpiece labels Cube_1-6=light/Cube_7-9=heavy; routing rule large-OR-heavy->HeavyBin). Earlier 0/9-frozen was a stale-Kit false-negative (ran after flip without restart-between), refuted by fresh-Kit re-run + CP-01 control.",
+      "n_objects": 9
     },
     "CP-NEW-conveyor-recirculation-overflow": {
       "robot": "Franka",
@@ -625,13 +641,13 @@
     }
   },
   "summary": {
-    "trusted": 76,
+    "trusted": 78,
     "_trusted_note": "trusted = 57 cube-GENUINE + 1 real-object-GENUINE (CP-YCB-01C) + 1 real-conveyor-GENUINE (CP-CONV-02) + 1 forklift-GENUINE (CP-FORK-01) + 3 humanoid-GENUINE (CP-G1-ARM-01 arm-actuation zero-G, CP-G1-STAND-01 STANDING arm-actuation under gravity via root-weld FixedJoint, CP-G1-STAND-02 BIMANUAL standing reach, cont.319ii-5). cont.319cc: CP-10 downgraded GENUINE->PARTIAL by the adversarial audit (stochastic n=9 grid, saved RAW 8/9 off-pallet). META-RISK RESOLVED (cont.319dd): re-verified ALL 12 structure-class GENUINE blocks (palletize/grid + stack/column) vs their saved eyes.json -> 11 RAW-CONFIRM their verdict; CP-10 was the ONLY stale-lucky false GENUINE. Not systemic.",
-    "genuine_execution_verified": 76,
+    "genuine_execution_verified": 78,
     "position_honest_only": 0,
     "false": 3,
     "partial": 7,
     "pending": 0,
-    "total": 86
+    "total": 88
   }
 }
