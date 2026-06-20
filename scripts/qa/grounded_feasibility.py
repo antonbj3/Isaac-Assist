@@ -118,6 +118,37 @@ def check_reach_feasibility(robot: str, target_xyz, base_xyz=(0.0, 0.0, DEFAULT_
     return {"feasible": True, "confidence": 0.9, "reason": f"{dist:.2f}m within {robot}'s {reach}m reach"}
 
 
+# ── FLOW expressibility: can the catalog express the requested routing? (grounded vs "unclear") ──
+SORTABLE_PROPERTY = {"colour": "color-sort", "color": "color-sort", "barcode": "barcode-sort", "sku": "barcode-sort",
+                     "material": "material-sort", "metal": "material-sort", "plastic": "material-sort",
+                     "weight": "size-weight-sort", "mass": "size-weight-sort", "size": "size-weight-sort",
+                     "heavy": "size-weight-sort", "destination": None, "shipping": None, "city": None}
+STATION_WORDS = ("station", "palletiz", "inspect", "press", "pack", "assembl", "weld", "machine")
+
+
+def check_flow_expressibility(condition: str) -> dict:
+    """Grounded check: can the catalog express a conditional routing? Maps the routing PROPERTY to a sorter, and
+    distinguishes route-to-BINS (sorters do this) from route-to-distinct-STATIONS (a branching Y-split chain, which
+    the LINEAR source->receiver chains do NOT provide)."""
+    c = (condition or "").lower()
+    prop = next((p for p in SORTABLE_PROPERTY if p in c), None)
+    to_stations = any(w in c for w in STATION_WORDS)
+    if prop is None:
+        return {"feasible": False, "confidence": 0.8,
+                "reason": f"no catalog sorter for the routing property in '{condition}' "
+                          f"(catalog sorts by colour/barcode/material/size-weight only)"}
+    sorter = SORTABLE_PROPERTY[prop]
+    if sorter is None:
+        return {"feasible": False, "confidence": 0.8,
+                "reason": f"'{prop}' is not a physically-sensable attribute in-sim (e.g. shipping destination is data, not a sensor reading)"}
+    if to_stations:
+        return {"feasible": None, "confidence": 0.7,
+                "reason": f"property '{prop}' IS sortable ({sorter}), BUT it routes to BINS; routing to DISTINCT "
+                          f"downstream STATIONS is a BRANCHING Y-split — the proven chains are LINEAR (source->receiver), "
+                          f"so a branching-chain block would be needed", "partial": sorter}
+    return {"feasible": True, "confidence": 0.85, "reason": f"'{prop}' routing -> {sorter} (sorts into bins)"}
+
+
 # ── COHESIVE special-order reasoner: ground EVERY constraint of a parsed order ───────────────
 ROBOT_PAYLOAD = {"franka": 3.0, "panda": 3.0, "ur3": 3.0, "ur5": 5.0, "ur10": 10.0, "ur10e": 12.5, "g1": 2.0}
 
@@ -141,10 +172,7 @@ def diagnose_special_order(spec: dict) -> dict:
                          "reason": f"{obj.mass_kg}kg exceeds {robot}'s {pay}kg payload"})
     for step in spec.get("flow", []):
         if step.get("conditional"):
-            findings.append({"check": "flow-expressibility", "feasible": None, "confidence": 0.7,
-                             "reason": f"conditional routing '{step.get('condition')}' to DISTINCT stations — the "
-                                       f"catalog's sorters route by colour/barcode/material to BINS, not an arbitrary "
-                                       f"property to separate downstream STATIONS; verify a conditional Y-split block exists"})
+            findings.append({"check": "flow-expressibility", **check_flow_expressibility(step.get("condition", ""))})
     tp = spec.get("throughput_per_min")
     if tp and tp > 60:
         findings.append({"check": "throughput", "feasible": False, "confidence": 0.7,
