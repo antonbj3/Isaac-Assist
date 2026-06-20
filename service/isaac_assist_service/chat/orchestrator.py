@@ -1804,7 +1804,7 @@ class ChatOrchestrator:
                         parsed = {}
                         if isinstance(out, str) and out.strip().startswith("{"):
                             try: parsed = json.loads(out)
-                            except: pass
+                            except Exception: pass  # cont.319ddd: was bare except: (swallowed-errors hygiene) — best-effort claim-verify skip on non-JSON output
                         actual = parsed.get("count")
                         # Shallow mismatch — if the recursive count matches,
                         # the nesting is off rather than the total wrong; tell
@@ -1819,7 +1819,7 @@ class ChatOrchestrator:
                                 rec_parsed = {}
                                 if isinstance(rec_out, str) and rec_out.strip().startswith("{"):
                                     try: rec_parsed = json.loads(rec_out)
-                                    except: pass
+                                    except Exception: pass  # cont.319ddd: was bare except: (swallowed-errors hygiene)
                                 rec_actual = rec_parsed.get("count")
                             except Exception:
                                 pass
@@ -1852,7 +1852,7 @@ class ChatOrchestrator:
                         parsed = {}
                         if isinstance(out, str) and out.strip().startswith("{"):
                             try: parsed = json.loads(out)
-                            except: pass
+                            except Exception: pass  # cont.319ddd: was bare except: (swallowed-errors hygiene) — best-effort claim-verify skip on non-JSON output
                         tr = parsed.get("translation") or parsed.get("world_translation") or parsed.get("position")
                         if isinstance(tr, (list, tuple)) and len(tr) >= 3:
                             actual = (round(float(tr[0]), 3),
@@ -1880,7 +1880,7 @@ class ChatOrchestrator:
                         parsed = {}
                         if isinstance(out, str) and out.strip().startswith("{"):
                             try: parsed = json.loads(out)
-                            except: pass
+                            except Exception: pass  # cont.319ddd: was bare except: (swallowed-errors hygiene) — best-effort claim-verify skip on non-JSON output
                         applied = parsed.get("applied_schemas") or parsed.get("schemas") or []
                         if applied and not any(schema in s for s in applied):
                             verify_warnings.append(
@@ -1906,7 +1906,7 @@ class ChatOrchestrator:
                         parsed = {}
                         if isinstance(out, str) and out.strip().startswith("{"):
                             try: parsed = json.loads(out)
-                            except: pass
+                            except Exception: pass  # cont.319ddd: was bare except: (swallowed-errors hygiene) — best-effort claim-verify skip on non-JSON output
                         actual = parsed.get("value")
                         if actual is None or parsed.get("error"):
                             continue  # attr missing — separate class, don't over-flag
