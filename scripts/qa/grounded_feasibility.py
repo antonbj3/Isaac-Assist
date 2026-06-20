@@ -118,6 +118,61 @@ def check_reach_feasibility(robot: str, target_xyz, base_xyz=(0.0, 0.0, DEFAULT_
     return {"feasible": True, "confidence": 0.9, "reason": f"{dist:.2f}m within {robot}'s {reach}m reach"}
 
 
+# ── COHESIVE special-order reasoner: ground EVERY constraint of a parsed order ───────────────
+ROBOT_PAYLOAD = {"franka": 3.0, "panda": 3.0, "ur3": 3.0, "ur5": 5.0, "ur10": 10.0, "ur10e": 12.5, "g1": 2.0}
+
+
+def diagnose_special_order(spec: dict) -> dict:
+    """Ground EVERY constraint of a parsed special-order. spec keys: robot, gripper, object (Obj),
+    targets [xyz...], flow [{conditional, condition}...], throughput_per_min. Returns a grounded report
+    (what's feasible, what's blocked + why + suggestion, what the catalog can't express). The agent should
+    run this on a captured special-order BEFORE composing — grounded, not asserted."""
+    findings = []
+    obj = spec.get("object")
+    robot = spec.get("robot", "")
+    if spec.get("gripper") and obj is not None:
+        findings.append({"check": "gripper-object", **check_gripper_object_feasibility(spec["gripper"], obj)})
+    for t in spec.get("targets", []):
+        findings.append({"check": "reach", "target": tuple(round(c, 2) for c in t),
+                         **check_reach_feasibility(robot, t)})
+    pay = ROBOT_PAYLOAD.get(robot.lower())
+    if pay is not None and obj is not None and obj.mass_kg > pay:
+        findings.append({"check": "payload", "feasible": False, "confidence": 0.9,
+                         "reason": f"{obj.mass_kg}kg exceeds {robot}'s {pay}kg payload"})
+    for step in spec.get("flow", []):
+        if step.get("conditional"):
+            findings.append({"check": "flow-expressibility", "feasible": None, "confidence": 0.7,
+                             "reason": f"conditional routing '{step.get('condition')}' to DISTINCT stations — the "
+                                       f"catalog's sorters route by colour/barcode/material to BINS, not an arbitrary "
+                                       f"property to separate downstream STATIONS; verify a conditional Y-split block exists"})
+    tp = spec.get("throughput_per_min")
+    if tp and tp > 60:
+        findings.append({"check": "throughput", "feasible": False, "confidence": 0.7,
+                         "reason": f"{tp}/min exceeds a single-arm cell's realistic rate"})
+    blockers = [f for f in findings if f.get("feasible") is False]
+    unclear = [f for f in findings if f.get("feasible") is None]
+    return {"feasible": (not blockers and not unclear), "blockers": blockers, "unclear": unclear, "findings": findings}
+
+
+def _demo_special_order():
+    # Anton's exact adversarial special-order, parsed into a spec:
+    spec = {
+        "robot": "franka", "gripper": "vacuum_suction",
+        "object": Obj("stainless-steel", "cylinder", "smooth-wet", 2.0, 0.08),
+        "targets": [(0.5, -0.3, 0.95)],
+        "flow": [{"conditional": True, "condition": "mass>1.5kg -> palletizer, else inspection"}],
+    }
+    print("\n=== diagnose_special_order on Anton's slippery-cylinder + Y-split order ===")
+    rep = diagnose_special_order(spec)
+    print(f"  overall feasible={rep['feasible']}")
+    for f in rep["findings"]:
+        print(f"   - [{f['check']:18}] feasible={str(f.get('feasible')):5} :: {f['reason']}"
+              + (f"  -> {f.get('suggested_gripper')}" if f.get('suggested_gripper') and not f.get('feasible') else ""))
+    print("  => GROUNDED verdict: NOT blindly buildable — suction won't hold the wet cylinder (use magnetic),")
+    print("     and the weight-conditional Y-split needs a catalog block the sorters don't provide. The agent")
+    print("     now KNOWS this from grounded checks, instead of picking CP-01/08/18 and asserting success.")
+
+
 def _selftest():
     cases = [
         # (gripper, obj, expected_feasible, label)
@@ -171,4 +226,6 @@ def _selftest():
 
 if __name__ == "__main__":
     import sys
-    sys.exit(_selftest())
+    rc = _selftest()
+    _demo_special_order()
+    sys.exit(rc)
