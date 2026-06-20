@@ -56,3 +56,32 @@ the fix), **ASK** (capture the missing variables). A "yes" to an impossible orde
 
 Each gap, when worked: build/promote → scene_eyes RAW verify (never delivered-count alone) → commit. The order is
 value: cheapest composable-breadth gains first, then the genuine "falls short" frontiers.
+
+## Branching-chain BUILD plan (frontier #4 — the genuine "falls short")
+
+Verified picture (greppa-före-bygg): conditional routing to 2 DESTINATIONS already exists in ONE cell —
+`CP-NEW-sorter-size-weight` routes light→LightBin(x+0.35) / heavy→HeavyBin(x-0.35) by size/weight (9/9, 0 misroute).
+The gap is only when the 2 destinations are DOWNSTREAM STATIONS (each a further-processing cell), not bins — because
+all 15 proven_chains are LINEAR source→receiver. CP-19's "split" is STATIC (pre-assigned cube→pos), not the model.
+
+**Architecture (1 source → 2 conditional handoff trays → 2 receivers):**
+1. **Branching-SOURCE** = `CP-NEW-sorter-size-weight` adapted surgically: replace the 2 BINS with 2 HANDOFF TRAYS
+   (TrayHeavy @ x-0.35, TrayLight @ x+0.35, flat handoff_z≈0.825 like CP-CONV-02-SRC's HandoffTray). The sort logic
+   (size/weight→which tray) is unchanged — it already routes correctly. New template: `CP-BRANCH-SRC-SW`.
+2. **Receiver A (heavy)** = an existing palletizer receiver picking from TrayHeavy (reuse CP-CHAIN-FLAT-style flat
+   pick + a palletize drop, or CP-08 grid).
+3. **Receiver B (light)** = an existing inspect/bin receiver picking from TrayLight.
+4. **Harness** = extend `chain_xkit_gate.py` from 1-relay to 2-relay: run the source once, then relay
+   {TrayHeavy delivered_paths → Receiver-A-Kit} AND {TrayLight delivered_paths → Receiver-B-Kit} as TWO independent
+   cross-Kit handoffs (each fresh Kit). Custody = complete iff BOTH branches deliver their routed subset. Reuse the
+   delivered_paths fix (relay only ACTUALLY-delivered poses; abort honestly at a 0-delivery branch).
+
+**Build-burst steps (fresh cc):** (a) draft CP-BRANCH-SRC-SW (surgical from CP-NEW-sorter-size-weight, bins→trays);
+(b) scene_eyes-verify the SOURCE routes the heavy subset to TrayHeavy + light to TrayLight (per-item xy, false-success-
+vakt on the sort like CP-82); (c) extend chain_xkit_gate to 2-relay; (d) run the full branching chain across 3 Kits,
+verify BOTH branches deliver their correct subset. Cost-cap each Kit (per-item SIGALRM); UR10 not involved (Franka
+source+receivers) so no PhysX-corruption hazard.
+
+**Why this is the highest-composition-value frontier:** it's a NEW CHAIN TOPOLOGY (branching), the runtime multiplier
+the linear chains can't express — directly unlocks the whole class of "route by property to distinct downstream
+processing" special-orders (battery #4, #8).
