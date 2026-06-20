@@ -131,8 +131,10 @@ for d in INSTS:
     tb = bbox(d["target"]) if d["target"] else None
     ct = d.get("cube_targets") or dict()
     n = 0
+    _zs = []   # cont.319zz: cube z's to detect a STACK that COLLAPSED into a pile (#40 at composition level)
     for c in d["cubes"]:
         cp = cpos(c)
+        if cp: _zs.append(cp[2])
         accs = ct.get(c) or ([d["target"]] if d.get("target") else [])
         tbs = [bbox(t) for t in accs]; tbs = [t for t in tbs if t]   # each cube vs ITS correct bin(s)
         hit = bool(cp and any(t[0][0]-0.05<=cp[0]<=t[1][0]+0.05 and t[0][1]-0.05<=cp[1]<=t[1][1]+0.05 and cp[2]>t[0][2]-0.05 for t in tbs))
@@ -149,8 +151,9 @@ for d in INSTS:
                     d["root"], c.split("/")[-1], cp[0], cp[1], cp[2], dx, dy, dz_below))
             else:
                 print("COMPOSE_MISS inst=%s cube=%s NO_POS/NO_TARGET" % (d["root"], c.split("/")[-1]))
-    print("COMPOSE_GATE inst=%s tpl=%s delivered=%d/%d target=%s tbbox=%s" % (
-        d["root"], d["name"], n, len(d["cubes"]), d["target"],
+    _zspread = round(max(_zs) - min(_zs), 3) if len(_zs) >= 2 else 0.0
+    print("COMPOSE_GATE inst=%s tpl=%s delivered=%d/%d zspread=%.3f target=%s tbbox=%s" % (
+        d["root"], d["name"], n, len(d["cubes"]), _zspread, d["target"],
         ("[%.2f,%.2f,%.2f]-[%.2f,%.2f,%.2f]" % (tb[0][0],tb[0][1],tb[0][2],tb[1][0],tb[1][1],tb[1][2])) if tb else "None"))
 '''
     rr = await kit_tools.exec_sync(chk, timeout=int(6000 * max(1, len(insts)) / 8) + 90)
@@ -173,9 +176,35 @@ for d in INSTS:
         return any(w in _meta for w in ("humanoid", "actuat", "forklift-lift", "stand-reach", "arm-reach", "bimanual"))
     _deliv_lines = [l for l in lines if not _is_actuation_template(l.split("tpl=")[1].split()[0] if "tpl=" in l else "")]
     _actu = len(lines) - len(_deliv_lines)
-    npass = sum(1 for l in _deliv_lines if (lambda d, t: d > 0 and d == t)(*map(int, l.split("delivered=")[1].split()[0].split("/"))))
+    import re as _re3
+    def _intended_zspread(nm):
+        try:
+            _t = json.load(open(f"{REPO}/workspace/templates/{nm}.json"))
+        except Exception:
+            return 0.0
+        _code = (_t.get("code") or "") + (_t.get("code_template") or "")
+        _blk = _re3.search(r"drop_targets\s*=\s*\{([^}]*)\}", _code)
+        if not _blk:
+            return 0.0
+        _zs = [float(z) for z in _re3.findall(r"\[\s*-?[\d.]+\s*,\s*-?[\d.]+\s*,\s*(-?[\d.]+)\s*\]", _blk.group(1))]
+        return (max(_zs) - min(_zs)) if len(_zs) >= 2 else 0.0
+    # cont.319zz (structural twin, ported): a stack that delivered all cubes to the bbox but COLLAPSED (actual zspread
+    # << its INTENDED drop_targets column height) is NOT a real pass. Robust drop_targets-geometry signal -> grids
+    # (intended_zspread ~0) are never flagged.
+    _npass = _ncollapse = 0
+    for l in _deliv_lines:
+        _tpl = l.split("tpl=")[1].split()[0] if "tpl=" in l else ""
+        _d, _t = map(int, l.split("delivered=")[1].split()[0].split("/"))
+        _zsp = float(l.split("zspread=")[1].split()[0]) if "zspread=" in l else 0.0
+        _izs = _intended_zspread(_tpl)
+        if _izs > 0.04 and _t >= 2 and _d == _t and _zsp < 0.5 * _izs:
+            _ncollapse += 1
+        elif _d > 0 and _d == _t:
+            _npass += 1
+    npass = _npass
     print(f"COMPOSE_GATE SUMMARY: {npass}/{len(_deliv_lines)} delivery-instances fully delivered"
-          + (f" ({_actu} actuation block(s) excluded — not delivery-verifiable)" if _actu else ""))
+          + (f" ({_actu} actuation block(s) excluded)" if _actu else "")
+          + (f" — {_ncollapse} COLLAPSED stack(s) failed structurally" if _ncollapse else ""))
 
 
 async def main():
