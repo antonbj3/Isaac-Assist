@@ -34,7 +34,14 @@ def delivers_z(st):
 
 
 def delivers_surface(st):
-    return st.get("delivers_surface", st.get("handoff_surface", ""))
+    # cont.319kk robustness: prefer a STRING delivers_surface, else fall back to handoff_surface,
+    # else "". A non-string value (e.g. the legacy `delivers_surface: true` typo on CP-CONV-02-SRC)
+    # must NOT crash the validator on .lower() — fall through to handoff_surface so a malformed entry
+    # still validates against its real surface (and a genuinely-bad one is FLAGGED, not a stack-trace).
+    v = st.get("delivers_surface")
+    if not isinstance(v, str):
+        v = st.get("handoff_surface", "")
+    return v if isinstance(v, str) else ""
 
 
 def main():
