@@ -101,12 +101,17 @@ async def _solve_ik(robot_path: str, pose: List[float], seed: int,
     return {"success": False, "error": "no_json_in_solve_ik_output"}
 
 
-async def _check_singularity(robot_path: str, joint_positions: Optional[List[float]]) -> Optional[float]:
-    """Return manipulability index, or None on failure."""
-    args: Dict[str, Any] = {"robot_path": robot_path}
-    if joint_positions is not None:
-        args["joint_positions"] = joint_positions
-    res = await _execute_tool_call("check_singularity", args)
+async def _check_singularity(robot_path: str, target_position: Optional[List[float]]) -> Optional[float]:
+    """Return manipulability index, or None on failure. check_singularity requires
+    {articulation_path, target_position} (it solves IK internally and reports the
+    manipulability at that config); the previous {robot_path, joint_positions}
+    signature VALIDATION-failed -> always None (manipulability silently skipped)."""
+    if target_position is None:
+        return None
+    res = await _execute_tool_call("check_singularity", {
+        "articulation_path": robot_path,
+        "target_position": list(target_position),
+    })
     out = (res.get("output") or "").strip()
     import json
     for line in out.splitlines()[::-1]:
@@ -313,9 +318,8 @@ async def _handle_diagnose_scene_feasibility(args: Dict[str, Any]) -> Dict[str, 
             ))
             continue  # skip downstream metrics if no IK
 
-        # Manipulability at IK solution
-        joint_q = ik.get("joint_positions") or ik.get("q") or None
-        manip = await _check_singularity(robot_path, joint_q)
+        # Manipulability at the target (check_singularity solves IK internally)
+        manip = await _check_singularity(robot_path, pose)
         manip_v, manip_sev = metrics.metric_manipulability(manip=manip)
         if manip_v is not None:
             metrics_out[f"{label}_manipulability"] = manip_v

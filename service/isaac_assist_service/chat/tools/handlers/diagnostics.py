@@ -847,6 +847,7 @@ else:
         'status': status,
         'condition_number': round(float(condition), 2),
         'singular_values': [round(float(s), 4) for s in sigma],
+        'manipulability': round(float(np.prod(sigma)), 6),
         'warnings': warnings,
         'joint_config': [round(float(v), 4) for v in q],
     }}
