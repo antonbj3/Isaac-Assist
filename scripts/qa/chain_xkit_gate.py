@@ -239,6 +239,12 @@ async def run_stage_k(k, name, handoff):
                        # cont.319r-b: place at the DELIVERED z (not the cube's 0.78 clamp) so a non-cube object
                        # rests on the handoff without a fall -> no settle-drift out of the receiver's sensor zone.
                        f"x=UsdGeom.Xformable(p); x.ClearXformOpOrder(); x.AddTranslateOp().Set(Gf.Vec3d({X[0]},{X[1]},{X[2]}))\n"
+                       # cont.319kk-h: a relay-side CollisionAPI-on-Xform + sleepThreshold=0 fix (mirroring the
+                       # WORKING standalone CP-YCB-01) was TESTED here and REFUTED — still 0/1, selector stays in
+                       # wait_sensor + never claims the relayed referenced object. So the kk-c gap is NOT a
+                       # missing-collider/sleep on the relay object; it's deeper (the selector's claim of a
+                       # DefinePrim+AddReference Xform at a relay path, vs the add_reference HELPER's setup, OR the
+                       # deep selector). Deferred (kk-c) stands. Relay reverted to the proven cube-faithful form.
                        "for _api in (UsdPhysics.RigidBodyAPI, UsdPhysics.MassAPI):\n    _api.Apply(p)\nPhysxSchema.PhysxRigidBodyAPI.Apply(p)\n"
                        f"_mp=stage.GetPrimAtPath('{cp}/{_RELAY_MESH}')\nif _mp.IsValid():\n    UsdPhysics.CollisionAPI.Apply(_mp)\n    UsdPhysics.MeshCollisionAPI.Apply(_mp).GetApproximationAttr().Set('convexHull')\n"
                        f"_rel=p.CreateRelationship('physics:materialBinding', custom=False); _rel.SetTargets([Sdf.Path('/World/PhysicsMaterials/rubber_natural')])\n")
