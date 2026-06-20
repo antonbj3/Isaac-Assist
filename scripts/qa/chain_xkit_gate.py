@@ -110,7 +110,16 @@ async def _play_and_measure(kt, target, cubes, total=6000, chunk=1000, reacquire
     # cont.277: scale the measurement window with N — a fixed 6000 FALSE-NEGATIVES large multi-cube chains
     # (CP-08's 4 cubes used ~1500 updates each; a 6/9-cube chain would be cut off mid-delivery). max() keeps the
     # 6000 floor; only GROWS the window, and the controller idles after S["done"] -> benign for working chains.
-    total = max(total, 1700 * len(cubes), int(_os.environ.get('CHAIN_TOTAL') or 0))
+    # cont.319kk: 1700/cube was calibrated on CP-08 BINNING (fast). STRUCTURED receivers (CP-CHAIN-STACK-RECV
+    # column, CP-CHAIN-PALLETIZE-RECV distinct-slot grid) plan ~2x slower per cube (careful ascending-z / slot
+    # placement), so 1700*3=5100 (floored to 6000) WINDOW-CUTS them: chain_recv_probe N-of-M showed default-window
+    # 3-cube STACK delivers 2/3 when cuRobo planning runs slow (ctrl:phase=executing at freeze, 16 plan_calls) but
+    # a clean 3/3 column when it finishes (24 plan_calls, phase=wait_sensor) — the SAME stochastic boundary the
+    # proven chains side-stepped by manually setting CHAIN_TOTAL~12000 (see chain_stages.json PALLETIZE-RECV note).
+    # Raising the per-cube budget to 3200 makes those structured chains robust BY DEFAULT (3-cube=9600, 4-cube=12800
+    # ~ the documented 12000 need) so a chain author need not remember the manual knob. 1-cube chains stay at the
+    # 6000 floor (3200<6000) -> BYTE-IDENTICAL for every proven single-cube relay; only GROWS multi-cube windows.
+    total = max(total, 3200 * len(cubes), int(_os.environ.get('CHAIN_TOTAL') or 0))
     # cont.319hh: optional per-chunk pose trajectory for diagnosing WHICH cube drops WHEN (e.g. the 4th
     # palletize pick). ENV-GATED + default-off (CHAIN_TRAJ unset) so normal chain runs are byte-identical
     # (no extra RPCs, no behaviour change) -> zero regression on the proven gate. Only a diagnostic run
