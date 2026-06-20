@@ -19,6 +19,13 @@
     "UR10:pick-place-bin": "CP-73"
   },
   "all": {
+    "CP-NEW-barcode-scanner-divert": {
+      "robot": "Franka",
+      "class": "sort-divert",
+      "verdict": "GENUINE(barcode/SKU sortation to 3 LANES: scene_eyes RAW @ dur=320, 6/6 items CONVERGED+GRIPPED + routed to their SKU-assigned lane (sku_a->LaneA x-0.35, sku_b->LaneB x0, sku_c->LaneC x+0.35; 2 items/lane, each within 0.01m of its lane x, upright, z>0.78). DISTINCT divert-to-lanes operation vs the color-sort-to-bins of CP-16/17.)",
+      "basis": "scene_eyes RAW cont.319kk-i @ dur=320 — per-item routing verified vs the code's exact semantic SKU labels (round-robin a/b/c). NOTE my initial 1/6 was a FALSE-NEGATIVE from a wrong static Item->SKU parse; the exact code tuple-list -> 6/6 (diagnostik-forst on my own parse).",
+      "n_objects": 6
+    },
     "CP-YCB-02": {
       "robot": "Franka",
       "class": "pick-place-real-object",
@@ -609,13 +616,13 @@
     }
   },
   "summary": {
-    "trusted": 74,
+    "trusted": 75,
     "_trusted_note": "trusted = 57 cube-GENUINE + 1 real-object-GENUINE (CP-YCB-01C) + 1 real-conveyor-GENUINE (CP-CONV-02) + 1 forklift-GENUINE (CP-FORK-01) + 3 humanoid-GENUINE (CP-G1-ARM-01 arm-actuation zero-G, CP-G1-STAND-01 STANDING arm-actuation under gravity via root-weld FixedJoint, CP-G1-STAND-02 BIMANUAL standing reach, cont.319ii-5). cont.319cc: CP-10 downgraded GENUINE->PARTIAL by the adversarial audit (stochastic n=9 grid, saved RAW 8/9 off-pallet). META-RISK RESOLVED (cont.319dd): re-verified ALL 12 structure-class GENUINE blocks (palletize/grid + stack/column) vs their saved eyes.json -> 11 RAW-CONFIRM their verdict; CP-10 was the ONLY stale-lucky false GENUINE. Not systemic.",
-    "genuine_execution_verified": 74,
+    "genuine_execution_verified": 75,
     "position_honest_only": 0,
     "false": 3,
     "partial": 7,
     "pending": 0,
-    "total": 84
+    "total": 85
   }
 }
