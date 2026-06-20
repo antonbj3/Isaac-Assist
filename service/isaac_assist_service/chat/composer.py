@@ -38,6 +38,11 @@ POSITION_KWARGS = frozenset({
     # anchors -> the prim spawned at the UN-offset origin across instances. 'center' (create_heap_zone /
     # zone spawns), 'target_xy' (2-vec, the len in (2,3) check at :80 handles it), 'camera_position'.
     "center", "target_xy", "camera_position",
+    # cont.319yy audit FIX #3: insertion handler waypoints — start_pose/target_pose are [x,y,z] (insertion.py:324-334,
+    # validated len==3) that build the seat trajectory; without offset they stayed at origin under composition ->
+    # the insertion aimed ~10-13m from the offset hole. ~8 templates use them (bottle-cap-tighten, narrow-clearance-
+    # insertion, label-applicator-pose, ...). The :303 detector (endswith 'position') was structurally blind to *_pose.
+    "start_pose", "target_pose",
 })
 
 # Filesystem-path kwargs that look path-like but must NEVER be re-rooted. (Belt-and-
@@ -297,10 +302,12 @@ def precondition_check(templates, layout="parallel"):
         if ("curobo" in mc) or ("_gen_pick_place_curobo" in code) or ("setup_pick_place_controller" in code):
             curobo_idxs.append(tid or i)
         # (c) POSITION-LIKE kwarg outside POSITION_KWARGS -> namespaced but NOT offset -> placed at
-        # absolute world coords (silently fused). Best-effort: a *position*-suffixed kwarg not covered.
+        # absolute world coords (silently fused). Best-effort: a *position*- or *pose*-suffixed kwarg not covered.
+        # cont.319yy audit FIX #3: was endswith("position") only -> structurally BLIND to *_pose (start_pose/
+        # target_pose), which is how the insertion mis-offset slipped past a clean precondition pass. Now also *pose.
         for m in _re.finditer(r"(\w+)\s*=\s*\[\s*-?\d", code):
             k = m.group(1)
-            if k.endswith("position") and k not in POSITION_KWARGS:
+            if (k.endswith("position") or k.endswith("pose")) and k not in POSITION_KWARGS:
                 issues.append({"severity": "warn", "kind": "uncovered_position_kwarg", "template": tid,
                                "detail": "kwarg '%s' looks positional but is not in POSITION_KWARGS -> may not be offset (verify)" % k})
                 break
