@@ -76,7 +76,7 @@
   "Same UR10 surface-gripper limitation as CP-69 \u2014 function-gate deferred.",
   "Verifier looks for surfaceVelocity > 0 \u2014 already provided."
  ],
- "verified_status": "DRAFT-UNVERIFIED",
+ "verified_status": "REFUTED-2026-06-20: UR10 same-xy column does NOT form (N=4, 2 Kit runs: 0.30m-spread+2-topple vs 1.55m-scatter, non-deterministic; never the ~0.05m tight column). Re-confirms cont.319kk-g (UR10 baseline placement-precision ~0.1m blocks ANY structured multi-cube). Picks 4/4 OK = positive control. NOT canonical; controller-deep, deferred.",
  "diagnose_args": {
   "robot_path": "/World/UR10",
   "sensor_path": "/World/PickSensor",
