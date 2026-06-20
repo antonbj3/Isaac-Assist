@@ -65,5 +65,18 @@ zero-shot-onboarding, force-control.
   complete_custody flag. DEMO: CONV-02-SRC-3 -> CP-CHAIN-FLAT = 3 parts, 3 COMPLETE custody across 2 stations. A
   dropped part -> stations_logged < n_stations = a DETECTED handoff loss (the gap-detection the demand requires).
   Commit: see chain_xkit_gate.py cont.319mm.
-- Next builds: compliance-schema EXPORT of the custody record (IATF/21-CFR fields: timestamp, robot_id, outcome,
-  integrity-hash) [12x demand]; weight-stratified mixed-SKU pallet [9x]; then the deeper handoff-gating [#1].
+- **COMPLIANCE-EXPORT — BUILT + DEMONSTRATED (scripts/qa/custody_compliance_export.py):** promotes the custody
+  record to a compliance-grade, tamper-evident export (IATF-16949 / AS9100 / 21-CFR-Part-11 compatible): per-step
+  robot_id (from chain_stages), outcome (PASS/FAIL), position, + a forward SHA-256 HASH-CHAIN where each record
+  folds in the prior -> editing any earlier record breaks every later hash = tamper-evident; the final
+  chain_integrity_hash SEALS the export. DEMO: 3 parts, 0 gaps, TAMPER_CHECK re-derives -> SEALED. Timestamps
+  honestly flagged capture_pending (NOT fabricated; chain_xkit_gate run-time capture is the follow-up).
+- ROUND-1 NET: 2 capabilities BUILT (per-part traceability + tamper-evident compliance-export) addressing the
+  12x-demand traceability/compliance cluster; #1 handoff-gating gotcha GROUNDED (confirmed).
+- Next round: weight-stratified mixed-SKU pallet [9x]; physical-state handoff GATING build [#1, deeper];
+  Gemini-windowed NL-composition + infeasibility-honesty; ground+document deep gaps (deformable/fault-recovery).
+
+### 48h ENGINE rhythm (self-sustaining via keepalive)
+generate (black-box workflow, sparing on cc) -> ground top demands in Kit -> BUILD tractable + Kit-verify +
+commit per capability + ledger -> re-test -> escalate to the next prober round. cc weekly hard-stop 94%
+(currently ~15%); pace the big workflows (~4% each). Each round leaves committed value (survives keepalive wakes).
