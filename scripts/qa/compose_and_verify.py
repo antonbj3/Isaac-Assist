@@ -12,7 +12,7 @@ workspace/training_data/verified_compositions.jsonl. Run it as compositions grow
 Usage: compose_and_verify.py CP-01 CP-01 [--task "..."]   (parallel layout; cells = the args)
 Needs ONE local Kit on :8001 (restart-before-run by the caller wrapper).
 """
-import asyncio, json, os, sys, time
+import asyncio, json, os, re, sys, time
 
 REPO = "/home/anton/projects/Omniverse_Nemotron_Ext"
 sys.path.insert(0, REPO)
@@ -58,12 +58,24 @@ async def main():
             for k, v in (src or {}).items():
                 if isinstance(v, str) and v.startswith("/"):
                     routing[str(k).lower()] = v
+        # cont.319kk-q: ATTR-ROUTED tuple-list class map (Item_N -> "sku_a"/"metal" from the canonical
+        # ("/World/Item_N", x, "class", ...) rows). A sorter whose cubes are NOT named Cube_<color> (barcode
+        # SKU / NIR material) has its class in the tuple-list, NOT the leaf name -> the color-key-in-leaf test
+        # below missed + fell back to the single target_path -> a multi-dest divert read 2/6 in composition
+        # (the kk-p compose-gate false-NEGATIVE; standalone routing_validate has the same _parse_item_class fix).
+        _code = (t.get("code") or "") + "\n" + (t.get("code_template") or "")
+        item_class = {m.group(1): m.group(2).lower() for m in
+                      re.finditer(r'\(["\'](/World/(?:Item|Cube)_\d+)["\']\s*,\s*[-0-9.]+\s*,\s*["\']([^"\']+)["\']', _code)}
         cube_targets = {}
         for c in cubes:
             if not c:
                 continue
             leaf = c.rsplit("/", 1)[-1].lower()
-            acc = [b for key, b in routing.items() if key in leaf]   # color key appears in cube leaf
+            _cls = item_class.get(c)
+            if _cls and _cls in routing:
+                acc = [routing[_cls]]                                  # attr-routed: tuple-list class -> bin
+            else:
+                acc = [b for key, b in routing.items() if key in leaf]   # color key appears in cube leaf
             if not acc:
                 acc = [target] if target else sorted(set(routing.values()))
             cube_targets[reroot_prim_path(c, f"inst{i}")] = [reroot_prim_path(b, f"inst{i}") for b in acc]
