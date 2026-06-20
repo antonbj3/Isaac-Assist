@@ -162,3 +162,23 @@ feeding back into the genuine compose multiplier (Kit-grounded), which is the ho
 generate (black-box workflow, sparing on cc) -> ground top demands in Kit -> BUILD tractable + Kit-verify +
 commit per capability + ledger -> re-test -> escalate to the next prober round. cc weekly hard-stop 94%
 (currently ~15%); pace the big workflows (~4% each). Each round leaves committed value (survives keepalive wakes).
+
+### cont.319nn — the catch CLOSED THE LOOP: chain_xkit_gate verdict is now END-TO-END custody, not per-stage
+The traceability-catch above proved the chain gate's per-stage "ALL DELIVERED" LIES on an N-mismatch. So I fixed the
+gate to NOT lie: custody is now computed BEFORE the verdict, and `all_ok` additionally requires `e2e_ok` (every part
+that ENTERED the chain completed EVERY station). The SUMMARY says "ALL DELIVERED end-to-end" only when no part was
+lost; a `CHAIN_END_TO_END: WARNING only M/N parts completed the FULL chain — K LOST at a handoff (custody gap...)`
+line fires otherwise. Logic verified against held data (N-mismatch _ncomp=1<3 -> INCOMPLETE; N-matched 1==1 -> ALL
+DELIVERED), so no Kit re-run needed to confirm the branch. This is the adversarial-sim's value compounding: a Round-1
+BUILD (custody) found a real loss, which motivated a Round-? gate-honesty FIX so the chain gate can never silently
+false-pass a part-losing chain again. (gates-lie / per-object-RAW, now at the chain level, BAKED INTO the gate.)
+
+### cont.319nn — NL-pick re-validation, finally un-blocked (Gemini recovered from the sustained overload)
+The full compose_reason_eval ran clean (15/21, gemini-2.5-flash, ZERO overload verdicts — the overload-retry is no
+longer masking anything). 6 MISSes, of which 4 are `picks=[]` (Gemini picked NOTHING): sortdiv-barcode, sortdiv-
+material, real-conveyor, humanoid-stand. KEY diagnostic tell: `humanoid-reach` PICKED CP-G1-STAND-01 while
+`humanoid-stand` (which wants exactly CP-G1-STAND-01, near-verbatim _DESC match) picked NOTHING — the SAME block, two
+outcomes. That is the signature of Gemini NON-DETERMINISM, not a description/catalog gap (all 4 gt-blocks ARE in the
+catalog with good _DESC). Running `--retries 3` (the living-tool flaky-filter, built for exactly this — "op-discrim
+~1/4 flaky-miss") to classify: variance-MISS -> FLAKY-PASS, genuine gap -> stays MISS. Diagnostik-först before any
+"enrich descriptions" build — don't fix a phantom. [result pending the retry run]
