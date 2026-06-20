@@ -2918,7 +2918,7 @@ def _gen_solve_ik(args: Dict) -> str:
         f"        'solve_ik: all paths failed. Tried: ' + ' | '.join(_ik_errors)",
         "    )",
         f"print(f'IK solved via {{_ik_via}} — {ee_frame} → joints={{_ik_solution}}')",
-        "print(json.dumps({'method': _ik_via, 'joint_positions': _ik_solution, 'errors': _ik_errors}))",
+        "print(json.dumps({'success': _ik_solution is not None, 'method': _ik_via, 'joint_positions': _ik_solution, 'errors': _ik_errors}))",
     ])
     return "\n".join(lines)
 

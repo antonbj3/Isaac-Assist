@@ -125,13 +125,22 @@ async def _check_singularity(robot_path: str, joint_positions: Optional[List[flo
 async def _check_path_clearance(robot_path: str,
                                  start_q: List[float],
                                  end_q: List[float],
-                                 n_samples: int = 20) -> Tuple[int, int]:
-    """Return (clear_count, total). Falls back to (0, total) on error."""
+                                 n_samples: int = 20,
+                                 obstacles: Optional[List[str]] = None) -> Tuple[int, int]:
+    """Return (clear_count, total). Falls back to (0, total) on error.
+
+    check_path_clearance now requires {articulation_path, trajectory (list of joint-angle
+    waypoints), obstacles}. The previous call passed the stale signature
+    (robot_path + start/end_joint_positions) -> the tool VALIDATION-failed, this fell back
+    to (0, n) = a phantom "0% clear" corridor block that false-failed every diagnose. Build
+    a straight-line joint trajectory start_q -> end_q and read the {num_waypoints,
+    num_violations} return shape (with a legacy fallback)."""
+    n = max(2, int(n_samples))
+    traj = [[s + (i / (n - 1)) * (e - s) for s, e in zip(start_q, end_q)] for i in range(n)]
     res = await _execute_tool_call("check_path_clearance", {
-        "robot_path": robot_path,
-        "start_joint_positions": start_q,
-        "end_joint_positions": end_q,
-        "n_samples": n_samples,
+        "articulation_path": robot_path,
+        "trajectory": traj,
+        "obstacles": list(obstacles or []),
     })
     out = (res.get("output") or "").strip()
     import json
@@ -140,13 +149,17 @@ async def _check_path_clearance(robot_path: str,
         if line.startswith("{"):
             try:
                 d = json.loads(line)
-                ok = d.get("clear_samples") or d.get("clear_count")
-                tot = d.get("n_samples") or d.get("total") or n_samples
+                nw = d.get("num_waypoints")
+                if nw is not None:
+                    nv = int(d.get("num_violations") or 0)
+                    return max(0, int(nw) - nv), int(nw)
+                ok = d.get("clear_samples") or d.get("clear_count")  # legacy shape
+                tot = d.get("n_samples") or d.get("total") or n
                 if ok is not None:
                     return int(ok), int(tot)
             except Exception:
                 continue
-    return 0, n_samples
+    return 0, n
 
 
 async def _bbox_for_obstacles(obstacle_paths: List[str]) -> Dict[str, Dict[str, List[float]]]:
@@ -378,6 +391,7 @@ async def _handle_diagnose_scene_feasibility(args: Dict[str, Any]) -> Dict[str, 
             n_samples = int(args.get("path_n_samples", 20))
             ok_count, total = await _check_path_clearance(
                 robot_path, pq, dq, n_samples=n_samples,
+                obstacles=args.get("obstacles") or [],
             )
             pct, sev = metrics.metric_clearance_pct(clear_count=ok_count, total=total)
             metrics_out["clearance_pct"] = pct

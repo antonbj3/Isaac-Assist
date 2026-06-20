@@ -310,6 +310,15 @@ async def execute_template_verify(template: Dict[str, Any]) -> Dict[str, Any]:
     if not verify_args:
         return {"executed": False, "reason": "template has no verify_args field"}
 
+    # Gap A (Anton, 2026-06-20): the agent always has Kit attached, so GROUND the
+    # default auto-verify reach with real IK (diagnose_scene_feasibility) instead of
+    # trusting the static reach-table. Safe now that the IK/feasibility tools are
+    # revived (solve_ik standalone-lula + diagnose stale-contract fixes) and VERIFIED
+    # to return feasible for a known-good gold (CP-01) — no false-fail. The
+    # verify_pickplace_pipeline 'feasibility' flag is opt-in (default off to preserve the
+    # tool's API contract); enable it BY DEFAULT for this agent-flow call, template can override.
+    verify_args = {"feasibility": True, **verify_args}
+
     try:
         res = await execute_tool_call("verify_pickplace_pipeline", verify_args)
     except Exception as e:
