@@ -10,6 +10,7 @@ and an object's physical attributes, decide feasibility from first-principles ru
 Wire-in target: a tool `check_gripper_object_feasibility` the ChatOrchestrator can call BEFORE picking a cell — so
 the agent GROUNDS the gripper choice instead of asserting it. Pure + deterministic (no LLM, no Kit, no ChromaDB).
 """
+import re
 from dataclasses import dataclass, field
 from typing import Optional
 
@@ -125,6 +126,14 @@ SORTABLE_PROPERTY = {"colour": "color-sort", "color": "color-sort", "barcode": "
                      "heavy": "size-weight-sort", "destination": None, "shipping": None, "city": None}
 STATION_WORDS = ("station", "palletiz", "inspect", "press", "pack", "assembl", "weld", "machine")
 
+# A real order names the property by VALUE/synonym, not the dictionary word: "route RED to the left bin" (not
+# "route by colour"), "HEAVIER parts to the far bin" (not "by weight"). Map those to the canonical sortable property
+# so the checker doesn't over-refuse a routing the catalog CAN express (false-block = capability under-claim).
+COLOUR_VALUES = ("red", "blue", "green", "yellow", "orange", "purple", "black", "white",
+                 "grey", "gray", "brown", "pink", "violet", "cyan", "magenta")
+COMPARATIVE = {"weight": ("heavier", "lighter", "heaviest", "lightest"),
+               "size": ("bigger", "smaller", "larger", "largest", "smallest", "taller", "shorter", "longer", "wider")}
+
 
 def check_flow_expressibility(condition: str) -> dict:
     """Grounded check: can the catalog express a conditional routing? Maps the routing PROPERTY to a sorter, and
@@ -132,6 +141,14 @@ def check_flow_expressibility(condition: str) -> dict:
     the LINEAR source->receiver chains do NOT provide)."""
     c = (condition or "").lower()
     prop = next((p for p in SORTABLE_PROPERTY if p in c), None)
+    if prop is None:  # value/synonym layer (word-boundaried to avoid 'red' in 'required' etc.)
+        if re.search(r"\b(" + "|".join(COLOUR_VALUES) + r")\b", c):
+            prop = "color"
+        else:
+            for canon, words in COMPARATIVE.items():
+                if re.search(r"\b(" + "|".join(words) + r")\b", c):
+                    prop = canon
+                    break
     to_stations = any(w in c for w in STATION_WORDS)
     if prop is None:
         return {"feasible": False, "confidence": 0.8,
