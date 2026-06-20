@@ -114,14 +114,17 @@ for _ in range(6000 * max(1, len(INSTS))): app.update()
 for d in INSTS:
     ct = d.get("cube_targets") or dict()
     n = 0
+    _zs = []
     for c in d["cubes"]:
         cp = cpos(c)
         if not cp: continue
+        _zs.append(cp[2])    # cont.319zz: collect cube z to detect a STACK that COLLAPSED into a pile
         accs = ct.get(c) or ([d["target"]] if d.get("target") else [])
         tbs = [bbox(t) for t in accs]; tbs = [t for t in tbs if t]
         if any(tb[0][0]-0.05<=cp[0]<=tb[1][0]+0.05 and tb[0][1]-0.05<=cp[1]<=tb[1][1]+0.05 and cp[2]>tb[0][2]-0.05 for tb in tbs):
             n += 1
-    print("DELIV inst=%s tpl=%s delivered=%d/%d" % (d["root"], d["name"], n, len(d["cubes"])))
+    _zspread = round(max(_zs) - min(_zs), 3) if len(_zs) >= 2 else 0.0
+    print("DELIV inst=%s tpl=%s delivered=%d/%d zspread=%.3f" % (d["root"], d["name"], n, len(d["cubes"]), _zspread))
 '''
     rr = await kit_tools.exec_sync(chk, timeout=int(6000 * max(1, len(insts)) / 8) + 90)
     out = (rr.get("output") or rr.get("error") or "").strip()
@@ -143,17 +146,44 @@ for d in INSTS:
             return True
         _meta = " ".join(str(_t.get(k, "")) for k in ("intent", "goal", "task_id")).lower()
         return any(w in _meta for w in ("humanoid", "actuat", "forklift-lift", "stand-reach", "arm-reach", "bimanual"))
+    # cont.319zz (audit twin #6, structural): a composed STACK can deliver all cubes INTO the target bbox yet have
+    # COLLAPSED into a flat pile (no vertical column) -> a bbox-only gate phantom-PASSes + appends a gold (the #40
+    # false-success at the COMPOSITION level). A stack's cubes must have a real vertical spread (~0.05*(N-1)); a
+    # near-zero zspread = collapsed. (Grid/bin/pick have no vertical-structure requirement, so this only gates stacks.)
+    import re as _re3
+    def _intended_zspread(nm):
+        # ROBUST stack-vs-grid signal = the template's OWN drop_targets GEOMETRY, not an ambiguous goal keyword
+        # ("stack" matched CP-08, a flat GRID, and would have false-failed it). A vertical column has drop_targets
+        # spanning distinct Z; a grid/bin has them at one Z. Returns the intended vertical span (0 if not parseable
+        # -> SAFE default = no structural check, no false-positive).
+        try:
+            _t = json.load(open(f"{REPO}/workspace/templates/{nm}.json"))
+        except Exception:
+            return 0.0
+        _code = (_t.get("code") or "") + (_t.get("code_template") or "")
+        _blk = _re3.search(r"drop_targets\s*=\s*\{([^}]*)\}", _code)
+        if not _blk:
+            return 0.0
+        _zs = [float(z) for z in _re3.findall(r"\[\s*-?[\d.]+\s*,\s*-?[\d.]+\s*,\s*(-?[\d.]+)\s*\]", _blk.group(1))]
+        return (max(_zs) - min(_zs)) if len(_zs) >= 2 else 0.0
     deliv = {}
     for l in out.splitlines():
         if l.startswith("DELIV"):
             root = l.split("inst=")[1].split()[0]
             tpl = l.split("tpl=")[1].split()[0] if "tpl=" in l else ""
             d, tot = map(int, l.split("delivered=")[1].split()[0].split("/"))
-            deliv[root] = {"delivered": d, "total": tot, "tpl": tpl, "actuation": _is_actuation_template(tpl)}
+            zspread = float(l.split("zspread=")[1].split()[0]) if "zspread=" in l else 0.0
+            _izs = _intended_zspread(tpl)   # the column height the template INTENDS (0 = grid/bin -> no check)
+            collapsed = bool(_izs > 0.04 and tot >= 2 and d == tot and zspread < 0.5 * _izs)
+            deliv[root] = {"delivered": d, "total": tot, "tpl": tpl, "zspread": zspread,
+                           "actuation": _is_actuation_template(tpl), "collapsed": collapsed}
     _delivery = {k: v for k, v in deliv.items() if not v.get("actuation")}
-    # all_full = every DELIVERY instance delivered full AND there is >=1 delivery instance (a pure-actuation
-    # composition is NOT delivery-verifiable -> all_full=False -> no gold record appended).
-    all_full = bool(_delivery) and all(v["delivered"] == v["total"] and v["total"] > 0 for v in _delivery.values())
+    # all_full = every DELIVERY instance delivered full AND not a COLLAPSED stack AND there is >=1 delivery instance.
+    all_full = (bool(_delivery)
+                and all(v["delivered"] == v["total"] and v["total"] > 0 and not v["collapsed"] for v in _delivery.values()))
+    _collapsed = [k for k, v in deliv.items() if v.get("collapsed")]
+    if _collapsed:
+        print("STRUCTURAL_FAIL: stack(s) delivered-to-bbox but COLLAPSED (zspread~0, no column):", _collapsed)
     rec = {
         "ts": time.time(), "level": "L2_composition",
         "verification_tier": "gold_kit_delivery_verified",  # only appended when it DELIVERED full in Kit
