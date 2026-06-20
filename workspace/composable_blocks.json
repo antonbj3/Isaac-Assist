@@ -19,6 +19,13 @@
     "UR10:pick-place-bin": "CP-73"
   },
   "all": {
+    "CP-NEW-nir-material-divert": {
+      "robot": "Franka",
+      "class": "sort-divert",
+      "verdict": "GENUINE(NIR-material recycling divert to 3 BINS: scene_eyes RAW @ dur=320, 6/6 items CONVERGED+GRIPPED + routed to their material-class bin (metal->BinMetal x-0.30, plastic->BinPlastic x0, glass->BinGlass x+0.30; 2/bin, each within 0.01m, upright). DISTINCT material-sensing recycling sort vs barcode/SKU divert (CP-NEW-barcode-scanner-divert -> lanes) and color-sort-to-bins (CP-16/17).)",
+      "basis": "scene_eyes RAW cont.319kk-j @ dur=320 — per-item routing verified vs the code's exact material labels (round-robin metal/plastic/glass). Final eyes.json (the mid-run snapshot was a belt-fed 2/6; waited for completion -> 6/6).",
+      "n_objects": 6
+    },
     "CP-NEW-barcode-scanner-divert": {
       "robot": "Franka",
       "class": "sort-divert",
@@ -616,13 +623,13 @@
     }
   },
   "summary": {
-    "trusted": 75,
+    "trusted": 76,
     "_trusted_note": "trusted = 57 cube-GENUINE + 1 real-object-GENUINE (CP-YCB-01C) + 1 real-conveyor-GENUINE (CP-CONV-02) + 1 forklift-GENUINE (CP-FORK-01) + 3 humanoid-GENUINE (CP-G1-ARM-01 arm-actuation zero-G, CP-G1-STAND-01 STANDING arm-actuation under gravity via root-weld FixedJoint, CP-G1-STAND-02 BIMANUAL standing reach, cont.319ii-5). cont.319cc: CP-10 downgraded GENUINE->PARTIAL by the adversarial audit (stochastic n=9 grid, saved RAW 8/9 off-pallet). META-RISK RESOLVED (cont.319dd): re-verified ALL 12 structure-class GENUINE blocks (palletize/grid + stack/column) vs their saved eyes.json -> 11 RAW-CONFIRM their verdict; CP-10 was the ONLY stale-lucky false GENUINE. Not systemic.",
-    "genuine_execution_verified": 75,
+    "genuine_execution_verified": 76,
     "position_honest_only": 0,
     "false": 3,
     "partial": 7,
     "pending": 0,
-    "total": 85
+    "total": 86
   }
 }
