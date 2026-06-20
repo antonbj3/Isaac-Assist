@@ -92,6 +92,35 @@ Gemini quota refreshed -> grounded the #2 (NL composition) + #5 (infeasibility-h
   harder adversarial infeasibility — no-touch zone, payload-over-limit — is the next escalation).
 - Next build: lift NL-pick from ~80% -> higher by enriching intent->canonical matching for the missed ops.
 
+### Round 2 LAYOUT-STRESS (Anton: build incrementally then suddenly reconfigure; stay within robotics)
+16 integrators build a line then disrupt it (reorder/insert/remove/move/robot-swap/shrink-floor/split-merge).
+20 distinct layout/reconfiguration demands, mostly HIGH overclaim-risk. TOP: incremental in-place cell edit (22x),
+frozen-cell preservation (14x), handoff re-bind after reorder (11x), reach re-validate (12x), spatial overlap (9x),
+robot-swap-in-place (6x), belt-mutation (10x), fixed-anchor (7x), N-to-1 merge (8x).
+
+★★ CRITICAL RE-GROUNDING (a durable methodology fix the sim itself forced — skepticism on my OWN grounding):
+I first "grounded" the spatial-overlap gotcha against scripts/qa/compose_gate.py (fixed 2.5*idx, no collision check)
+and started building a redundant compose_layout_check.py. WRONG ARTIFACT: compose_gate is a TEST GATE. The actual
+PRODUCTION composer is **service/isaac_assist_service/chat/composer.py**, and it is SOPHISTICATED — verified by its
+_selftest (PASSES: "namespacing + offset + phase_id + chain source-override") and by reading it:
+  - compute_layout_offsets(throw_pad, clearance) — footprint-based, OVERLAP-FREE layout (explicitly "Replaces the
+    hardcoded 2.5*idx"); template_footprint derives each cell's extent; throw_pad even absorbs measured ride-off.
+  - namespace_and_offset_calls / reroot_prim_path / _transform_value — full multi-instance namespacing.
+  - apply_source_override — chain handoff/source re-wiring (so reorder/robot-swap re-derive on re-compose).
+  - precondition_check — surfaces fusion/contention (#47-class) LOUDLY before build (refuse/warn findings).
+  -> So spatial-overlap is HANDLED (gotcha REFUTED); handoff-rebind / robot-swap / reorder are handled via a
+  DETERMINISTIC re-compose; my compose_layout_check was redundant + inferior -> DISCARDED (rm'd, not committed).
+★★ DURABLE LESSON: ground the adversarial sim against the PRODUCTION composer + runtime, NOT the qa test gates
+(compose_gate / chain_xkit_gate / scene_eyes are MEASUREMENT harnesses). This RE-FRAMES Round 1: the traceability
+build went into chain_xkit_gate (a test harness, OK as a cross-Kit chain runtime but verify it reflects production)
+and the #1 handoff-gating gotcha was grounded against chain_xkit_gate, NOT the production apply_source_override path
+— both need a production-pipeline re-check before being treated as real gaps.
+GENUINE narrow layout gaps (the composer does NOT cover): in-place EDIT preserving a commissioned cell's exact state
+(it re-composes from scratch — but for a SIM the re-compose is correct, so this is a real-world commissioning concern
+not a sim-correctness bug); parametric BELT mutation (template-level, no API); FIXED-ANCHOR clearance constraint
+(could extend precondition_check — the one tractable+sim-relevant build candidate). Most of the wave was REFUTED =
+an HONEST outcome (the sim validated the composer's real capability + corrected the agents' naive-composer assumption).
+
 ### 48h ENGINE rhythm (self-sustaining via keepalive)
 generate (black-box workflow, sparing on cc) -> ground top demands in Kit -> BUILD tractable + Kit-verify +
 commit per capability + ledger -> re-test -> escalate to the next prober round. cc weekly hard-stop 94%
