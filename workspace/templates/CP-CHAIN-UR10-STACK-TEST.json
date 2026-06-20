@@ -1,0 +1,38 @@
+{
+  "task_id": "CP-CHAIN-UR10-STACK-TEST",
+  "goal": "HYPOTHESIS TEST (cont.319kk-g): does a UR10 build a single-xy COLUMN (sidestepping the grid-SPREAD wrist-flip limit)? 2 stacked cubes at one pick xy -> 2-slot column drop_targets at the Tray.",
+  "tools_used": [
+    "create_scene_baseline",
+    "create_prim",
+    "add_reference",
+    "teleport_prim",
+    "apply_api_schema",
+    "bulk_set_attribute",
+    "apply_physics_material",
+    "setup_pick_place_controller"
+  ],
+  "code": "# UR10 COLUMN-RECEIVER hypothesis test (cont.319kk-g): does a UR10 build a single-xy COLUMN (multi-z drop_targets\n# at ONE xy) -> sidestepping the grid-SPREAD wrist-flip limit (project_isaac_assist_ur10_gridspread_limit, which\n# was multi-TARGET xy-spread)? Adapts the PROVEN CP-CHAIN-UR10-RECV-NATIVE (suction pick @ raised [0,-0.4,0.975],\n# deliver rel [0.5,-0.4]) to TWO cubes STACKED at the SAME pick xy (no pick-spread) + a 2-slot COLUMN drop_targets\n# at the Tray. If the UR10 stacks a clean 2-column -> single-xy column works (robot-diversity multi-cube unlocked).\n# If scatter/res_None/wrist-flip/reach-fail -> hypothesis refuted (UR10 multi-cube genuinely needs a real chain).\ncreate_scene_baseline(table_size=[4.0, 3.5])\n\ncreate_prim(prim_path=\"/World/UR10\", prim_type=\"Xform\")\nadd_reference(prim_path=\"/World/UR10\", reference_path=\"/mnt/shared_data/isaac-sim-assets-complete-5.0.0/Assets/Isaac/5.0/Collected_Robots/ur10.usd\")\nteleport_prim(prim_path=\"/World/UR10\", position=[0.5, -0.8, 0.75])\n\n# Pedestal + TWO cubes STACKED at the proven pick xy [0,-0.4] (rel [-0.5,0.4] from base). Cube_1 top (1.025),\n# Cube_2 below (0.975) so the suction picks top-down in list order.\ncreate_prim(prim_path=\"/World/Pedestal\", prim_type=\"Cube\", position=[0.0, -0.4, 0.875], scale=[0.06, 0.06, 0.075])\napply_api_schema(prim_path=\"/World/Pedestal\", schema_name=\"PhysicsCollisionAPI\")\n\ncreate_prim(prim_path=\"/World/Cube_1\", prim_type=\"Cube\", position=[0.0, -0.4, 1.025], size=0.05)\nfor api in (\"PhysicsRigidBodyAPI\", \"PhysicsCollisionAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n    apply_api_schema(prim_path=\"/World/Cube_1\", schema_name=api)\nbulk_set_attribute(prim_paths=[\"/World/Cube_1\"], attr=\"physxRigidBody:sleepThreshold\", value=0.0)\napply_physics_material(prim_path=\"/World/Cube_1\", material_name=\"rubber\")\n\ncreate_prim(prim_path=\"/World/Cube_2\", prim_type=\"Cube\", position=[0.0, -0.4, 0.975], size=0.05)\nfor api in (\"PhysicsRigidBodyAPI\", \"PhysicsCollisionAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n    apply_api_schema(prim_path=\"/World/Cube_2\", schema_name=api)\nbulk_set_attribute(prim_paths=[\"/World/Cube_2\"], attr=\"physxRigidBody:sleepThreshold\", value=0.0)\napply_physics_material(prim_path=\"/World/Cube_2\", material_name=\"rubber\")\n\n# Flat pallet base at [1.0,-1.2] (rel [0.5,-0.4] = proven deliver side); cubes COLUMN here.\ncreate_prim(prim_path=\"/World/PalletBase\", prim_type=\"Cube\", position=[1.0, -1.2, 0.74], scale=[0.12, 0.12, 0.01])\napply_api_schema(prim_path=\"/World/PalletBase\", schema_name=\"PhysicsCollisionAPI\")\n\nsetup_pick_place_controller(\n    robot_path=\"/World/UR10\",\n    robot_family=\"ur10\",\n    target_source=\"curobo\",\n    source_paths=[\"/World/Cube_1\", \"/World/Cube_2\"],\n    destination_path=\"/World/PalletBase\",\n    drop_targets=[[1.0, -1.2, 0.775], [1.0, -1.2, 0.825]],\n    planning_obstacles=[\"/World/Table\", \"/World/PalletBase\"],\n)",
+  "simulate_args": {
+    "cube_paths": [
+      "/World/Cube_1",
+      "/World/Cube_2"
+    ],
+    "target_path": "/World/PalletBase",
+    "duration_s": 200
+  },
+  "verified_status": "REFUTED-COLUMN / RCA-REFINED (cont.319kk-g): UR10 single-xy COLUMN does NOT sidestep the grid-spread limit. scene_eyes RAW @ dur=200: plan_fails=0 (UR10 REACHES the stacked pick z~1.17 AND the column places \u2014 NOT a reach/res_None failure), but STACK STRUCTURE = 1 z-level [0.775], both cubes settled 0.1m apart side-by-side, NO column formed. REFINED RCA: the UR10 limit is PLACEMENT-SCATTER (suction force-release ~0.1m precision), NOT xy-spread/wrist-flip -> it blocks ANY structured multi-cube (column AND grid), single-xy or not. PARTIAL CAPABILITY: UR10 multi-cube COLLECTION (unstructured -> zone/bin) WORKS (2/2 delivered to PalletBase within footprint); only structured (<0.06m precision) is blocked. Robot-diversity multi-cube = collection-only.",
+  "intent": {
+    "pattern_hint": "pick_place",
+    "structural_features": {
+      "n_robot_stations": 1,
+      "n_handoffs": 0,
+      "destination_kind": "column",
+      "uses_conveyor_transport": false,
+      "n_workpieces": 2
+    },
+    "structural_tags": [
+      "isaac:robot.ur10",
+      "isaac:role.chain_receiver_stage"
+    ]
+  }
+}
