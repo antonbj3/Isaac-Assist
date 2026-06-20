@@ -157,8 +157,25 @@ for d in INSTS:
     out = (rr.get("output") or rr.get("error") or "").strip()
     print(out)
     lines = [l for l in out.splitlines() if l.startswith("COMPOSE_GATE")]
-    npass = sum(1 for l in lines if (lambda d, t: d > 0 and d == t)(*map(int, l.split("delivered=")[1].split()[0].split("/"))))
-    print(f"COMPOSE_GATE SUMMARY: {npass}/{len(lines)} instances fully delivered")
+    # cont.319yy FIX #2 (ported to compose_gate's twin): a self-target ACTUATION block (humanoid/forklift) "delivers"
+    # its cube into its own bbox -> phantom delivered=N/N -> a false-PASS in the SUMMARY. (No gold poisoning here as in
+    # compose_and_verify, but the printed verdict still misleads.) Exclude actuation instances from the pass count.
+    def _is_actuation_template(nm):
+        try:
+            _t = json.load(open(f"{REPO}/workspace/templates/{nm}.json"))
+        except Exception:
+            return False
+        _sa = _t.get("simulate_args") or {}
+        _cubes = _sa.get("cube_paths") or []
+        if not _cubes or _sa.get("target_path") in _cubes:
+            return True
+        _meta = " ".join(str(_t.get(k, "")) for k in ("intent", "goal", "task_id")).lower()
+        return any(w in _meta for w in ("humanoid", "actuat", "forklift-lift", "stand-reach", "arm-reach", "bimanual"))
+    _deliv_lines = [l for l in lines if not _is_actuation_template(l.split("tpl=")[1].split()[0] if "tpl=" in l else "")]
+    _actu = len(lines) - len(_deliv_lines)
+    npass = sum(1 for l in _deliv_lines if (lambda d, t: d > 0 and d == t)(*map(int, l.split("delivered=")[1].split()[0].split("/"))))
+    print(f"COMPOSE_GATE SUMMARY: {npass}/{len(_deliv_lines)} delivery-instances fully delivered"
+          + (f" ({_actu} actuation block(s) excluded — not delivery-verifiable)" if _actu else ""))
 
 
 async def main():
