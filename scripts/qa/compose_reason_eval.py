@@ -142,6 +142,18 @@ def _is_overload(txt):
             or "try again in a moment" in t or ("overloaded" in t and "cp-" not in t))
 
 
+def _is_throttled(txt):
+    """cont.319pp (instrument-lies guard, sibling of _is_overload): a 429 quota / rate-limit error (free-tier RPM/RPD
+    exhausted) is ALSO transient infra — it must NOT be scored as a capability MISS. The provider retries 429 with
+    backoff then raises; _eval_once catches it as 'ERROR ...429...exceeded your current quota'. Without this, a
+    throttled call parses to picks=[] and is mis-scored as a genuine MISS — that is exactly what made the 4 'NL-pick
+    gaps' (sortdiv-*, real-conveyor, humanoid-stand) look real: they were 429s, not capability gaps (held tell: the
+    SAME block CP-G1-STAND-01 was picked for humanoid-reach but 'missed' for humanoid-stand = a throttled call)."""
+    t = (txt or "").lower()
+    return (("429" in t and ("quota" in t or "rate" in t or "exceeded" in t))
+            or "resource_exhausted" in t or "exceeded your current quota" in t)
+
+
 async def _eval_once(prov, c):
     """One LLM attempt at one case -> a result dict (id/verdict/picks/structure/ok)."""
     prompt = f"Available work-cells:\n{CATALOG}\n\nTask: {c['task']}"
@@ -156,6 +168,8 @@ async def _eval_once(prov, c):
             break
         await asyncio.sleep(3 * (_att + 1))
     overloaded = _is_overload(txt)
+    throttled = _is_throttled(txt)
+    transient = overloaded or throttled   # cont.319pp: 429-throttle is transient infra too, NOT a capability MISS
     if os.environ.get("EVAL_RAW"):
         print(f"  RAW[{c['id']}]: {txt[:400]}")
     picks = set(re.findall(r"CP-[A-Za-z0-9][A-Za-z0-9-]*", txt.split('"reasoning"')[0] if '"reasoning"' in txt else txt))
@@ -184,10 +198,11 @@ async def _eval_once(prov, c):
         extras = picks - allowed
         verdict = (("FORBID-HIT" if forbid_hit else ("STRUCT-MISS" if (blocks_ok and not struct_ok) else "MISS"))
                    if not ok else ("PASS" if not extras else "OK+EXTRA"))
-    if overloaded:
-        verdict, ok = "OVERLOAD", None   # transient Gemini overload, NOT a real miss — excluded from the pass-rate
+    if transient:
+        verdict, ok = ("THROTTLED" if throttled else "OVERLOAD"), None   # transient infra (429/overload), NOT a real miss — excluded from the pass-rate
     return {"id": c["id"], "verdict": verdict, "picks": sorted(picks),
-            "gt": sorted(c["gt"]), "gap_flag": flagged_gap, "structure": struct, "ok": ok, "overloaded": overloaded}
+            "gt": sorted(c["gt"]), "gap_flag": flagged_gap, "structure": struct, "ok": ok,
+            "overloaded": transient, "throttled": throttled}
 
 
 async def _run(model, only=None, retries=0):
@@ -215,10 +230,12 @@ async def _run(model, only=None, retries=0):
         print(f"  {c['id']:16s} {r['verdict']:12s} picks={r['picks']}  {_exp}{' (FLAKY-PASS on retry)' if flaky else ''}")
     n_ok = sum(1 for x in rows if x["ok"])
     n_scored = sum(1 for x in rows if x["ok"] is not None)   # exclude transient OVERLOAD cases from the denominator
-    n_over = sum(1 for x in rows if x.get("overloaded"))
+    n_over = sum(1 for x in rows if x.get("overloaded"))   # transient total (overload-body + 429-throttle)
+    n_thr = sum(1 for x in rows if x.get("throttled"))
     n_flaky = sum(1 for x in rows if x.get("flaky"))
     print(f"\nCOMPOSE-REASON: {n_ok}/{n_scored} cases OK (model={model})"
-          + (f"  [{n_flaky} flaky-pass]" if n_flaky else "") + (f"  [{n_over} OVERLOAD-excluded]" if n_over else ""))
+          + (f"  [{n_flaky} flaky-pass]" if n_flaky else "")
+          + (f"  [{n_over} transient-excluded: {n_thr} throttle-429 + {n_over - n_thr} overload]" if n_over else ""))
     return rows
 
 
