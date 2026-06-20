@@ -223,6 +223,13 @@ def template_footprint(template, axis="x"):
     for fn in _GEOM_FNS:
         for m in _re.finditer(_re.escape(fn) + r"\(([^)]*(?:\([^)]*\)[^)]*)*)\)", code):
             args = m.group(1)
+            # cont.319yy audit FIX #4 (part b, never done): skip the floor/ground slab + any oversized backdrop.
+            # CP-83 authors create_prim("/World/Ground", scale=[20,20,1]) -> a (-10,10) footprint that shoves the
+            # next cell +14.6m. A ground/dome/floor slab is scene BACKDROP, not cell geometry (mirrors the
+            # canonical_instantiator slab-skip). audit #14 part (a) parsed code_template but never excluded this.
+            _pp = _re.search(r"(?:prim_path|dest_path)\s*=\s*['\"]([^'\"]+)['\"]", args)
+            if _pp and any(_pp.group(1).endswith(s) for s in ("/Ground", "/GroundPlane", "/Floor", "/DomeLight")):
+                continue
             pm = _re.search(r"position\s*=\s*\[([^\]]+)\]", args)
             sm = _re.search(r"(?:scale|size)\s*=\s*\[([^\]]+)\]", args)
             if not pm:
@@ -241,6 +248,8 @@ def template_footprint(template, axis="x"):
                         half = sv[ai] / 2.0
                 except ValueError:
                     pass
+            if half > 5.0:        # a >10m extent is a floor/backdrop slab, not a cell footprint -> skip
+                continue
             l, h = pv[ai] - half, pv[ai] + half
             lo = l if lo is None else min(lo, l)
             hi = h if hi is None else max(hi, h)
