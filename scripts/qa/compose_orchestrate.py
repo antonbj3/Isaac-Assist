@@ -98,7 +98,11 @@ async def plan_with_gemini(task, model):
     txt = (r.text or "").strip()
     seg = txt.split('"reasoning"')[0] if '"reasoning"' in txt else txt
     seen = set()
-    cells = [c for c in re.findall(r"CP-[A-Z0-9-]+", seg)
+    # cont.319yy: was CP-[A-Z0-9-]+ (UPPERCASE-only) — it truncated every LOWERCASE canonical id (e.g.
+    # CP-NEW-barcode-scanner-divert -> "CP-NEW-") to a non-catalog stub -> the orchestrator HALTed on a PERFECT
+    # LLM pick of the newest attr-sort blocks. Ported the proven eval regex (compose_reason_eval.py:175). Found by
+    # the adversarial-composition-audit: a fix that landed in the eval but never in its production twin.
+    cells = [c for c in re.findall(r"CP-[A-Za-z0-9][A-Za-z0-9-]*", seg)
              if (c in _CANON or c in _CHAIN) and not (c in seen or seen.add(c))]
     sm = re.search(r'"structure"\s*:\s*"(sequential|parallel)"', txt)
     gap = bool(re.search(r'"gaps"\s*:\s*\[\s*"[^"]', txt))
