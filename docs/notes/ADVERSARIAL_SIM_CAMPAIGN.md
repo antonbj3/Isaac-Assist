@@ -146,6 +146,18 @@ CAUGHT MY OWN instrument/grounding errors (regex, overload, wrong-module, stale-
 vakt. Genuine remaining gaps are NARROW + mostly block-level robot capabilities (Kit-grounded: weight-pallet,
 deformables) or deep (in-place-edit, fault-tolerance) — pursued via Kit, not via more reasoning-only gotcha waves.
 
+### ★ Traceability build VALIDATED in the real compose work (the adversarial-loop build pays off)
+Chained CONV-02-SRC-3 (real conveyor, N=3) -> CP-CHAIN-UR10-RECV-NATIVE (UR10, N=1) = real-asset x robot-diversity.
+The per-stage SUMMARY printed "3/3 + 1/1 — ALL DELIVERED" — but the CUSTODY record (my Round-1 traceability build)
+EXPOSED the truth: the UR10 N=1 receiver took only 1 of the 3 source cubes; Cube_2 + Cube_3 have INCOMPLETE custody
+(delivered by the Franka conveyor stage, NEVER received by the UR10 stage = LOST at the handoff). The delivered-COUNT
+gate LIED ("ALL DELIVERED"); the per-part CUSTODY chain caught the loss. So the traceability build is now validated as
+a real COMPOSITION-level false-success-vakt (catches handoff losses the per-stage count hides — the "gates lie /
+per-object RAW" lesson at the chain level), AND it surfaced a real composition constraint: SOURCE-N must match
+RECEIVER-N (or the receiver must be multi-cube), else parts vanish silently at the handoff. Re-running N-matched
+(CONV-02-SRC N=1 -> UR10-RECV N=1) for a CLEAN robot-diversity real-asset chain. = the adversarial-sim's builds
+feeding back into the genuine compose multiplier (Kit-grounded), which is the honest high-value vein now.
+
 ### 48h ENGINE rhythm (self-sustaining via keepalive)
 generate (black-box workflow, sparing on cc) -> ground top demands in Kit -> BUILD tractable + Kit-verify +
 commit per capability + ledger -> re-test -> escalate to the next prober round. cc weekly hard-stop 94%
