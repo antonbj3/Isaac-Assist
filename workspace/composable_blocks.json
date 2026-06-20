@@ -20,7 +20,8 @@
     "UR10:color-sort": null,
     "UR10:other": null,
     "UR10:palletize/grid": null,
-    "UR10:pick-place-bin": "CP-73"
+    "UR10:pick-place-bin": "CP-73",
+    "UR10:conveyor-pick": "CP-69"
   },
   "all": {
     "CP-NEW-nir-material-divert": {
@@ -473,9 +474,9 @@
     },
     "CP-69": {
       "robot": "UR10",
-      "class": "pick-place-bin",
-      "verdict": "GENUINE(scene_eyes UR10 suction 1/1 delivered to Bin[0.5,-0.4], cube moved 1.70m; cont.318g)",
-      "basis": "delivery-gate (honest for bin/sort)",
+      "class": "conveyor-pick",
+      "verdict": "GENUINE(UR10 picks 1 cube OFF A CONVEYOR -> Bin; re-verified N-of-2 fresh-Kit cont.319nnn: both runs Cube_1 CONVERGED+GRIPPED (closest 25mm) + xy-in-bin=yes, identical convergence ~10-12s. Promoted to UR10:conveyor-pick = the robot-diversity gap (UR10 had 4 composable blocks vs Franka 13; this is the UR10 analog of Franka:conveyor-pick CP-CONV-02). Re-classed from pick-place-bin: CP-69 is conveyor-FED, distinct from CP-73's static-pedestal pick-place-bin.)",
+      "basis": "scene_eyes RAW N-of-2 fresh-Kit (cont.319nnn) — UR10 cuRobo/suction picks off the belt + delivers; cuRobo-stub did NOT block (UR10 controller works). Original cont.318g delivery-gate confirm.",
       "n_objects": 1
     },
     "CP-70": {
