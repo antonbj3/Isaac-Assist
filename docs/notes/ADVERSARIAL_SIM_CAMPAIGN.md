@@ -182,3 +182,20 @@ outcomes. That is the signature of Gemini NON-DETERMINISM, not a description/cat
 catalog with good _DESC). Running `--retries 3` (the living-tool flaky-filter, built for exactly this — "op-discrim
 ~1/4 flaky-miss") to classify: variance-MISS -> FLAKY-PASS, genuine gap -> stays MISS. Diagnostik-först before any
 "enrich descriptions" build — don't fix a phantom. [result pending the retry run]
+
+### cont.319pp — the 4 "NL-pick gaps" ROOT-CAUSED to a 429-throttle eval mis-score (3rd distinct instrument-artifact)
+Ran `--retries 3` to classify the 4 picks=[] MISSes (flaky vs genuine). It ran 15 min then died on the truth: the
+RAW output is `HTTP 429 ... exceeded your current quota` on EVERY call — the free-tier Gemini quota was exhausted by
+the back-to-back full + retry runs. KEY: `_is_overload()` did NOT catch 429 (429 is an HTTP error, not an overload-
+APOLOGY-body), so a throttled call surfaced as `txt='ERROR ...429...'`, parsed to picks=[], and was scored as a
+GENUINE capability MISS. So the 4 "NL-pick gaps" were never a composition-capability gap — they were 429-throttled
+calls mis-scored as misses (the held tell already pointed here: the SAME block CP-G1-STAND-01 picked for humanoid-
+reach but 'missed' for humanoid-stand = one call throttled). FIX (cont.319pp, committed): added `_is_throttled()`
+(429/quota/rate/RESOURCE_EXHAUSTED); `transient = overload OR throttle` -> verdict THROTTLED, ok=None, excluded from
+the denominator. Offline-verified the classifier (real-429 -> excluded; clean pick -> scoreable; real-429
+overload=False = the exact fall-through). In-vivo re-confirm DEFERRED — quota is exhausted right now; hammering it
+would just burn more 429s (cost-conscious / avoid-waste). This is the THIRD distinct instrument-artifact this
+reasoning layer has produced (overload-body, regex-lowercase, now 429-misclassify) — each time rigorous diagnostik-
+först REFUTED a "gap" as an instrument lie. The META-FINDING holds harder: the NL-pick reasoning layer is gated by
+free-tier Gemini RELIABILITY, NOT by a composition-capability gap. Strategic implication unchanged: the high-value
+vein is Kit-grounded composition (breadth robust-blocks x robot-diversity), not Gemini-variance/throttle-chasing.
