@@ -302,14 +302,11 @@ async def main():
     print("CHAIN_XKIT STAGES:")
     for r in results:
         print("  inst%d %s relay=%s/%s" % (r["stage"], r["name"], r.get("delivered"), r.get("total")))
-    all_ok = all(r.get("delivered", 0) >= r.get("total", 1) for r in results) and len(results) == len(specs)
-    print("CHAIN_XKIT SUMMARY: %d stage(s), %s — %s" % (
-        len(results), " + ".join("%d/%d" % (r.get("delivered", 0), r.get("total", 1)) for r in results),
-        "ALL DELIVERED (faithful cross-Kit relay)" if all_ok else "INCOMPLETE"))
-    # cont.319mm (adversarial-sim TRACEABILITY build): per-part CUSTODY CHAIN across robot-robot handoffs.
-    # Each part keeps its identity (leaf, e.g. Cube_1) through every relay (Cube_1 -> relay1/Cube_1 -> ...);
-    # log its delivered-outcome at every station -> a queryable custody record. A part NOT delivered at some
-    # stage gets an INCOMPLETE custody chain = a DETECTED handoff loss (the per-item-traceability demand).
+    # cont.319mm (adversarial-sim TRACEABILITY build): per-part CUSTODY CHAIN across robot-robot handoffs — computed
+    # BEFORE the verdict so the gate is HONEST about END-TO-END delivery, not just per-stage counts. Each part keeps
+    # its identity (leaf, e.g. Cube_1) through every relay; a part NOT delivered at some stage = an INCOMPLETE custody
+    # chain = a DETECTED handoff loss. (The old per-stage 'ALL DELIVERED' false-passed an N-mismatch chain: CONV-02-
+    # SRC-3 N=3 -> UR10-RECV N=1 read 'ALL DELIVERED' while 2 parts were silently LOST at the handoff, cont.319mm.)
     _custody = {}
     for _r in results:
         for _cp, _pos in (_r.get("poses") or {}).items():
@@ -323,8 +320,17 @@ async def main():
     _ncomp = sum(1 for _r in _custody.values() if _r["complete_custody"])
     json.dump({"chain": list(specs), "n_stations": len(results), "parts": list(_custody.values())},
               open("/tmp/chain_custody.json", "w"), indent=1)
-    print("CHAIN_CUSTODY: %d parts, %d with COMPLETE custody across all %d stations -> /tmp/chain_custody.json"
+    e2e_ok = bool(_custody) and _ncomp == len(_custody)   # every part that entered the chain completed EVERY station
+    all_ok = (all(r.get("delivered", 0) >= r.get("total", 1) for r in results)
+              and len(results) == len(specs) and e2e_ok)
+    print("CHAIN_XKIT SUMMARY: %d stage(s), %s — %s" % (
+        len(results), " + ".join("%d/%d" % (r.get("delivered", 0), r.get("total", 1)) for r in results),
+        "ALL DELIVERED end-to-end (faithful cross-Kit relay)" if all_ok else "INCOMPLETE"))
+    print("CHAIN_CUSTODY: %d parts, %d with COMPLETE end-to-end custody across all %d stations -> /tmp/chain_custody.json"
           % (len(_custody), _ncomp, len(results)))
+    if _custody and _ncomp < len(_custody):
+        print("CHAIN_END_TO_END: WARNING only %d/%d parts completed the FULL chain — %d LOST at a handoff (custody gap; "
+              "the per-stage counts HID it — likely an N-mismatch, source-N > receiver-N)." % (_ncomp, len(_custody), len(_custody) - _ncomp))
     if _os.environ.get("CHAIN_TRAJ"):                         # cont.319hh diagnostic dump
         json.dump(results, open("/tmp/chain_traj.json", "w"), indent=1)
         print("CHAIN_TRAJ dumped -> /tmp/chain_traj.json")
