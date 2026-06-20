@@ -15,7 +15,8 @@ Method (hand-derived + proven on CP-16, cont.198 — eyes-first, RAW final posit
   4. For each cube: CORRECT iff its final xy is within the ASSIGNED bin's footprint (+margin) and it is
      in-bin (not on the floor); else MIS-ROUTED (names the bin it actually landed in) / UNDELIVERED.
 
-Honest scope: covers color-named-cube sorters (the common case). Mixed-SKU / bbox-less zone routing
+Honest scope: covers color-named-cube sorters (Cube_<color>) AND attr-routed sorters that label each item
+with its class via the canonical tuple-list (barcode SKU, NIR material — cont.319kk-k upgrade). Mixed-SKU / bbox-less zone routing
 (the cont.21 exception) needs the bbox compose_and_verify gate, not this. Reports UNMAPPED rather than
 guessing. CONFOUNDED (cont.200) when the SCENE has colors NOT in color_routing (e.g. CP-35 has a 5th 'd'
 color / 10 cubes vs the routed 8) — the bin-containment read mis-flags; cross-check with scene_eyes for
@@ -39,6 +40,20 @@ def _parse_color_routing(code):
     return out
 
 
+def _parse_item_class(code):
+    """cont.319kk-k UPGRADE: extract {item_path: class} from the canonical tuple-list rows the ATTR-ROUTED
+    divert/sort templates use to label each item with its routed CLASS, e.g.
+        ("/World/Item_1", -1.40, "sku_a",  "/World/Materials/Orange"),   # barcode/SKU
+        ("/World/Item_1", -1.40, "metal",  "/World/Materials/MatMetal"), # NIR-material
+    These cubes are NOT named Cube_<color>, so the name-suffix map below reports them UNASSESSABLE. With this
+    map the tool ROUTES them: item -> class -> color_routing[class] -> bin. (Verified by hand on barcode/nir,
+    cont.319kk-i/j; now first-class.) Empty {} for color-named sorters (the name-suffix path still handles them)."""
+    out = {}
+    for m in re.finditer(r'\(["\'](/World/(?:Item|Cube)_\d+)["\']\s*,\s*[-0-9.]+\s*,\s*["\']([^"\']+)["\']', code):
+        out[m.group(1)] = m.group(2).lower()
+    return out
+
+
 def _source_paths(tpl):
     sa = tpl.get("simulate_args") or {}
     return list(sa.get("cube_paths") or ([sa["cube_path"]] if sa.get("cube_path") else []))
@@ -47,7 +62,11 @@ def _source_paths(tpl):
 async def _validate_one(kit_tools, etc, name):
     tpl = json.load(open(f"{REPO}/workspace/templates/{name}.json"))
     code = tpl.get("code", "")
-    routing = _parse_color_routing(code)
+    # cont.319kk-k: prefer the CLEAN simulate_args.color_routing dict over the code-regex — the regex's
+    # non-greedy {.*?} UNDER-PARSED a 3-key routing (barcode read only sku_a/sku_b, dropped sku_c -> 4/6
+    # false-mis-route). simulate_args carries the authoritative {class: dest} map; fall back to the code parse.
+    routing = (tpl.get("simulate_args") or {}).get("color_routing") or _parse_color_routing(code)
+    routing = {str(k).lower(): v for k, v in routing.items()} if routing else {}
     if not routing:
         return {"template": name, "status": "NOT_A_COLOR_SORT (no color_routing dict)"}
     srcs = _source_paths(tpl)
@@ -77,7 +96,7 @@ async def _validate_one(kit_tools, etc, name):
         "import omni.timeline,omni.kit.app; omni.timeline.get_timeline_interface().play()\n"
         f"_a=omni.kit.app.get_app()\nfor _ in range({steps}): _a.update()", timeout=int(steps/25)+120)
 
-    spec = json.dumps({"routing": routing, "srcs": srcs, "starts": starts})
+    spec = json.dumps({"routing": routing, "srcs": srcs, "starts": starts, "item_class": _parse_item_class(code)})
     code_q = f'''
 import omni.usd, json as _j
 from pxr import UsdGeom, Sdf
@@ -97,7 +116,9 @@ for color,bp in D["routing"].items():
 res=[]
 for sp in D["srcs"]:
     cc=ctr(sp)
-    color=sp.rsplit("_",1)[-1].lower()
+    # cont.319kk-k: ATTR-ROUTED tuple-list class (barcode sku / NIR material) takes priority; else the
+    # Cube_<color> name-suffix convention (color-named sorters). Covers both sorter families in one tool.
+    color=D.get("item_class",{{}}).get(sp) or sp.rsplit("_",1)[-1].lower()
     # first-char fallback (r1->red) — only when UNAMBIGUOUS (routing keys have distinct first chars).
     if color not in bins:
         _cand=[c for c in bins if c and color and c[0]==color[0]]
