@@ -70,11 +70,11 @@ TARGET=__TARGET__; CUBES=__CUBES__; PLAY=__PLAY__
 if PLAY:
     app=omni.kit.app.get_app(); tl=omni.timeline.get_timeline_interface(); tl.play()
     for _ in range(5000): app.update()
-tb=bb(TARGET); res={"target":TARGET,"delivered":0,"total":len(CUBES),"poses":{}}
+tb=bb(TARGET); res={"target":TARGET,"delivered":0,"total":len(CUBES),"poses":{},"delivered_paths":[]}
 for cp in CUBES:
     c=cz(cp); res["poses"][cp]=c
     if tb and c and tb[0][0]-0.06<=c[0]<=tb[1][0]+0.06 and tb[0][1]-0.06<=c[1]<=tb[1][1]+0.06 and c[2]>tb[0][2]-0.04:
-        res["delivered"]+=1
+        res["delivered"]+=1; res["delivered_paths"].append(cp)
 print("MEASURE "+json.dumps(res))
 '''
 
@@ -141,7 +141,7 @@ async def _play_and_measure(kt, target, cubes, total=6000, chunk=1000, reacquire
     out = (await kt.exec_sync(_mcode, timeout=120)).get("output", "").strip()
     lines = [l for l in out.splitlines() if l.startswith("MEASURE")]
     if not lines:
-        return {"target": target, "delivered": 0, "total": len(cubes), "poses": {},
+        return {"target": target, "delivered": 0, "total": len(cubes), "poses": {}, "delivered_paths": [],
                 "measure_error": out[-400:]}
     res = json.loads(lines[-1][8:])
     if _cap:
@@ -158,8 +158,10 @@ async def run_stage0(name):
     await kt.exec_sync("import builtins\nfor k in [x for x in list(vars(builtins)) if x.startswith('_curobo_pp_sub_')]:\n    try: delattr(builtins,k)\n    except Exception: pass\n", timeout=10)
     await execute_template_canonical(tpl); await settle_after_canonical(tpl)
     r = await _play_and_measure(kt, target, cubes)
-    # handoff = delivered cube world poses
-    r["handoff"] = {cp: r["poses"][cp] for cp in cubes if r["poses"].get(cp)}
+    # handoff = ONLY actually-DELIVERED cube world poses (cont.319ww fix: was {all posed cubes}, which relayed a
+    # NON-delivered cube downstream -> the chain falsely "succeeded" at stage k even when stage k-1 delivered 0.
+    # Caught by a self-regression-audit: CONV-02-SRC delivered 0/1 yet still handed off Cube_1's undelivered pose).
+    r["handoff"] = {cp: r["poses"][cp] for cp in r.get("delivered_paths", []) if r["poses"].get(cp)}
     return r
 
 
@@ -298,7 +300,7 @@ async def main():
         rk = await run_stage_k(i, specs[i], handoff); rk["stage"] = i; rk["name"] = specs[i]
         results.append(rk)
         print(f"  stage{i} {specs[i]}: delivered={rk['delivered']}/{rk['total']} auto_offset={rk.get('auto_offset')} poses={rk.get('poses')}")
-        handoff = {cp: rk["poses"][cp] for cp in rk["poses"] if rk["poses"].get(cp)}
+        handoff = {cp: rk["poses"][cp] for cp in rk.get("delivered_paths", []) if rk["poses"].get(cp)}  # cont.319ww: delivered-only
     print("CHAIN_XKIT STAGES:")
     for r in results:
         print("  inst%d %s relay=%s/%s" % (r["stage"], r["name"], r.get("delivered"), r.get("total")))
@@ -307,16 +309,24 @@ async def main():
     # its identity (leaf, e.g. Cube_1) through every relay; a part NOT delivered at some stage = an INCOMPLETE custody
     # chain = a DETECTED handoff loss. (The old per-stage 'ALL DELIVERED' false-passed an N-mismatch chain: CONV-02-
     # SRC-3 N=3 -> UR10-RECV N=1 read 'ALL DELIVERED' while 2 parts were silently LOST at the handoff, cont.319mm.)
+    # cont.319ww FIX: custody now records ACTUAL per-station DELIVERY (cp in that stage's delivered_paths), NOT mere
+    # presence. The old code hardcoded delivered=True for any cube with a POSE -> it reported "COMPLETE custody" even
+    # when a stage delivered 0 (the cube was present-but-undelivered). A part has COMPLETE custody only if it was
+    # actually DELIVERED at EVERY station — that is the honest end-to-end claim.
     _custody = {}
     for _r in results:
+        _dp = set(_r.get("delivered_paths") or [])
         for _cp, _pos in (_r.get("poses") or {}).items():
             _leaf = _cp.rsplit("/", 1)[-1]
             _rec = _custody.setdefault(_leaf, {"part_id": _leaf, "journey": []})
             _rec["journey"].append({"stage": _r["stage"], "station": _r["name"], "path": _cp,
-                                    "delivered": True, "pos": [round(float(x), 3) for x in _pos]})
+                                    "delivered": _cp in _dp, "pos": [round(float(x), 3) for x in _pos]})
     for _rec in _custody.values():
         _rec["stations_logged"] = len(_rec["journey"])
-        _rec["complete_custody"] = len(_rec["journey"]) == len(results)
+        _rec["delivered_stations"] = sum(1 for _j in _rec["journey"] if _j["delivered"])
+        # COMPLETE = seen at every station AND actually delivered at every one of them
+        _rec["complete_custody"] = (len(_rec["journey"]) == len(results)
+                                    and all(_j["delivered"] for _j in _rec["journey"]))
     _ncomp = sum(1 for _r in _custody.values() if _r["complete_custody"])
     json.dump({"chain": list(specs), "n_stations": len(results), "parts": list(_custody.values())},
               open("/tmp/chain_custody.json", "w"), indent=1)
