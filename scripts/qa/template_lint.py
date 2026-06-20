@@ -61,10 +61,22 @@ def lint(tid):
         print(f"TEMPLATE_LINT: NOT-FOUND {tid}")
         return 2
     t = json.load(open(p))
+    used_ct = not t.get("code") and bool(t.get("code_template"))
     code = t.get("code") or t.get("code_template") or ""
     created = _created_prims(code)
     refs = _refs(code)
     issues = []
+    # CONFIDENCE GUARD (false-success-vakt on this tool itself): the static created-set is INCOMPLETE whenever a
+    # prim path is built in a form the regex can't resolve — a bare-variable path kwarg (prim_path=some_var), a
+    # non-Cube f-string loop (Bin_{j}), or a code_template with {{placeholders}}. Corpus scan: 561 variable-indirected
+    # paths, 38 non-Cube loops, 213 placeholder templates. On such a template a "never created" finding can be FALSE,
+    # so the lint MUST NOT claim CLEAN (or hard-fail) — it reports LOW-CONFIDENCE instead. High-confidence CLEAN is
+    # reserved for the literal + Cube_{i+1}-loop idiom (the hand-authored CP-NEW/CP-CHAIN drafts this tool is FOR).
+    # `path` is the cube-loop variable (`path = f"/World/Cube_{i+1}"`), which _created_prims ALREADY resolves via
+    # the f-string — so exclude it. Count only GENUINELY-unresolvable bare-variable path kwargs (arbitrary names).
+    unresolved = len(re.findall(r'(?:prim_path|dest_path|sensor_path)\s*=\s*(?!["\']|f["\']|path\b)[A-Za-z_]\w*', code))
+    unresolved += len(re.findall(r'f"/World/(?!Cube_\{i\+1\}")[^"]*\{', code))   # non-Cube f-string loops
+    low_conf = unresolved > 0 or used_ct
 
     for kw in ("destination_path", "sensor_path", "belt_path", "robot_path"):
         for path in refs.get(kw, []):
@@ -93,13 +105,21 @@ def lint(tid):
             issues.append(f"verify_args place_path={pp} never created")
 
     print(f"TEMPLATE_LINT {tid}: created={len(created)} prims; "
-          f"refs dest={refs.get('destination_path')} drop_keys={len(refs['drop_target_keys'])} obstacles={len(refs['obstacles'])}")
+          f"refs dest={refs.get('destination_path')} drop_keys={len(refs['drop_target_keys'])} obstacles={len(refs['obstacles'])}; "
+          f"confidence={'LOW' if low_conf else 'high'}")
+    if low_conf:
+        print(f"TEMPLATE_LINT: LOW-CONFIDENCE — {unresolved} path(s) built via variable/non-Cube-loop"
+              + (" + code_template placeholders" if used_ct else "")
+              + "; the static created-set is INCOMPLETE, so any 'never created' below MAY BE FALSE. Verify in Kit, do not trust this lint.")
+        for i in issues:
+            print("   ? (cannot verify statically)", i)
+        return 0   # NOT a hard fail: this tool can't reliably judge this template — refuse to assert either way
     if issues:
         print("TEMPLATE_LINT: ISSUES")
         for i in issues:
             print("   -", i)
         return 1
-    print("TEMPLATE_LINT: CLEAN (internally consistent — static only; scene_eyes RAW is the real verdict)")
+    print("TEMPLATE_LINT: CLEAN (high-confidence: fully-resolvable literal/Cube-loop idiom — static only; scene_eyes RAW is the real verdict)")
     return 0
 
 
