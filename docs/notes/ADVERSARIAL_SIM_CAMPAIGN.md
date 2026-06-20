@@ -34,6 +34,25 @@ feat/foundation-build + this ledger; surgical template text-edits; ALDRIG thresh
 
 ## LEDGER (round | demand | grounding verdict | gap/built | status)
 
-### Round 1 (2026-06-20)
-- BLACK-BOX GENERATE: workflow blackbox-adversarial-probes (20 domains x escalation-styles) — RUNNING.
-- Next: cluster -> ground top demands in Kit -> build the gaps.
+### Round 1 (2026-06-20) — BLACK-BOX GENERATE done
+20 domains x escalation-styles -> 186 raw demands -> 27 distinct (workflow blackbox-adversarial-probes, w9zrxqar6).
+Top-7 (grounding_priority 5, by cross-domain demand):
+- [13x] multi-robot fault-tolerant load-rebalancing (one robot faults mid-run, others absorb) — DEEP
+- [12x] deformable/non-rigid grasp (bag, fabric, produce) — cluster claims "sim HAS deformable support, never exercised under compose" -> GROUND it
+- [12x] per-item serial TRACEABILITY across robot-robot handoffs (custody log) — TRACTABLE build
+- [11x] autonomous cross-robot FAULT RECOVERY with live part disposition — DEEP
+- [10x] NL multi-station composition -> EXECUTABLE chain from one sentence — Gemini-gated
+- [9x] hard-constraint INFEASIBILITY reporting (refuse+explain, not silently violate) — the HONESTY test — Gemini-gated
+- [9x] generative weight-stratified mixed-SKU pallet (heavy below light, stability) — TRACTABLE build
+
+★ SINGLE BIGGEST CREDIBILITY RISK (cluster's own synthesis): inter-station handoff relies on SOFTWARE SIGNALS
+not confirmed PHYSICAL STATE -> a stalled station -> upstream silently overwrites the occupied slot, NO fault
+surfaced. Root cause of ~30% of the escalated demands. Exposed with ONE stall injection. = GROUND+BUILD #1.
+
+BUILD QUEUE (tractable, Kit-groundable, no Gemini): (1) physical-state handoff GATING [#1 risk, root-cause];
+(2) per-item TRACEABILITY logging across handoffs; (3) weight-stratified mixed-SKU pallet. Gemini-windowed:
+NL-composition end-to-end, infeasibility-honesty. Ground+document-as-limit (deep): fault-recovery, deformable,
+zero-shot-onboarding, force-control.
+
+### Round 1 GROUND+BUILD #1 — physical-state handoff gating (IN PROGRESS)
+- Ground: does the chain/composition handoff gate on physical handoff-occupancy, or just deliver (software-signal)?
