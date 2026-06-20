@@ -17,7 +17,7 @@
     "G1-humanoid:humanoid-arm": "CP-G1-ARM-01",
     "G1-humanoid:humanoid-stand-reach": "CP-G1-STAND-01",
     "G1-humanoid:humanoid-bimanual-reach": "CP-G1-STAND-02",
-    "UR10:color-sort": null,
+    "UR10:color-sort": "CP-82",
     "UR10:other": null,
     "UR10:palletize/grid": null,
     "UR10:pick-place-bin": "CP-73",
@@ -530,9 +530,9 @@
     },
     "CP-82": {
       "robot": "UR10",
-      "class": "pick-place-bin",
-      "verdict": "GENUINE(scene_eyes UR10 2/2 color-routed: Cube_1->Bin_red[0.5,-0.30], Cube_2->Bin_blue[0.5,-0.55]; cont.318h)",
-      "basis": "delivery-gate (honest for bin/sort)",
+      "class": "color-sort",
+      "verdict": "GENUINE(UR10 2-bin COLOR-SORT, routing-verified: re-verify fresh-Kit cont.319nnn -> final eyes.json per-cube positions Cube_1=[0.51,-0.296] in Bin_red(y-center -0.30) + Cube_2=[0.51,-0.540] in Bin_blue(y-center -0.55) = CORRECT color routing (not just delivery), both upright tilt 0.3deg, 2/2 CONVERGED+GRIPPED. Promoted to UR10:color-sort. Re-classed from pick-place-bin.)",
+      "basis": "scene_eyes RAW per-cube xy vs bin_bboxes (cont.319nnn fresh-Kit) — false-success-vakt on the SORT: confirmed distinct color-correct bins, not just 2/2-in-some-bin. Original cont.318h routing-verify confirmed.",
       "n_objects": 2
     },
     "CP-83": {
