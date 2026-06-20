@@ -306,6 +306,25 @@ async def main():
     print("CHAIN_XKIT SUMMARY: %d stage(s), %s — %s" % (
         len(results), " + ".join("%d/%d" % (r.get("delivered", 0), r.get("total", 1)) for r in results),
         "ALL DELIVERED (faithful cross-Kit relay)" if all_ok else "INCOMPLETE"))
+    # cont.319mm (adversarial-sim TRACEABILITY build): per-part CUSTODY CHAIN across robot-robot handoffs.
+    # Each part keeps its identity (leaf, e.g. Cube_1) through every relay (Cube_1 -> relay1/Cube_1 -> ...);
+    # log its delivered-outcome at every station -> a queryable custody record. A part NOT delivered at some
+    # stage gets an INCOMPLETE custody chain = a DETECTED handoff loss (the per-item-traceability demand).
+    _custody = {}
+    for _r in results:
+        for _cp, _pos in (_r.get("poses") or {}).items():
+            _leaf = _cp.rsplit("/", 1)[-1]
+            _rec = _custody.setdefault(_leaf, {"part_id": _leaf, "journey": []})
+            _rec["journey"].append({"stage": _r["stage"], "station": _r["name"], "path": _cp,
+                                    "delivered": True, "pos": [round(float(x), 3) for x in _pos]})
+    for _rec in _custody.values():
+        _rec["stations_logged"] = len(_rec["journey"])
+        _rec["complete_custody"] = len(_rec["journey"]) == len(results)
+    _ncomp = sum(1 for _r in _custody.values() if _r["complete_custody"])
+    json.dump({"chain": list(specs), "n_stations": len(results), "parts": list(_custody.values())},
+              open("/tmp/chain_custody.json", "w"), indent=1)
+    print("CHAIN_CUSTODY: %d parts, %d with COMPLETE custody across all %d stations -> /tmp/chain_custody.json"
+          % (len(_custody), _ncomp, len(results)))
     if _os.environ.get("CHAIN_TRAJ"):                         # cont.319hh diagnostic dump
         json.dump(results, open("/tmp/chain_traj.json", "w"), indent=1)
         print("CHAIN_TRAJ dumped -> /tmp/chain_traj.json")

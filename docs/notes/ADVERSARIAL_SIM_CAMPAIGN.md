@@ -54,5 +54,16 @@ BUILD QUEUE (tractable, Kit-groundable, no Gemini): (1) physical-state handoff G
 NL-composition end-to-end, infeasibility-honesty. Ground+document-as-limit (deep): fault-recovery, deformable,
 zero-shot-onboarding, force-control.
 
-### Round 1 GROUND+BUILD #1 — physical-state handoff gating (IN PROGRESS)
-- Ground: does the chain/composition handoff gate on physical handoff-occupancy, or just deliver (software-signal)?
+### Round 1 GROUND+BUILD
+- **#1 handoff-gating — GROUNDED (gotcha CONFIRMED, code-level):** chain_xkit_gate relay auto-derives handoff
+  geometry but has NO occupancy/wait/clear gate; the source (CP-CONV-02-SRC) gates its PICK on a belt PickSensor
+  but NOTHING gates its PLACE onto the HandoffTray. So no physical-state handoff gating -> a stalled receiver in
+  a steady-state line would be silently overwritten. (Build = controller-deep, sensor-gated place; queued.)
+- **TRACEABILITY — BUILT + DEMONSTRATED (chain_xkit_gate custody instrumentation):** the cross-Kit chain runtime
+  now emits a per-part CUSTODY CHAIN (/tmp/chain_custody.json): each part's identity (leaf Cube_N) is tracked
+  through every robot-robot handoff (Cube_N -> relay1/Cube_N -> ...); journey = [(station, stage, delivered, pos)],
+  complete_custody flag. DEMO: CONV-02-SRC-3 -> CP-CHAIN-FLAT = 3 parts, 3 COMPLETE custody across 2 stations. A
+  dropped part -> stations_logged < n_stations = a DETECTED handoff loss (the gap-detection the demand requires).
+  Commit: see chain_xkit_gate.py cont.319mm.
+- Next builds: compliance-schema EXPORT of the custody record (IATF/21-CFR fields: timestamp, robot_id, outcome,
+  integrity-hash) [12x demand]; weight-stratified mixed-SKU pallet [9x]; then the deeper handoff-gating [#1].
