@@ -101,7 +101,7 @@ async def _augment_verify_with_feasibility(verify_result: Dict, stages: list) ->
     verify_result['issues'] list. Sets pipeline_ok=False if any CRITICAL
     violations found.
 
-    Reads stage pick_pos / place_pos from verify_result['results']
+    Reads stage pick_pos / place_pos from verify_result['stages']
     (already computed by the kit-side script) — avoids second Kit RPC trip
     to compute them.
 
@@ -123,7 +123,12 @@ async def _augment_verify_with_feasibility(verify_result: Dict, stages: list) ->
     if not parsed:
         return verify_result  # non-parseable; leave alone
 
-    stage_results = parsed.get("results") or []
+    # NOTE: verify_pickplace_pipeline emits per-stage data under "stages" (each
+    # entry carries robot_path/pick_pos/place_pos/robot_pos/reach_m). The original
+    # code read "results", which this tool never emits -> _augment silently grounded
+    # ZERO stages (the feasibility augmentation was dead code). Read "stages", with
+    # a "results" fallback in case an older/alternate format is ever passed in.
+    stage_results = parsed.get("stages") or parsed.get("results") or []
     issues = list(parsed.get("issues") or [])
     pipeline_ok = bool(parsed.get("pipeline_ok"))
     feasibility_reports = []

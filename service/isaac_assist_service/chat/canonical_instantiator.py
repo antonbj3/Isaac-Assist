@@ -310,15 +310,6 @@ async def execute_template_verify(template: Dict[str, Any]) -> Dict[str, Any]:
     if not verify_args:
         return {"executed": False, "reason": "template has no verify_args field"}
 
-    # Gap A (Anton, 2026-06-20): the agent always has Kit attached, so the
-    # default auto-verify should GROUND reach with real cuRobo IK
-    # (diagnose_scene_feasibility) instead of trusting the static reach-table —
-    # static_eyes' own reach-shell is a no-Kit compromise that is strictly worse
-    # here. The verify_pickplace_pipeline 'feasibility' flag is opt-in (default
-    # off to preserve the tool's API contract); enable it BY DEFAULT for this
-    # agent-flow call only, while still letting a template override it.
-    verify_args = {"feasibility": True, **verify_args}
-
     try:
         res = await execute_tool_call("verify_pickplace_pipeline", verify_args)
     except Exception as e:
