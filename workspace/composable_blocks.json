@@ -21,7 +21,8 @@
     "UR10:other": null,
     "UR10:palletize/grid": null,
     "UR10:pick-place-bin": "CP-73",
-    "UR10:conveyor-pick": "CP-69"
+    "UR10:conveyor-pick": "CP-69",
+    "UR10:stack/column": "CP-81"
   },
   "all": {
     "CP-NEW-nir-material-divert": {
@@ -523,9 +524,9 @@
     },
     "CP-81": {
       "robot": "UR10",
-      "class": "pick-place-bin",
-      "verdict": "GENUINE(scene_eyes UR10 suction 2/2 delivered to Bin, stacked 2-level z 0.785/0.835; EJECTION flag=2.2m/s fast-watch NOT >8m/s blowup; cont.318g)",
-      "basis": "delivery-gate (honest for bin/sort)",
+      "class": "stack/column",
+      "verdict": "GENUINE(UR10 2-high STACK/column: re-verify fresh-Kit cont.319nnn -> STACK-STRUCTURE 2 distinct z-levels [0.785, 0.835] (5cm apart = stacked, not piled), xy-extent 0.02m (aligned column), min-pair-xy 0.018m, both CONVERGED+GRIPPED + xy-in-bin. Promoted to UR10:stack/column = the robot-diversity stack gap (Franka had stack/column CP-13, UR10 didn't). Re-classed from pick-place-bin.)",
+      "basis": "scene_eyes RAW STACK-STRUCTURE (cont.319nnn fresh-Kit) — 2 z-levels + tight xy = genuine 2-high column, not a pile. Original cont.318g delivery confirm.",
       "n_objects": 2
     },
     "CP-82": {
