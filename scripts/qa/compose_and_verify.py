@@ -126,13 +126,34 @@ for d in INSTS:
     rr = await kit_tools.exec_sync(chk, timeout=int(6000 * max(1, len(insts)) / 8) + 90)
     out = (rr.get("output") or rr.get("error") or "").strip()
     print(out)
+    # cont.319yy (audit FIX #2): a self-targeting ACTUATION block (humanoid arm/stand-reach has target_path==cube_path,
+    # or 0 objects) "delivers" its cube into its OWN bbox -> phantom delivered=N/N regardless of whether it actuated.
+    # The actuation-skip (audit_golds_raw.py:101) was never ported here, so such a block would phantom-PASS and poison
+    # verified_compositions.jsonl with a gold record. Exclude actuation instances; require >=1 real DELIVERY instance.
+    def _is_actuation_template(nm):
+        try:
+            _t = json.load(open(f"{REPO}/workspace/templates/{nm}.json"))
+        except Exception:
+            return False
+        _sa = _t.get("simulate_args") or {}
+        _cubes = _sa.get("cube_paths") or []
+        if not _cubes:
+            return True                              # 0 objects -> nothing to deliver
+        if _sa.get("target_path") in _cubes:         # self-target -> "delivery" is the cube vs its own bbox (phantom)
+            return True
+        _meta = " ".join(str(_t.get(k, "")) for k in ("intent", "goal", "task_id")).lower()
+        return any(w in _meta for w in ("humanoid", "actuat", "forklift-lift", "stand-reach", "arm-reach", "bimanual"))
     deliv = {}
     for l in out.splitlines():
         if l.startswith("DELIV"):
             root = l.split("inst=")[1].split()[0]
+            tpl = l.split("tpl=")[1].split()[0] if "tpl=" in l else ""
             d, tot = map(int, l.split("delivered=")[1].split()[0].split("/"))
-            deliv[root] = {"delivered": d, "total": tot}
-    all_full = bool(deliv) and all(v["delivered"] == v["total"] and v["total"] > 0 for v in deliv.values())
+            deliv[root] = {"delivered": d, "total": tot, "tpl": tpl, "actuation": _is_actuation_template(tpl)}
+    _delivery = {k: v for k, v in deliv.items() if not v.get("actuation")}
+    # all_full = every DELIVERY instance delivered full AND there is >=1 delivery instance (a pure-actuation
+    # composition is NOT delivery-verifiable -> all_full=False -> no gold record appended).
+    all_full = bool(_delivery) and all(v["delivered"] == v["total"] and v["total"] > 0 for v in _delivery.values())
     rec = {
         "ts": time.time(), "level": "L2_composition",
         "verification_tier": "gold_kit_delivery_verified",  # only appended when it DELIVERED full in Kit
