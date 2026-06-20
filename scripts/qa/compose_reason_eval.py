@@ -48,6 +48,14 @@ CASES = [
     {"id": "sort+kit", "gt": {"CP-03", "CP-50"}, "gap": False,
      "task": "Station 1: a Franka sorts parts by colour into separate bins. Station 2: a Franka assembles "
              "a kit from parts."},
+    # cont.319kk-s: the new attr-routed DIVERT operations (barcode-sort / material-sort) entered canonical_blocks
+    # this session — discriminate them from colour-sort (forbid CP-03) so the LLM picks the RIGHT sensor/operation.
+    {"id": "sortdiv-barcode", "gt": {"CP-NEW-barcode-scanner-divert"}, "forbid": {"CP-03"},
+     "task": "A Franka station scans each package's BARCODE and diverts it by SKU to one of three output LANES "
+             "(barcode/SKU sortation, NOT colour sorting)."},
+    {"id": "sortdiv-material", "gt": {"CP-NEW-nir-material-divert"}, "forbid": {"CP-03"},
+     "task": "A Franka station uses a NIR material sensor to sort items by MATERIAL — metal, plastic, glass — "
+             "into recycling bins (material recycling sortation, NOT colour sorting)."},
     {"id": "3stn-mixed", "gt": {"CP-73", "CP-08", "CP-13"}, "gap": False,
      "task": "Three stations. (1) a UR10 picks parts into a bin; (2) a Franka palletizes parts into a grid; "
              "(3) a Franka stacks parts into a column."},

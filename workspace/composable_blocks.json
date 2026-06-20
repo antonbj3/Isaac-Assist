@@ -1,6 +1,8 @@
 {
   "canonical_blocks": {
     "Franka:color-sort": "CP-03",
+    "Franka:barcode-sort": "CP-NEW-barcode-scanner-divert",
+    "Franka:material-sort": "CP-NEW-nir-material-divert",
     "Franka:conveyor-pick": "CP-CONV-02",
     "Franka:inspect/vision": "CP-18",
     "Franka:kit/assembly": "CP-50",
