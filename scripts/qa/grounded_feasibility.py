@@ -90,6 +90,34 @@ def check_gripper_object_feasibility(gripper_type: str, obj: Obj) -> dict:
             "suggested_gripper": _suggest_for(o)}
 
 
+# ── REACH feasibility (the "stack 1.5m tall" / far-target trap) ──────────────
+# Max reach RADIUS from the robot base (representative datasheet values, metres).
+ROBOT_REACH = {"franka": 0.855, "panda": 0.855, "ur3": 0.5, "ur5": 0.85, "ur10": 1.30,
+               "ur10e": 1.30, "kuka_iiwa": 0.8, "g1": 0.7}
+DEFAULT_BASE_Z = 0.75   # robots in these cells sit on a ~0.75m pedestal/table
+
+
+def check_reach_feasibility(robot: str, target_xyz, base_xyz=(0.0, 0.0, DEFAULT_BASE_Z)) -> dict:
+    """Grounded reach pre-check (before the heavier solve_ik): is the target within the robot's reach sphere?
+    Catches 'stack a 1.5m column' / 'far target' specs the LLM would otherwise assert as buildable."""
+    r = (robot or "").lower().replace("-", "_")
+    reach = ROBOT_REACH.get(r)
+    if reach is None:
+        return {"feasible": None, "reason": f"unknown robot reach for '{robot}'", "confidence": 0.0}
+    dx = target_xyz[0] - base_xyz[0]
+    dy = target_xyz[1] - base_xyz[1]
+    dz = target_xyz[2] - base_xyz[2]
+    dist = (dx * dx + dy * dy + dz * dz) ** 0.5
+    if dist > reach:
+        return {"feasible": False, "confidence": 0.9,
+                "reason": f"target {tuple(round(c,2) for c in target_xyz)} is {dist:.2f}m from base, "
+                          f"exceeds {robot}'s {reach}m reach (need a taller/longer robot, a lift axis, or a closer target)"}
+    if dist > 0.9 * reach:
+        return {"feasible": True, "confidence": 0.6,
+                "reason": f"{dist:.2f}m is near {robot}'s {reach}m limit -> marginal IK / singularity risk"}
+    return {"feasible": True, "confidence": 0.9, "reason": f"{dist:.2f}m within {robot}'s {reach}m reach"}
+
+
 def _selftest():
     cases = [
         # (gripper, obj, expected_feasible, label)
@@ -115,10 +143,30 @@ def _selftest():
         print(f"  [{'OK' if hit else 'XX'}] {g:14} {label:46} feasible={r['feasible']!s:5}{sug}")
         if not hit:
             print(f"        reason: {r['reason']}")
-    print(f"\n{npass}/{len(cases)} grounded verdicts correct.")
-    print("THE TRAP: slippery wet steel cylinder + suction -> INFEASIBLE (seal breaks) + suggests magnetic (steel is ferrous).")
-    print("This is the grounded reasoning the agent should CALL instead of guessing/asserting the gripper works.")
-    return 0 if npass == len(cases) else 1
+    print(f"\n{npass}/{len(cases)} grip verdicts correct.")
+    # REACH battery — (robot, target_xyz, expected_feasible, label)
+    reach_cases = [
+        ("franka", (0.5, -0.3, 2.25), False, "stack 1.5m-tall column (target z=2.25) + Franka (THE reach trap)"),
+        ("franka", (0.5, -0.3, 0.93), True, "normal bin drop z=0.93 + Franka"),
+        ("ur10", (0.5, -0.3, 2.25), False, "1.5m column + UR10 (1.3m reach, still too far)"),
+        ("ur10", (1.05, 0.0, 0.78), True, "far-but-reachable target 1.05m + UR10 (within 1.3m)"),
+        ("franka", (1.6, 0.0, 0.78), False, "1.6m-away target + Franka (0.855m reach)"),
+    ]
+    rpass = 0
+    print("=== GROUNDED reach feasibility — trap battery ===")
+    for rob, tgt, exp, label in reach_cases:
+        r = check_reach_feasibility(rob, tgt)
+        hit = (r["feasible"] == exp)
+        rpass += hit
+        print(f"  [{'OK' if hit else 'XX'}] {rob:7} {label:52} feasible={r['feasible']!s:5}")
+        if not hit:
+            print(f"        reason: {r['reason']}")
+    print(f"\n{rpass}/{len(reach_cases)} reach verdicts correct.")
+    print("THE TRAPS now grounded: suction-on-slippery-cylinder (seal breaks) + 1.5m-column (exceeds arm reach).")
+    print("These are the grounded checks the agent should CALL before asserting a special-order is buildable.")
+    total, tot = npass + rpass, len(cases) + len(reach_cases)
+    print(f"OVERALL: {total}/{tot}")
+    return 0 if total == tot else 1
 
 
 if __name__ == "__main__":
