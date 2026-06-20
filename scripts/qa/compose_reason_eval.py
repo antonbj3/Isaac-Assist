@@ -119,7 +119,7 @@ async def _eval_once(prov, c):
         txt = (resp.text or "").strip()
     except Exception as e:
         txt = f"ERROR {e}"
-    picks = set(re.findall(r"CP-[A-Z0-9][A-Z0-9-]*", txt.split('"reasoning"')[0] if '"reasoning"' in txt else txt))
+    picks = set(re.findall(r"CP-[A-Za-z0-9][A-Za-z0-9-]*", txt.split('"reasoning"')[0] if '"reasoning"' in txt else txt))
     picks &= _AVAIL  # only count real catalog ids
     flagged_gap = '"gaps"' in txt and bool(re.search(r'"gaps"\s*:\s*\[\s*"[^"]', txt))
     _sm = re.search(r'"structure"\s*:\s*"(sequential|parallel)"', txt)

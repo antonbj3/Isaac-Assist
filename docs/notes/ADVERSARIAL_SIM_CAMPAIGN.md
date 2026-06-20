@@ -76,6 +76,22 @@ zero-shot-onboarding, force-control.
 - Next round: weight-stratified mixed-SKU pallet [9x]; physical-state handoff GATING build [#1, deeper];
   Gemini-windowed NL-composition + infeasibility-honesty; ground+document deep gaps (deformable/fault-recovery).
 
+### Round 1 GEMINI-WINDOW grounding (NL-composition core promise + honesty)
+Gemini quota refreshed -> grounded the #2 (NL composition) + #5 (infeasibility-honesty) demands via compose_reason_eval.
+- ★ INSTRUMENT-BUG FIXED (false-success-vakt on the EVAL itself): pick-extraction regex was `CP-[A-Z0-9]...` which
+  does NOT match lowercase -> the new lowercase canonicals (CP-NEW-barcode-scanner-divert, nir-material-divert,
+  sorter-size-weight, precision-pick) were UN-extractable -> false MISS. Fixed -> `[A-Za-z0-9]`. After fix
+  sortdiv-barcode PASS (LLM DID pick it; the SYSTEM delivers, the eval was hiding it). Committed.
+- GROUNDED NL-pick reliability ~16-17/21: GENUINE misses = sortdiv-material (LLM won't pick the NIR-material divert),
+  real-conveyor (won't pick CP-CONV-02 for "moving real belt"), humanoid-stand (won't pick CP-G1-STAND-01),
+  robot-ambig (incomplete), imp-seq-down (structure=None, the known stochasticity). So the "compose ANY task from
+  one sentence" promise delivers ~80%, NOT 100% -> a hostile reviewer's one-sentence demand hits the ~20% intent-
+  match gap. = grounded credibility finding (the build = richer intent->canonical matching in the SYS/catalog).
+- GAP-HONESTY WORKS (positive): gap-ur10-sort + gap-ur10-kit both correctly FLAGGED the gap (picks=[]) instead of
+  hallucinating a block -> the system IS honest about those catalog gaps (the #5 honesty test passes the basic cases;
+  harder adversarial infeasibility — no-touch zone, payload-over-limit — is the next escalation).
+- Next build: lift NL-pick from ~80% -> higher by enriching intent->canonical matching for the missed ops.
+
 ### 48h ENGINE rhythm (self-sustaining via keepalive)
 generate (black-box workflow, sparing on cc) -> ground top demands in Kit -> BUILD tractable + Kit-verify +
 commit per capability + ledger -> re-test -> escalate to the next prober round. cc weekly hard-stop 94%
