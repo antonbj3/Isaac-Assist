@@ -156,7 +156,10 @@ def xform(p):
 # ROWS -> the gate false-NEGATIVE'd a working palletizer. Add unambiguous delivery-item prefixes (Brick/Carton/
 # Crate/Package/Parcel); deliberately EXCLUDE "Box"/"Block" (ambiguous with Bin/container/scene-block -> would
 # risk tracking a non-delivery prim into the structure verdict = a false-positive). Add those case-by-case.
-_DELIV_PREFIX = ("Cube", "Item", "Brick", "Carton", "Crate", "Package", "Parcel")
+# cont.319kk-l: + "Sheet" — CP-NEW-vacuum-gripper-sheet-pick names its workpieces Sheet_4/5/6; without it
+# scene_eyes tracked ZERO objects (CUBES=[]) -> a false-NEGATIVE (the #45 class). Verified unambiguous: the
+# only /World/Sheet* prims in the corpus are those delivery sheets (no SheetMetal-surface / Worksheet etc.).
+_DELIV_PREFIX = ("Cube", "Item", "Brick", "Carton", "Crate", "Package", "Parcel", "Sheet")
 CUBES = [str(pr.GetPath()) for pr in stage.Traverse() if pr.GetName().startswith(_DELIV_PREFIX)]
 # 2026-06-19 (cont.319jj): DEX-HAND palm tracking for the dexterous-grasp detector. A humanoid 3-finger hand has
 # NO SurfaceGripper/suction-cup, so the gripper-based grip logic (gripped-set / cup-slip) reads 'never-gripped'
