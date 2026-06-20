@@ -121,6 +121,31 @@ not a sim-correctness bug); parametric BELT mutation (template-level, no API); F
 (could extend precondition_check — the one tractable+sim-relevant build candidate). Most of the wave was REFUTED =
 an HONEST outcome (the sim validated the composer's real capability + corrected the agents' naive-composer assumption).
 
+### Round 1 NL-pick RE-GROUNDED (diagnostik-först on the raw response — instrument lied AGAIN)
+The "NL-pick ~80%, real misses material-sort/real-conveyor/humanoid-stand" finding was WRONG. EVAL_RAW raw-read of
+the LLM body revealed the 3 "misses" were Gemini OVERLOAD-ERRORS: a 200-OK body = "I'm having trouble reaching my
+reasoning backend right now (upstream service overloaded). Please try again." The eval counted that apology as a
+response -> no CP-ids -> picks=[] -> FALSE MISS. So the ~80% was CONFOUNDED (real passes + transient overload-misses);
+the TRUE NL-pick rate is higher, and these 3 are NOT real reasoning gaps.
+LIVING-TOOL FIXES committed: (1) eval pick-regex [A-Z0-9]->[A-Za-z0-9] (lowercase canonicals were un-extractable);
+(2) _is_overload() detection + retry-on-overload (4x backoff) + an OVERLOAD verdict EXCLUDED from the pass-rate
+denominator (was false-MISS); (3) EVAL_RAW env-gated raw-print (the diagnostic that caught it). Description-enrichment
+(scope-clarifying op cues in CATALOG, shared by compose_orchestrate too) KEPT — plausibly helpful, but UNVALIDATED
+(Gemini was overloaded during the window; re-validate next quota window with the overload-retry now in place).
+
+### ★★ CAMPAIGN META-FINDING (the biggest, most honest output so far)
+Rigorous GROUNDING (vs the PRODUCTION composer + raw-reads) has CONSISTENTLY REFUTED the black-box waves' gotchas as
+INSTRUMENT / INFRA artifacts, not real system failures:
+- layout gotchas -> REFUTED (production composer has footprint-overlap-free layout + namespacing + handoff-rebind +
+  precondition contention-detection; I'd grounded against the qa TEST GATE not production).
+- NL-pick "misses" -> Gemini OVERLOAD-errors (false-MISS), + an eval REGEX bug (lowercase) — both instrument lies.
+- #1 handoff-gating -> a SCOPE limit (finite-batch composition), not a silent-overwrite bug.
+So: the "infinite capacity" MARKETING is over-stated, but the actual production composition CORE is MORE capable and
+MORE honest than the black-box gotcha-hunt assumed. The adversarial sim's real value here = it forced the rigor that
+CAUGHT MY OWN instrument/grounding errors (regex, overload, wrong-module, stale-Kit) — a system-level false-success-
+vakt. Genuine remaining gaps are NARROW + mostly block-level robot capabilities (Kit-grounded: weight-pallet,
+deformables) or deep (in-place-edit, fault-tolerance) — pursued via Kit, not via more reasoning-only gotcha waves.
+
 ### 48h ENGINE rhythm (self-sustaining via keepalive)
 generate (black-box workflow, sparing on cc) -> ground top demands in Kit -> BUILD tractable + Kit-verify +
 commit per capability + ledger -> re-test -> escalate to the next prober round. cc weekly hard-stop 94%

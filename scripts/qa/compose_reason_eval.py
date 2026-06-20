@@ -20,7 +20,29 @@ from service.isaac_assist_service.chat.llm_gemini import GeminiProvider
 
 _BLOCKS = json.load(open(f"{REPO}/workspace/composable_blocks.json"))["canonical_blocks"]
 _AVAIL = {cp for cp in _BLOCKS.values() if cp}
-CATALOG = "\n".join(f"- {cp}: a {k.split(':',1)[0]} robot work-cell that performs {k.split(':',1)[1]}"
+# cont.319mm (adversarial-sim NL-pick build): scope-clarifying op descriptions so the LLM matches natural intents
+# (the grounded misses were "moving real belt"->conveyor-pick, "NIR material"->material-sort, "stands upright +
+# reaches"->humanoid-stand-reach). The op-name alone under-cued the LLM; a one-line scope cue lifts intent-matching.
+_DESC = {
+    "ForkliftB:forklift-lift": "a forklift raises/lowers a loaded pallet on its lift mast",
+    "Franka:barcode-sort": "sorts items by BARCODE/SKU into destination LANES (barcode scanner)",
+    "Franka:color-sort": "sorts items by COLOUR into colour-matched bins",
+    "Franka:conveyor-pick": "picks parts off a conveyor/belt feed (belt-fed, real or generated; the belt pauses at a proximity sensor for the pick) — use for ANY 'pick off a (moving) conveyor/belt' station",
+    "Franka:inspect/vision": "inspects each item (vision/defect check) and routes pass vs reject",
+    "Franka:kit/assembly": "assembles or kits parts into a fixture/kit tray",
+    "Franka:material-sort": "sorts items by MATERIAL using a NIR/material sensor (metal/plastic/glass) into recycling bins",
+    "Franka:palletize/grid": "places parts into a grid/pallet layout (palletising)",
+    "Franka:pick-place-bin": "picks loose parts and drops them into a bin (basic pick-and-place)",
+    "Franka:pick-place-real-object": "picks a REAL meshed product object (YCB box/can/brick) into a bin",
+    "Franka:precision-pick": "precision pick of ONE part from tightly-packed neighbours into a tight-tolerance bin without disturbing the others",
+    "Franka:size-weight-sort": "sorts items by PHYSICAL size and weight (bounding-box + force-torque) into heavy/light bins",
+    "Franka:stack/column": "stacks parts into a vertical column/tower",
+    "G1-humanoid:humanoid-arm": "a humanoid robot's arm reaches/actuates (free/low-gravity)",
+    "G1-humanoid:humanoid-bimanual-reach": "a standing humanoid reaches with BOTH arms (bimanual)",
+    "G1-humanoid:humanoid-stand-reach": "a humanoid robot STANDS UPRIGHT under gravity (fixed base) and reaches/places with its arm",
+    "UR10:pick-place-bin": "a UR10 robot picks parts and drops them into a bin",
+}
+CATALOG = "\n".join(f"- {cp}: a {k.split(':',1)[0]} robot work-cell — {_DESC.get(k) or ('performs ' + k.split(':',1)[1])}"
                     for k, cp in sorted(_BLOCKS.items()) if cp)
 
 SYS = ("You are a factory-scene COMPOSITION PLANNER. You build scenes by selecting pre-built robot work-cells "
@@ -111,14 +133,31 @@ CASES = [
 ]
 
 
+def _is_overload(txt):
+    """cont.319mm (instrument-lies guard): Gemini occasionally returns a 200-OK BODY that is an overload apology
+    ('trouble reaching my reasoning backend ... try again'), NOT a composition. Detecting it lets the eval RETRY +
+    NOT count it as a real MISS (the diagnostik-först raw-read caught 3 false-MISSes that were pure overload-errors)."""
+    t = (txt or "").lower()
+    return ("trouble reaching my reasoning backend" in t or "upstream service overloaded" in t
+            or "try again in a moment" in t or ("overloaded" in t and "cp-" not in t))
+
+
 async def _eval_once(prov, c):
     """One LLM attempt at one case -> a result dict (id/verdict/picks/structure/ok)."""
     prompt = f"Available work-cells:\n{CATALOG}\n\nTask: {c['task']}"
-    try:
-        resp = await prov.complete([{"role": "user", "content": prompt}], {"system_override": SYS})
-        txt = (resp.text or "").strip()
-    except Exception as e:
-        txt = f"ERROR {e}"
+    txt = ""
+    for _att in range(4):   # Gemini sometimes 200-OKs an 'upstream overloaded, try again' body -> retry, don't MISS
+        try:
+            resp = await prov.complete([{"role": "user", "content": prompt}], {"system_override": SYS})
+            txt = (resp.text or "").strip()
+        except Exception as e:
+            txt = f"ERROR {e}"
+        if not _is_overload(txt):
+            break
+        await asyncio.sleep(3 * (_att + 1))
+    overloaded = _is_overload(txt)
+    if os.environ.get("EVAL_RAW"):
+        print(f"  RAW[{c['id']}]: {txt[:400]}")
     picks = set(re.findall(r"CP-[A-Za-z0-9][A-Za-z0-9-]*", txt.split('"reasoning"')[0] if '"reasoning"' in txt else txt))
     picks &= _AVAIL  # only count real catalog ids
     flagged_gap = '"gaps"' in txt and bool(re.search(r'"gaps"\s*:\s*\[\s*"[^"]', txt))
@@ -145,8 +184,10 @@ async def _eval_once(prov, c):
         extras = picks - allowed
         verdict = (("FORBID-HIT" if forbid_hit else ("STRUCT-MISS" if (blocks_ok and not struct_ok) else "MISS"))
                    if not ok else ("PASS" if not extras else "OK+EXTRA"))
+    if overloaded:
+        verdict, ok = "OVERLOAD", None   # transient Gemini overload, NOT a real miss — excluded from the pass-rate
     return {"id": c["id"], "verdict": verdict, "picks": sorted(picks),
-            "gt": sorted(c["gt"]), "gap_flag": flagged_gap, "structure": struct, "ok": ok}
+            "gt": sorted(c["gt"]), "gap_flag": flagged_gap, "structure": struct, "ok": ok, "overloaded": overloaded}
 
 
 async def _run(model, only=None, retries=0):
@@ -160,7 +201,7 @@ async def _run(model, only=None, retries=0):
         # LLM nondeterminism: a single-shot MISS can be FLAKINESS not a real gap (op-discrim flaky-misses ~1/4,
         # cont.319y — an occasional empty/malformed pick). Retry a MISS up to `retries` times; if ANY retry passes
         # it is FLAKY-PASS. A REAL gap fails all retries. This stops a flaky-miss being misread as a regression.
-        if (not r["ok"]) and retries > 0:
+        if (r["ok"] is False) and retries > 0:
             for _ in range(retries):
                 r2 = await _eval_once(prov, c)
                 if r2["ok"]:
@@ -172,9 +213,12 @@ async def _run(model, only=None, retries=0):
                 + (f" forbid={sorted(c['forbid'])}" if c.get("forbid") else "")
                 + (f" struct={c['exp_structure']}(got={r['structure']})" if c.get("exp_structure") else ""))
         print(f"  {c['id']:16s} {r['verdict']:12s} picks={r['picks']}  {_exp}{' (FLAKY-PASS on retry)' if flaky else ''}")
-    n_ok = sum(x["ok"] for x in rows)
-    n_flaky = sum(x.get("flaky") for x in rows)
-    print(f"\nCOMPOSE-REASON: {n_ok}/{len(rows)} cases OK (model={model})" + (f"  [{n_flaky} flaky-pass on retry]" if n_flaky else ""))
+    n_ok = sum(1 for x in rows if x["ok"])
+    n_scored = sum(1 for x in rows if x["ok"] is not None)   # exclude transient OVERLOAD cases from the denominator
+    n_over = sum(1 for x in rows if x.get("overloaded"))
+    n_flaky = sum(1 for x in rows if x.get("flaky"))
+    print(f"\nCOMPOSE-REASON: {n_ok}/{n_scored} cases OK (model={model})"
+          + (f"  [{n_flaky} flaky-pass]" if n_flaky else "") + (f"  [{n_over} OVERLOAD-excluded]" if n_over else ""))
     return rows
 
 
