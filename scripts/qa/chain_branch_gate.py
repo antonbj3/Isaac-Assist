@@ -85,7 +85,10 @@ async def main():
         full = r["total"] > 0 and r["delivered"] == r["total"]
         all_full = all_full and full and r["total"] > 0
         print(f"  {r['branch']:18} -> {r['recv']:24} {r['delivered']}/{r['total']} {'FULL' if full else 'PARTIAL'}")
-    print("VERDICT:", "BRANCHING CHAIN GOLD (both branches deliver their routed subset)" if all_full and len(results) == 2
+    # N-way verdict: GOLD iff EVERY branch delivered its full routed subset (was hardcoded len==2,
+    # which false-negatived a clean 3-way all-FULL run as PARTIAL after the N-way generalization).
+    print("VERDICT:", f"BRANCHING CHAIN GOLD (all {len(results)} branches deliver their routed subset)"
+          if all_full and len(results) >= 2
           else "PARTIAL / needs review (honest custody)")
 
 
