@@ -8,6 +8,7 @@
     "Franka:inspect/vision": "CP-18",
     "Franka:kit/assembly": "CP-50",
     "Franka:shelf-store-real-asset": "CP-36-REAL",
+    "Franka:shelf-store-real-object": "CP-YCB-SHELF",
     "Franka:other": null,
     "Franka:palletize/grid": "CP-08",
     "Franka:palletize/grid-tight": "CP-08-TIGHT",
