@@ -34,7 +34,16 @@ def _singularity_ok() -> Dict[str, Any]:
 
 
 def _singularity_singular() -> Dict[str, Any]:
-    return {"output": json.dumps({"manipulability": 0.02})}
+    # Near-singular config: the SOUND signal is the condition number (sigma_max/
+    # sigma_min) + status 'danger' (>=100); the prod-of-sigma manipulability is an
+    # artifact kept info-only. The diagnose violation now fires on status, not manip.
+    return {"output": json.dumps({
+        "manipulability": 0.02,
+        "condition_number": 130.0,
+        "status": "danger",
+        "singular_values": [1.0, 0.8, 0.6, 0.4, 0.2, 0.0077],
+        "warnings": ["Joint 5 near zero — possible wrist singularity"],
+    })}
 
 
 def _bbox(prim_path: str, mn, mx) -> Dict[str, Any]:
@@ -269,11 +278,13 @@ async def test_path_clear_no_violation():
 
 @pytest.mark.asyncio
 async def test_singular_config_warning():
-    """Manipulability warning flips verdict to tightly_feasible without
-    blocking other axes."""
+    """A near-singular config (condition number >= 100 -> status 'danger')
+    raises a WARNING-severity 'singularity' violation that flips the verdict to
+    tightly_feasible without blocking other axes. (The prod-of-sigma
+    manipulability is an artifact -> info-only, no longer a violation axis.)"""
     fake = _build_router({
         "solve_ik": [_ok_solve_ik([0]*7)],
-        "check_singularity": [_singularity_singular()],  # 0.02 → WARNING
+        "check_singularity": [_singularity_singular()],  # condition 130 -> danger
         "get_bounding_box": [],
     })
     with patch.object(dtool, "_execute_tool_call", side_effect=fake):
@@ -286,7 +297,8 @@ async def test_singular_config_warning():
         })
     assert report["verdict"] == "tightly_feasible"
     axes = [v["axis"] for v in report["violations"]]
-    assert "manipulability" in axes
+    assert "singularity" in axes
+    assert "manipulability" not in axes  # artifact metric is info-only now
 
 
 @pytest.mark.asyncio
