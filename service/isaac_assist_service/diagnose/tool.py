@@ -101,11 +101,17 @@ async def _solve_ik(robot_path: str, pose: List[float], seed: int,
     return {"success": False, "error": "no_json_in_solve_ik_output"}
 
 
-async def _check_singularity(robot_path: str, target_position: Optional[List[float]]) -> Optional[float]:
-    """Return manipulability index, or None on failure. check_singularity requires
-    {articulation_path, target_position} (it solves IK internally and reports the
-    manipulability at that config); the previous {robot_path, joint_positions}
-    signature VALIDATION-failed -> always None (manipulability silently skipped)."""
+async def _check_singularity(robot_path: str, target_position: Optional[List[float]]) -> Optional[Dict[str, Any]]:
+    """Return check_singularity's parsed result dict, or None on failure.
+    Keys: status ('safe'<50 / 'warning'<100 / 'danger'>=100 by CONDITION NUMBER
+    = sigma_max/sigma_min), condition_number, singular_values, manipulability,
+    warnings. check_singularity requires {articulation_path, target_position}
+    (it solves IK internally and reports the Jacobian SVD at that config).
+
+    ⚠️ The condition-number `status` is the SOUND singularity signal; the
+    prod-of-sigma `manipulability` is an ARTIFACT — a product of 6 singular
+    values is <0.05 even for HEALTHY poses, so thresholding on it false-warned
+    every healthy gold (CP-01/08/13 ~0.025). Surface condition/status instead."""
     if target_position is None:
         return None
     res = await _execute_tool_call("check_singularity", {
@@ -119,9 +125,8 @@ async def _check_singularity(robot_path: str, target_position: Optional[List[flo
         if line.startswith("{"):
             try:
                 d = json.loads(line)
-                m = d.get("manipulability") or d.get("manipulability_index")
-                if m is not None:
-                    return float(m)
+                if any(k in d for k in ("manipulability", "condition_number", "status")):
+                    return d
             except Exception:
                 continue
     return None
@@ -318,28 +323,29 @@ async def _handle_diagnose_scene_feasibility(args: Dict[str, Any]) -> Dict[str, 
             ))
             continue  # skip downstream metrics if no IK
 
-        # Manipulability at the target (check_singularity solves IK internally)
-        manip = await _check_singularity(robot_path, pose)
-        manip_v, manip_sev = metrics.metric_manipulability(manip=manip)
-        if manip_v is not None:
-            metrics_out[f"{label}_manipulability"] = manip_v
-        # manipulability WARNING SUPPRESSED: the numerical-Jacobian manipulability threshold
-        # over-warns — every healthy Franka gold (CP-01/08/13 ~0.025) falls below it -> spurious
-        # 'tightly_feasible'/near-singularity noise on cells that pick fine. Surface the value as an
-        # info metric only; re-enable the violation once the threshold is calibrated against a
-        # genuinely-singular config. (False-positive warnings = progress poison.)
-        if False and manip_sev:
-            violations.append(Violation(
-                axis="manipulability",
-                severity=manip_sev,
-                value=manip_v,
-                threshold=THRESHOLDS["manipulability"]["warning"],
-                message=messages.format_violation(
-                    "manipulability", manip_sev.value,
-                    value=manip_v, threshold=THRESHOLDS["manipulability"]["warning"],
-                    pose_label=label, lang=lang),
-                details={"pose_label": label},
-            ))
+        # Singularity at the target (check_singularity solves IK internally and
+        # reports the Jacobian SVD). Surface the SOUND condition-number signal as
+        # info: status (safe<50/warning<100/danger>=100) + condition_number +
+        # the artifact-prone manipulability (info-only). The LLM can read the
+        # condition number to judge singularity proximity without a fragile
+        # threshold.
+        sing = await _check_singularity(robot_path, pose)
+        if sing is not None:
+            manip_v = sing.get("manipulability")
+            if manip_v is not None:
+                metrics_out[f"{label}_manipulability"] = manip_v  # info (prod-of-sigma artifact)
+            cond = sing.get("condition_number")
+            if cond is not None:
+                metrics_out[f"{label}_condition_number"] = cond   # info (sigma_max/sigma_min — sound)
+            if sing.get("status"):
+                metrics_out[f"{label}_singularity_status"] = sing["status"]
+        # manipulability VIOLATION still SUPPRESSED: the prod-of-sigma manipulability
+        # threshold (0.05) over-warns — every healthy Franka gold (CP-01/08/13 ~0.025)
+        # falls below it. The condition-number `status` IS calibrated (50/100), but
+        # re-enabling it as a VIOLATION needs a Kit control first (confirm a healthy
+        # gold pick pose lands at status 'safe', condition<50, i.e. no false-positive);
+        # until then condition/status are surfaced as INFO only. (False-positive
+        # warnings = progress poison.)
 
         # Reach utilization (needs robot_base + max_reach)
         # We expect the caller to pass these via args; falls back to hard-coded
