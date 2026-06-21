@@ -339,13 +339,26 @@ async def _handle_diagnose_scene_feasibility(args: Dict[str, Any]) -> Dict[str, 
                 metrics_out[f"{label}_condition_number"] = cond   # info (sigma_max/sigma_min — sound)
             if sing.get("status"):
                 metrics_out[f"{label}_singularity_status"] = sing["status"]
-        # manipulability VIOLATION still SUPPRESSED: the prod-of-sigma manipulability
-        # threshold (0.05) over-warns — every healthy Franka gold (CP-01/08/13 ~0.025)
-        # falls below it. The condition-number `status` IS calibrated (50/100), but
-        # re-enabling it as a VIOLATION needs a Kit control first (confirm a healthy
-        # gold pick pose lands at status 'safe', condition<50, i.e. no false-positive);
-        # until then condition/status are surfaced as INFO only. (False-positive
-        # warnings = progress poison.)
+        # Condition-number singularity VIOLATION (re-enabled cont.319www after a Kit CONTROL:
+        # CP-01 drop pose = condition 12.11 -> status 'safe', a ~4x margin to the 50 threshold,
+        # so healthy golds do NOT false-positive; the status classifier — safe<50 / warning<100 /
+        # danger>=100, standard manipulator thresholds — was verified producing 'safe' at 12).
+        # WARNING-severity only (advisory; never blocks a buildable scene). The prod-of-sigma
+        # `manipulability` stays info-only — it is an artifact (<0.05 even for healthy poses), which
+        # is why the OLD metric_manipulability(0.05) violation was a false-positive and was removed.
+        if (sing is not None and sing.get("status") in ("warning", "danger")
+                and sing.get("condition_number") is not None):
+            violations.append(Violation(
+                axis="singularity",
+                severity=Severity.WARNING,
+                value=float(sing["condition_number"]),
+                threshold=50.0,
+                message=(f"Pose '{label}' near a kinematic singularity — condition number "
+                         f"{sing['condition_number']:.1f} ({sing['status']}). "
+                         + "; ".join(sing.get("warnings") or [])).strip(),
+                details={"pose_label": label, "status": sing.get("status"),
+                         "singular_values": sing.get("singular_values")},
+            ))
 
         # Reach utilization (needs robot_base + max_reach)
         # We expect the caller to pass these via args; falls back to hard-coded
