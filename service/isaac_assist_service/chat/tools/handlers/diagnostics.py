@@ -5414,37 +5414,91 @@ async def _handle_validate_scene_blueprint(args: Dict) -> Dict:
         if z > ground_level + 0.5:
             warnings.append(f"Object '{name}' is at z={z:.2f}m — may be floating without support.")
 
-    # ── Check for AABB overlaps (simple distance-based) ─────────────────
-    positioned_objects = []
+    # ── Check for AABB overlaps (true per-axis half-extents) ────────────
+    # A sphere-radius=max(scale) approximation false-flagged large flat
+    # scenery (a 20m ground / a table) as "overlapping" every object, since
+    # its radius swallowed the whole scene. True AABB uses per-axis half-
+    # extents and requires interpenetration on ALL THREE axes — so a flat
+    # ground (tiny z-extent) never overlaps a cube resting above it, and a
+    # cube resting ON another (z-faces touching, not penetrating) is not
+    # flagged either; only genuine interpenetration is.
+    boxes = []
     for obj in objects:
         pos = obj.get("position", [0, 0, 0])
         scale = obj.get("scale", [1, 1, 1])
-        if isinstance(pos, (list, tuple)) and len(pos) >= 3:
-            # Approximate object radius from scale
-            if isinstance(scale, (list, tuple)) and len(scale) >= 3:
-                radius = max(abs(scale[0]), abs(scale[1]), abs(scale[2])) * 0.5
-            else:
-                radius = 0.5
-            positioned_objects.append({
-                "name": obj.get("name", "unnamed"),
-                "pos": pos,
-                "radius": radius,
-            })
+        if not (isinstance(pos, (list, tuple)) and len(pos) >= 3):
+            continue
+        if isinstance(scale, (list, tuple)) and len(scale) >= 3:
+            half = [abs(scale[0]) * 0.5, abs(scale[1]) * 0.5, abs(scale[2]) * 0.5]
+        elif isinstance(scale, (int, float)):
+            half = [abs(scale) * 0.5] * 3
+        else:
+            half = [0.5, 0.5, 0.5]
+        boxes.append({"name": obj.get("name", "unnamed"), "pos": pos, "half": half})
 
-    for i in range(len(positioned_objects)):
-        for j in range(i + 1, len(positioned_objects)):
-            a = positioned_objects[i]
-            b = positioned_objects[j]
-            dx = a["pos"][0] - b["pos"][0]
-            dy = a["pos"][1] - b["pos"][1]
-            dz = a["pos"][2] - b["pos"][2]
-            dist = (dx * dx + dy * dy + dz * dz) ** 0.5
-            min_dist = a["radius"] + b["radius"]
-            if dist < min_dist * 0.7:  # 70% overlap threshold — some tolerance for surface items
+    for i in range(len(boxes)):
+        for j in range(i + 1, len(boxes)):
+            a, b = boxes[i], boxes[j]
+            # Flag only if penetrating on EVERY axis past a 0.7 tolerance
+            # (lets faces touch — placed-on-surface / stacked — without a
+            # false overlap). margins[ax] = gap - combined_half_extent < 0
+            # means overlap on that axis.
+            margins = [abs(a["pos"][ax] - b["pos"][ax]) - (a["half"][ax] + b["half"][ax])
+                       for ax in range(3)]
+            reaches = [(a["half"][ax] + b["half"][ax]) for ax in range(3)]
+            if all(margins[ax] < -0.3 * reaches[ax] for ax in range(3)):
                 warnings.append(
                     f"Objects '{a['name']}' and '{b['name']}' may overlap "
-                    f"(distance={dist:.3f}m, combined radius={min_dist:.3f}m)."
+                    f"(AABB interpenetration on all axes; deepest margin {max(margins):+.3f}m)."
                 )
+
+    # ── Check for out-of-reach objects (robot envelope, static placement) ──
+    # Grounds "is anything placed beyond the arm's reach?" from authored
+    # positions. UNSOUND for conveyor/belt scenes (workpieces spawn far then
+    # ARRIVE at the pick zone), so this is SKIPPED when a conveyor/belt is
+    # present, and is WARNING-only otherwise — never blocks (valid stays
+    # True), since an authored position may be a pre-pick staging pose. The
+    # authoritative reach check is the settle-dependent scripts/qa/scene_validate.py
+    # / diagnose_scene_feasibility (pick POSE, in-Kit); this is the cheap
+    # static first pass.
+    REACH = {"franka": 0.855, "ur10": 1.30, "ur5": 0.85, "ur3": 0.50}
+    has_conveyor = any(
+        any(k in (o.get("name", "") + " " + str(o.get("asset_name", ""))).lower()
+            for k in ("conveyor", "belt"))
+        for o in objects)
+    robots = []
+    for obj in objects:
+        ident = (obj.get("name", "") + " " + str(obj.get("asset_name", "")) + " "
+                 + str(obj.get("asset_path", ""))).lower()
+        for key, rmax in REACH.items():
+            if key in ident:
+                pos = obj.get("position", [0, 0, 0])
+                if isinstance(pos, (list, tuple)) and len(pos) >= 3:
+                    robots.append({"name": obj.get("name", key), "base": pos, "reach": rmax})
+                break
+    if robots and not has_conveyor:
+        _scenery = ("ground", "plane", "floor", "camera", "light", "overhead", "ceiling",
+                    "lamp", "wall", "table", "conveyor", "belt", "bin", "tray", "fixture",
+                    "stand", "pedestal", "robot")
+        for obj in objects:
+            name = obj.get("name", "unnamed")
+            nl = name.lower()
+            if any(k in nl for k in _scenery) or any(rk in nl for rk in REACH):
+                continue
+            pos = obj.get("position", [0, 0, 0])
+            if not (isinstance(pos, (list, tuple)) and len(pos) >= 3):
+                continue
+            best = min(robots, key=lambda r: sum((pos[k] - r["base"][k]) ** 2 for k in range(3)))
+            d = sum((pos[k] - best["base"][k]) ** 2 for k in range(3)) ** 0.5
+            if d > best["reach"]:
+                warnings.append(
+                    f"Object '{name}' is {d:.2f}m from robot '{best['name']}' base — BEYOND its "
+                    f"{best['reach']:.2f}m reach envelope (authored position; if conveyor-fed or "
+                    f"staged it may be reachable at pick-time).")
+            elif d > best["reach"] * 0.92:
+                warnings.append(
+                    f"Object '{name}' is {d:.2f}m from robot '{best['name']}' — near its reach edge "
+                    f"({best['reach']:.2f}m, {d / best['reach']:.0%}); placement is marginal.")
 
     # ── Check for scale mismatches between objects ──────────────────────
     max_scales = []
