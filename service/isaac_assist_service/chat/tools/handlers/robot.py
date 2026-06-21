@@ -1889,16 +1889,20 @@ def _nav_step(dt):
             print("A* nav: %d obstacle(s) -> %d blocked cells -> %d waypoints" % (len(_obs_pathsN), int(occupancy.sum()), len(_wl)))
         else:
             _nav_state["wps"] = [np.array([target[0], target[1]])]
-    _wps = _nav_state["wps"]; _i = min(_nav_state["wpi"], len(_wps)-1); _wp = _wps[_i]
+    _wps = _nav_state["wps"]
+    # PURE-PURSUIT: skip any waypoint within the lookahead radius so we always aim at a point AHEAD.
+    # This gives the diff-drive forward authority (it translates) instead of turning-in-place on a near
+    # corner and stalling (the cont.319-NAV stall: disp 0.3m on the tight routing turn).
+    _LOOK = 1.5  # larger lookahead -> commit to a heading longer -> faster translation (less re-aiming)
+    while _nav_state["wpi"] < len(_wps)-1 and (((pos[0]-_wps[_nav_state["wpi"]][0])**2 + (pos[1]-_wps[_nav_state["wpi"]][1])**2) ** 0.5) < _LOOK:
+        _nav_state["wpi"] += 1
+    _i = min(_nav_state["wpi"], len(_wps)-1); _wp = _wps[_i]
     _d = float(((pos[0]-_wp[0])**2 + (pos[1]-_wp[1])**2) ** 0.5)
-    _tol = 0.15 if _i == len(_wps)-1 else 0.40
-    if _d < _tol:
-        if _i >= len(_wps)-1:
-            try: _robot.apply_wheel_actions(ArticulationAction(joint_velocities=np.zeros(len(_wheels))))
-            except Exception: pass
-            print("navigate_to: reached target (%d wps)" % len(_wps))
-            _nav_sub.unsubscribe(); return
-        _nav_state["wpi"] = _i + 1; return
+    if _i >= len(_wps)-1 and _d < 0.15:
+        try: _robot.apply_wheel_actions(ArticulationAction(joint_velocities=np.zeros(len(_wheels))))
+        except Exception: pass
+        print("navigate_to: reached target (%d wps)" % len(_wps))
+        _nav_sub.unsubscribe(); return
     action = _pose_ctrl.forward(
         start_position=np.array(pos, dtype=float),
         start_orientation=np.array(orient, dtype=float),
