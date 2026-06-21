@@ -5390,15 +5390,34 @@ async def _handle_validate_scene_blueprint(args: Dict) -> Dict:
                 elif abs(s) > 1000:
                     warnings.append(f"Object '{name}' has very large scale on {axis} axis ({s}) — is this intended?")
 
-    # ── Check for floating objects (z > 0 without obvious support) ──────
+    # ── Check for floating objects (no support surface beneath) ─────────
     ground_level = 0.0
-    # Find ground plane or lowest object to establish reference
     for obj in objects:
         name_lower = obj.get("name", "").lower()
         if any(k in name_lower for k in ("ground", "plane", "floor")):
             pos = obj.get("position", [0, 0, 0])
             ground_level = pos[2] if len(pos) > 2 else 0.0
             break
+
+    # The reference isn't just the ground: a part RESTING on a 0.75m table is not
+    # floating. Find the highest SUPPORT-surface top in the scene (table/shelf/
+    # pallet/...) and use it as the floor for "floating" (a holistic test showed
+    # the old ground-only threshold false-flagged every table-top object, diluting
+    # the real feasibility groundings 8:7). Support z-extent uses scale_z directly
+    # (generous — covers the size-2 USD Cube convention) so the top is not under-read.
+    support_top = ground_level
+    for obj in objects:
+        nl = obj.get("name", "").lower()
+        if not any(k in nl for k in ("table", "shelf", "pallet", "rack", "bench",
+                                     "workbench", "platform", "stand", "pedestal", "counter")):
+            continue
+        p = obj.get("position", [0, 0, 0])
+        sc = obj.get("scale", [1, 1, 1])
+        if not (isinstance(p, (list, tuple)) and len(p) >= 3):
+            continue
+        hz = (abs(sc[2]) if isinstance(sc, (list, tuple)) and len(sc) >= 3
+              else abs(sc) if isinstance(sc, (int, float)) else 0.4)
+        support_top = max(support_top, p[2] + hz)
 
     for obj in objects:
         name = obj.get("name", "unnamed")
@@ -5407,12 +5426,16 @@ async def _handle_validate_scene_blueprint(args: Dict) -> Dict:
         if len(pos) < 3:
             continue
         z = pos[2]
-        # Skip ground planes, cameras, lights, overhead items — they are expected to be elevated
-        if any(k in name_lower for k in ("ground", "plane", "floor", "camera", "light", "overhead", "ceiling", "lamp")):
+        # Skip scenery / non-restable items that are expected to be elevated
+        if any(k in name_lower for k in ("ground", "plane", "floor", "camera", "light", "overhead",
+                                         "ceiling", "lamp", "table", "shelf", "pallet", "rack",
+                                         "stand", "pedestal", "conveyor", "belt")):
             continue
-        # Objects more than 0.5m above ground level may be floating
-        if z > ground_level + 0.5:
-            warnings.append(f"Object '{name}' is at z={z:.2f}m — may be floating without support.")
+        # Floating only if >0.5m above BOTH the ground and the highest support beneath it
+        floor = max(ground_level + 0.5, support_top + 0.3)
+        if z > floor:
+            warnings.append(f"Object '{name}' is at z={z:.2f}m, >{(z - max(ground_level, support_top)):.2f}m "
+                            "above the nearest support surface — may be floating without support.")
 
     # Scenery = support surfaces / structure that workpieces legitimately rest
     # ON or IN (so their AABBs touch by design). Shared by the overlap + reach
