@@ -50,7 +50,7 @@ def main() -> int:
         gate_args.append("%s:%s" % (c, f))
     # eyes_gold_gate parses scene_eyes' OWN printed verdict per instance -> GOLD iff all genuine
     print("=== eyes_gold_gate (scene_eyes verdict per cell) ===")
-    r = subprocess.run(["python3", GATE, *gate_args], capture_output=True, text=True)
+    r = subprocess.run(["python3", GATE, "--append", *gate_args], capture_output=True, text=True)  # record GOLD compositions as training data
     print(r.stdout.strip())
     print("COMPOSE_EYES_GATE verdict:", "★ GOLD (scene_eyes-verified)" if r.returncode == 0
           else "NOT GOLD (scene_eyes did not confirm every cell)")
