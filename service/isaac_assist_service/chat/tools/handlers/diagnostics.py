@@ -5462,6 +5462,7 @@ async def _handle_validate_scene_blueprint(args: Dict) -> Dict:
     # / diagnose_scene_feasibility (pick POSE, in-Kit); this is the cheap
     # static first pass.
     REACH = {"franka": 0.855, "ur10": 1.30, "ur5": 0.85, "ur3": 0.50}
+    PAYLOAD = {"franka": 3.0, "ur10": 12.5, "ur5": 5.0, "ur3": 3.0}  # kg, rated payload
     has_conveyor = any(
         any(k in (o.get("name", "") + " " + str(o.get("asset_name", ""))).lower()
             for k in ("conveyor", "belt"))
@@ -5474,7 +5475,8 @@ async def _handle_validate_scene_blueprint(args: Dict) -> Dict:
             if key in ident:
                 pos = obj.get("position", [0, 0, 0])
                 if isinstance(pos, (list, tuple)) and len(pos) >= 3:
-                    robots.append({"name": obj.get("name", key), "base": pos, "reach": rmax})
+                    robots.append({"name": obj.get("name", key), "base": pos, "reach": rmax,
+                                   "key": key, "payload": PAYLOAD.get(key, 3.0)})
                 break
     if robots and not has_conveyor:
         _scenery = ("ground", "plane", "floor", "camera", "light", "overhead", "ceiling",
@@ -5499,6 +5501,33 @@ async def _handle_validate_scene_blueprint(args: Dict) -> Dict:
                 warnings.append(
                     f"Object '{name}' is {d:.2f}m from robot '{best['name']}' — near its reach edge "
                     f"({best['reach']:.2f}m, {d / best['reach']:.0%}); placement is marginal.")
+
+    # ── Check for over-payload workpieces (robot rated load) ────────────
+    # Grounds "can the arm LIFT this part?" — gotcha #1 (a 9 kg block defeats a
+    # Franka's 3 kg payload -> use a UR10). Fires ONLY when an object carries an
+    # explicit `mass` (kg) exceeding the (nearest) robot's rated payload;
+    # WARNING-only + suggests the lightest arm that can lift it. No false-
+    # positive on unmassed objects (mass absent/zero -> skipped).
+    if robots:
+        for obj in objects:
+            m = obj.get("mass")
+            if not isinstance(m, (int, float)) or m <= 0:
+                continue
+            name = obj.get("name", "unnamed")
+            if any(rk in name.lower() for rk in REACH):
+                continue  # the robot itself
+            pos = obj.get("position", [0, 0, 0])
+            if isinstance(pos, (list, tuple)) and len(pos) >= 3:
+                rb = min(robots, key=lambda r: sum((pos[k] - r["base"][k]) ** 2 for k in range(3)))
+            else:
+                rb = min(robots, key=lambda r: r["payload"])
+            if m > rb["payload"]:
+                better = next((k for k, p in sorted(PAYLOAD.items(), key=lambda kv: kv[1]) if p >= m), None)
+                sug = (f" — use a higher-payload arm ({better}, {PAYLOAD[better]:.0f}kg)"
+                       if better else " — exceeds the rated payload of every known arm")
+                warnings.append(
+                    f"Object '{name}' mass {m:.1f}kg exceeds robot '{rb['name']}' rated payload "
+                    f"{rb['payload']:.1f}kg{sug}.")
 
     # ── Check for scale mismatches between objects ──────────────────────
     max_scales = []
