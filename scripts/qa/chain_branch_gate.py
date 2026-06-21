@@ -71,7 +71,12 @@ async def main():
         rk = await run_stage_k(i, recv, h)
         results.append({"branch": tray, "recv": recv, "delivered": rk.get("delivered"),
                         "total": len(h), "delivered_paths": rk.get("delivered_paths")})
-        print(f"  BRANCH {i} {recv} <- {tray}: delivered={rk.get('delivered')}/{len(h)}")
+        # instrument the branch (per 'instrument the failure path'): a 0-delivery branch needs the auto-offset +
+        # final poses to isolate offset-too-large vs reach vs relay (the UR10-branch 0/1 diagnosis, cont.319qqq).
+        _diag = f"  BRANCH {i} {recv} <- {tray}: delivered={rk.get('delivered')}/{len(h)} auto_offset={rk.get('auto_offset')} mode={rk.get('receiver_mode')} handoff_in={rk.get('handoff_in')}"
+        if not rk.get("delivered"):
+            _diag += f" | poses={rk.get('poses')} measure_error={str(rk.get('measure_error'))[:140]}"
+        print(_diag)
     print("\n=== BRANCHING CHAIN RESULT ===")
     all_full = True
     for r in results:
