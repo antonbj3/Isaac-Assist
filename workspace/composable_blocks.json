@@ -9,6 +9,7 @@
     "Franka:kit/assembly": "CP-50",
     "Franka:other": null,
     "Franka:palletize/grid": "CP-08",
+    "Franka:palletize/grid-tight": "CP-08-TIGHT",
     "Franka:pick-place-bin": "CP-01",
     "Franka:precision-pick": "CP-PRECISION-3CUBE",
     "Franka:pick-place-real-object": "CP-YCB-01C",
