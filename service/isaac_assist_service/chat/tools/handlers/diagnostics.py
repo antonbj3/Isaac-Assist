@@ -5409,7 +5409,8 @@ async def _handle_validate_scene_blueprint(args: Dict) -> Dict:
     for obj in objects:
         nl = obj.get("name", "").lower()
         if not any(k in nl for k in ("table", "shelf", "pallet", "rack", "bench",
-                                     "workbench", "platform", "stand", "pedestal", "counter")):
+                                     "workbench", "platform", "stand", "pedestal", "counter",
+                                     "conveyor", "belt")):  # parts ride ON a conveyor too
             continue
         p = obj.get("position", [0, 0, 0])
         sc = obj.get("scale", [1, 1, 1])
@@ -5426,10 +5427,14 @@ async def _handle_validate_scene_blueprint(args: Dict) -> Dict:
         if len(pos) < 3:
             continue
         z = pos[2]
-        # Skip scenery / non-restable items that are expected to be elevated
+        # Skip scenery / structure / non-restable items expected to be elevated:
+        # ground/lights/cameras; support surfaces; tall STRUCTURES (a wall/pillar
+        # reaches the floor — its centre at z=1m is not "floating"); and robots.
         if any(k in name_lower for k in ("ground", "plane", "floor", "camera", "light", "overhead",
                                          "ceiling", "lamp", "table", "shelf", "pallet", "rack",
-                                         "stand", "pedestal", "conveyor", "belt")):
+                                         "stand", "pedestal", "conveyor", "belt", "wall", "barrier",
+                                         "pillar", "column", "fence", "robot", "franka", "panda",
+                                         "ur10", "ur5", "ur3", "arm", "gripper")):
             continue
         # Floating only if >0.5m above BOTH the ground and the highest support beneath it
         floor = max(ground_level + 0.5, support_top + 0.3)
@@ -5446,6 +5451,9 @@ async def _handle_validate_scene_blueprint(args: Dict) -> Dict:
     _SCENERY = ("ground", "plane", "floor", "ceiling", "wall", "table", "shelf",
                 "bin", "tray", "rack", "fixture", "stand", "pedestal", "conveyor",
                 "belt", "camera", "light", "lamp", "overhead", "robot",
+                # nav obstacles / structure are not manipulation targets (you don't
+                # grasp/pick them), so skip them from overlap/reach/grasp checks.
+                "obstacle", "barrier", "pillar", "column", "fence", "cone",
                 # robots by asset name too — "Franka"/"UR10" carry no "robot"
                 # substring, so without these a robot's (extent-less) phantom box
                 # would false-overlap nearby parts (caught in self-test).
