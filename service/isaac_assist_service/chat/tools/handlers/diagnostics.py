@@ -5562,6 +5562,31 @@ async def _handle_validate_scene_blueprint(args: Dict) -> Dict:
                     f"Object '{name}' mass {m:.1f}kg exceeds robot '{rb['name']}' rated payload "
                     f"{rb['payload']:.1f}kg{sug}.")
 
+    # ── Capability-boundary: unsupported manipulation types ─────────────
+    # Grounds the honest "not covered" answer for DEFORMABLE (#13: cable/rope/
+    # cloth routed through clips) and FRAGILE/force-controlled (#14: a glass
+    # beaker) orders — the pipeline is RIGID-body pick-place only, so a part
+    # that needs deformable or compliant handling should be EXPLAINED, not
+    # silently attempted with a fixed rigid grasp. Keyword-based on name/
+    # material; workpieces only; WARNING-only. (Conveyor 'belt' is scenery and
+    # excluded, so it is not mistaken for a deformable.)
+    _DEFORMABLE = ("cable", "rope", "cloth", "fabric", "flexible", "hose", "tubing", "wire harness", "lace")
+    _FRAGILE = ("glass", "beaker", "fragile", "ceramic", "porcelain", "vial", "ampoule", "lightbulb", "eggshell")
+    for obj in objects:
+        nm = str(obj.get("name", ""))
+        if any(k in nm.lower() for k in _SCENERY):
+            continue
+        ident = (nm + " " + str(obj.get("material", ""))).lower()
+        if any(k in ident for k in _DEFORMABLE):
+            warnings.append(
+                f"Object '{nm or '?'}' appears DEFORMABLE — the pipeline is rigid-body pick-place only; "
+                "deformable manipulation (threading through clips, draping, cable routing) is NOT supported. "
+                "Explain this rather than attempting a rigid grasp.")
+        elif any(k in ident for k in _FRAGILE):
+            warnings.append(
+                f"Object '{nm or '?'}' appears FRAGILE — rigid pick-place applies a fixed grasp force; "
+                "force-controlled / compliant grasping for fragile parts is NOT supported. Explain this.")
+
     # ── Check for scale mismatches between objects ──────────────────────
     max_scales = []
     for obj in objects:
