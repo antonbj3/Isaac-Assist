@@ -362,7 +362,7 @@
     "drop_targets dict missing some cube \u2014 falls through to DEST_PATH (pallet bbox center), all unmapped cubes pile up at center.",
     "Conveyor not wide enough \u2014 Cube_1 starts at x=-2.7, conveyor [-3, +3] = 6m. Within bound."
   ],
-  "verified_status": "PARTIAL stochastic n=9 grid (cont.319cc audit RE-VERIFIED: reverify 1/9 x2 + saved RAW 8/9 off-pallet = NOT robust). The old 'pre-fix/re-verify pending \u2014 rest_speed' marker is SUPERSEDED: this WAS re-verified and is genuinely stochastic.",
+  "verified_status": "★ ROBUST 9/9 (cont.319-EYES2 2026-06-21): the prior 'stochastic 1/9-8/9 off-pallet' is now STALE/SUPERSEDED \u2014 scene_eyes (DUR=520) N-of-2 BOTH show 9/9 delivered to Pallet, ALL UPRIGHT (tilt 4-9deg), plan_fails=0, FLAT 1-tier grid; the near-field-IK fix (CP-10 #12) resolved the off-pallet. ⚠️ SLOW: belt-feed-limited, ~125s for 9 cubes (~14s/cube) \u2014 scene_eyes needs DUR>=130 to see all 9 (default 40s shows only ~3). A robust 3x3 dense-grid block (toward the 25-box gotcha).",
   "diagnose_args": {
     "robot_path": "/World/Franka",
     "obstacles": [
