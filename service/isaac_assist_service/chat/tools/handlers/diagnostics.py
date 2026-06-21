@@ -5414,27 +5414,58 @@ async def _handle_validate_scene_blueprint(args: Dict) -> Dict:
         if z > ground_level + 0.5:
             warnings.append(f"Object '{name}' is at z={z:.2f}m — may be floating without support.")
 
-    # ── Check for AABB overlaps (true per-axis half-extents) ────────────
-    # A sphere-radius=max(scale) approximation false-flagged large flat
-    # scenery (a 20m ground / a table) as "overlapping" every object, since
-    # its radius swallowed the whole scene. True AABB uses per-axis half-
-    # extents and requires interpenetration on ALL THREE axes — so a flat
-    # ground (tiny z-extent) never overlaps a cube resting above it, and a
-    # cube resting ON another (z-faces touching, not penetrating) is not
-    # flagged either; only genuine interpenetration is.
+    # Scenery = support surfaces / structure that workpieces legitimately rest
+    # ON or IN (so their AABBs touch by design). Shared by the overlap + reach
+    # checks. (Adversarial audit cont.319: a flat USD Plane authored with the
+    # conventional scale.z=1 became a phantom 0.5 m slab that false-flagged every
+    # low object as "overlapping the ground"; scoping overlap to workpiece-vs-
+    # workpiece + reading the real authoring fields fixes it.)
+    _SCENERY = ("ground", "plane", "floor", "ceiling", "wall", "table", "shelf",
+                "bin", "tray", "rack", "fixture", "stand", "pedestal", "conveyor",
+                "belt", "camera", "light", "lamp", "overhead", "robot")
+
+    def _half_extents(o):
+        """True per-axis half-extents from the real authoring fields (radius /
+        size / height), falling back to scale; a Plane is forced thin in z."""
+        if o.get("radius") is not None:
+            try:
+                r = abs(float(o["radius"]))
+                hz = abs(float(o.get("height", 2 * r))) * 0.5
+                return [r, r, max(r, hz)]
+            except Exception:
+                pass
+        sz = o.get("size")
+        if isinstance(sz, (int, float)):
+            return [abs(sz) * 0.5] * 3
+        if isinstance(sz, (list, tuple)) and len(sz) >= 3:
+            return [abs(sz[0]) * 0.5, abs(sz[1]) * 0.5, abs(sz[2]) * 0.5]
+        sc = o.get("scale", [1, 1, 1])
+        if isinstance(sc, (list, tuple)) and len(sc) >= 3:
+            h = [abs(sc[0]) * 0.5, abs(sc[1]) * 0.5, abs(sc[2]) * 0.5]
+        elif isinstance(sc, (int, float)):
+            h = [abs(sc) * 0.5] * 3
+        else:
+            h = [0.5, 0.5, 0.5]
+        ident = (str(o.get("prim_type", "")) + " " + str(o.get("name", ""))).lower()
+        if "plane" in ident:  # a USD Plane is flat regardless of z-scale
+            h[2] = min(h[2], 0.01)
+        return h
+
+    # ── Check for AABB overlaps between WORKPIECES (true per-axis extents) ──
+    # Workpiece-vs-workpiece interpenetration only (two parts spawned into each
+    # other). Scenery is SKIPPED — a part resting on a table / in a bin is not
+    # an overlap. The build-time Kit-side overlap_check.py (real ComputeWorldBound)
+    # catches genuine part-vs-scenery embedding; this static pass stays
+    # false-positive-safe.
     boxes = []
     for obj in objects:
+        nm = obj.get("name", "unnamed")
+        if any(k in nm.lower() for k in _SCENERY):
+            continue
         pos = obj.get("position", [0, 0, 0])
-        scale = obj.get("scale", [1, 1, 1])
         if not (isinstance(pos, (list, tuple)) and len(pos) >= 3):
             continue
-        if isinstance(scale, (list, tuple)) and len(scale) >= 3:
-            half = [abs(scale[0]) * 0.5, abs(scale[1]) * 0.5, abs(scale[2]) * 0.5]
-        elif isinstance(scale, (int, float)):
-            half = [abs(scale) * 0.5] * 3
-        else:
-            half = [0.5, 0.5, 0.5]
-        boxes.append({"name": obj.get("name", "unnamed"), "pos": pos, "half": half})
+        boxes.append({"name": nm, "pos": pos, "half": _half_extents(obj)})
 
     for i in range(len(boxes)):
         for j in range(i + 1, len(boxes)):
@@ -5479,18 +5510,20 @@ async def _handle_validate_scene_blueprint(args: Dict) -> Dict:
                                    "key": key, "payload": PAYLOAD.get(key, 3.0)})
                 break
     if robots and not has_conveyor:
-        _scenery = ("ground", "plane", "floor", "camera", "light", "overhead", "ceiling",
-                    "lamp", "wall", "table", "conveyor", "belt", "bin", "tray", "fixture",
-                    "stand", "pedestal", "robot")
         for obj in objects:
             name = obj.get("name", "unnamed")
             nl = name.lower()
-            if any(k in nl for k in _scenery) or any(rk in nl for rk in REACH):
+            if any(k in nl for k in _SCENERY) or any(rk in nl for rk in REACH):
                 continue
             pos = obj.get("position", [0, 0, 0])
             if not (isinstance(pos, (list, tuple)) and len(pos) >= 3):
                 continue
-            best = min(robots, key=lambda r: sum((pos[k] - r["base"][k]) ** 2 for k in range(3)))
+            # Out of reach only if BEYOND EVERY robot — the best-PLACED arm decides
+            # (the most slack = reach - distance), not the nearest base. Otherwise a
+            # part a small ur3 can't reach but a farther long-reach ur10 can would be
+            # falsely flagged just because the ur3 base is nearer.
+            best = max(robots, key=lambda r: r["reach"]
+                       - sum((pos[k] - r["base"][k]) ** 2 for k in range(3)) ** 0.5)
             d = sum((pos[k] - best["base"][k]) ** 2 for k in range(3)) ** 0.5
             if d > best["reach"]:
                 warnings.append(
