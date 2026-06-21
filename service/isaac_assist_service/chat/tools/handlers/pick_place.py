@@ -4190,13 +4190,34 @@ if DROP_FIXTURE and DROP_TARGETS is None:
                     _best = _cand
         if _best is not None:
             _tz, _cx, _cy, _fwx, _fwy = _best
-            _nn = max(len(SOURCE_PATHS), 1)
-            _span = _fwx * 0.6  # 60% of deck width = 20% inset each side
+            # 2D GRID (cont.319-REALSHELF stress, Anton "hur stabil är autofördelningen?"): a 1D row held 9
+            # cubes on a small deck but at min-pair 5.7cm (cube=5cm, on the collision edge) and wasted the deck
+            # DEPTH. A 2D grid uses both x AND y with a pitch = MEASURED object footprint x 1.4 (collision-safe
+            # gap), centred + 10% inset, far-row first (don't reach over placed cubes). Density-robust + uses
+            # the whole deck + adapts to object size. Object footprint measured so it's frictionless for any size.
+            _ow = 0.05
+            try:
+                _osb = _bc.ComputeWorldBound(_stg.GetPrimAtPath(SOURCE_PATHS[0])).ComputeAlignedRange()
+                if not _osb.IsEmpty():
+                    _ow = max(float(_osb.GetMax()[0] - _osb.GetMin()[0]), float(_osb.GetMax()[1] - _osb.GetMin()[1]))
+            except Exception:
+                pass
+            _pitch = max(_ow * 1.4, 0.02)
+            _ux = _fwx * 0.8; _uy = _fwy * 0.8  # 10% inset each side
+            _cols = max(1, int(_ux / _pitch))
+            _rows = max(1, int(_uy / _pitch))
             DROP_TARGETS = {{}}
             for _ii, _spath in enumerate(SOURCE_PATHS):
-                _ox = (_cx + _span * ((_ii / max(_nn - 1, 1)) - 0.5)) if _nn > 1 else _cx
-                DROP_TARGETS[_spath] = [_ox, _cy, _tz + 0.025]
-            print("[drop_fixture] %s deck top_z=%.3f centre=(%.3f,%.3f) footprint=%.2fx%.2f -> %d targets" % (DROP_FIXTURE, _tz, _cx, _cy, _fwx, _fwy, len(DROP_TARGETS)))
+                _r = _ii // _cols
+                _c = _ii % _cols
+                _r = min(_r, _rows - 1)  # deck full on one layer -> hold on the last row (no piling); see capacity warn
+                _ox = _cx + (_c - (_cols - 1) / 2.0) * _pitch
+                _oy = _cy - (_r - (_rows - 1) / 2.0) * _pitch  # minus -> far row (more negative y) filled first
+                DROP_TARGETS[_spath] = [_ox, _oy, _tz + 0.025]
+            _cap = _cols * _rows
+            print("[drop_fixture] %s deck top_z=%.3f footprint=%.2fx%.2f obj=%.3f pitch=%.3f grid=%dx%d cap=%d -> %d targets%s" % (
+                DROP_FIXTURE, _tz, _fwx, _fwy, _ow, _pitch, _cols, _rows, _cap, len(SOURCE_PATHS),
+                (" WARNING: %d cubes > %d deck capacity (last row will crowd)" % (len(SOURCE_PATHS), _cap)) if len(SOURCE_PATHS) > _cap else ""))
         else:
             print("[drop_fixture] WARNING no horizontal surface on %s; controller falls back to DEST_PATH" % DROP_FIXTURE)
     else:
