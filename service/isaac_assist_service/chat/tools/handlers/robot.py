@@ -1815,7 +1815,55 @@ _pose_ctrl = WheelBasePoseController(
     open_loop_wheel_controller=DifferentialController(name="nav_diff", wheel_radius=WHEEL_RADIUS, wheel_base=WHEEL_BASE),
     is_holonomic=False,
 )
-_nav_state = {{"init": False}}
+# cont.319-NAV: A* obstacle-routing on the REAL direct drive. Build an occupancy grid from the robot's
+# registered obstacles (curobo:moving_obstacles); when PLANNER=="astar", route the waypoints AROUND them
+# and the proven closed-loop drive follows the waypoint chain. PLANNER=="direct" -> waypoints=[target]
+# (byte-identical to the prior single-goal drive). Harmless for obstacle-free scenes (occupancy stays 0).
+import heapq as _heapq
+PLANNER = "{planner}"
+GRID_RES = 0.25; GRID_SIZE = 80
+GRID_OFFSET = np.array([-GRID_SIZE*GRID_RES/2.0, -GRID_SIZE*GRID_RES/2.0])
+occupancy = np.zeros((GRID_SIZE, GRID_SIZE), dtype=int)
+def _w2g(p): return int((p[0]-GRID_OFFSET[0])/GRID_RES), int((p[1]-GRID_OFFSET[1])/GRID_RES)
+def _g2w(c): return np.array([c[0]*GRID_RES+GRID_OFFSET[0], c[1]*GRID_RES+GRID_OFFSET[1]])
+try:
+    _oaN = _stage.GetPrimAtPath(robot_path).GetAttribute("curobo:moving_obstacles")
+    _obs_pathsN = list(_oaN.Get() or []) if _oaN else []
+except Exception:
+    _obs_pathsN = []
+if _obs_pathsN:
+    from pxr import UsdGeom as _UGN, Usd as _UsdN
+    _bcN = _UGN.BBoxCache(_UsdN.TimeCode.Default(), [_UGN.Tokens.default_] if hasattr(_UGN.Tokens, 'default_') else [], useExtentsHint=True)
+    for _op in _obs_pathsN:
+        _pr = _stage.GetPrimAtPath(_op)
+        if not _pr or not _pr.IsValid(): continue
+        _bb = _bcN.ComputeWorldBound(_pr).ComputeAlignedRange()
+        if _bb.IsEmpty(): continue
+        _mn, _mx = _bb.GetMin(), _bb.GetMax()
+        _a0, _b0 = _w2g([float(_mn[0])-0.35, float(_mn[1])-0.35])
+        _a1, _b1 = _w2g([float(_mx[0])+0.35, float(_mx[1])+0.35])
+        for _gx in range(max(0, min(_a0,_a1)), min(GRID_SIZE, max(_a0,_a1)+1)):
+            for _gy in range(max(0, min(_b0,_b1)), min(GRID_SIZE, max(_b0,_b1)+1)):
+                occupancy[_gy, _gx] = 1
+def _astar(s, gl):
+    _osq = [(0, s)]; _cf = {{}}; _gs = {{s: 0}}
+    while _osq:
+        _, cur = _heapq.heappop(_osq)
+        if cur == gl:
+            _p = []
+            while cur in _cf: _p.append(cur); cur = _cf[cur]
+            _p.append(s); return _p[::-1]
+        for _dx, _dy in [(-1,0),(1,0),(0,-1),(0,1),(-1,-1),(1,1),(-1,1),(1,-1)]:
+            _nx, _ny = cur[0]+_dx, cur[1]+_dy
+            if 0 <= _nx < GRID_SIZE and 0 <= _ny < GRID_SIZE and occupancy[_ny, _nx] == 0:
+                _ng = _gs[cur] + (1.414 if _dx and _dy else 1.0)
+                if (_nx,_ny) not in _gs or _ng < _gs[(_nx,_ny)]:
+                    _gs[(_nx,_ny)] = _ng
+                    _hh = abs(_nx-gl[0]) + abs(_ny-gl[1])
+                    _heapq.heappush(_osq, (_ng+_hh, (_nx,_ny))); _cf[(_nx,_ny)] = cur
+    return [s, gl]
+
+_nav_state = {{"init": False, "wps": None, "wpi": 0}}
 
 def _nav_step(dt):
     if not _nav_state["init"]:
@@ -1824,22 +1872,43 @@ def _nav_step(dt):
         except Exception:
             return
     pos, orient = _robot.get_world_pose()
-    dist = float(((pos[0]-target[0])**2 + (pos[1]-target[1])**2) ** 0.5)
-    if dist < 0.15:
-        try: _robot.apply_wheel_actions(ArticulationAction(joint_velocities=np.zeros(len(_wheels))))
-        except Exception: pass
-        print("navigate_to: reached target")
-        _nav_sub.unsubscribe(); return
+    if _nav_state["wps"] is None:
+        if PLANNER == "astar":
+            _gp = _astar(_w2g([pos[0], pos[1]]), _w2g([target[0], target[1]]))
+            # simplify to CORNER cells only (collapse collinear runs) -> clean straight segments so the
+            # diff-drive translates instead of spinning between dense 0.25m zigzag grid cells.
+            if len(_gp) > 2:
+                _sp = [_gp[0]]
+                for _k in range(1, len(_gp)-1):
+                    _d1 = (_gp[_k][0]-_gp[_k-1][0], _gp[_k][1]-_gp[_k-1][1])
+                    _d2 = (_gp[_k+1][0]-_gp[_k][0], _gp[_k+1][1]-_gp[_k][1])
+                    if _d1 != _d2: _sp.append(_gp[_k])
+                _sp.append(_gp[-1]); _gp = _sp
+            _wl = [_g2w(_c) for _c in _gp[1:]]; _wl.append(np.array([target[0], target[1]]))
+            _nav_state["wps"] = _wl
+            print("A* nav: %d obstacle(s) -> %d blocked cells -> %d waypoints" % (len(_obs_pathsN), int(occupancy.sum()), len(_wl)))
+        else:
+            _nav_state["wps"] = [np.array([target[0], target[1]])]
+    _wps = _nav_state["wps"]; _i = min(_nav_state["wpi"], len(_wps)-1); _wp = _wps[_i]
+    _d = float(((pos[0]-_wp[0])**2 + (pos[1]-_wp[1])**2) ** 0.5)
+    _tol = 0.15 if _i == len(_wps)-1 else 0.40
+    if _d < _tol:
+        if _i >= len(_wps)-1:
+            try: _robot.apply_wheel_actions(ArticulationAction(joint_velocities=np.zeros(len(_wheels))))
+            except Exception: pass
+            print("navigate_to: reached target (%d wps)" % len(_wps))
+            _nav_sub.unsubscribe(); return
+        _nav_state["wpi"] = _i + 1; return
     action = _pose_ctrl.forward(
         start_position=np.array(pos, dtype=float),
         start_orientation=np.array(orient, dtype=float),
-        goal_position=target,
+        goal_position=np.array([_wp[0], _wp[1], 0.0]),
     )
     try: _robot.apply_wheel_actions(action)
     except Exception: pass
 
 _nav_sub = omni.physx.get_physx_interface().subscribe_physics_step_events(_nav_step)
-print("navigate_to (closed-loop diff-drive) -> [{target[0]}, {target[1]}], wheels=" + str(_wheels))
+print("navigate_to (%s closed-loop diff-drive) -> [{target[0]}, {target[1]}], wheels=" % PLANNER + str(_wheels))
 """
 
 
