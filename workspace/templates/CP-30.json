@@ -78,7 +78,7 @@
     "Wider drop_targets spacing (16cm) could mean longer transit time per cube — total cycle longer than CP-08.",
     "Same physics gotchas as CP-01."
   ],
-  "verified_status": "build-spec-2026-04-XX; form-gate ✓; function-gate ✓ [pre-fix; re-verify pending — rest_speed standardised 2026-05-18] (Mode B FixedJoint at grip_close + 16 IK seeds)",
+  "verified_status": "GENUINE delivery, plan-fragile (cont.319-EYES4 2026-06-21, scene_eyes @ dur=120): 4/4 cubes delivered to Pallet, ALL UPRIGHT (tilt 8.8-8.9deg), CONVERGED+GRIPPED, FLAT 1-tier grid — so it DOES deliver (the old pre-fix/re-verify-pending is cleared). ⚠️ plan_fails=6 (of 38 plan_calls) vs 0 for the clean golds (CP-08-TIGHT/CP-10) = mild plan-fragility; the planner retried+recovered but is not plan_fails=0-clean. Usable block, flag fragility under composition/load. (Mode B FixedJoint + 16 IK seeds)",
   "diagnose_args": {
     "robot_path": "/World/Franka",
     "obstacles": [
