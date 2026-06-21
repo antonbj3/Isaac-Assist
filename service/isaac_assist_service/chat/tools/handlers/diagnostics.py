@@ -5422,7 +5422,11 @@ async def _handle_validate_scene_blueprint(args: Dict) -> Dict:
     # workpiece + reading the real authoring fields fixes it.)
     _SCENERY = ("ground", "plane", "floor", "ceiling", "wall", "table", "shelf",
                 "bin", "tray", "rack", "fixture", "stand", "pedestal", "conveyor",
-                "belt", "camera", "light", "lamp", "overhead", "robot")
+                "belt", "camera", "light", "lamp", "overhead", "robot",
+                # robots by asset name too — "Franka"/"UR10" carry no "robot"
+                # substring, so without these a robot's (extent-less) phantom box
+                # would false-overlap nearby parts (caught in self-test).
+                "franka", "panda", "ur10", "ur5", "ur3", "gripper", "arm")
 
     def _half_extents(o):
         """True per-axis half-extents from the real authoring fields (radius /
@@ -5572,11 +5576,14 @@ async def _handle_validate_scene_blueprint(args: Dict) -> Dict:
     # excluded, so it is not mistaken for a deformable.)
     _DEFORMABLE = ("cable", "rope", "cloth", "fabric", "flexible", "hose", "tubing", "wire harness", "lace")
     _FRAGILE = ("glass", "beaker", "fragile", "ceramic", "porcelain", "vial", "ampoule", "lightbulb", "eggshell")
+    _ROUND = ("ball", "sphere", "soup can", "bottle", "round", "cylinder")  # name hints; prim_type adds Sphere/Cylinder
+    _SLIPPERY = ("oily", "wet", "greasy", "lubricated", "porous", "slippery")  # suction-seal hazards
     for obj in objects:
         nm = str(obj.get("name", ""))
         if any(k in nm.lower() for k in _SCENERY):
             continue
         ident = (nm + " " + str(obj.get("material", ""))).lower()
+        ptype = str(obj.get("prim_type", "")).lower()
         if any(k in ident for k in _DEFORMABLE):
             warnings.append(
                 f"Object '{nm or '?'}' appears DEFORMABLE — the pipeline is rigid-body pick-place only; "
@@ -5586,6 +5593,16 @@ async def _handle_validate_scene_blueprint(args: Dict) -> Dict:
             warnings.append(
                 f"Object '{nm or '?'}' appears FRAGILE — rigid pick-place applies a fixed grasp force; "
                 "force-controlled / compliant grasping for fragile parts is NOT supported. Explain this.")
+        elif any(k in ident for k in _ROUND) or ptype in ("sphere", "cylinder"):
+            warnings.append(
+                f"Object '{nm or '?'}' appears ROUND — grasp-slip risk; a parallel-jaw grasp can roll it. "
+                "Collection / bin-drop is fine, but PRECISE UPRIGHT placement needs a descend-to-place "
+                "strategy that is marginal here (gotcha #7/#10).")
+        # surface hazard is independent of shape -> separate (not elif)
+        if any(k in ident for k in _SLIPPERY):
+            warnings.append(
+                f"Object '{nm or '?'}' has an OILY/WET/POROUS surface — a SUCTION/vacuum gripper cannot seal "
+                "on it (grasp will slip); use a parallel-JAW gripper instead (gotcha #2).")
 
     # ── Check for scale mismatches between objects ──────────────────────
     max_scales = []
