@@ -43,6 +43,7 @@ async def main() -> int:
         print("usage: cell_throughput.py <CANONICAL>")
         return 2
     cell = sys.argv[1]
+    print("⚠️  POSITION-PROXY (re-implemented MEASURE) — NOT a scene_eyes gold. It shows final positions only, never grip/convergence/feeding/topple/plan_fails. For the GOLD verdict run scene_eyes.py. (Anton: alltid alltid scene eyes)")
     chunk = int(os.environ.get("CELL_TP_CHUNK") or 300)  # finer than the 1000-step default -> ~5s resolution
     res = await run_stage0(cell, chunk=chunk)
     traj = res.get("traj") or []

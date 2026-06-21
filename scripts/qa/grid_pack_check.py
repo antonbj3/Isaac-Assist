@@ -20,6 +20,7 @@ from chain_xkit_gate import run_stage0  # noqa: E402
 
 async def main() -> int:
     cell = sys.argv[1] if len(sys.argv) > 1 else "CP-08"
+    print("⚠️  POSITION-PROXY (re-implemented MEASURE) — NOT a scene_eyes gold. It shows final positions only, never grip/convergence/feeding/topple/plan_fails. For the GOLD verdict run scene_eyes.py. (Anton: alltid alltid scene eyes)")
     res = await run_stage0(cell)
     poses = {k: v for k, v in (res.get("poses") or {}).items() if v}
     delivered, total = res.get("delivered", 0), res.get("total", 0)
