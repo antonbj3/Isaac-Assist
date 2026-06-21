@@ -90,6 +90,7 @@ ALLOWED_AFTER_INSTANTIATE = frozenset({
     "find_prims_by_name",
     "find_prims_by_schema",
     "get_bounding_box",
+    "resolve_fixture_surfaces",
     "get_articulation_state",
     "get_world_transform",
     "get_attribute",

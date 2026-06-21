@@ -3891,6 +3891,71 @@ print(json.dumps(result, default=str))
 """
     return await kit_tools.queue_exec_patch(code, f"get_bounding_box {prim_path}")
 
+
+async def _handle_resolve_fixture_surfaces(args: Dict) -> Dict:
+    """Measure a referenced FIXTURE's horizontal SURFACES (tiers) so a cell can derive its
+    drop-targets from the REAL geometry instead of hardcoded z-levels (cont.319-REALSHELF,
+    Anton 2026-06-21 "frictionless real assets, even when sizes differ"). The fixture analogue
+    of the bbox-driven workpiece grasp: traverse the prim's child gprims, keep the ones whose
+    world bbox is THIN in z and WIDE in both xy (a horizontal panel you rest objects on, not an
+    upright/post or a one-axis beam), and report each tier's top_z + xy-footprint, sorted low->high.
+
+    Returns {prim_path, overall_size, tiers:[{top_z, center:[x,y], footprint:[dx,dy]}], top_deck_z,
+    n_tiers}. A cell calls this AFTER referencing+scaling+positioning the fixture, then sets
+    drop_targets z = top_deck_z + half_object_height — so re-scaling or swapping the asset needs
+    NO hardcode change, only a re-measure. Defaults are scale-aware (min_span 0.08m catches a
+    deck shrunk to tabletop size; raise it to ignore small ledges)."""
+    from .. import kit_tools
+    prim_path = args["prim_path"]
+    min_thickness = float(args.get("min_thickness", 0.12))
+    min_span = float(args.get("min_span", 0.08))
+    code = f"""\
+import omni.usd, json
+from pxr import Usd, UsdGeom
+
+stage = omni.usd.get_context().get_stage()
+prim = stage.GetPrimAtPath({prim_path!r})
+result = {{'prim_path': {prim_path!r}}}
+if not prim or not prim.IsValid():
+    result['error'] = 'prim not found'
+else:
+    _purposes = [UsdGeom.Tokens.default_] if hasattr(UsdGeom.Tokens, 'default_') else []
+    cache = UsdGeom.BBoxCache(Usd.TimeCode.Default(), _purposes, useExtentsHint=True) if _purposes \
+        else UsdGeom.BBoxCache(Usd.TimeCode.Default(), useExtentsHint=True)
+    ob = cache.ComputeWorldBound(prim).ComputeAlignedRange()
+    if ob.IsEmpty():
+        result['error'] = 'empty bbox'
+    else:
+        omn, omx = ob.GetMin(), ob.GetMax()
+        surfaces = []
+        for p in Usd.PrimRange(prim):
+            if not p.IsA(UsdGeom.Gprim):
+                continue
+            b = cache.ComputeWorldBound(p).ComputeAlignedRange()
+            if b.IsEmpty():
+                continue
+            mn, mx = b.GetMin(), b.GetMax()
+            sx, sy, sz = float(mx[0]-mn[0]), float(mx[1]-mn[1]), float(mx[2]-mn[2])
+            if sz <= {min_thickness!r} and sx >= {min_span!r} and sy >= {min_span!r} and sz < 0.5*min(sx, sy):
+                surfaces.append({{'top_z': float(mx[2]),
+                                  'center': [float((mn[0]+mx[0])/2.0), float((mn[1]+mx[1])/2.0)],
+                                  'footprint': [sx, sy]}})
+        surfaces.sort(key=lambda s: s['top_z'])
+        tiers = []
+        for s in surfaces:
+            if tiers and abs(s['top_z'] - tiers[-1]['top_z']) < 0.02:
+                tiers[-1]['footprint'][0] = max(tiers[-1]['footprint'][0], s['footprint'][0])
+                tiers[-1]['footprint'][1] = max(tiers[-1]['footprint'][1], s['footprint'][1])
+            else:
+                tiers.append({{'top_z': s['top_z'], 'center': list(s['center']), 'footprint': list(s['footprint'])}})
+        result['overall_size'] = [float(omx[0]-omn[0]), float(omx[1]-omn[1]), float(omx[2]-omn[2])]
+        result['tiers'] = tiers
+        result['n_tiers'] = len(tiers)
+        result['top_deck_z'] = (tiers[-1]['top_z'] if tiers else float(omx[2]))
+print(json.dumps(result, default=str))
+"""
+    return await kit_tools.queue_exec_patch(code, f"resolve_fixture_surfaces {prim_path}")
+
 @with_telemetry
 async def _handle_prim_exists(args: Dict) -> Dict:
     """Boolean check for prim presence at a path. Used by verify-contract to
@@ -6223,6 +6288,7 @@ def register(
     data["get_asset_info"] = _handle_get_asset_info
     data["get_attribute"] = _handle_get_attribute
     data["get_bounding_box"] = _handle_get_bounding_box
+    data["resolve_fixture_surfaces"] = _handle_resolve_fixture_surfaces
     data["get_kind"] = _handle_get_kind
     data["get_prim_metadata"] = _handle_get_prim_metadata
     data["get_prim_type"] = _handle_get_prim_type

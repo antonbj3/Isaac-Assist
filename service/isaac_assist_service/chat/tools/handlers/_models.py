@@ -2973,6 +2973,15 @@ class GetBoundingBoxArgs(BaseModel):
     purpose: Optional[str] = Field(None, description="BBoxCache purpose token: 'default', 'render', or 'proxy'. Default: 'default'")
 
 
+class ResolveFixtureSurfacesArgs(BaseModel):
+    """Measure a referenced fixture's horizontal SURFACES (tiers) so a cell derives its drop-targets from REAL geometry instead of hardcoded z-levels. Returns {tiers:[{top_z, center, footprint}], top_deck_z, overall_size, n_tiers}."""
+    model_config = ConfigDict(populate_by_name=True, extra='allow')
+
+    prim_path: str = Field(..., description="USD path to the referenced fixture prim (shelf/rack/table), already positioned+scaled in the stage")
+    min_thickness: Optional[float] = Field(None, description="max z-extent (m) for a prim to count as a horizontal surface (default 0.12)")
+    min_span: Optional[float] = Field(None, description="min xy-extent (m) in BOTH axes for a surface (default 0.08, scale-aware for tabletop-shrunk fixtures)")
+
+
 class SetSemanticLabelArgs(BaseModel):
     """Apply a Semantics.SemanticsAPI to a prim with the given class name. Used for synthetic data generation (SDG) annotation so Replicator writers emit semantic_segmentation / instance_segmentation / bound"""
     model_config = ConfigDict(populate_by_name=True, extra='allow')
@@ -4408,6 +4417,7 @@ MODEL_REGISTRY = {
     "get_attribute": GetAttributeArgs,
     "get_world_transform": GetWorldTransformArgs,
     "get_bounding_box": GetBoundingBoxArgs,
+    "resolve_fixture_surfaces": ResolveFixtureSurfacesArgs,
     "set_semantic_label": SetSemanticLabelArgs,
     "get_joint_limits": GetJointLimitsArgs,
     "set_drive_gains": SetDriveGainsArgs,
