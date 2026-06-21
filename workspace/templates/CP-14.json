@@ -278,7 +278,7 @@
     "Both controllers race for same _curobo_pp_sub_ name \u2014 fixed in CP-02 era: per-robot scoping by robot path tag.",
     "Pallet too small \u2014 15x15cm gives ~5cm margin around 5cm cubes. Robot drop precision typically 5cm; cubes may drop just outside. Future: enlarge to 20-30cm."
   ],
-  "verified_status": "build-spec-2026-04-XX; form-gate \u2713; function-gate \u2713 [pre-fix; re-verify pending \u2014 rest_speed standardised 2026-05-18] (multi-cube cube_paths + Mode A 3-strike fix)",
+  "verified_status": "⚠️ FAILS — toppled stack (cont.319-EYES9 2026-06-21, scene_eyes dur=110): a relay-STACKER, but Cube_2 settles at tilt=90deg TOPPLED (ORIENTATION FAIL) at the SAME z-level as Cube_1 (both z=0.825, 0.122m apart) instead of stacking ON it — Cube_2|Cube_1 place-time collision knocked it over. A delivered-count says 2/2-to-PalletBase (FALSE-SUCCESS); scene_eyes catches the topple. NOT a gold; genuine stack failure (the pre-fix-pending caution was correct).",
   "diagnose_args": {
     "cycles": [
       {
