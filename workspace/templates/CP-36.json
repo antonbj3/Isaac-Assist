@@ -85,7 +85,7 @@
   "Cube placement on TOP shelf at z=1.0: robot descends from h1=1.20 to z=1.0. 0.20m descent — adequate.",
   "Same physics gotchas as CP-08."
  ],
- "verified_status": "build-spec-2026-04-XX; form-gate ✓; function-gate ✓ [pre-fix; re-verify pending — rest_speed standardised 2026-05-18] (multi-cube cube_paths + xy_tol=0.15 + rest_speed=10 — Cube_3 delivered to ShelfBottom)",
+ "verified_status": "★ GENUINE GOLD (cont.319-EYES6 2026-06-21, scene_eyes dur=120): two-tier shelf 4/4 delivered to the CORRECT tiers (Cube_3/4 -> ShelfBottom z=0.825, Cube_1/2 -> ShelfTop z=1.000), ALL UPRIGHT (7.4-8.3deg), plan_fails=0, CONVERGED. Clean robust multi-tier-shelf block (distinct topology vs flat grid); the pre-fix-pending was a false-negative, now scene_eyes-confirmed.",
  "diagnose_args": {
   "robot_path": "/World/Franka",
   "obstacles": [
