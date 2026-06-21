@@ -26,7 +26,9 @@ def main():
     # 1: all proven adjacent pairs -> COMPAT
     n_pairs = 0
     for c in reg["proven_chains"]:
-        names = c["stages"]
+        names = c.get("stages")
+        if not names:                                      # branching_chain (L2.5) entries are prose-described and
+            continue                                       # validated by chain_branch_gate.py, not the linear pair-compat check
         for a, b in zip(names, names[1:]):
             n_pairs += 1
             try:
@@ -44,13 +46,17 @@ def main():
     else:
         print(f"  CP-73->CP-13: INCOMPAT ok ({bad['reason'][:60]})")
 
-    # 3: NEGATIVE CONTROL -- flat delivery (0.775) into a RAISED-picking UR10 must be INCOMPAT by height
-    neg = ch.chain_compat("CP-CHAIN-UR10-SRC", "CP-CHAIN-UR10-RECV-NATIVE")  # delivers flat 0.775 -> UR10 picks 0.975
+    # 3: NEGATIVE CONTROL -- reach-RANGE still discriminates (not a rubber stamp): a GROSS-unreachable handoff z
+    # (floor-level 0.1, far below any receiver reach) MUST be INCOMPAT. (cont.319-L3: the OLD "flat 0.775 -> UR10
+    # raised" neg-control was UNphysical -- the cross-Kit relay re-instantiates at the source z with z-offset=0, so
+    # 0.775 IS within UR10 reach and that pair actually chains; CP-CONV-02-SRC@0.825->UR10 is a PROVEN COMPAT pair.
+    # Replaced with a real out-of-reach case via measured_z.)
+    neg = ch.chain_compat("CP-36", "CP-CHAIN-UR10-RECV-NATIVE", measured_z=0.1)  # 0.1 below UR10 reach floor (0.40)
     if neg["compatible"]:
-        print("  flat->UR10-raised: COMPAT (WRONG -- height branch is a rubber stamp)")
-        fails.append("flat 0.775 -> UR10 raised pick should be INCOMPAT by height but predicted COMPAT")
+        print("  floor-0.1->UR10: COMPAT (WRONG -- reach-range is a rubber stamp)")
+        fails.append("floor-level z=0.1 -> UR10 receiver should be INCOMPAT (out of reach) but predicted COMPAT")
     else:
-        print(f"  flat->UR10-raised: INCOMPAT ok ({neg['reason'][:60]})")
+        print(f"  floor-0.1->UR10: INCOMPAT ok ({neg['reason'][:60]})")
 
     # 4: CAPACITY overflow neg-control (cont.318n) -- CP-08 (4 parts) -> STACK-RECV (capacity 3) MUST be INCOMPAT
     # (verified: the chain executes 3/4, extra part falls). Distinct from height/deep-bin = capacity branch works.

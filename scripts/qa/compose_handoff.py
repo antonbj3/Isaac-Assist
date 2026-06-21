@@ -16,7 +16,14 @@ chainable pairs into chain_xkit_gate. Use: compose_handoff.py SRC RECV  | or imp
 import json, sys
 REPO = "/home/anton/projects/Omniverse_Nemotron_Ext"
 _STAGES = json.load(open(f"{REPO}/workspace/chain_stages.json"))["stages"]
-_PICK_Z = {"UR10": 0.975, "Franka": 0.775}                 # the z a robot can grasp from, top-down
+_PICK_Z = {"UR10": 0.975, "Franka": 0.775}                 # a robot's DESIGN/native top-down pick z (source-height guess)
+# cont.319-L3 reach-RANGE: the cross-Kit relay (chain_xkit_gate run_stage_k) re-instantiates the handoff object at
+# the SOURCE delivery world-z with z-offset=0.0 — so the RECEIVER picks at the source's delivery height, which only
+# needs to fall inside the receiver's top-down REACH RANGE (NOT equal a single native pick z). The old single-z+-0.08
+# match FALSE-NEGATIVED proven pairs (CP-CONV-02-SRC@0.825 -> UR10 native@0.975: 0.825 IS in UR10 reach -> works).
+# Bounds contain every proven handoff height (Franka receives {0.775,0.825}; UR10 receives {0.825,0.975}) + ballpark
+# arm kinematics; they catch only GROSS unreachability (floor/ceiling), not unphysical cm-level discrimination.
+_REACH = {"UR10": (0.40, 1.35), "Franka": (0.30, 1.05)}    # (lo, hi) top-down pickable z range per receiver robot
 _DEEP_CONTAINER = ("bin", "container", "crate", "hopper", "box")  # NOT pickable from inside by a receiver arm
 
 
@@ -25,8 +32,13 @@ def _robot_of(tpl):
     return "UR10" if "ur10" in blob else "Franka"
 
 
-def chain_compat(src_name, recv_name):
-    """-> {compatible: bool, reason: str}. Source delivers; receiver picks the handoff."""
+def chain_compat(src_name, recv_name, measured_z=None):
+    """-> {compatible, height_verified, needs_measure, reason}. Source delivers; receiver picks the handoff.
+
+    measured_z (cont.319-L3): pass the REAL delivery-surface z from measure_fixture(target_path) in Kit to CLOSE
+    the loop — a non-catalog source's height becomes VERIFIED instead of a source-robot guess. Flow: pre-filter
+    flags needs_measure -> caller runs measure_fixture(needs_measure) in Kit -> re-calls with measured_z=that.
+    """
     src = json.load(open(f"{REPO}/workspace/templates/{src_name}.json"))
     recv = json.load(open(f"{REPO}/workspace/templates/{recv_name}.json"))
     s_stage = _STAGES.get(src_name)
@@ -37,19 +49,31 @@ def chain_compat(src_name, recv_name):
         # deliver into a deep container; read delivers_surface from the registry (default True for back-compat).
         deliver_z = s_stage.get("delivers_z", s_stage.get("handoff_z")); leaf = "(catalog)"
         kind = "surface" if s_stage.get("delivers_surface", True) else "deep_container"
+        height_inferred = False; measure_target = None      # catalog z is VERIFIED (declared from a measured chain run)
     else:                                                  # infer from the template's delivery target
+        # cont.319-L3: a NON-catalog source's delivery HEIGHT is not statically known Kit-free — it depends on the
+        # target prim's world-z (needs USD). Previously deliver_z=None => the height-check (below) was SILENTLY
+        # bypassed => a height-incompatible arbitrary pair (e.g. UR10 source @0.975 -> Franka flat receiver) FALSE-
+        # PASSED the pre-filter. Honor "never silently assume": infer a BEST-EFFORT height from the SOURCE robot's
+        # working envelope so gross mismatches are still caught, but FLAG it unverified + surface the target_path
+        # that measure_fixture must resolve in Kit for a trusted verdict (measured-vs-modelled provenance).
         tgt = (src.get("simulate_args") or {}).get("target_path") or ""
         leaf = tgt.rsplit("/", 1)[-1].lower()
         kind = "deep_container" if any(k in leaf for k in _DEEP_CONTAINER) else "surface"
-        deliver_z = None
+        if measured_z is not None:                          # Kit-measured surface z -> VERIFIED, no longer a guess
+            deliver_z = float(measured_z); height_inferred = False; measure_target = None
+        else:
+            deliver_z = _PICK_Z.get(_robot_of(src), 0.775)  # best-effort: source delivers at its own working height
+            height_inferred = True; measure_target = tgt or None
     if kind == "deep_container":
         return {"compatible": False,
                 "reason": f"source {src_name} delivers into a DEEP CONTAINER ('{leaf}') — a receiver arm cannot pick from inside it"}
     recv_robot = (_STAGES.get(recv_name) or {}).get("robot") or _robot_of(recv)
-    pick_z = _PICK_Z.get(recv_robot, 0.775)
-    if deliver_z is not None and abs(deliver_z - pick_z) > 0.08:
-        return {"compatible": False,
-                "reason": f"handoff HEIGHT mismatch: source delivers at z={deliver_z}, but {recv_robot} receiver picks at z~{pick_z} (UR10 raised / Franka flat)"}
+    lo, hi = _REACH.get(recv_robot, _REACH["Franka"])
+    if deliver_z is not None and not (lo <= deliver_z <= hi):
+        _inf = " (INFERRED from source robot — verify in Kit)" if height_inferred else ""
+        return {"compatible": False, "height_verified": not height_inferred, "needs_measure": measure_target,
+                "reason": f"handoff height z={deliver_z}{_inf} is OUTSIDE {recv_robot} receiver reach [{lo},{hi}] — the cross-Kit relay re-instantiates the object at the SOURCE delivery z (z-offset=0), so the receiver must REACH that height"}
     # CAPACITY overflow (cont.318n): a FIXED-capacity receiver (e.g. a 3-slot stacker) cannot absorb a source
     # that delivers MORE parts than it has slots — the extra parts have no target and fall. VERIFIED: CP-08(4)
     # -> CP-CHAIN-STACK-RECV(cap 3) executes at 3/4 (3 not even stacked + 1 fell). Fail-closed pre-filter so the
@@ -66,8 +90,12 @@ def chain_compat(src_name, recv_name):
     if isinstance(recv_cap, int) and isinstance(src_n, int) and src_n > recv_cap:
         return {"compatible": False,
                 "reason": f"CAPACITY overflow: source {src_name} delivers {src_n} parts but receiver {recv_name} holds only {recv_cap} (extra parts have no slot and fall — verified CP-08->STACK-RECV = 3/4)"}
-    return {"compatible": True,
-            "reason": f"source delivers onto a pickable surface (z~{deliver_z}) matching {recv_robot} pick z~{pick_z}"}
+    if height_inferred:                                    # surface passed the GROSS check, but z is a robot-guess
+        return {"compatible": True, "height_verified": False, "needs_measure": measure_target,
+                "reason": f"source delivers onto a pickable surface; height z~{deliver_z} is INFERRED from the source "
+                          f"robot (within {recv_robot} reach [{lo},{hi}]) — measure_fixture('{measure_target}') in Kit to VERIFY before trusting the chain"}
+    return {"compatible": True, "height_verified": True, "needs_measure": None,
+            "reason": f"source delivers onto a pickable surface (z~{deliver_z}) within {recv_robot} reach [{lo},{hi}]"}
 
 
 if __name__ == "__main__":
