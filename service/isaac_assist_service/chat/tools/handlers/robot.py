@@ -1632,7 +1632,12 @@ def _gen_navigate_to(args: Dict) -> str:
     wheel_radius = args.get("wheel_radius", 0.14)
     wheel_base = args.get("wheel_base", 0.413)
 
-    if False:  # astar drive was a no-op stub AND its occupancy grid is hardcoded-empty (real grids
+    if False:  # cont.319-NAV: occupancy-population is now WIRED below (A* routes around registered obstacles),
+        # but the astar DRIVE itself is still the OLD broken approach (hardcoded start [0,0] at line ~1714 +
+        # WheelBasePoseController open-loop no-op + hardcoded wheel params) — nav_gate CONFIRMED it drives
+        # WEAKLY (forklift 1.6m vs the direct branch's 2.9m). So keep astar FALLING THROUGH to the REAL direct
+        # closed-loop drive until the astar drive is rewritten to match it (live start pose + the gravity/
+        # velocity-drive/wheel-detection fixes + waypoint-sequencing). THEN flip this to `planner == "astar"`.
         # were never wired from generate_occupancy_map -> A* path == straight == direct). Route "astar"
         # through the REAL direct closed-loop drive below; A* code kept here for re-enabling
         # waypoint-following once a real occupancy grid feeds navigate_to.
@@ -1651,8 +1656,7 @@ GRID_RES = 0.25  # meters per cell
 GRID_SIZE = 80   # 80x80 grid = 20m x 20m
 GRID_OFFSET = np.array([-GRID_SIZE * GRID_RES / 2, -GRID_SIZE * GRID_RES / 2])
 
-# Pre-generate an empty occupancy grid (0=free, 1=obstacle)
-# Replace with actual occupancy data for real scenes
+# Occupancy grid (0=free, 1=obstacle).
 occupancy = np.zeros((GRID_SIZE, GRID_SIZE), dtype=int)
 
 def world_to_grid(pos):
@@ -1660,6 +1664,31 @@ def world_to_grid(pos):
 
 def grid_to_world(cell):
     return np.array([cell[0] * GRID_RES + GRID_OFFSET[0], cell[1] * GRID_RES + GRID_OFFSET[1]])
+
+# cont.319-NAV: populate occupancy from the robot's REGISTERED obstacles (curobo:moving_obstacles) so A*
+# routes AROUND them — replaces the old hardcoded-empty grid (which made A* path == straight == direct).
+import omni.usd as _ouN
+from pxr import Usd as _UsdN, UsdGeom as _UGN
+_stgN = _ouN.get_context().get_stage()
+_rprimN = _stgN.GetPrimAtPath(robot_path)
+_oaN = _rprimN.GetAttribute("curobo:moving_obstacles") if (_rprimN and _rprimN.IsValid()) else None
+_obs_pathsN = list(_oaN.Get() or []) if _oaN else []
+_bcN = _UGN.BBoxCache(_UsdN.TimeCode.Default(), [_UGN.Tokens.default_] if hasattr(_UGN.Tokens, 'default_') else [], useExtentsHint=True)
+_INFL = 0.35  # robot half-width clearance (m) — inflate obstacles so A* keeps the base clear
+for _op in _obs_pathsN:
+    _pr = _stgN.GetPrimAtPath(_op)
+    if not _pr or not _pr.IsValid():
+        continue
+    _bb = _bcN.ComputeWorldBound(_pr).ComputeAlignedRange()
+    if _bb.IsEmpty():
+        continue
+    _mn, _mx = _bb.GetMin(), _bb.GetMax()
+    _gx0, _gy0 = world_to_grid([float(_mn[0]) - _INFL, float(_mn[1]) - _INFL])
+    _gx1, _gy1 = world_to_grid([float(_mx[0]) + _INFL, float(_mx[1]) + _INFL])
+    for _gx in range(max(0, min(_gx0, _gx1)), min(GRID_SIZE, max(_gx0, _gx1) + 1)):
+        for _gy in range(max(0, min(_gy0, _gy1)), min(GRID_SIZE, max(_gy0, _gy1) + 1)):
+            occupancy[_gy, _gx] = 1
+print("A* occupancy: %d obstacle(s) -> %d blocked cells" % (len(_obs_pathsN), int(occupancy.sum())))
 
 def astar(start, goal):
     open_set = [(0, start)]
