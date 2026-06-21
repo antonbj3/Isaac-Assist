@@ -30,9 +30,14 @@ def _class(template):
     # palletizer routes to the lenient color-sort branch and a collapsed grid false-passes. A pure colour-sort
     # (into bins, no pallet) has no "pallet" token -> still color-sort. Routing a sort-onto-pallet here is only
     # STRICTER (flat-grid check), never a false-negative.
+    # cont.319-STACKCOMPOSE fix: check COLUMN/STACK keywords BEFORE pallet. CP-13's goal is "2-cube column
+    # stack (cube-on-cube) ... on a PALLET base" — the word "pallet" (the base) wrongly routed it to
+    # palletize/grid (flat-expected), which then REJECTED its CORRECT 2-z-level column as a "pile" (a false-
+    # negative). A cube-on-cube / column / tower goal is a STACK even when it mentions a pallet base. Keeps
+    # pallet-before-sort (a sorted palletizer stays palletize/grid).
+    if any(w in g for w in ["tower", "column", "cube-on-cube", "graduated"]): return "stack/column"
     if any(w in g for w in ["pallet", "palletiz"]): return "palletize/grid"
     if "sort" in g: return "color-sort"
-    if any(w in g for w in ["tower", "column", "cube-on-cube", "graduated"]): return "stack/column"
     if any(w in g for w in ["grid", "2x2", "3x3"]): return "palletize/grid"
     return "pick-place-bin"
 
