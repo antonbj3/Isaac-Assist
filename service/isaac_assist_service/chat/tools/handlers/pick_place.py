@@ -4188,6 +4188,15 @@ if DROP_FIXTURE and DROP_TARGETS is None:
                 _cand = (float(_mx[2]), float((_mn[0] + _mx[0]) / 2.0), float((_mn[1] + _mx[1]) / 2.0), _sx, _sy)
                 if _best is None or _cand[0] > _best[0]:
                     _best = _cand
+        if _best is None:
+            # SINGLE-MESH fixture (e.g. a pallet / simple table) has no separable horizontal sub-prim ->
+            # the surface scan finds nothing. Fall back to the fixture's OVERALL top face as the deck.
+            _ob2 = _bc.ComputeWorldBound(_fxp).ComputeAlignedRange()
+            if not _ob2.IsEmpty():
+                _o2mn, _o2mx = _ob2.GetMin(), _ob2.GetMax()
+                _best = (float(_o2mx[2]), float((_o2mn[0] + _o2mx[0]) / 2.0), float((_o2mn[1] + _o2mx[1]) / 2.0),
+                         float(_o2mx[0] - _o2mn[0]), float(_o2mx[1] - _o2mn[1]))
+                print("[drop_fixture] no sub-surface on %s -> using overall top face (single-mesh fixture)" % DROP_FIXTURE)
         if _best is not None:
             _tz, _cx, _cy, _fwx, _fwy = _best
             # 2D GRID (cont.319-REALSHELF stress, Anton "hur stabil är autofördelningen?"): a 1D row held 9
