@@ -88,7 +88,7 @@
   "Cubes within each tray not slot-precision-placed (no drop_targets dict). They land in tray but pile up if multiple cubes per tray.",
   "1 Gemini API call per build."
  ],
- "verified_status": "build-spec-2026-04-XX; form-gate ✓; function-gate ✓ [pre-fix; re-verify pending — rest_speed standardised 2026-05-18] (multi-cube cube_paths + xy_tol=0.15 + rest_speed=10 — Cube_4 delivered to RedTray)",
+ "verified_status": "★ GENUINE GOLD (cont.319-EYES7 2026-06-21, scene_eyes dur=120): vision-kitting 4/4 delivered as 2 clean 2-high stacks (Cube_1/2 z=0.875 ON Cube_3/4 z=0.825), ALL UPRIGHT (6.6-9.4deg), plan_fails=0. scene_eyes flagged Cube_3|Cube_1 + Cube_4|Cube_2 place-time contacts = the INTENDED stacking (no knock-off; all upright). pre-fix-pending was a false-negative, now confirmed clean.",
  "intent": {
   "pattern_hint": "pick_place",
   "structural_features": {
