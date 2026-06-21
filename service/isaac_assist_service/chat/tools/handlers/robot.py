@@ -4470,6 +4470,13 @@ def _gen_generate_occupancy_map(args: Dict) -> str:
     height_range = args.get("height_range", [0, 2])
 
     return f"""\
+# cont.319-NAV: enable the omap extension before import — the module exists on disk
+# (exts/isaacsim.asset.gen.omap) but isn't auto-enabled in the Kit boot -> 'No module named
+# isaacsim.asset.gen' at runtime. Enable it on demand, then import.
+import omni.kit.app as _kitapp
+_em = _kitapp.get_app().get_extension_manager()
+if not _em.is_extension_enabled("isaacsim.asset.gen.omap"):
+    _em.set_extension_enabled_immediate("isaacsim.asset.gen.omap", True)
 from isaacsim.asset.gen.omap import MapGenerator
 import carb
 
@@ -4561,6 +4568,11 @@ import os
 from pathlib import Path
 
 # Phase 8A.3 occupancy generator (sync, runs inside Kit)
+# cont.319-NAV: enable the omap extension before import (not auto-enabled in the Kit boot).
+import omni.kit.app as _kitapp2
+_em2 = _kitapp2.get_app().get_extension_manager()
+if not _em2.is_extension_enabled("isaacsim.asset.gen.omap"):
+    _em2.set_extension_enabled_immediate("isaacsim.asset.gen.omap", True)
 from isaacsim.asset.gen.omap.bindings import _omap
 
 origin = ({origin[0]}, {origin[1]}, {origin[2]})
