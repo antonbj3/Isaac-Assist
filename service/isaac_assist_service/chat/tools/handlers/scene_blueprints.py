@@ -1335,9 +1335,15 @@ async def _handle_generate_scene_blueprint(args: Dict) -> Dict:
         "instructions": (
             "Based on the description and available assets, generate a blueprint JSON with: "
             "objects: [{name, asset_path (from available_assets), prim_path (/World/Name), "
-            "position [x,y,z], rotation [rx,ry,rz], scale [sx,sy,sz]}]. "
-            "Ensure objects don't overlap, items sit ON surfaces (not floating), "
-            "robots have 1m clearance. Then call build_scene_from_blueprint with the blueprint."
+            "position [x,y,z], rotation [rx,ry,rz], scale [sx,sy,sz], and OPTIONALLY mass (kg) "
+            "+ material for parts}]. Ensure objects don't overlap, items sit ON surfaces (not "
+            "floating), robots have 1m clearance. "
+            "REQUIRED next step: call validate_scene_blueprint with the blueprint FIRST — it "
+            "grounds feasibility (overlap, out-of-reach, over-payload, kinematic-singularity-risk, "
+            "and unsupported manipulation: round-grasp / oily-surface / deformable / fragile) and "
+            "returns issues+warnings. Resolve the issues — and explain any genuine infeasibility to "
+            "the user (e.g. a 9 kg part needs a UR10, not a Franka) — BEFORE calling "
+            "build_scene_from_blueprint."
         ),
     }
 
