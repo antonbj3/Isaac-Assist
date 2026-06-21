@@ -43,10 +43,12 @@ async def main() -> int:
         print("usage: cell_throughput.py <CANONICAL>")
         return 2
     cell = sys.argv[1]
-    res = await run_stage0(cell)
+    chunk = int(os.environ.get("CELL_TP_CHUNK") or 300)  # finer than the 1000-step default -> ~5s resolution
+    res = await run_stage0(cell, chunk=chunk)
     traj = res.get("traj") or []
     delivered = res.get("delivered", 0)
     total = res.get("total", 0)
+    chunk_res_s = chunk * PHYSICS_DT
 
     if not traj:
         print("THROUGHPUT " + json.dumps({"cell": cell, "error": "no trajectory", "delivered": delivered}))
@@ -55,7 +57,9 @@ async def main() -> int:
     total_steps = traj[-1]["t"]
     avg = _per_min(delivered, total_steps)
 
-    # Step-stamp each delivery: the chunk at which the cumulative delivered count first reached each level.
+    # Step-stamp each delivery: the chunk at which the cumulative delivered count first reached each
+    # level. `seen` only increases (monotonic), so a cube that BOUNCES OUT after delivery (count drops)
+    # is detected as peak_delivered > delivered -> the cell is unstable, flagged (adversarial audit #4).
     deliv_at: list[int] = []
     seen = 0
     for e in traj:
@@ -63,27 +67,38 @@ async def main() -> int:
         while seen < d:
             deliv_at.append(int(e["t"]))
             seen += 1
+    peak_delivered = len(deliv_at)
+    bounced_out = peak_delivered - delivered  # >0 means cubes left the target after first delivery
 
     if len(deliv_at) >= 2:
         span = deliv_at[-1] - deliv_at[0]
-        sustained = _per_min(len(deliv_at) - 1, span)  # intervals BETWEEN first & last delivery
+        sustained = _per_min(len(deliv_at) - 1, span)  # intervals BETWEEN first & last first-delivery
         cycles_s = [(deliv_at[i] - deliv_at[i - 1]) * PHYSICS_DT for i in range(1, len(deliv_at))]
         mean_cycle = sum(cycles_s) / len(cycles_s)
+        # the cycle cannot be resolved finer than one chunk; if it pins at the floor, say so honestly
+        cycle_at_floor = mean_cycle <= chunk_res_s * 1.01
     else:
         sustained = avg
         mean_cycle = None
+        cycle_at_floor = False
 
     out = {
         "cell": cell,
         "delivered": delivered,
         "total_cubes": total,
+        "peak_delivered": peak_delivered,
+        "bounced_out": bounced_out,
         "window_s": round(total_steps * PHYSICS_DT, 1),
         "avg_per_min": round(avg, 2),
         "sustained_per_min": round(sustained, 2),
         "mean_cycle_s": round(mean_cycle, 1) if mean_cycle is not None else None,
+        "chunk_resolution_s": round(chunk_res_s, 1),
+        "cycle_at_resolution_floor": cycle_at_floor,
         "first_delivery_step": deliv_at[0] if deliv_at else None,
-        "note": "SIM throughput (proxy for real). sustained = deliveries / span(first..last); "
-                "chunk-resolution coarse; single-arm cell.",
+        "note": ("SIM throughput (proxy for real). sustained = first-deliveries / span; single-arm cell. "
+                 + ("⚠️ mean_cycle is PINNED at the chunk-resolution floor — the true cycle is <= this; "
+                    "rerun with smaller CELL_TP_CHUNK for a tighter number. " if cycle_at_floor else "")
+                 + (f"⚠️ {bounced_out} cube(s) BOUNCED OUT after delivery (unstable cell). " if bounced_out > 0 else "")),
     }
     print("THROUGHPUT " + json.dumps(out))
     # honest feasibility grounding for common gotcha targets — quantify the multi-cell scale-up

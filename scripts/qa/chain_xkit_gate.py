@@ -151,7 +151,10 @@ async def _play_and_measure(kt, target, cubes, total=6000, chunk=1000, reacquire
     return res
 
 
-async def run_stage0(name):
+async def run_stage0(name, chunk=1000):
+    # chunk = play/MEASURE granularity; default 1000 keeps every existing caller byte-identical.
+    # cell_throughput.py passes a SMALLER chunk for finer delivery-timing resolution (the default
+    # 1000 steps = ~16.7s floor quantizes the measured pick-place cycle — adversarial audit #4).
     from service.isaac_assist_service.chat.tools import kit_tools as kt
     from service.isaac_assist_service.chat.canonical_instantiator import execute_template_canonical, settle_after_canonical
     tpl = json.load(open(f"{REPO}/workspace/templates/{name}.json"))
@@ -159,7 +162,7 @@ async def run_stage0(name):
     await kt.exec_sync("import omni.usd; omni.usd.get_context().new_stage()", timeout=25)
     await kt.exec_sync("import builtins\nfor k in [x for x in list(vars(builtins)) if x.startswith('_curobo_pp_sub_')]:\n    try: delattr(builtins,k)\n    except Exception: pass\n", timeout=10)
     await execute_template_canonical(tpl); await settle_after_canonical(tpl)
-    r = await _play_and_measure(kt, target, cubes)
+    r = await _play_and_measure(kt, target, cubes, chunk=chunk)
     # handoff = ONLY actually-DELIVERED cube world poses (cont.319ww fix: was {all posed cubes}, which relayed a
     # NON-delivered cube downstream -> the chain falsely "succeeded" at stage k even when stage k-1 delivered 0.
     # Caught by a self-regression-audit: CONV-02-SRC delivered 0/1 yet still handed off Cube_1's undelivered pose).
