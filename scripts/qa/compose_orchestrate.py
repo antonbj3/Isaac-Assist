@@ -218,8 +218,9 @@ async def main():
     # composition is GOLD ONLY when scene_eyes' OWN verdict confirms it (Anton: "alltid alltid scene
     # eyes"). So NEVER print a clean GREEN from this proxy — always require the scene_eyes pass.
     print("⚠️ POSITION-PROXY verdict — NOT a gold. The composition is GOLD only after scene_eyes:")
-    print("   for each instance, run: scene_eyes.py --compose \"%s\"  then eyes_gold_gate.py"
-          % "\" \"".join("%s@%g,0,0" % (c, 2.5 * i) for i, c in enumerate(p["cells"])))
+    print("   RUN:  python scripts/qa/compose_eyes_gate.py %s" % " ".join(p["cells"]))
+    print("   (compose_eyes_gate runs scene_eyes --compose per instance + eyes_gold_gate — the real verdict;")
+    print("    this proxy LIED: it false-negatived CP-50 2/4 while scene_eyes showed 4/4 upright, cont.319-COMPOSE3)")
     print("E2E RESULT:", "◑ PROXY-delivered full (RUN scene_eyes to confirm GOLD)"
           if r["verified"] else "❌ proxy says under-delivered — but scene_eyes may differ (proxy lies on routing/stack cells); RUN scene_eyes before concluding")
 
