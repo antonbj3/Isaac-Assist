@@ -4587,7 +4587,7 @@ generator.set_cell_size(resolution)
 generator.set_transform((origin[0], origin[1], origin[2]),
                         (-dims_xy[0] / 2.0, -dims_xy[1] / 2.0, height_min),
                         (dims_xy[0] / 2.0, dims_xy[1] / 2.0, height_max))
-generator.generate2d()
+generator.generate()  # cont.319-NAV: raw _omap interface uses .generate() (generate2d() is on the MapGenerator wrapper, not the raw OccupancyMap -> AttributeError in 5.x)
 buffer = generator.get_buffer()  # row-major occupancy: 0=free, 100=occupied, -1=unknown
 width_px = int(dims_xy[0] / resolution)
 height_px = int(dims_xy[1] / resolution)
