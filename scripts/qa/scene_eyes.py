@@ -739,7 +739,11 @@ def _analyse(js):
                        % (held, onset, rows[i1]["t"], span_s, max_r, max_rt, max_ee, verdict, max_t, max_tt, ee_note))
             out.append("    (object orientation relative to the EE over the finger/cup-contact span; >~30° = the part rotated out of a rigid couple = pinch-slip/pendulum — the signal the position-only gate cannot see)")
         else:
-            out.append("GRIP-SLIP: '%s' identified but no finger/cup-contact rows captured" % held)
+            _suction_held = any(held in (r.get("grp") or []) for r in rows)
+            if _suction_held:
+                out.append("GRIP-SLIP: '%s' held via SUCTION cup (raycast grip -> no contact-FORCE rows is EXPECTED for a suction gripper, NOT a slip; see the gripped-set / CONVERGED+GRIPPED verdict above)" % held)
+            else:
+                out.append("GRIP-SLIP: '%s' identified but no finger/cup-contact rows captured" % held)
     else:
         out.append("GRIP-SLIP: no grasped object identified (no finger/cup contact, no gripped-set)")
     # DEX-HAND FRICTION GRASP (cont.319jj) — the GRIP-SLIP logic above is blind to a 3-finger humanoid hand
