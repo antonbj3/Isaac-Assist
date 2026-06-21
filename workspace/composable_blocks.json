@@ -7,6 +7,7 @@
     "Franka:conveyor-pick": "CP-CONV-02",
     "Franka:inspect/vision": "CP-18",
     "Franka:kit/assembly": "CP-50",
+    "Franka:shelf-store-real-asset": "CP-36-REAL",
     "Franka:other": null,
     "Franka:palletize/grid": "CP-08",
     "Franka:palletize/grid-tight": "CP-08-TIGHT",
