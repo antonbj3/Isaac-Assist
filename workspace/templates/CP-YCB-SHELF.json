@@ -86,7 +86,7 @@
     "Cube placement on TOP shelf at z=1.0: robot descends from h1=1.20 to z=1.0. 0.20m descent \u2014 adequate.",
     "Same physics gotchas as CP-08."
   ],
-  "verified_status": "\u2605 GENUINE GOLD (cont.319-YCB-SHELF 2026-06-21, scene_eyes dur=220): 4 REAL YCB foam_bricks auto-distributed onto a REAL warehouse rack via drop_fixture - all settled z=0.851 on the measured deck, 1 z-level flat, ALL UPRIGHT (9.1-10.4deg), 0 never-gripped, plan_fails=0. \u2605 OBJECT-ADAPTIVE PITCH VERIFIED: min-pair-xy=0.105m matches the MEASURED brick footprint (7.8cm x1.4=0.109), NOT the 0.07 cube pitch -> the auto-distribute adapts to real object size. Combines real-object (#49) x real-fixture (#55) x adaptive grid.",
+  "verified_status": "\u2605 GENUINE GOLD (cont.319-YCB-SHELF 2026-06-21, scene_eyes dur=220, N-of-2 both clean 4/4): 4 REAL YCB foam_bricks auto-distributed onto a REAL warehouse rack via drop_fixture - all settled z=0.851 on the measured deck, 1 z-level flat, ALL UPRIGHT (9.1-10.4deg), 0 never-gripped, plan_fails=0. \u2605 OBJECT-ADAPTIVE PITCH VERIFIED: min-pair-xy=0.105m matches the MEASURED brick footprint (7.8cm x1.4=0.109), NOT the 0.07 cube pitch -> the auto-distribute adapts to real object size. Combines real-object (#49) x real-fixture (#55) x adaptive grid. N-of-2 CONFIRMED (2 runs identical: 4/4 z=0.851, plan_fails=0, min-pair 0.104-0.105m).",
   "diagnose_args": {
     "robot_path": "/World/Franka",
     "obstacles": [
