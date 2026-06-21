@@ -992,6 +992,33 @@ def _analyse(js):
         if _topp:
             out.append("*** ORIENTATION FAIL: %d object(s) TOPPLED (delivered but tipped >60° from upright = not correctly placed): %s ***" % (
                 len(_topp), ", ".join(n for n, _ in _topp)))
+            # TILT-ONSET (cont.319-CEV3 diagnostic, Anton "varför är den fragil?"): the settled tilt alone
+            # cannot say WHY a cube toppled. Report WHEN each toppled cube first crossed 30°/60° from world-up
+            # — read from the per-frame quaternion this analysis already has (rows[*].cubes_q). An onset NEAR
+            # the cube's last-upright moment that climbs monotonically = a placement/release failure (tipped as
+            # it was set down); an onset LONG after it first appears settled, with many upright frames before =
+            # a DRIFT failure (sat upright, then tipped under later load/disturbance). Distinguishes the two
+            # mechanisms the position gate + a final-tilt number are both blind to.
+            for _nm, _t in _topp:
+                _traj = [(_r["t"], _tilt_of(_q)) for _r in rows
+                         if (_q := (_r.get("cubes_q") or {}).get(_nm))]
+                if not _traj:
+                    continue
+                _c30 = next((tt for tt, tl in _traj if tl > 30), None)
+                _c60 = next((tt for tt, tl in _traj if tl > 60), None)
+                # last frame the cube was still upright (<30°) before it crossed — drift if many upright frames precede
+                _upr = [tt for tt, tl in _traj if tl < 30]
+                _last_upr = max(_upr) if _upr else None
+                _kind = "?"
+                if _c60 is not None and _last_upr is not None:
+                    _kind = "DRIFT (sat upright then tipped)" if (_c60 - _last_upr) < 0.6 and _last_upr > _traj[0][0] + 1.0 \
+                        else ("PLACEMENT (tipped ~at set-down)" if _last_upr <= _traj[0][0] + 1.0 else "LATE-TIP")
+                out.append("    └─ %s ONSET: first-seen %.0f°@%.1fs  cross30=%s  cross60=%s  last-upright=%s  end=%.1fs  -> %s" % (
+                    _nm, _traj[0][1], _traj[0][0],
+                    ("%.1fs" % _c30) if _c30 is not None else "never",
+                    ("%.1fs" % _c60) if _c60 is not None else "never",
+                    ("%.1fs" % _last_upr) if _last_upr is not None else "never",
+                    _traj[-1][0], _kind))
 
         # XY-CONTAINMENT (#36, 2026-06-19, Anton false-success discipline): the gold-gate's bin/sort branch had
         # NO check that a delivered object actually ended INSIDE the bin's xy footprint — an object dropped NEXT
