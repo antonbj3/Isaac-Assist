@@ -28,8 +28,10 @@ async def run_branch_source(name, targets):
     await kt.exec_sync("import omni.usd; omni.usd.get_context().new_stage()", timeout=25)
     await kt.exec_sync("import builtins\nfor k in [x for x in list(vars(builtins)) if x.startswith('_curobo_pp_sub_')]:\n    try: delattr(builtins,k)\n    except Exception: pass\n", timeout=10)
     await execute_template_canonical(tpl); await settle_after_canonical(tpl)
-    # single play window (sorter is slow @ belt 0.02; scale with cube count, allow CHAIN_TOTAL override)
-    total = max(3200 * len(cubes), int(os.environ.get("CHAIN_TOTAL") or 0), 24000)
+    # single play window: scale with cube count (sorter @ belt 0.02 ~3200 updates/cube), 8000 floor; CHAIN_TOTAL
+    # overrides EITHER WAY (the old unconditional max(...,24000) floor made even a 2-cube source crawl + couldn't be
+    # lowered). A 2-cube MINI -> 8000 (~130s sim); a 9-cube source -> 28800.
+    total = int(os.environ.get("CHAIN_TOTAL") or max(3200 * len(cubes), 8000))
     done = 0
     while done < total:
         n = min(1000, total - done)
