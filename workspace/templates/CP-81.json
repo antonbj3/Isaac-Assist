@@ -143,7 +143,7 @@
     "_next_cube() picks nearest-to-base; with cubes at +Y 0.55 and 0.25, order may matter for FJ propagation.",
     "Bin overflow if both cubes land at same XY — no per-cube drop_target offset configured."
   ],
-  "verified_status": "build-spec-2026-04-XX; form-gate ✓; function-gate ✓ [pre-fix; re-verify pending — rest_speed standardised 2026-05-18] (drop-precision XY arrival gate (UR10 cuRobo))",
+  "verified_status": "★ GENUINE UR10 GOLD column-stack (cont.319-EYES12 2026-06-21, scene_eyes dur=150): clean 2-high COLUMN (Cube_1 z=0.835 ON Cube_2 z=0.785, xy-aligned 0.018m), BOTH UPRIGHT (tilt 0.2-0.3deg), CONVERGED+GRIPPED. plan_fails=2 (mild, recovered). Unlike CP-14 (Franka relay-stacker that toppled), UR10 stacks CLEAN. robot-diversity column-stack block. pre-fix-pending was a false-negative.",
   "diagnose_args": {
     "robot_path": "/World/UR10",
     "obstacles": [
