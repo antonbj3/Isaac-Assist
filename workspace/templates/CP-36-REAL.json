@@ -86,7 +86,7 @@
     "Cube placement on TOP shelf at z=1.0: robot descends from h1=1.20 to z=1.0. 0.20m descent \u2014 adequate.",
     "Same physics gotchas as CP-08."
   ],
-  "verified_status": "\u2605 GENUINE GOLD - FULL AUTO-WIRE (cont.319-REALSHELF-AUTOWIRE 2026-06-21, scene_eyes dur=190): template says ONLY drop_fixture=\"/World/RealShelf\" (no drop_targets); setup_pick_place_controller MEASURES the real referenced rack deck at execution (UsdGeom world-bbox in the generated curobo code) + auto-distributes the 4 cubes on it. Result: plan_calls=32, all 4 settled z=0.850 on the real deck, ALL UPRIGHT (8.9-9.0deg), plan_fails=0. ZERO hardcoded drop-z. Proven genuine (not fallback): removing drop_targets without the measure-block gave plan_calls=0 in realshelf4; the stage-acquisition fix made it clean 4/4.",
+  "verified_status": "\u2605 GENUINE GOLD - FULL AUTO-WIRE (cont.319-REALSHELF-AUTOWIRE 2026-06-21, scene_eyes dur=190, N-of-2 both clean 4/4): template says ONLY drop_fixture=\"/World/RealShelf\" (no drop_targets); setup_pick_place_controller MEASURES the real referenced rack deck at execution (UsdGeom world-bbox in the generated curobo code) + auto-distributes the 4 cubes on it. Result: plan_calls=32, all 4 settled z=0.850 on the real deck, ALL UPRIGHT (8.9-9.0deg), plan_fails=0. ZERO hardcoded drop-z. Proven genuine (not fallback): removing drop_targets without the measure-block gave plan_calls=0 in realshelf4; the stage-acquisition fix made it clean 4/4. N-of-2 CONFIRMED (2 independent runs identical 4/4 @ z=0.850 upright). Regression: CP-36 original stays GOLD (additive, byte-identical).",
   "diagnose_args": {
     "robot_path": "/World/Franka",
     "obstacles": [
