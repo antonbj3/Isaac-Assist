@@ -496,6 +496,7 @@ def _gen_setup_pick_place_controller(args: Dict) -> str:
             curobo_world_yml=args.get("curobo_world_yml"),
             color_routing=args.get("color_routing"),
             drop_targets=args.get("drop_targets"),
+            drop_fixture=args.get("drop_fixture"),
             gripper_rotation=args.get("gripper_rotation"),
             robot_family=_rf,
             require_upright=bool(args.get("require_upright", False)),
@@ -3890,6 +3891,7 @@ def _gen_pick_place_curobo(robot_path: str, sensor_path: str, belt_path: str,
                            curobo_world_yml=None,
                            color_routing=None,
                            drop_targets=None,
+                           drop_fixture=None,
                            gripper_rotation=None,
                            robot_family: str = "franka",
                            require_upright: bool = False,
@@ -3996,7 +3998,7 @@ def _gen_pick_place_curobo(robot_path: str, sensor_path: str, belt_path: str,
     return f"""\
 # ── setup_pick_place_controller (curobo) — MotionPlanner + 5-segment plan ──
 import sys, importlib, omni.usd, omni.timeline, omni.physx, omni.kit.app, numpy as np, builtins, json, time, os
-from pxr import UsdGeom, Sdf, Gf, UsdPhysics
+from pxr import Usd, UsdGeom, Sdf, Gf, UsdPhysics
 
 # Env-bridge to isaac_lab_env site-packages
 _CUROBO_SP = "/home/anton/miniconda3/envs/isaac_lab_env/lib/python3.11/site-packages"
@@ -4161,6 +4163,44 @@ COLOR_ROUTING = {_json.dumps(color_routing or {})}
 # instead of DROP_TARGET / DEST_PATH for the named cube. Used by CP-08+
 # canonicals where each cube goes to a distinct grid/column position.
 DROP_TARGETS = {_json.dumps(drop_targets) if drop_targets else 'None'}
+# FRICTIONLESS REAL-FIXTURE drop (cont.319-REALSHELF-AUTOWIRE): when drop_fixture is a referenced
+# shelf/rack/table prim path, MEASURE its top deck here at REAL execution (UsdGeom world-bbox, no
+# capture-pass proxy problem) and auto-distribute SOURCE_PATHS in a centred row on the deck. The path
+# arg is a string (capture-safe); the measurement happens in this generated code that runs for real.
+# Derives drop-z from the actual asset -> re-scale or swap the fixture needs NO edit. Default None ->
+# existing cells (which pass drop_targets) are byte-identical (block skipped).
+DROP_FIXTURE = {drop_fixture!r}
+if DROP_FIXTURE and DROP_TARGETS is None:
+    _stg = omni.usd.get_context().get_stage()  # `stage` isn't bound yet at this point in the curobo code
+    _fxp = _stg.GetPrimAtPath(DROP_FIXTURE)
+    if _fxp and _fxp.IsValid():
+        _bc = UsdGeom.BBoxCache(Usd.TimeCode.Default(), [UsdGeom.Tokens.default_] if hasattr(UsdGeom.Tokens, 'default_') else [], useExtentsHint=True)
+        _best = None  # topmost wide-thin horizontal surface: (top_z, cx, cy, fx, fy)
+        for _pp in Usd.PrimRange(_fxp):
+            if not _pp.IsA(UsdGeom.Gprim):
+                continue
+            _bb = _bc.ComputeWorldBound(_pp).ComputeAlignedRange()
+            if _bb.IsEmpty():
+                continue
+            _mn = _bb.GetMin(); _mx = _bb.GetMax()
+            _sx = float(_mx[0] - _mn[0]); _sy = float(_mx[1] - _mn[1]); _sz = float(_mx[2] - _mn[2])
+            if _sz <= 0.12 and _sx >= 0.08 and _sy >= 0.08 and _sz < 0.5 * min(_sx, _sy):
+                _cand = (float(_mx[2]), float((_mn[0] + _mx[0]) / 2.0), float((_mn[1] + _mx[1]) / 2.0), _sx, _sy)
+                if _best is None or _cand[0] > _best[0]:
+                    _best = _cand
+        if _best is not None:
+            _tz, _cx, _cy, _fwx, _fwy = _best
+            _nn = max(len(SOURCE_PATHS), 1)
+            _span = _fwx * 0.6  # 60% of deck width = 20% inset each side
+            DROP_TARGETS = {{}}
+            for _ii, _spath in enumerate(SOURCE_PATHS):
+                _ox = (_cx + _span * ((_ii / max(_nn - 1, 1)) - 0.5)) if _nn > 1 else _cx
+                DROP_TARGETS[_spath] = [_ox, _cy, _tz + 0.025]
+            print("[drop_fixture] %s deck top_z=%.3f centre=(%.3f,%.3f) footprint=%.2fx%.2f -> %d targets" % (DROP_FIXTURE, _tz, _cx, _cy, _fwx, _fwy, len(DROP_TARGETS)))
+        else:
+            print("[drop_fixture] WARNING no horizontal surface on %s; controller falls back to DEST_PATH" % DROP_FIXTURE)
+    else:
+        print("[drop_fixture] WARNING fixture prim %s not found; falling back to DEST_PATH" % DROP_FIXTURE)
 # Per-cube yaw rotation (deg) at drop. Dict {{cube_path: yaw_deg}} or scalar.
 # When set, the drop pose's gripper orientation rotates around world Z by yaw_deg.
 GRIPPER_ROTATION = {_json.dumps(gripper_rotation) if gripper_rotation is not None else 'None'}
