@@ -302,6 +302,34 @@ async def test_singular_config_warning():
 
 
 @pytest.mark.asyncio
+async def test_singular_safe_config_no_warning():
+    """A healthy config (condition number < 50 -> status 'safe') raises NO
+    singularity violation, even though its prod-of-sigma manipulability (0.024)
+    is below the OLD 0.05 threshold that false-warned every gold. Locks in the
+    false-positive-safety in the unit suite, beyond the single CP-01 Kit control
+    (adversarial audit #3: 'false-positive-free' should be more than N=1)."""
+    fake = _build_router({
+        "solve_ik": [_ok_solve_ik([0]*7)],
+        "check_singularity": [{"output": json.dumps({
+            "manipulability": 0.024, "condition_number": 12.0, "status": "safe",
+            "singular_values": [1.0, 0.8, 0.6, 0.4, 0.2, 0.083]})}],
+        "get_bounding_box": [],
+    })
+    with patch.object(dtool, "_execute_tool_call", side_effect=fake):
+        report = await dtool._handle_diagnose_scene_feasibility({
+            "robot_path": "/World/Franka",
+            "pick_pose": [0.4, 0.0, 0.5],
+            "robot_base": [0.0, 0.0, 0.0],
+            "max_reach": 0.855,
+            "use_cache": False,
+        })
+    axes = [v["axis"] for v in report["violations"]]
+    assert "singularity" not in axes  # status 'safe' -> no false-positive
+    # the sound condition number is still surfaced as an info metric for the LLM
+    assert any("condition_number" in k for k in (report.get("metrics") or {}))
+
+
+@pytest.mark.asyncio
 async def test_multi_robot_cycles_aggregate_critical():
     """T-MULTI-1: 2-cycle scene where second cycle has no IK at drop.
     aggregate.worst_severity = CRITICAL, per_cycle[1].verdict = infeasible."""
