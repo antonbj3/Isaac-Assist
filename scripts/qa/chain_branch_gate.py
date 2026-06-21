@@ -51,9 +51,11 @@ async def run_branch_source(name, targets):
 async def main():
     a = sys.argv[1:]
     source = a[0] if a else "CP-BRANCH-SRC-SW"
-    branches = ([(a[1], a[2]), (a[3], a[4])] if len(a) >= 5
-                else [("/World/HeavyBin", "CP-CHAIN-PALLETIZE-RECV"),
-                      ("/World/LightBin", "CP-CHAIN-PALLETIZE-RECV")])
+    # N branches: SOURCE TRAY1 RECV1 TRAY2 RECV2 [TRAY3 RECV3 ...] — generalizes the 2-way Y-split to an N-way
+    # fan-out (e.g. the 3-lane colour sorter -> 3 receivers); the rest of main() already loops over `branches`.
+    pairs = [(a[1 + 2 * i], a[2 + 2 * i]) for i in range((len(a) - 1) // 2)]
+    branches = pairs or [("/World/HeavyBin", "CP-CHAIN-PALLETIZE-RECV"),
+                         ("/World/LightBin", "CP-CHAIN-PALLETIZE-RECV")]
     print(f"=== BRANCHING CHAIN: {source} -> " + " + ".join(f"{t}->{r}" for t, r in branches) + " ===")
     handoffs, cubes = await run_branch_source(source, [t for t, _ in branches])
     results = []
