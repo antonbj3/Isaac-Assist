@@ -86,9 +86,17 @@ async def main() -> int:
                 "chunk-resolution coarse; single-arm cell.",
     }
     print("THROUGHPUT " + json.dumps(out))
-    # honest feasibility grounding for common gotcha targets
+    # honest feasibility grounding for common gotcha targets — quantify the multi-cell scale-up
+    # (the gotcha #8/#15 expected answer is "single arm can't -> multi-cell"; ground HOW MANY cells).
+    import math
     for tgt in (15, 30, 60):
-        verdict = "FEASIBLE" if sustained >= tgt else "INFEASIBLE on this single cell -> needs multi-cell / faster cycle"
+        if sustained <= 0:
+            verdict = "UNKNOWN (cell delivered nothing — fix the cell first)"
+        elif sustained >= tgt:
+            verdict = "FEASIBLE on this single cell"
+        else:
+            n_cells = math.ceil(tgt / sustained)
+            verdict = f"INFEASIBLE single-cell -> ~{n_cells} parallel cells needed at this rate"
         print(f"  target {tgt}/min: {verdict} (measured sustained {sustained:.1f}/min)")
     return 0
 
