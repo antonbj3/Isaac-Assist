@@ -54,7 +54,9 @@ if COMPOSE:
     NFRAMES = 0
 else:
     TPL = ARGS[0] if ARGS else "CP-69"
-    DUR = float(ARGS[1]) if len(ARGS) > 1 else 40.0
+    # positional DUR wins; else honor EYES_DUR (it was silently ignored for single-template before,
+    # so EYES_DUR=520 ran the 40 s default -> a slow 9-cube cell only showed ~3 picks); else 40 s.
+    DUR = float(ARGS[1]) if len(ARGS) > 1 else float(os.environ.get("EYES_DUR", "40"))
     NFRAMES = int(ARGS[2]) if len(ARGS) > 2 else 16
 # In compose mode, focus the probe on ONE instance's robot (default inst1, the 2nd cell
 # that degrades). Empty for single-template -> auto-detect (byte-identical).
