@@ -136,7 +136,9 @@ async def _play_and_measure(kt, target, cubes, total=6000, chunk=1000, reacquire
             _o = (await kt.exec_sync(_mcode, timeout=120)).get("output", "").strip()
             _l = [l for l in _o.splitlines() if l.startswith("MEASURE")]
             if _l:
-                try: traj.append({"t": done, "poses": json.loads(_l[-1][8:]).get("poses", {})})
+                try:
+                    _md = json.loads(_l[-1][8:])
+                    traj.append({"t": done, "delivered": _md.get("delivered", 0), "poses": _md.get("poses", {})})
                 except Exception: pass
     out = (await kt.exec_sync(_mcode, timeout=120)).get("output", "").strip()
     lines = [l for l in out.splitlines() if l.startswith("MEASURE")]
