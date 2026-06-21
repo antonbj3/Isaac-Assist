@@ -5527,8 +5527,12 @@ async def _handle_validate_scene_blueprint(args: Dict) -> Dict:
     # authoritative reach check is the settle-dependent scripts/qa/scene_validate.py
     # / diagnose_scene_feasibility (pick POSE, in-Kit); this is the cheap
     # static first pass.
-    REACH = {"franka": 0.855, "ur10": 1.30, "ur5": 0.85, "ur3": 0.50}
-    PAYLOAD = {"franka": 3.0, "ur10": 12.5, "ur5": 5.0, "ur3": 3.0}  # kg, rated payload
+    # reach (m) + rated payload (kg) by published spec. ur16e fills the heavy-but-shorter-reach
+    # gap between ur10e (12.5kg) and a forklift; ur16 BEFORE ur10 in iteration order is irrelevant
+    # (dict membership, not prefix). Order longest-key-first only matters if a name contains two —
+    # not the case here.
+    REACH = {"franka": 0.855, "ur16": 0.90, "ur10": 1.30, "ur5": 0.85, "ur3": 0.50}
+    PAYLOAD = {"franka": 3.0, "ur16": 16.0, "ur10": 12.5, "ur5": 5.0, "ur3": 3.0}  # kg, rated payload
     has_conveyor = any(
         any(k in (o.get("name", "") + " " + str(o.get("asset_name", ""))).lower()
             for k in ("conveyor", "belt"))
