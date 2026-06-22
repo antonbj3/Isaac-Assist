@@ -4487,17 +4487,16 @@ import omni.kit.app as _kitapp
 _em = _kitapp.get_app().get_extension_manager()
 if not _em.is_extension_enabled("isaacsim.asset.gen.omap"):
     _em.set_extension_enabled_immediate("isaacsim.asset.gen.omap", True)
-from isaacsim.asset.gen.omap import MapGenerator
-import carb
+# cont.319-OMAP: MapGenerator was REMOVED in isaacsim 5.x -> use the raw _omap interface
+# (acquire_omap_interface + set_cell_size + set_transform + generate, per test_occupancy.py).
+from isaacsim.asset.gen.omap.bindings import _omap
 
-gen = MapGenerator()
-gen.update_settings(cell_size={resolution})
-gen.set_transform(
-    origin=carb.Float3({origin[0]}, {origin[1]}, 0),
-    min_bound=carb.Float3({-dimensions[0]/2}, {-dimensions[1]/2}, {height_range[0]}),
-    max_bound=carb.Float3({dimensions[0]/2}, {dimensions[1]/2}, {height_range[1]}),
-)
-gen.generate2d()
+gen = _omap.acquire_omap_interface()
+gen.set_cell_size(float({resolution}))
+gen.set_transform(({origin[0]}, {origin[1]}, 0.0),
+                  ({-dimensions[0]/2}, {-dimensions[1]/2}, {height_range[0]}),
+                  ({dimensions[0]/2}, {dimensions[1]/2}, {height_range[1]}))
+gen.generate()
 buffer = gen.get_buffer()
 print(f"Occupancy map generated: {int(dimensions[0]/resolution)} x {int(dimensions[1]/resolution)} cells")
 """
