@@ -7975,3 +7975,5 @@ cont.319-B13 (2026-06-22) — CP-01+CP-12+CP-08, CP-30+CP-42+CP-13 light 3-cell 
 cont.319-B14 (2026-06-22) — CP-01+CP-42+CP-08, CP-12+CP-30+CP-03 light 3-cell golds; dataset=71.
 
 cont.319-5LIGHT (2026-06-22) — 5-cell LIGHT capstone CP-01+CP-03+CP-08+CP-12+CP-13 = GOLD (bin+color-sort+2grids+stack all GENUINE under max 5-arm parallel contention). Light-robust set composes to 5-cell. Envelope verified at max. dataset=72.
+
+cont.319-5B (2026-06-22) — 5-cell light B CP-01+CP-03+CP-30+CP-42+CP-13 verified; dataset=73.
