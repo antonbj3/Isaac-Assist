@@ -8005,3 +8005,5 @@ cont.319-E6 (2026-06-22) — 3-cell CP-12+CP-13+CP-30 verified; dataset=85.
 cont.319-E7 (2026-06-22) — 5-cell G CP-01+CP-08+CP-30+CP-42+CP-03 verified; dataset=86 (7 distinct 5-cell golds).
 
 cont.319-E8 (2026-06-22) — 3-cell CP-10+CP-08+CP-13 verified; dataset=87.
+
+cont.319-E9 (2026-06-22) — 3-cell CP-01+CP-10+CP-13 verified; dataset=88.
