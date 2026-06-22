@@ -7999,3 +7999,5 @@ cont.319-E3 (2026-06-22) — 3-cell CP-08+CP-30+CP-42 verified; dataset=82.
 cont.319-E4 (2026-06-22) — 3-cell CP-01+CP-13+CP-42 verified; dataset=83.
 
 cont.319-E5 (2026-06-22) — 3-cell CP-03+CP-08+CP-42 verified; dataset=84.
+
+cont.319-E6 (2026-06-22) — 3-cell CP-12+CP-13+CP-30 verified; dataset=85.
