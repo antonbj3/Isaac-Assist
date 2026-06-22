@@ -7987,3 +7987,5 @@ cont.319-4B (2026-06-22) — 4-cell light B CP-01+CP-08+CP-12+CP-42 verified; da
 cont.319-4C (2026-06-22) — 4-cell C CP-30+CP-42+CP-12+CP-13 verified; dataset=77.
 
 cont.319-5E (2026-06-22) — 5-cell E CP-30+CP-08+CP-12+CP-01+CP-03 verified; dataset=78 (5 distinct 5-cell golds).
+
+cont.319-4D (2026-06-22) — 4-cell D CP-01+CP-30+CP-08+CP-03 verified; dataset=79.
