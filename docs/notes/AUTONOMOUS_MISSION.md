@@ -7937,3 +7937,5 @@ cont.319-L4 COMPLETE (2026-06-22, Anton-steered) ★★ — the L4 mobile-mediat
 cont.319-L4-DECK (2026-06-22) — confirmed Nova Carter has NO payload deck: scanned all /World/Carter link bboxes, every top surface is sensor hardware (XT_32 lidar z=1.05, RPLidar 0.94, cameras 0.86-0.89), xy-extents only 0.05-0.14m. So the cargo bin cannot sit on a real deck (there is none) — it rides "floating" above Carter via the kinematic-carry (functionally correct, visually not a real mount). The L4 transport MECHANISM is robot-agnostic (kinematic-carry follows any nav base); a visually-realistic cargo-AMR twin needs a FLAT AGV/cart asset (none in the registry: only nova_carter [sensor robot] + jetbot/kaya [too small]) -> a future asset-import follow-up. L4 functional keystone = DONE (N-of-2 deterministic GOLD); realistic-visual carrier = banked on asset availability.
 
 cont.319-BREADTH5 (2026-06-22) — 3 more diverse golds (CP-12+CP-13, CP-42+CP-01, CP-30+CP-13); dataset=49 honest scene_eyes golds.
+
+cont.319-BREADTH6 (2026-06-22) — 3 real-asset golds: CP-YCB-SHELF+CP-50, CP-36-REAL+CP-08, CP-YCB-SHELF+CP-08 (real-shelf/rack compose robustly with kits/grids); dataset=52.
