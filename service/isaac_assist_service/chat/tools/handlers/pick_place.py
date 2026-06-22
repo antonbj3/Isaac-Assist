@@ -847,6 +847,10 @@ def _advance(dt):
 
     elif phase == "drop_settle":
         # Wait 0.5s for palm to fully stop (PD-drives settle, zero velocity)
+        # (cont.319-4CELLL: a velocity-gated release was TRIED here + REVERTED — it did NOT fix the CP-29
+        # bin-miss because the real cause is a LANDING BIAS ~0.15m, not release velocity: the cube settles
+        # ~0.15m off the drop_target, and CP-29's bin sits at the drop_target rather than at the actual
+        # landing spot. The fix is bias/geometry, not the release dynamics. See #56.)
         if now - S["phase_enter_t"] > 0.5:
             _detach_cube(S["grasp_joint"])
             S["grasp_joint"] = None
