@@ -7969,3 +7969,5 @@ cont.319-B10b (2026-06-22) — CP-10+CP-25 NOT GOLD: CP-25 (16-cube DENSE grid) 
 cont.319-B11 (2026-06-22) — CP-30+CP-12, CP-42+CP-03 light-robust golds; dataset=65.
 
 cont.319-B12 (2026-06-22) — CP-30+CP-12+CP-08, CP-42+CP-03+CP-13 light 3-cell golds; dataset=67.
+
+cont.319-B13 (2026-06-22) — CP-01+CP-12+CP-08, CP-30+CP-42+CP-13 light 3-cell golds; dataset=69.
