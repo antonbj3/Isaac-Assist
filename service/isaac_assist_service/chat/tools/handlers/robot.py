@@ -1887,25 +1887,57 @@ def _nav_step(dt):
         except Exception:
             return
     _nav_state["t"] += dt
-    if ATTACH_CARGO and not _nav_state.get("welded"):
-        # cont.319-L4-A: weld the cargo (e.g. a deck bin) to the AMR at t=0 = MOUNTED HARDWARE from the start
-        # (it rides during BOTH loading and transport). Controller-side runtime FixedJoint -> mutates the LIVE
-        # stage (a build-time joint no-ops in the canonical capture pass; PhysX's USD parser picks it up next
-        # step). The cargo must be a DYNAMIC body so the heavy AMR carries it — welding a STATIC bin pins/lifts
-        # the chassis (measured: chassis yanked z 0.49->0.77 + stuck).
-        _nav_state["welded"] = True
-        try:
-            from pxr import UsdPhysics as _UP
-            _ws = omni.usd.get_context().get_stage()
-            _wj = _UP.FixedJoint.Define(_ws, ATTACH_CARGO + "/RideJoint")
-            _wj.CreateBody0Rel().SetTargets([ATTACH_BODY])
-            _wj.CreateBody1Rel().SetTargets([ATTACH_CARGO])
-            print("L4_WELD attached %s -> %s" % (ATTACH_CARGO, ATTACH_BODY))
-        except Exception as _we:
-            print("L4_WELD failed:", _we)
     if _nav_state["t"] < START_AFTER:
         return  # cont.319-L4: hold the AMR at the dock until the loading arm finishes placing cargo
-    pos, orient = _robot.get_world_pose()
+    # cont.319-L4-A: KINEMATIC CARRY (Anton "bolt a bin on") — at depart, secure each cargo prim to ride with
+    # the AMR by POSE-FOLLOWING, NOT a FixedJoint: an external FJ to the Carter ARTICULATION destabilizes it
+    # (chassis yanked + stuck, measured) and the gripper itself abandoned FJ for friction ("NO FJ"). Each cargo
+    # is made kinematic + its offset from the AMR base is captured once; then every step its pose is set to
+    # follow the base. Robust regardless of robot geometry/articulation. ATTACH_CARGO is a comma-list.
+    _bp, _bo = _robot.get_world_pose()
+    if ATTACH_CARGO and "carry" not in _nav_state:
+        _carry = []
+        try:
+            from pxr import UsdGeom as _UG, UsdPhysics as _UP
+            _ws = omni.usd.get_context().get_stage()
+            try:
+                from isaacsim.core.prims import SingleRigidPrim as _SRP
+            except Exception:
+                _SRP = None
+            for _cpath in [c for c in ATTACH_CARGO.split(",") if c]:
+                _cp = _ws.GetPrimAtPath(_cpath)
+                if not (_cp and _cp.IsValid()):
+                    continue
+                _t = _UG.Xformable(_cp).ComputeLocalToWorldTransform(0).ExtractTranslation()
+                _off = (float(_t[0]) - _bp[0], float(_t[1]) - _bp[1], float(_t[2]))
+                _w = None
+                if _SRP is not None and _cp.HasAPI(_UP.RigidBodyAPI):
+                    try:
+                        _w = _SRP(_cpath); _w.initialize()
+                    except Exception:
+                        _w = None
+                _carry.append((_cpath, _w, _off))
+            print("L4_CARRY secured %s" % [c[0] for c in _carry])
+        except Exception as _ce:
+            print("L4_CARRY setup failed:", _ce)
+        _nav_state["carry"] = _carry
+    if _nav_state.get("carry"):
+        from pxr import UsdGeom as _UG2
+        _ws2 = omni.usd.get_context().get_stage()
+        for _cpath, _w, _off in _nav_state["carry"]:
+            _tgt = (_bp[0] + _off[0], _bp[1] + _off[1], _off[2])
+            if _w is not None:
+                # dynamic body: set the PHYSICS pose (USD xform alone is overridden by PhysX) + zero velocity
+                try:
+                    _w.set_world_pose(position=np.array(_tgt, dtype=float))
+                    _w.set_linear_velocity(np.zeros(3)); _w.set_angular_velocity(np.zeros(3))
+                    continue
+                except Exception:
+                    pass
+            _cp2 = _ws2.GetPrimAtPath(_cpath)
+            if _cp2 and _cp2.IsValid():
+                _UG2.XformCommonAPI(_cp2).SetTranslate(_tgt)
+    pos, orient = _bp, _bo
     if _nav_state["wps"] is None:
         if PLANNER == "astar":
             _gp = _astar(_w2g([pos[0], pos[1]]), _w2g([target[0], target[1]]))

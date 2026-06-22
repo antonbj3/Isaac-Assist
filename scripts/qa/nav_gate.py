@@ -160,13 +160,21 @@ print("NAV_CARGO_JSON " + _j.dumps(cargo_out))
     # (and the base actually moved). cargo_disp~0 while base moved = product left behind (NOT transported).
     cline = next((l for l in out.splitlines() if l.startswith("NAV_CARGO_JSON")), None)
     cargo = json.loads(cline[len("NAV_CARGO_JSON "):]) if cline else []
-    base_disp = max((d["disp"] or 0) for d in robots) if robots else 0.0
+    # the carrier = the base that moved the most; RODE iff the cargo ENDED NEAR the carrier (within deck
+    # offset + tolerance) AND the carrier actually moved. (cont.319-L4 fix: the old disp-MAGNITUDE compare
+    # false-NEGATIVED a riding cargo — the cargo's pre-transport loading move pollutes its whole-run disp.
+    # Final-proximity is the correct transport metric: a left-behind cargo ends metres from the carrier.)
+    carrier = max(robots, key=lambda d: d.get("disp") or 0) if robots else None
+    base_disp = (carrier.get("disp") or 0.0) if carrier else 0.0
+    bx, by = (carrier["p1"][0], carrier["p1"][1]) if (carrier and carrier.get("p1")) else (0.0, 0.0)
+    RIDE_TOL = 1.0  # m: cargo within this of the carrier at end = on the deck (deck offset ~0.3 + slack)
     cargo_verdict = []
     for c in cargo:
-        rode = bool(c["disp"] is not None and base_disp > 0.3 and c["disp"] > 0.3
-                    and abs(c["disp"] - base_disp) <= 0.5)
-        cargo_verdict.append({**c, "base_disp": round(base_disp, 3), "rode": rode})
-        print(f"  CARGO {c['path']}: disp={c['disp']} base_disp={round(base_disp,3)} -> "
+        cf = c.get("p1")
+        dist = round(((cf[0] - bx) ** 2 + (cf[1] - by) ** 2) ** 0.5, 3) if cf else None
+        rode = bool(dist is not None and base_disp > 0.5 and dist < RIDE_TOL)
+        cargo_verdict.append({**c, "base_disp": round(base_disp, 3), "final_dist_to_carrier": dist, "rode": rode})
+        print(f"  CARGO {c['path']}: final_dist_to_AMR={dist} base_disp={round(base_disp,3)} disp={c['disp']} -> "
               f"{'RODE with AMR (transported)' if rode else 'did NOT transport (left behind / fell)'}")
     print("NAV_GATE_FULL=" + json.dumps({"template": tpl_name, "robots": robots, "cargo": cargo_verdict,
           "n": n, "n_spawned": n_spawned, "n_moved": n_moved, "n_reached": n_reached,
