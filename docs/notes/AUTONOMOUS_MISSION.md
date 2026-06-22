@@ -7965,3 +7965,5 @@ cont.319-WRONGGEN (2026-06-22) — ★ CORRECTION to cont.319-BINBIAS: my veloci
 cont.319-B10 (2026-06-22) — CP-10+CP-25, CP-42+CP-08 golds; dataset=63.
 
 cont.319-B10b (2026-06-22) — CP-10+CP-25 NOT GOLD: CP-25 (16-cube DENSE grid) toppled 2 cubes under combined heavy-grid load with CP-10 (9-cube). CP-25 is heavy-marginal: GOLD with LIGHT partners (CP-25+CP-08/13/03+08), topples with a 2nd HEAVY grid. ENVELOPE COMPLETE: light-robust (grids<=9cube, stacks, color-sort, multi-cube-bins) compose to 4-5 cell; heavy dense grid CP-25 robust only with light partners; marginal bin-drops CP-28/29/50 fail at 3+ cell. Breadth saturated (re-confirming the envelope); dataset=63 comprehensive. Substantial next work (G1 #59, #56 curobo-path fix, #57) needs fresh context.
+
+cont.319-B11 (2026-06-22) — CP-30+CP-12, CP-42+CP-03 light-robust golds; dataset=65.
