@@ -74,6 +74,19 @@ def chain_compat(src_name, recv_name, measured_z=None):
         _inf = " (INFERRED from source robot — verify in Kit)" if height_inferred else ""
         return {"compatible": False, "height_verified": not height_inferred, "needs_measure": measure_target,
                 "reason": f"handoff height z={deliver_z}{_inf} is OUTSIDE {recv_robot} receiver reach [{lo},{hi}] — the cross-Kit relay re-instantiates the object at the SOURCE delivery z (z-offset=0), so the receiver must REACH that height"}
+    # cont.319-CHAIN2: reach-range is necessary but NOT sufficient. ADAPTIVE arm receivers (a generic cuRobo
+    # pick — flat-receive, UR10-NATIVE) plan to the cube's LIVE pose, so any in-reach delivery works. But a
+    # FIXED-height receiver (a palletize/stack ROUTINE that picks at a SET surface z) needs the relayed cube
+    # to LAND ON that surface: if the source delivers far above it, the cube has no support and FALLS, and the
+    # routine misses it. MEASURED: RAISED-SRC@0.975 -> PALLETIZE-RECV@0.825 (Δ0.15) chained 0/1 (cube fell to
+    # 0.775); FRANKA-SRC@0.775 -> same (Δ0.05) chained 1/1. So require |deliver_z - receiver handoff_z| <= 0.10
+    # for fixed-height receivers only.
+    _rs = _STAGES.get(recv_name) or {}
+    _recv_hz = _rs.get("handoff_z")
+    _fixed_pick = bool(_rs.get("fixed_pick")) or any(w in recv_name.upper() for w in ("PALLETIZE", "STACK"))
+    if _fixed_pick and deliver_z is not None and _recv_hz is not None and abs(deliver_z - _recv_hz) > 0.10:
+        return {"compatible": False, "height_verified": not height_inferred, "needs_measure": measure_target,
+                "reason": f"FIXED-height receiver {recv_name} picks at a SET surface z~{_recv_hz}; source delivers z={deliver_z} (Δ={round(abs(deliver_z-_recv_hz),3)}>0.10) — the relayed cube lands with no support at the pick surface and FALLS (verified RAISED-SRC->PALLETIZE = 0/1). Adaptive arm receivers tolerate this; fixed routines do not"}
     # CAPACITY overflow (cont.318n): a FIXED-capacity receiver (e.g. a 3-slot stacker) cannot absorb a source
     # that delivers MORE parts than it has slots — the extra parts have no target and fall. VERIFIED: CP-08(4)
     # -> CP-CHAIN-STACK-RECV(cap 3) executes at 3/4 (3 not even stacked + 1 fell). Fail-closed pre-filter so the

@@ -67,6 +67,18 @@ def main():
     else:
         print(f"  CP-08->STACK-RECV: INCOMPAT ok ({cap['reason'][:60]})")
 
+    # 5: FIXED-HEIGHT receiver neg-control (cont.319-CHAIN2) -- a RAISED source (z=0.975) into a fixed-height
+    # palletize/stack receiver (pick surface z~0.825) MUST be INCOMPAT: the relayed cube lands with no support
+    # at the pick surface and falls. MEASURED: CP-CHAIN-FRANKA-RAISED-SRC -> CP-CHAIN-PALLETIZE-RECV chained 0/1.
+    # (The matched-height FRANKA-SRC -> PALLETIZE-RECV is a proven COMPAT pair, checked above — so this branch
+    # discriminates by Δz, not a blanket reject of palletize receivers.)
+    fix = ch.chain_compat("CP-CHAIN-FRANKA-RAISED-SRC", "CP-CHAIN-PALLETIZE-RECV")
+    if fix["compatible"]:
+        print("  RAISED->PALLETIZE: COMPAT (WRONG -- raised cube has no support on the flat pick surface, falls)")
+        fails.append("RAISED-SRC@0.975 -> PALLETIZE-RECV@0.825 should be INCOMPAT (fixed-height Δ0.15) but predicted COMPAT")
+    else:
+        print(f"  RAISED->PALLETIZE: INCOMPAT ok ({fix['reason'][:60]})")
+
     print(f"\n{n_pairs} proven pairs checked.")
     if fails:
         print("REGRESSION:")
