@@ -1626,6 +1626,12 @@ def _gen_navigate_to(args: Dict) -> str:
     robot_path = args["robot_path"]
     target = args["target_position"]
     planner = args.get("planner", "direct")
+    # cont.319-L4: event-coordination for mobile handoff — hold the AMR at its dock for the first
+    # start_after_s seconds so an upstream LOADING ARM finishes placing cargo BEFORE the AMR departs.
+    # Fixes the L4 sequencing (depart-after-load) AND avoids the dual-controller startup contention
+    # (the arm's cuRobo planning + the nav drive no longer fire simultaneously). DEFAULT 0.0 =
+    # byte-identical to every existing nav template (the hold gate never triggers).
+    start_after = float(args.get("start_after_s", 0.0))
     # Wheel geometry for the differential controller. Defaults are Nova Carter's
     # (measured: radius ~0.14 m, track width ~0.413 m). Other wheeled robots
     # (JetBot etc.) should pass their own via wheel_radius / wheel_base.
@@ -1821,6 +1827,7 @@ _pose_ctrl = WheelBasePoseController(
 # (byte-identical to the prior single-goal drive). Harmless for obstacle-free scenes (occupancy stays 0).
 import heapq as _heapq
 PLANNER = "{planner}"
+START_AFTER = {start_after}  # cont.319-L4: hold the AMR this many sim-seconds (depart-after-load coordination)
 GRID_RES = 0.25; GRID_SIZE = 80
 GRID_OFFSET = np.array([-GRID_SIZE*GRID_RES/2.0, -GRID_SIZE*GRID_RES/2.0])
 occupancy = np.zeros((GRID_SIZE, GRID_SIZE), dtype=int)
@@ -1863,7 +1870,7 @@ def _astar(s, gl):
                     _heapq.heappush(_osq, (_ng+_hh, (_nx,_ny))); _cf[(_nx,_ny)] = cur
     return [s, gl]
 
-_nav_state = {{"init": False, "wps": None, "wpi": 0}}
+_nav_state = {{"init": False, "wps": None, "wpi": 0, "t": 0.0}}
 
 def _nav_step(dt):
     if not _nav_state["init"]:
@@ -1871,6 +1878,9 @@ def _nav_step(dt):
             _robot.initialize(); _nav_state["init"] = True
         except Exception:
             return
+    _nav_state["t"] += dt
+    if _nav_state["t"] < START_AFTER:
+        return  # cont.319-L4: hold the AMR at the dock until the loading arm finishes placing cargo
     pos, orient = _robot.get_world_pose()
     if _nav_state["wps"] is None:
         if PLANNER == "astar":
