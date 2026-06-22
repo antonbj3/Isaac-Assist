@@ -7957,3 +7957,5 @@ cont.319-3CELLC (2026-06-22) — CONTENTION ENVELOPE characterized: CP-50 (3-cel
 cont.319-3CELLD (2026-06-22) — 2 robust-set 3-cell golds (CP-10+CP-12+CP-13, CP-25+CP-03+CP-08); dataset=60. Robust-set composes clean at 3-cell (envelope holds).
 
 cont.319-4ROBUST (2026-06-22) — 4-cell ROBUST CP-10+CP-12+CP-13+CP-08 = GOLD (all grids+stack GENUINE, CP-10 9-cube grid 55mm spread). Confirms the earlier 4-cell FAIL was the heavy/marginal cells (CP-25 topple + CP-50 bin-miss), NOT a generic 4-cell limit. Robust set composes to 4-cell. Envelope fully characterized. dataset=61.
+
+cont.319-B9 (2026-06-22) — CP-42+CP-30, CP-25+CP-12 golds; dataset=63.
