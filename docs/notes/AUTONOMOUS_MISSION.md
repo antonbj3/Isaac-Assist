@@ -7955,3 +7955,5 @@ cont.319-3CELLB (2026-06-22) — 2 diverse 3-cell golds (CP-42+CP-12+CP-08, CP-3
 cont.319-3CELLC (2026-06-22) — CONTENTION ENVELOPE characterized: CP-50 (3-cell w/ CP-01+CP-13) + CP-28 (3-cell w/ CP-10+CP-03) BOTH REJECT (bin outside) -> the bin-drop class (CP-28/29/50, #56) is fragile already at 3-cell with heavier partners, not just 4-cell (lower threshold than thought). ROBUST-AT-HIGH-CONTENTION set (compose to 5-cell): grids (CP-08/10/12/25/30/42), stacks (CP-13), color-sort (CP-03), multi-cube-bins (CP-01). MARGINAL (avoid at 3+ cell): single-cube bin-drops CP-28/29/50. Gate correctly rejected (no false gold). Breadth now restricted to the robust set.
 
 cont.319-3CELLD (2026-06-22) — 2 robust-set 3-cell golds (CP-10+CP-12+CP-13, CP-25+CP-03+CP-08); dataset=60. Robust-set composes clean at 3-cell (envelope holds).
+
+cont.319-4ROBUST (2026-06-22) — 4-cell ROBUST CP-10+CP-12+CP-13+CP-08 = GOLD (all grids+stack GENUINE, CP-10 9-cube grid 55mm spread). Confirms the earlier 4-cell FAIL was the heavy/marginal cells (CP-25 topple + CP-50 bin-miss), NOT a generic 4-cell limit. Robust set composes to 4-cell. Envelope fully characterized. dataset=61.
