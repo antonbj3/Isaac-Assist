@@ -1632,6 +1632,12 @@ def _gen_navigate_to(args: Dict) -> str:
     # (the arm's cuRobo planning + the nav drive no longer fire simultaneously). DEFAULT 0.0 =
     # byte-identical to every existing nav template (the hold gate never triggers).
     start_after = float(args.get("start_after_s", 0.0))
+    # cont.319-L4: payload mount — weld a cargo prim (e.g. an AmrBin already positioned on the AMR deck)
+    # to the AMR's moving body at the hold->drive transition, so it (and anything resting in it) TRANSPORTS
+    # with the AMR. Controller-side (real exec) => the FixedJoint actually mutates the live stage, unlike a
+    # build-time run_usd_script which no-ops in the canonical capture pass. "" = no payload (default).
+    attach_cargo = args.get("attach_cargo", "")
+    attach_body = args.get("attach_body", "")  # robot link to weld to; default = <robot_path>/chassis_link
     # Wheel geometry for the differential controller. Defaults are Nova Carter's
     # (measured: radius ~0.14 m, track width ~0.413 m). Other wheeled robots
     # (JetBot etc.) should pass their own via wheel_radius / wheel_base.
@@ -1828,6 +1834,8 @@ _pose_ctrl = WheelBasePoseController(
 import heapq as _heapq
 PLANNER = "{planner}"
 START_AFTER = {start_after}  # cont.319-L4: hold the AMR this many sim-seconds (depart-after-load coordination)
+ATTACH_CARGO = "{attach_cargo}"  # cont.319-L4: cargo prim to weld onto the AMR at depart (rides with it); "" = none
+ATTACH_BODY = "{attach_body}" or (robot_path + "/chassis_link")  # AMR link the cargo welds to
 GRID_RES = 0.25; GRID_SIZE = 80
 GRID_OFFSET = np.array([-GRID_SIZE*GRID_RES/2.0, -GRID_SIZE*GRID_RES/2.0])
 occupancy = np.zeros((GRID_SIZE, GRID_SIZE), dtype=int)
@@ -1879,6 +1887,22 @@ def _nav_step(dt):
         except Exception:
             return
     _nav_state["t"] += dt
+    if ATTACH_CARGO and not _nav_state.get("welded"):
+        # cont.319-L4-A: weld the cargo (e.g. a deck bin) to the AMR at t=0 = MOUNTED HARDWARE from the start
+        # (it rides during BOTH loading and transport). Controller-side runtime FixedJoint -> mutates the LIVE
+        # stage (a build-time joint no-ops in the canonical capture pass; PhysX's USD parser picks it up next
+        # step). The cargo must be a DYNAMIC body so the heavy AMR carries it — welding a STATIC bin pins/lifts
+        # the chassis (measured: chassis yanked z 0.49->0.77 + stuck).
+        _nav_state["welded"] = True
+        try:
+            from pxr import UsdPhysics as _UP
+            _ws = omni.usd.get_context().get_stage()
+            _wj = _UP.FixedJoint.Define(_ws, ATTACH_CARGO + "/RideJoint")
+            _wj.CreateBody0Rel().SetTargets([ATTACH_BODY])
+            _wj.CreateBody1Rel().SetTargets([ATTACH_CARGO])
+            print("L4_WELD attached %s -> %s" % (ATTACH_CARGO, ATTACH_BODY))
+        except Exception as _we:
+            print("L4_WELD failed:", _we)
     if _nav_state["t"] < START_AFTER:
         return  # cont.319-L4: hold the AMR at the dock until the loading arm finishes placing cargo
     pos, orient = _robot.get_world_pose()
