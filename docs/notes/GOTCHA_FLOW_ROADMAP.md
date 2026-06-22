@@ -14,12 +14,21 @@ Realistic multi-station product-flow gotchas, and how to make the system handle 
   cont.319uuu).
 - **L3 — Auto-handoff geometry** (#29, OPEN): make ARBITRARY blocks chain (handoff role/height compat),
   not just pre-declared chain-ready stages.
-- **L4 — MOBILE-mediated handoff + coordination** (THE GAP the gotchas demand): an AMR carries product
-  between stations whose handoff locations are NOT geometrically adjacent, and the transport is
-  EVENT-coordinated with the stations' timing ("drive when the cell finishes").
+- **L4 — MOBILE-mediated handoff + coordination** (BUILT + verified, cont.319-L4, the gotcha keystone):
+  an AMR carries product between stations, EVENT-coordinated with station timing. PRIMITIVE = CP-NEW-amr-
+  pickup-handoff: Franka loads cube into a bin -> Carter HOLDS during loading (navigate_to `start_after_s`)
+  -> departs + reaches goal -> cargo RIDES with the AMR. Verified N-of-2 deterministic GOLD via nav_gate
+  (cargo final_dist_to_AMR=0.44m on the deck; transported conveyor->[2.55,-1.10]).
+  - **Reusable pattern (use for G1/G3/G4):** `navigate_to(robot_path, target_position, start_after_s=<load
+    time>, attach_cargo="<bin>,<part>")`. Cargo transport = KINEMATIC-CARRY (each cargo prim pose-follows the
+    base per step), NOT a FixedJoint — FJ-to-articulation destabilizes the Carter (the gripper also abandoned
+    FJ for friction). Robot-agnostic; works on any nav base.
+  - **Verify with** `nav_gate.py <tpl>` — now reports per-cargo `RODE with AMR` (final-proximity to carrier).
+  - **Realism caveat:** Nova Carter has NO payload deck (all-sensor top) -> the bin rides "floating"; a
+    visually-real cargo-AMR needs a FLAT AGV asset (none in registry yet — asset-import follow-up).
 
-**Recurring gap across ALL gotchas:** today's handoff is STATIC (receiver picks where source delivered).
-The gotchas need a mobile transport (AMR/forklift) as the link, plus event-synced coordination.
+**Recurring gap across ALL gotchas — NOW CLOSED at the primitive level:** mobile transport + event-sync is
+built (L4 above). Remaining = compose L4 INTO the full multi-station gotcha scenes (G1/G3/G4).
 
 ## The gotcha suite (realistic, graded — also the build order)
 
