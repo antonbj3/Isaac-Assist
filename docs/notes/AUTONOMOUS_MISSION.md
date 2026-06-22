@@ -7949,3 +7949,5 @@ cont.319-BINBIAS-STOP (2026-06-22) — STOPPED the bin-drop rabbit-hole after 3 
 cont.319-BREADTH7 (2026-06-22) — 3 diverse golds (CP-42+CP-12, CP-30+CP-03, CP-25+CP-13); dataset=54 honest scene_eyes golds.
 
 cont.319-BREADTH8 (2026-06-22) — CP-12+CP-03, CP-10+CP-01 golds; dataset=56.
+
+cont.319-3CELLB (2026-06-22) — 2 diverse 3-cell golds (CP-42+CP-12+CP-08, CP-30+CP-03+CP-13); dataset=58.
