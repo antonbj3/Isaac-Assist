@@ -841,6 +841,10 @@ def _advance(dt):
     elif phase == "transit":
         # 2026-05-26 PRECISION-FIX: tighter tolerance (60mm→15mm) + dwell-settle (0.5s) before release.
         # Previously: release happened when palm 60mm from target + with momentum = cube ejected sideways.
+        # (cont.319-BINBIAS: a timeout 8s->18s was tried + REVERTED — did NOT fix CP-29. The real cause is
+        # SCENE: CP-29's target is a tiny solid Cube MARKER (scale 0.05) not a containing create_bin, so the
+        # cube has no walls + a tiny footprint and settles off it under contention. Fix is the template, not
+        # this controller. See #56.)
         if _reached(S["current_target"], tol=0.015) or (now - S["phase_enter_t"] > 8.0):
             S["phase"] = "drop_settle"
             S["phase_enter_t"] = now
