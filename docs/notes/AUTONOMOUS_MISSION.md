@@ -7979,3 +7979,5 @@ cont.319-5LIGHT (2026-06-22) — 5-cell LIGHT capstone CP-01+CP-03+CP-08+CP-12+C
 cont.319-5B (2026-06-22) — 5-cell light B CP-01+CP-03+CP-30+CP-42+CP-13 verified; dataset=73.
 
 cont.319-5C (2026-06-22) — 5-cell grid-heavy CP-08+CP-10+CP-30+CP-13+CP-03 = GOLD (3 grids incl CP-10 9-cube + stack + color-sort all GENUINE at 5-cell). Framework robust with multiple grids at max cell-count. dataset=74.
+
+cont.319-5D (2026-06-22) — 5-cell mix D CP-12+CP-42+CP-08+CP-01+CP-13 verified; dataset=75. 4 distinct 5-cell golds now (light, light-B, grid-heavy, mix-D) — framework maximally verified at 5-cell.
