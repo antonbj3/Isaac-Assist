@@ -1,38 +1,306 @@
 {
-  "_doc": "Chain-stage catalog for SEQUENTIAL robot-diversity composition (#29). Each entry is a VERIFIED chain-ready block with a source/receiver role + handoff geometry. A chain stage_k delivers its object to a HANDOFF (height handoff_z, on a surface vs into a container), and the next stage picks FROM that handoff. The handoff-compatibility rule (chain_compat in compose_handoff.py) predicts whether (src,recv) chain, grounded in the proven pairs — it would have pre-filtered the cont.262 CP-73->CP-13 failure (CP-73 delivers into a deep Bin; a Franka receiver needs a pickable flat surface).",
+  "_doc": "Chain-stage catalog for SEQUENTIAL robot-diversity composition (#29). Each entry is a VERIFIED chain-ready block with a source/receiver role + handoff geometry. A chain stage_k delivers its object to a HANDOFF (height handoff_z, on a surface vs into a container), and the next stage picks FROM that handoff. The handoff-compatibility rule (chain_compat in compose_handoff.py) predicts whether (src,recv) chain, grounded in the proven pairs \u2014 it would have pre-filtered the cont.262 CP-73->CP-13 failure (CP-73 delivers into a deep Bin; a Franka receiver needs a pickable flat surface).",
   "stages": {
-    "CP-CHAIN-UR10-SRC":          {"robot": "UR10",   "role": "source",   "handoff_surface": "flat",   "handoff_z": 0.775, "n_cube": 1, "verified": "chain stage0 1/1 (cont.261b no-regression)"},
-    "CP-CHAIN-FLAT":              {"robot": "Franka", "role": "receiver", "pick_height":      "flat",   "handoff_z": 0.775, "n_cube": "1..N", "verified": "chain stage1 1/1 (cont.227+261b); MULTI-CUBE receiver: picks ALL N relay cubes (controller iterates SOURCE_PATHS) — 4/4 x2 from CP-08 grid (cont.269)"},
-    "CP-CHAIN-FRANKA-RAISED-SRC": {"robot": "Franka", "role": "source",   "handoff_surface": "raised", "handoff_z": 0.975, "n_cube": 1, "verified": "4/4 RAW (1 local scene_eyes + 3 Modal)"},
-    "CP-CHAIN-UR10-RECV-NATIVE":  {"robot": "UR10",   "role": "receiver", "pick_height":      "raised", "handoff_z": 0.975, "n_cube": 1, "verified": "GOLD 3/3 + arbitrary-offset path-3 (cont.261)"},
-    "CP-NEW-ur10-flat-deliver":   {"robot": "UR10",   "role": "source",   "handoff_surface": "flat",   "handoff_z": 0.825, "n_cube": 1, "verified": "chain stage0 1/1 (cont.266, HandoffPad design)"},
-    "CP-NEW-franka-flat-receive": {"robot": "Franka", "role": "receiver", "pick_height":      "flat",   "handoff_z": 0.825, "n_cube": 1, "verified": "chain stage1 1/1 (cont.266, auto-offset path-2 @[0.11,-0.39])"},
-    "CP-CHAIN-FRANKA-SRC":        {"robot": "Franka", "role": "source",   "handoff_surface": "flat",   "handoff_z": 0.775, "n_cube": 1, "verified": "chain stage0 1/1 (cont.267, Franka->Franka line)"},
-    "CP-CONV-02-SRC":             {"robot": "Franka", "role": "source",   "handoff_surface": "flat",   "handoff_z": 0.825, "n_cube": 1, "delivers_surface": "flat", "verified": "REAL-CONVEYOR chain source: chain stage0 1/1 (cont.319hh). Belt-fed cube -> Franka picks -> open HandoffTray @0.825; CP-CONV-02-SRC->CP-CHAIN-FLAT = 1/1+1/1 ALL DELIVERED. The real-asset conveyor cell feeds a downstream station."},
-    "CP-CONV-02-SRC-3":           {"robot": "Franka", "role": "source",   "handoff_surface": "flat",   "handoff_z": 0.825, "n_cube": 3, "delivers_surface": "flat", "verified": "REAL-CONVEYOR MULTI-CUBE chain source (N=3): scene_eyes RAW cont.319ll fresh-Kit, real ConveyorBelt_A09 feeds 3 cubes -> Franka picks each -> staged on open HandoffTray in a clean row (Cube_1/2/3 z=0.825 y=-0.49 x 0.39/0.50/0.60, ~0.10m spacing), 3/3 PICKED plan_fails=0 no topple. The N=3 extension of CP-CONV-02-SRC (real-asset multi-cube sourcing for downstream receivers). Minor advisory: Franka base overlaps HandoffTray 4cm (cosmetic, delivery clean)."},
-    "CP-08":                      {"robot": "Franka", "role": "source",   "handoff_surface": "flat-grid", "handoff_z": 0.825, "n_cube": 4, "verified": "MULTI-CUBE source: chain stage0 4/4 x2 (cont.269), tight 0.144m 2x2 grid handoff"},
-    "CP-12":                      {"robot": "Franka", "role": "source",   "handoff_surface": "flat-grid", "handoff_z": 0.825, "n_cube": 3, "verified": "MULTI-CUBE source: chain stage0 3/3 (cont.271, generality — not CP-08-specific), diagonal grid handoff"},
-    "CP-CHAIN-PALLETIZE-RECV":    {"robot": "Franka", "role": "receiver", "can_source": true, "pick_height": "flat", "handoff_z": 0.825, "delivers_z": 0.80, "delivers_surface": "flat-grid", "n_cube": "1..N", "verified": "MULTI-CUBE re-palletize RECEIVER + MID-STAGE SOURCE: picks N relay cubes at 0.825 + re-palletizes to a distinct-slot GRID output at z~0.80 (not a bin-stack) that a FURTHER pick cell chains from; proven as both 2-stage receiver (4/4 cont.284) AND 3-stage MID source (4/4/4 cont.286); robust @ DEFAULT window since the cont.319kk gate fix (chain_xkit_gate auto-sizes 3200/cube for the ~2x-slower distinct-slot planning; re-verified 3/3 N-of-2 @ auto 9600, no manual CHAIN_TOTAL — the old ~12000 knob is no longer needed)"},
-    "CP-CHAIN-STACK-RECV":        {"robot": "Franka", "role": "receiver", "pick_height": "flat", "handoff_z": 0.825, "n_cube": "1..N", "capacity": 3, "output": "a vertical COLUMN (a cube-on-cube tower) on a pallet", "verified": "CHAIN-VERIFIED N-of-M=2 (cont.318): STACK end-stage picks N relay cubes at 0.825 + stacks bottom-up into a vertical COLUMN on a PalletBase (LIST index-keyed drop_targets z 0.825/0.875/0.925); RAW poses 3 distinct ascending z-levels, robust 3/3 N-of-3 @ the gate's auto-sized 9600 window (cont.319kk; the old 'deterministic both runs' was window-lucky — default 6000 window-cut 2/3 when cuRobo planned slow, fixed by the 3200/cube auto-size, place-to-fixed-target); chain OUTPUT is a TOWER not a bin/grid"}
+    "CP-CHAIN-UR10-SRC": {
+      "robot": "UR10",
+      "role": "source",
+      "handoff_surface": "flat",
+      "handoff_z": 0.775,
+      "n_cube": 1,
+      "verified": "chain stage0 1/1 (cont.261b no-regression)"
+    },
+    "CP-CHAIN-FLAT": {
+      "robot": "Franka",
+      "role": "receiver",
+      "pick_height": "flat",
+      "handoff_z": 0.775,
+      "n_cube": "1..N",
+      "verified": "chain stage1 1/1 (cont.227+261b); MULTI-CUBE receiver: picks ALL N relay cubes (controller iterates SOURCE_PATHS) \u2014 4/4 x2 from CP-08 grid (cont.269)"
+    },
+    "CP-CHAIN-FRANKA-RAISED-SRC": {
+      "robot": "Franka",
+      "role": "source",
+      "handoff_surface": "raised",
+      "handoff_z": 0.975,
+      "n_cube": 1,
+      "verified": "4/4 RAW (1 local scene_eyes + 3 Modal)"
+    },
+    "CP-CHAIN-UR10-RECV-NATIVE": {
+      "robot": "UR10",
+      "role": "receiver",
+      "pick_height": "raised",
+      "handoff_z": 0.975,
+      "n_cube": 1,
+      "verified": "GOLD 3/3 + arbitrary-offset path-3 (cont.261)"
+    },
+    "CP-NEW-ur10-flat-deliver": {
+      "robot": "UR10",
+      "role": "source",
+      "handoff_surface": "flat",
+      "handoff_z": 0.825,
+      "n_cube": 1,
+      "verified": "chain stage0 1/1 (cont.266, HandoffPad design)"
+    },
+    "CP-NEW-franka-flat-receive": {
+      "robot": "Franka",
+      "role": "receiver",
+      "pick_height": "flat",
+      "handoff_z": 0.825,
+      "n_cube": 1,
+      "verified": "chain stage1 1/1 (cont.266, auto-offset path-2 @[0.11,-0.39])"
+    },
+    "CP-CHAIN-FRANKA-SRC": {
+      "robot": "Franka",
+      "role": "source",
+      "handoff_surface": "flat",
+      "handoff_z": 0.775,
+      "n_cube": 1,
+      "verified": "chain stage0 1/1 (cont.267, Franka->Franka line)"
+    },
+    "CP-CONV-02-SRC": {
+      "robot": "Franka",
+      "role": "source",
+      "handoff_surface": "flat",
+      "handoff_z": 0.825,
+      "n_cube": 1,
+      "delivers_surface": "flat",
+      "verified": "REAL-CONVEYOR chain source: chain stage0 1/1 (cont.319hh). Belt-fed cube -> Franka picks -> open HandoffTray @0.825; CP-CONV-02-SRC->CP-CHAIN-FLAT = 1/1+1/1 ALL DELIVERED. The real-asset conveyor cell feeds a downstream station."
+    },
+    "CP-CONV-02-SRC-3": {
+      "robot": "Franka",
+      "role": "source",
+      "handoff_surface": "flat",
+      "handoff_z": 0.825,
+      "n_cube": 3,
+      "delivers_surface": "flat",
+      "verified": "REAL-CONVEYOR MULTI-CUBE chain source (N=3): scene_eyes RAW cont.319ll fresh-Kit, real ConveyorBelt_A09 feeds 3 cubes -> Franka picks each -> staged on open HandoffTray in a clean row (Cube_1/2/3 z=0.825 y=-0.49 x 0.39/0.50/0.60, ~0.10m spacing), 3/3 PICKED plan_fails=0 no topple. The N=3 extension of CP-CONV-02-SRC (real-asset multi-cube sourcing for downstream receivers). Minor advisory: Franka base overlaps HandoffTray 4cm (cosmetic, delivery clean)."
+    },
+    "CP-08": {
+      "robot": "Franka",
+      "role": "source",
+      "handoff_surface": "flat-grid",
+      "handoff_z": 0.825,
+      "n_cube": 4,
+      "verified": "MULTI-CUBE source: chain stage0 4/4 x2 (cont.269), tight 0.144m 2x2 grid handoff"
+    },
+    "CP-12": {
+      "robot": "Franka",
+      "role": "source",
+      "handoff_surface": "flat-grid",
+      "handoff_z": 0.825,
+      "n_cube": 3,
+      "verified": "MULTI-CUBE source: chain stage0 3/3 (cont.271, generality \u2014 not CP-08-specific), diagonal grid handoff"
+    },
+    "CP-CHAIN-PALLETIZE-RECV": {
+      "robot": "Franka",
+      "role": "receiver",
+      "can_source": true,
+      "pick_height": "flat",
+      "handoff_z": 0.825,
+      "delivers_z": 0.8,
+      "delivers_surface": "flat-grid",
+      "n_cube": "1..N",
+      "verified": "MULTI-CUBE re-palletize RECEIVER + MID-STAGE SOURCE: picks N relay cubes at 0.825 + re-palletizes to a distinct-slot GRID output at z~0.80 (not a bin-stack) that a FURTHER pick cell chains from; proven as both 2-stage receiver (4/4 cont.284) AND 3-stage MID source (4/4/4 cont.286); robust @ DEFAULT window since the cont.319kk gate fix (chain_xkit_gate auto-sizes 3200/cube for the ~2x-slower distinct-slot planning; re-verified 3/3 N-of-2 @ auto 9600, no manual CHAIN_TOTAL \u2014 the old ~12000 knob is no longer needed)"
+    },
+    "CP-CHAIN-STACK-RECV": {
+      "robot": "Franka",
+      "role": "receiver",
+      "pick_height": "flat",
+      "handoff_z": 0.825,
+      "n_cube": "1..N",
+      "capacity": 3,
+      "output": "a vertical COLUMN (a cube-on-cube tower) on a pallet",
+      "verified": "CHAIN-VERIFIED N-of-M=2 (cont.318): STACK end-stage picks N relay cubes at 0.825 + stacks bottom-up into a vertical COLUMN on a PalletBase (LIST index-keyed drop_targets z 0.825/0.875/0.925); RAW poses 3 distinct ascending z-levels, robust 3/3 N-of-3 @ the gate's auto-sized 9600 window (cont.319kk; the old 'deterministic both runs' was window-lucky \u2014 default 6000 window-cut 2/3 when cuRobo planned slow, fixed by the 3200/cube auto-size, place-to-fixed-target); chain OUTPUT is a TOWER not a bin/grid"
+    }
   },
-  "handoff_rule": "A source delivers onto a SURFACE at handoff_z; a receiver picks at pick_height. They chain iff (a) the source delivers onto a FLAT/RAISED surface (NOT into a deep bin/container — a receiver arm cannot pick from inside a deep bin), AND (b) source.handoff_z matches receiver pick envelope: UR10 picks RAISED (~0.975 pedestal), Franka picks FLAT (~0.775). UR10 delivers flat; Franka delivers flat or raised.",
+  "handoff_rule": "A source delivers onto a SURFACE at handoff_z; a receiver picks at pick_height. They chain iff (a) the source delivers onto a FLAT/RAISED surface (NOT into a deep bin/container \u2014 a receiver arm cannot pick from inside a deep bin), AND (b) source.handoff_z matches receiver pick envelope: UR10 picks RAISED (~0.975 pedestal), Franka picks FLAT (~0.775). UR10 delivers flat; Franka delivers flat or raised.",
   "proven_chains": [
-    {"stages": ["CP-CHAIN-UR10-SRC", "CP-CHAIN-FLAT"],              "dir": "UR10->Franka", "handoff": "flat 0.775",   "result": "1/1+1/1 GOLD"},
-    {"stages": ["CP-CHAIN-FRANKA-RAISED-SRC", "CP-CHAIN-UR10-RECV-NATIVE"], "dir": "Franka->UR10", "handoff": "raised 0.975", "result": "1/1+1/1 GOLD (+arbitrary offset)"},
-    {"stages": ["CP-NEW-ur10-flat-deliver", "CP-NEW-franka-flat-receive"], "dir": "UR10->Franka", "handoff": "flat 0.825 HandoffPad", "result": "1/1+1/1 (cont.266, auto-offset [0.11,-0.39] path-2)"},
-    {"stages": ["CP-CHAIN-FRANKA-SRC", "CP-CHAIN-FLAT"], "dir": "Franka->Franka (same-robot LINE)", "handoff": "flat 0.775", "result": "1/1+1/1 (cont.267)"},
-    {"stages": ["CP-08", "CP-CHAIN-FLAT"], "dir": "Franka(palletize)->Franka(pick) MULTI-CUBE", "handoff": "flat-grid 0.825 (4 cubes)", "result": "4/4+4/4 N-of-M=2 (cont.269) — faithful multi-cube relay, RAW: tight grid handoff + stable 4-stack collected in bin"},
-    {"stages": ["CP-12", "CP-CHAIN-FLAT"], "dir": "Franka(palletize)->Franka(pick) MULTI-CUBE", "handoff": "flat-grid 0.825 (3 cubes)", "result": "3/3+3/3 (cont.271) — generality: multi-cube works across palletizers + N (not CP-08-specific)"},
-    {"stages": ["CP-08", "CP-CHAIN-PALLETIZE-RECV"], "dir": "Franka(palletize)->Franka(RE-PALLETIZE) MULTI-CUBE GRID-OUTPUT", "handoff": "flat-grid 0.825 (4)", "result": "4/4+4/4 (cont.284, operation-variety: chain ENDS IN A GRID not a bin; needs CHAIN_TOTAL~12000)"},
-    {"stages": ["CP-08", "CP-CHAIN-PALLETIZE-RECV", "CP-CHAIN-FLAT"], "dir": "Franka 3-STAGE multi-cube (palletize->re-palletize->pick) — composition DEPTH", "handoff": "flat-grid 0.825 x2", "result": "4/4+4/4+4/4 (cont.286; RAW: grid@stage1, stack-in-bin@stage2; offset propagates across all 3 stages; CHAIN_TOTAL=12000)"},
-    {"stages": ["CP-12", "CP-CHAIN-STACK-RECV"], "dir": "Franka(palletize)->Franka(STACK) MULTI-CUBE COLUMN-OUTPUT", "handoff": "flat-grid 0.825 (3 cubes)", "result": "3/3+3/3 N-of-M=2 (cont.318) — NEW operation-variety: chain ENDS IN A 3-HIGH COLUMN/tower (not bin/grid); RAW poses 3 distinct ascending z-levels 0.825/0.875/0.925 at one xy (5-6mm spread, ~14mm stable lean), robust 3/3 N-of-3 @ the gate's auto-sized 9600 window (cont.319kk; the old 'deterministic both runs' was window-lucky — default 6000 window-cut 2/3 when cuRobo planned slow, fixed by the 3200/cube auto-size, place-to-fixed-target); LLM-composable via compose_orchestrate output-aware catalog"},
-    {"stages": ["CP-12", "CP-CHAIN-PALLETIZE-RECV", "CP-CHAIN-STACK-RECV"], "dir": "Franka 3-STAGE 3-DISTINCT-OPERATIONS (palletize->re-palletize/grid->STACK/column) — operation-variety AT DEPTH", "handoff": "flat-grid 0.825 x2", "result": "3/3+3/3+3/3 (cont.318) — first 3-stage ending in a TOWER + first with 3 DISTINCT op-types; RAW: flat L-grid@stage1 (z=0.785 distinct xy), clean 3-high COLUMN@stage2 (z 0.825/0.875/0.925 distinct, xy 5mm spread); offset propagates across all 3 stages (final cubes world y~-2.14)"},
-    {"stages": ["CP-CONV-02-SRC", "CP-CHAIN-FLAT"], "dir": "REAL-CONVEYOR(belt-feed+pick)->Franka(pick) — first chain with a REAL-ASSET source cell", "handoff": "flat HandoffTray 0.825 (1 cube)", "result": "STOCHASTIC-AT-SOURCE (cont.319ww re-audit; reclassified from '1/1+1/1 GOLD'): same N=1 belt-window source CP-CONV-02-SRC as chain [14], which I proved window-stochastic (1/1 then 0/1 across 2 runs). The relay to the Franka receiver is SOUND when the source delivers, but source delivery is window-dependent -> NOT a deterministic gold; rate by belt window. Originally verified with the pre-cont.319ww buggy handoff/custody gate (relayed undelivered poses) -> re-run end-to-end with the fixed gate for a clean guarantee. (cont.319hh.)"},
-    {"stages": ["CP-CONV-02-SRC-3", "CP-CHAIN-FLAT"], "dir": "REAL-CONVEYOR(N=3 belt-feed)->Franka(pick) — MULTI-CUBE real-asset chain", "handoff": "flat HandoffTray 0.825 (3 cubes)", "result": "3/3+3/3 ALL DELIVERED — ✓✓ RE-CONFIRMED with the FIXED gate (cont.319ww in-vivo: stage0 3/3 handoff all 3 cubes @z=0.825, stage1 3/3 relay z 0.785/0.835/0.885, SUMMARY 'ALL DELIVERED end-to-end', CUSTODY 3 COMPLETE via delivered_paths). This run ALSO proves the cont.319ww gate fix is NON-REGRESSING (a genuinely-delivering chain still passes) — caveat lifted, this is a clean GOLD. real ConveyorBelt_A09 feeds 3 cubes, Franka stages them in a row on the tray (z=0.825 x 0.40/0.50/0.60), faithful cross-Kit relay, CP-CHAIN-FLAT receiver picks ALL 3 -> 3-high bin stack. The N=3 real-asset MULTI-cube composition multiplier (cont.319ll, re-verified cont.319ww). [siblings [12][13] use the same proven N=3 source + fixed gate; re-run them for their own clean stamp.]"},
-    {"stages": ["CP-CONV-02-SRC-3", "CP-CHAIN-STACK-RECV"], "dir": "REAL-CONVEYOR(N=3 belt-feed)->Franka(column-stack) — real-asset feed culminating in a TOWER", "handoff": "flat HandoffTray 0.825 (3 cubes)", "result": "3/3+3/3 ALL DELIVERED — ✓✓ RE-CONFIRMED with the FIXED gate (cont.319ww in-vivo: stage0 3/3 @z=0.825, stage1 3/3 relay z 0.825/0.875/0.925 distinct ascending COLUMN, SUMMARY 'ALL DELIVERED end-to-end', CUSTODY 3 COMPLETE via delivered_paths) — caveat lifted, clean GOLD. real ConveyorBelt_A09 feeds 3 cubes -> Franka stages on tray -> faithful cross-Kit relay -> CP-CHAIN-STACK-RECV stacks ALL 3 into a clean 3-high TOWER. Real-asset feed -> tower output; distinct from the ->FLAT(bin) variant. [sibling [13] (3-stage) same proven source+gate; re-run for its own stamp.]"},
-    {"stages": ["CP-CONV-02-SRC-3", "CP-CHAIN-PALLETIZE-RECV", "CP-CHAIN-STACK-RECV"], "dir": "REAL-ASSET 3-STAGE 3-DISTINCT-OPS: real-conveyor feed -> grid -> tower", "handoff": "flat 0.825 -> flat-grid 0.785", "result": "3/3+3/3+3/3 ALL DELIVERED — ✓✓ RE-CONFIRMED with the FIXED gate (cont.319bbb in-vivo: stage0 3/3 @z=0.825, stage1 PALLETIZE 3/3 grid z=0.785, stage2 STACK 3/3 COLUMN relay2 z=0.825/0.875/0.925, SUMMARY 'ALL DELIVERED end-to-end', CUSTODY 3 COMPLETE via delivered_paths across all 3 stations) — caveat lifted, clean GOLD. real ConveyorBelt_A09 feeds 3 cubes -> grid (z=0.785 distinct xy) -> 3-high COLUMN; offset propagates across all 3 stages (final y~-2.14). The FIRST 3-stage chain with a REAL-ASSET source + 3 distinct op-types; the fixed-gate delivered_paths handoff holds across 3 stages."},
-    {"stages": ["CP-CONV-02-SRC", "CP-CHAIN-UR10-RECV-NATIVE"], "dir": "REAL-CONVEYOR(Franka belt-feed)->UR10(pick) — real-asset feed into a ROBOT-DIVERSITY receiver", "handoff": "flat HandoffTray 0.825 (1 cube)", "result": "STOCHASTIC-AT-SOURCE (cont.319ww re-audit; reclassified from overclaimed '1/1+1/1 GOLD'): CONV-02-SRC (real ConveyorBelt_A09 Franka cell) is belt-WINDOW-limited — delivered 1/1 (cont.319mm) then 0/1 (cont.319ww) across 2 runs. WHEN the source lands the cube in the pick window the faithful cross-Kit relay to the UR10 receiver works (real-asset x robot-diversity relay is SOUND when fed); but source delivery is window-dependent, so NOT a deterministic gold — rate by source-delivery window. ★ The re-audit ALSO caught 2 chain_xkit_gate bugs it had hidden: (1) handoff relayed UNDELIVERED cube poses -> a 0-delivery source still fed a phantom cube downstream; (2) custody hardcoded delivered=True (presence, not delivery) -> false 'COMPLETE'. BOTH FIXED cont.319ww (delivered_paths): the gate now ABORTs honestly at a 0-delivery stage. ⚠️ N MUST MATCH: CONV-02-SRC-3 (N=3) -> N=1 receiver loses cubes."},
-    {"branching_chain": "CP-BRANCH-SRC-MINI -> {HeavyTray->CP-CHAIN-FLAT (heavy), LightTray->CP-CHAIN-FLAT (light)}", "harness": "scripts/qa/chain_branch_gate.py (2-relay fork)", "topology": "BRANCHING / Y-split (NON-LINEAR — the FIRST; every entry above is linear source->receiver)", "result": "★★ N-of-2 GOLD (cont.319ppp): 1 conditional sorter SOURCE routes each item by weight to one of 2 HANDOFF TRAYS (light->LightTray x+0.35, heavy->HeavyTray x-0.35; per-cube routing verified 2/2 + cubes settle ON the trays at z0.815-0.820 pickable), then the harness forks TWO INDEPENDENT cross-Kit relays -> heavy branch CP-CHAIN-FLAT 1/1 FULL + light branch CP-CHAIN-FLAT 1/1 FULL, BOTH fresh-Kit runs IDENTICAL = both branches deliver their routed subset. The composition multiplier the 15 linear chains could not express (maximal-stress order #4 'route by property to 2 distinct downstream STATIONS'). Sources: CP-BRANCH-SRC-SW (9-cube 9/9 routed) + CP-BRANCH-SRC-MINI (2-cube clean demo). ⚠️ receiver N must match the branch subset count."},
-    {"branching_chain": "CP-BRANCH-SRC-3WAY -> {RedBin->CP-CHAIN-FLAT, GreenBin->CP-CHAIN-FLAT, BlueBin->CP-CHAIN-FLAT}", "harness": "scripts/qa/chain_branch_gate.py (N-way fork; CLI + verdict generalized cont.319rrr/ttt)", "topology": "BRANCHING / Y-split 3-WAY (the N-way generalization of the 2-way above — first non-binary fan-out)", "result": "★★ N-of-3 GOLD (cont.319ttt): a 3-lane COLOUR sorter SOURCE routes 9 cubes (3 red/3 green/3 blue) to 3 HANDOFF BINS (RedBin x-0.40, GreenBin x0.0, BlueBin x+0.40); source routed 9/9 (per-colour cube paths verified: Red=Cube_1/4/7, Green=2/5/8, Blue=3/6/9), then the harness forks THREE INDEPENDENT cross-Kit relays -> Red 3/3 + Green 3/3 + Blue 3/3 = 9/9 delivered across 3 branches, EVERY branch FULL. ⚠️ Needs CHAIN_TOTAL>=28800 for the 9-cube source to route all 9 (at 11000 the farthest red cube misses the pick window -> source 8/9; play-window/throughput, NOT branching). ⚠️ The verdict STRING was a stale hardcoded len(results)==2 -> false-negatived this clean all-FULL run as 'PARTIAL'; FIXED to len>=2 (the GOLD rests on the MEASURED 9/9 + 3/3-per-branch, not the string). ⚠️ a reduced 3-cube minimal source fails to classify/route (colour-sorter low-cube-count quirk, source-side, banked)."}
+    {
+      "stages": [
+        "CP-CHAIN-UR10-SRC",
+        "CP-CHAIN-FLAT"
+      ],
+      "dir": "UR10->Franka",
+      "handoff": "flat 0.775",
+      "result": "1/1+1/1 GOLD"
+    },
+    {
+      "stages": [
+        "CP-CHAIN-FRANKA-RAISED-SRC",
+        "CP-CHAIN-UR10-RECV-NATIVE"
+      ],
+      "dir": "Franka->UR10",
+      "handoff": "raised 0.975",
+      "result": "1/1+1/1 GOLD (+arbitrary offset)"
+    },
+    {
+      "stages": [
+        "CP-NEW-ur10-flat-deliver",
+        "CP-NEW-franka-flat-receive"
+      ],
+      "dir": "UR10->Franka",
+      "handoff": "flat 0.825 HandoffPad",
+      "result": "1/1+1/1 (cont.266, auto-offset [0.11,-0.39] path-2)"
+    },
+    {
+      "stages": [
+        "CP-CHAIN-FRANKA-SRC",
+        "CP-CHAIN-FLAT"
+      ],
+      "dir": "Franka->Franka (same-robot LINE)",
+      "handoff": "flat 0.775",
+      "result": "1/1+1/1 (cont.267)"
+    },
+    {
+      "stages": [
+        "CP-08",
+        "CP-CHAIN-FLAT"
+      ],
+      "dir": "Franka(palletize)->Franka(pick) MULTI-CUBE",
+      "handoff": "flat-grid 0.825 (4 cubes)",
+      "result": "4/4+4/4 N-of-M=2 (cont.269) \u2014 faithful multi-cube relay, RAW: tight grid handoff + stable 4-stack collected in bin"
+    },
+    {
+      "stages": [
+        "CP-12",
+        "CP-CHAIN-FLAT"
+      ],
+      "dir": "Franka(palletize)->Franka(pick) MULTI-CUBE",
+      "handoff": "flat-grid 0.825 (3 cubes)",
+      "result": "3/3+3/3 (cont.271) \u2014 generality: multi-cube works across palletizers + N (not CP-08-specific)"
+    },
+    {
+      "stages": [
+        "CP-08",
+        "CP-CHAIN-PALLETIZE-RECV"
+      ],
+      "dir": "Franka(palletize)->Franka(RE-PALLETIZE) MULTI-CUBE GRID-OUTPUT",
+      "handoff": "flat-grid 0.825 (4)",
+      "result": "4/4+4/4 (cont.284, operation-variety: chain ENDS IN A GRID not a bin; needs CHAIN_TOTAL~12000)"
+    },
+    {
+      "stages": [
+        "CP-08",
+        "CP-CHAIN-PALLETIZE-RECV",
+        "CP-CHAIN-FLAT"
+      ],
+      "dir": "Franka 3-STAGE multi-cube (palletize->re-palletize->pick) \u2014 composition DEPTH",
+      "handoff": "flat-grid 0.825 x2",
+      "result": "4/4+4/4+4/4 (cont.286; RAW: grid@stage1, stack-in-bin@stage2; offset propagates across all 3 stages; CHAIN_TOTAL=12000)"
+    },
+    {
+      "stages": [
+        "CP-12",
+        "CP-CHAIN-STACK-RECV"
+      ],
+      "dir": "Franka(palletize)->Franka(STACK) MULTI-CUBE COLUMN-OUTPUT",
+      "handoff": "flat-grid 0.825 (3 cubes)",
+      "result": "3/3+3/3 N-of-M=2 (cont.318) \u2014 NEW operation-variety: chain ENDS IN A 3-HIGH COLUMN/tower (not bin/grid); RAW poses 3 distinct ascending z-levels 0.825/0.875/0.925 at one xy (5-6mm spread, ~14mm stable lean), robust 3/3 N-of-3 @ the gate's auto-sized 9600 window (cont.319kk; the old 'deterministic both runs' was window-lucky \u2014 default 6000 window-cut 2/3 when cuRobo planned slow, fixed by the 3200/cube auto-size, place-to-fixed-target); LLM-composable via compose_orchestrate output-aware catalog"
+    },
+    {
+      "stages": [
+        "CP-12",
+        "CP-CHAIN-PALLETIZE-RECV",
+        "CP-CHAIN-STACK-RECV"
+      ],
+      "dir": "Franka 3-STAGE 3-DISTINCT-OPERATIONS (palletize->re-palletize/grid->STACK/column) \u2014 operation-variety AT DEPTH",
+      "handoff": "flat-grid 0.825 x2",
+      "result": "3/3+3/3+3/3 (cont.318) \u2014 first 3-stage ending in a TOWER + first with 3 DISTINCT op-types; RAW: flat L-grid@stage1 (z=0.785 distinct xy), clean 3-high COLUMN@stage2 (z 0.825/0.875/0.925 distinct, xy 5mm spread); offset propagates across all 3 stages (final cubes world y~-2.14)"
+    },
+    {
+      "stages": [
+        "CP-CONV-02-SRC",
+        "CP-CHAIN-FLAT"
+      ],
+      "dir": "REAL-CONVEYOR(belt-feed+pick)->Franka(pick) \u2014 first chain with a REAL-ASSET source cell",
+      "handoff": "flat HandoffTray 0.825 (1 cube)",
+      "result": "STOCHASTIC-AT-SOURCE (cont.319ww re-audit; reclassified from '1/1+1/1 GOLD'): same N=1 belt-window source CP-CONV-02-SRC as chain [14], which I proved window-stochastic (1/1 then 0/1 across 2 runs). The relay to the Franka receiver is SOUND when the source delivers, but source delivery is window-dependent -> NOT a deterministic gold; rate by belt window. Originally verified with the pre-cont.319ww buggy handoff/custody gate (relayed undelivered poses) -> re-run end-to-end with the fixed gate for a clean guarantee. (cont.319hh.)"
+    },
+    {
+      "stages": [
+        "CP-CONV-02-SRC-3",
+        "CP-CHAIN-FLAT"
+      ],
+      "dir": "REAL-CONVEYOR(N=3 belt-feed)->Franka(pick) \u2014 MULTI-CUBE real-asset chain",
+      "handoff": "flat HandoffTray 0.825 (3 cubes)",
+      "result": "3/3+3/3 ALL DELIVERED \u2014 \u2713\u2713 RE-CONFIRMED with the FIXED gate (cont.319ww in-vivo: stage0 3/3 handoff all 3 cubes @z=0.825, stage1 3/3 relay z 0.785/0.835/0.885, SUMMARY 'ALL DELIVERED end-to-end', CUSTODY 3 COMPLETE via delivered_paths). This run ALSO proves the cont.319ww gate fix is NON-REGRESSING (a genuinely-delivering chain still passes) \u2014 caveat lifted, this is a clean GOLD. real ConveyorBelt_A09 feeds 3 cubes, Franka stages them in a row on the tray (z=0.825 x 0.40/0.50/0.60), faithful cross-Kit relay, CP-CHAIN-FLAT receiver picks ALL 3 -> 3-high bin stack. The N=3 real-asset MULTI-cube composition multiplier (cont.319ll, re-verified cont.319ww). [siblings [12][13] use the same proven N=3 source + fixed gate; re-run them for their own clean stamp.]"
+    },
+    {
+      "stages": [
+        "CP-CONV-02-SRC-3",
+        "CP-CHAIN-STACK-RECV"
+      ],
+      "dir": "REAL-CONVEYOR(N=3 belt-feed)->Franka(column-stack) \u2014 real-asset feed culminating in a TOWER",
+      "handoff": "flat HandoffTray 0.825 (3 cubes)",
+      "result": "3/3+3/3 ALL DELIVERED \u2014 \u2713\u2713 RE-CONFIRMED with the FIXED gate (cont.319ww in-vivo: stage0 3/3 @z=0.825, stage1 3/3 relay z 0.825/0.875/0.925 distinct ascending COLUMN, SUMMARY 'ALL DELIVERED end-to-end', CUSTODY 3 COMPLETE via delivered_paths) \u2014 caveat lifted, clean GOLD. real ConveyorBelt_A09 feeds 3 cubes -> Franka stages on tray -> faithful cross-Kit relay -> CP-CHAIN-STACK-RECV stacks ALL 3 into a clean 3-high TOWER. Real-asset feed -> tower output; distinct from the ->FLAT(bin) variant. [sibling [13] (3-stage) same proven source+gate; re-run for its own stamp.]"
+    },
+    {
+      "stages": [
+        "CP-CONV-02-SRC-3",
+        "CP-CHAIN-PALLETIZE-RECV",
+        "CP-CHAIN-STACK-RECV"
+      ],
+      "dir": "REAL-ASSET 3-STAGE 3-DISTINCT-OPS: real-conveyor feed -> grid -> tower",
+      "handoff": "flat 0.825 -> flat-grid 0.785",
+      "result": "3/3+3/3+3/3 ALL DELIVERED \u2014 \u2713\u2713 RE-CONFIRMED with the FIXED gate (cont.319bbb in-vivo: stage0 3/3 @z=0.825, stage1 PALLETIZE 3/3 grid z=0.785, stage2 STACK 3/3 COLUMN relay2 z=0.825/0.875/0.925, SUMMARY 'ALL DELIVERED end-to-end', CUSTODY 3 COMPLETE via delivered_paths across all 3 stations) \u2014 caveat lifted, clean GOLD. real ConveyorBelt_A09 feeds 3 cubes -> grid (z=0.785 distinct xy) -> 3-high COLUMN; offset propagates across all 3 stages (final y~-2.14). The FIRST 3-stage chain with a REAL-ASSET source + 3 distinct op-types; the fixed-gate delivered_paths handoff holds across 3 stages."
+    },
+    {
+      "stages": [
+        "CP-CONV-02-SRC",
+        "CP-CHAIN-UR10-RECV-NATIVE"
+      ],
+      "dir": "REAL-CONVEYOR(Franka belt-feed)->UR10(pick) \u2014 real-asset feed into a ROBOT-DIVERSITY receiver",
+      "handoff": "flat HandoffTray 0.825 (1 cube)",
+      "result": "STOCHASTIC-AT-SOURCE (cont.319ww re-audit; reclassified from overclaimed '1/1+1/1 GOLD'): CONV-02-SRC (real ConveyorBelt_A09 Franka cell) is belt-WINDOW-limited \u2014 delivered 1/1 (cont.319mm) then 0/1 (cont.319ww) across 2 runs. WHEN the source lands the cube in the pick window the faithful cross-Kit relay to the UR10 receiver works (real-asset x robot-diversity relay is SOUND when fed); but source delivery is window-dependent, so NOT a deterministic gold \u2014 rate by source-delivery window. \u2605 The re-audit ALSO caught 2 chain_xkit_gate bugs it had hidden: (1) handoff relayed UNDELIVERED cube poses -> a 0-delivery source still fed a phantom cube downstream; (2) custody hardcoded delivered=True (presence, not delivery) -> false 'COMPLETE'. BOTH FIXED cont.319ww (delivered_paths): the gate now ABORTs honestly at a 0-delivery stage. \u26a0\ufe0f N MUST MATCH: CONV-02-SRC-3 (N=3) -> N=1 receiver loses cubes."
+    },
+    {
+      "branching_chain": "CP-BRANCH-SRC-MINI -> {HeavyTray->CP-CHAIN-FLAT (heavy), LightTray->CP-CHAIN-FLAT (light)}",
+      "harness": "scripts/qa/chain_branch_gate.py (2-relay fork)",
+      "topology": "BRANCHING / Y-split (NON-LINEAR \u2014 the FIRST; every entry above is linear source->receiver)",
+      "result": "\u2605\u2605 N-of-2 GOLD (cont.319ppp): 1 conditional sorter SOURCE routes each item by weight to one of 2 HANDOFF TRAYS (light->LightTray x+0.35, heavy->HeavyTray x-0.35; per-cube routing verified 2/2 + cubes settle ON the trays at z0.815-0.820 pickable), then the harness forks TWO INDEPENDENT cross-Kit relays -> heavy branch CP-CHAIN-FLAT 1/1 FULL + light branch CP-CHAIN-FLAT 1/1 FULL, BOTH fresh-Kit runs IDENTICAL = both branches deliver their routed subset. The composition multiplier the 15 linear chains could not express (maximal-stress order #4 'route by property to 2 distinct downstream STATIONS'). Sources: CP-BRANCH-SRC-SW (9-cube 9/9 routed) + CP-BRANCH-SRC-MINI (2-cube clean demo). \u26a0\ufe0f receiver N must match the branch subset count."
+    },
+    {
+      "branching_chain": "CP-BRANCH-SRC-3WAY -> {RedBin->CP-CHAIN-FLAT, GreenBin->CP-CHAIN-FLAT, BlueBin->CP-CHAIN-FLAT}",
+      "harness": "scripts/qa/chain_branch_gate.py (N-way fork; CLI + verdict generalized cont.319rrr/ttt)",
+      "topology": "BRANCHING / Y-split 3-WAY (the N-way generalization of the 2-way above \u2014 first non-binary fan-out)",
+      "result": "\u2605\u2605 N-of-3 GOLD (cont.319ttt): a 3-lane COLOUR sorter SOURCE routes 9 cubes (3 red/3 green/3 blue) to 3 HANDOFF BINS (RedBin x-0.40, GreenBin x0.0, BlueBin x+0.40); source routed 9/9 (per-colour cube paths verified: Red=Cube_1/4/7, Green=2/5/8, Blue=3/6/9), then the harness forks THREE INDEPENDENT cross-Kit relays -> Red 3/3 + Green 3/3 + Blue 3/3 = 9/9 delivered across 3 branches, EVERY branch FULL. \u26a0\ufe0f Needs CHAIN_TOTAL>=28800 for the 9-cube source to route all 9 (at 11000 the farthest red cube misses the pick window -> source 8/9; play-window/throughput, NOT branching). \u26a0\ufe0f The verdict STRING was a stale hardcoded len(results)==2 -> false-negatived this clean all-FULL run as 'PARTIAL'; FIXED to len>=2 (the GOLD rests on the MEASURED 9/9 + 3/3-per-branch, not the string). \u26a0\ufe0f a reduced 3-cube minimal source fails to classify/route (colour-sorter low-cube-count quirk, source-side, banked)."
+    },
+    {
+      "stages": [
+        "CP-CHAIN-FRANKA-SRC",
+        "CP-CHAIN-PALLETIZE-RECV"
+      ],
+      "dir": "Franka source -> palletizer receiver",
+      "handoff": "flat 0.775->0.825 (1 cube)",
+      "result": "GOLD 1/1+1/1 ALL DELIVERED (cont.319-CHAIN1); validates L3 reach-range end-to-end"
+    },
+    {
+      "stages": [
+        "CP-CHAIN-FRANKA-SRC",
+        "CP-NEW-franka-flat-receive"
+      ],
+      "dir": "Franka source -> flat receiver",
+      "handoff": "flat 0.775->0.825 (1 cube)",
+      "result": "GOLD 1/1+1/1 ALL DELIVERED (cont.319-CHAIN3); height-matched"
+    },
+    {
+      "stages": [
+        "CP-08",
+        "CP-NEW-franka-flat-receive"
+      ],
+      "dir": "4-cube GRID source -> flat receiver",
+      "handoff": "flat 0.825->0.825 (4 cubes)",
+      "result": "GOLD 4/4+4/4 COMPLETE custody, receiver stacked all 4 (cont.319-CHAIN4); multi-cube grid-source chain"
+    },
+    {
+      "stages": [
+        "CP-CHAIN-FRANKA-SRC",
+        "CP-CHAIN-PALLETIZE-RECV",
+        "CP-NEW-franka-flat-receive"
+      ],
+      "dir": "3-STAGE: source -> palletizer(mid) -> flat receiver",
+      "handoff": "0.775->0.825->0.8->0.825 (1 cube)",
+      "result": "GOLD 1/1+1/1+1/1 COMPLETE custody across 3 stations (cont.319-CHAIN5); KOMPOSITION-multiplier capstone"
+    }
   ]
 }
