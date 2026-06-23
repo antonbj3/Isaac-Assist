@@ -272,20 +272,62 @@ def _wire_yaskawa_gp25() -> None:
 
 _wire_yaskawa_gp25()
 
-def _resolve_robot_asset(entry: Dict) -> str:
-    """Return the best asset path for a robot registry entry.
+# Version-robust Isaac asset resolution (Anton 2026-06-23: "härda det så det
+# fungerar med alla Isaac Sim versioner 5 och framåt, 6 släpps snart"). The
+# per-entry cloud_url hardcodes ONE version (/Assets/Isaac/5.1/...), which breaks
+# in a 5.0/5.2/6.x environment. rel_path is version-agnostic ("Isaac/Robots/.../x.usd"),
+# so we DERIVE candidate URLs from a base + a version list and let the importer try
+# each until one resolves (AddReference is lazy + won't 404, so an empty prim = wrong
+# version -> try next). Works across Isaac 5.x AND the upcoming 6.x with no per-asset edits.
+_ISAAC_CLOUD_BASE = ("https://omniverse-content-production.s3-us-west-2.amazonaws.com"
+                     "/Assets/Isaac")
 
-    Prefers local disk (ASSETS_ROOT_PATH + rel_path) when present, since
-    USD's asset resolver is ~50-100× faster off disk than over HTTPS and
-    doesn't depend on internet. Falls back to the cloud URL otherwise.
-    """
+
+def _isaac_asset_versions() -> "list[str]":
+    """Ordered Isaac asset-version candidates. ISAAC_ASSETS_VERSION env pins/leads;
+    else detect from the ASSETS_ROOT_PATH dir name (e.g. ...-complete-5.0.0); else a
+    sensible newest-known order. Add new versions (6.x) here as they ship."""
+    import os as _os, re as _re
+    order = ["5.1", "5.0", "5.2", "5.3", "6.0", "6.1"]
+    v = _os.environ.get("ISAAC_ASSETS_VERSION", "").strip()
+    if v:
+        return [v] + [x for x in order if x != v]
+    m = _re.search(r"(\d+\.\d+)(?:\.\d+)?", _os.environ.get("ASSETS_ROOT_PATH", ""))
+    if m and m.group(1) in order:
+        d = m.group(1)
+        return [d] + [x for x in order if x != d]
+    return order
+
+
+def _robot_asset_candidates(entry: Dict) -> "list[str]":
+    """Ordered asset-URL candidates for a registry entry: local disk first (fastest,
+    offline), then cloud derived from rel_path across Isaac versions, then the legacy
+    hardcoded cloud_url as a final fallback. The importer tries each until one loads."""
     import os as _os
+    out: "list[str]" = []
+    rel = (entry.get("rel_path") or "").lstrip("/")
     assets_root = _os.environ.get("ASSETS_ROOT_PATH", "").rstrip("/")
-    if assets_root and entry.get("rel_path"):
-        local = f"{assets_root}/{entry['rel_path']}"
+    if assets_root and rel:
+        local = f"{assets_root}/{rel}"
         if _os.path.exists(local):
-            return local
-    return entry.get("cloud_url", "")
+            out.append(local)
+    if rel:
+        for v in _isaac_asset_versions():
+            url = f"{_ISAAC_CLOUD_BASE}/{v}/{rel}"
+            if url not in out:
+                out.append(url)
+    cu = entry.get("cloud_url")
+    if cu and cu not in out:
+        out.append(cu)
+    return out
+
+
+def _resolve_robot_asset(entry: Dict) -> str:
+    """Best single asset path for a robot entry (backward-compat). Returns the FIRST
+    version-robust candidate (local if present, else the leading-version cloud URL).
+    Callers wanting full version-fallback should use ``_robot_asset_candidates``."""
+    cands = _robot_asset_candidates(entry)
+    return cands[0] if cands else entry.get("cloud_url", "")
 
 # from: feat/addendum-phase8F-ros2-quality
 # _ROS2_QOS_PRESETS migrated to handlers/ros2.py (Phase 8 wave 4, 2026-05-13).

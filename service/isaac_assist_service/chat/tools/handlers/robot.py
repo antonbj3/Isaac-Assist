@@ -865,7 +865,7 @@ def _gen_robot_wizard(args: Dict) -> str:
             empty prim (e.g. bad Nucleus URL) or URDF import fails.
     """
     # Phase 8 wave 13 — _ROBOT_TYPE_DEFAULTS migrated.
-    from ._shared import _ROBOT_WIZARD_REGISTRY, _resolve_robot_asset
+    from ._shared import _ROBOT_WIZARD_REGISTRY, _resolve_robot_asset, _robot_asset_candidates
 
     # Resolve `robot_name` against the registry BEFORE requiring asset_path.
     # This is the deterministic path: agent says robot_name="franka_panda"
@@ -899,6 +899,13 @@ def _gen_robot_wizard(args: Dict) -> str:
             )
         asset_path = args["asset_path"]
         robot_type = args.get("robot_type", "manipulator")
+    # Version-robust asset candidates: a registry robot gets local + cloud-across-
+    # Isaac-versions; an explicit asset_path is used as-is (single candidate). The
+    # generated importer tries each until one resolves to a non-empty prim.
+    if registry_hit:
+        _asset_candidates = _robot_asset_candidates(registry_hit)
+    else:
+        _asset_candidates = [asset_path]
     defaults = _ROBOT_TYPE_DEFAULTS.get(robot_type, _ROBOT_TYPE_DEFAULTS["manipulator"])
     # Per-robot profile overrides: if the registry entry specifies drive
     # gains, variants, home_joints, etc., use those before falling back to
@@ -976,26 +983,35 @@ if not _imported_prim.IsValid():
 print(f"Imported URDF → {{dest_path}}")
 """
     else:
+        _cands_literal = _json_rw.dumps(_asset_candidates)
         import_block = _path_check + f"""
-# Step 1: Import robot from USD
+# Step 1: Import robot from USD — VERSION-ROBUST (Anton 2026-06-23): try each
+# candidate asset URL (local + cloud across Isaac 5.x/6.x) until one resolves to a
+# NON-empty prim. AddReference is lazy + won't error on a 404, so an empty Xform
+# (<=1 descendant) means that version's URL is absent -> clear + try the next. No
+# per-asset version pin -> works on Isaac 5.0/5.1/5.x and the upcoming 6.x.
 dest_path = {dest_path_arg!r}
+_candidates = {_cands_literal}
 prim = stage.DefinePrim(dest_path, 'Xform')
-prim.GetReferences().AddReference({asset_path!r})
-if not prim.HasAuthoredReferences():
-    raise RuntimeError(f'robot_wizard: AddReference({{_asset!r}}) completed but HasAuthoredReferences is False on {{dest_path}}')
-# Verify the reference actually resolved — AddReference is lazy and will
-# not error on a 404. An empty Xform (≤1 descendant) means the asset
-# server rejected the URL. Deprecated /Isaac/4.2/ paths are the most
-# common offender; Isaac Sim 5.x uses /Isaac/5.0/ or /Isaac/Assets/.
 from pxr import Usd as _Usd
-_desc = len(list(_Usd.PrimRange(prim))[1:])
-if _desc < 2:
+_loaded = None; _tried = []
+for _cand in _candidates:
+    try:
+        prim.GetReferences().ClearReferences()
+        prim.GetReferences().AddReference(_cand)
+        _desc = len(list(_Usd.PrimRange(prim))[1:])
+    except Exception as _e:
+        _desc = 0
+    _tried.append((_cand, _desc))
+    if _desc >= 2:
+        _loaded = _cand; break
+if _loaded is None:
     raise RuntimeError(
-        f'robot_wizard: AddReference({{_asset!r}}) left {{dest_path}} with '
-        f'{{_desc}} descendants — asset URL likely failed to resolve. '
-        f'Check for deprecated 4.x paths; use a 5.x asset URL.'
-    )
-print(f"Loaded USD asset → {{dest_path}} ({{_desc}} descendants)")
+        'robot_wizard: no candidate asset URL resolved to a non-empty prim for '
+        + dest_path + ' -- tried ' + str([(_c.split('/Isaac/')[-1][:45], _d) for _c, _d in _tried])
+        + '. The asset may be absent in this Isaac version or the path is wrong; '
+        + 'set ISAAC_ASSETS_VERSION (e.g. 6.0) or pass an explicit asset_path.')
+print('Loaded USD asset -> ' + dest_path + ' from ' + str(_loaded) + ' (' + str(_desc) + ' descendants)')
 """
 
     return f"""\
