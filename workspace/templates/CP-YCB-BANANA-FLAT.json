@@ -1,0 +1,36 @@
+{
+  "task_id": "CP-YCB-BANANA-FLAT",
+  "goal": "FINAL disambiguation: banana spawned LIE-FLAT (rotation_euler=[90,0,0]). If it now grips+delivers -> the grasp-pose/PCA fix is NOT needed (the failures were spawn-orientation). If it still fails (elongated, jaw can't span) -> the grasp-pose fix IS genuinely needed for elongated objects.",
+  "tools_used": [
+    "create_prim",
+    "set_attribute",
+    "apply_api_schema",
+    "robot_wizard",
+    "create_conveyor",
+    "create_bin",
+    "add_proximity_sensor",
+    "set_physics_scene_config",
+    "apply_physics_material",
+    "bulk_set_attribute",
+    "setup_pick_place_controller"
+  ],
+  "code": "# ADVERSARIAL AUDIT of real_asset_spawn graspability: a CURVED object (banana) the helper flags graspable\n# (min-horiz 3.9cm) but is bbox-BLIND to curvature -> does the bbox-center grasp actually hold it?\ncreate_scene_baseline(include_ground=False, table_size=[2.0, 1.0])\nrobot_wizard(robot_name=\"franka_panda\", dest_path=\"/World/Franka\", position=[0, 0, 0.75], orientation=[0.7071068, 0, 0, 0.7071068])\ncreate_conveyor(prim_path=\"/World/ConveyorBelt\", position=[0.0, 0.4, 0.78], size=[3.0, 0.4, 0.05], surface_velocity=[0.2, 0, 0])\ncreate_prim(prim_path=\"/World/Item_1\", prim_type=\"Xform\", position=[0.0, 0.4, 0.85], rotation_euler=[90, 0, 0])\nadd_reference(prim_path=\"/World/Item_1\", reference_path=\"/mnt/shared_data/isaac-sim-assets-complete-5.0.0/Assets/Isaac/5.0/Isaac/Props/YCB/Axis_Aligned/011_banana.usd\")\nfor api in (\"PhysicsRigidBodyAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n    apply_api_schema(prim_path=\"/World/Item_1\", schema_name=api)\napply_api_schema(prim_path=\"/World/Item_1/_11_banana\", schema_name=\"PhysicsCollisionAPI\")\nsimplify_collision(prim_path=\"/World/Item_1/_11_banana\", approximation=\"convexHull\")\nbulk_set_attribute(prim_paths=[\"/World/Item_1\"], attr=\"physxRigidBody:sleepThreshold\", value=0.0)\napply_physics_material(prim_path=\"/World/Item_1/_11_banana\", material_name=\"rubber\")\ncreate_bin(prim_path=\"/World/Bin\", position=[0, -0.4, 0.75], size=[0.3, 0.3, 0.15])\nadd_proximity_sensor(sensor_path=\"/World/PickSensor\", position=[0.4, 0.4, 0.835], size=[0.06, 0.06, 0.06])\nsetup_pick_place_controller(robot_path=\"/World/Franka\", target_source=\"curobo\", sensor_path=\"/World/PickSensor\", belt_path=\"/World/ConveyorBelt\", source_paths=[\"/World/Item_1\"], destination_path=\"/World/Bin\", planning_obstacles=[\"/World/Table\", \"/World/ConveyorBelt\", \"/World/Bin\"])\n",
+  "code_template": "# ADVERSARIAL AUDIT of real_asset_spawn graspability: a CURVED object (banana) the helper flags graspable\n# (min-horiz 3.9cm) but is bbox-BLIND to curvature -> does the bbox-center grasp actually hold it?\ncreate_scene_baseline(include_ground=False, table_size=[2.0, 1.0])\nrobot_wizard(robot_name=\"franka_panda\", dest_path=\"/World/Franka\", position=[0, 0, 0.75], orientation=[0.7071068, 0, 0, 0.7071068])\ncreate_conveyor(prim_path=\"/World/ConveyorBelt\", position=[0.0, 0.4, 0.78], size=[3.0, 0.4, 0.05], surface_velocity=[0.2, 0, 0])\ncreate_prim(prim_path=\"/World/Item_1\", prim_type=\"Xform\", position=[0.0, 0.4, 0.85], rotation_euler=[90, 0, 0])\nadd_reference(prim_path=\"/World/Item_1\", reference_path=\"/mnt/shared_data/isaac-sim-assets-complete-5.0.0/Assets/Isaac/5.0/Isaac/Props/YCB/Axis_Aligned/011_banana.usd\")\nfor api in (\"PhysicsRigidBodyAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n    apply_api_schema(prim_path=\"/World/Item_1\", schema_name=api)\napply_api_schema(prim_path=\"/World/Item_1/_11_banana\", schema_name=\"PhysicsCollisionAPI\")\nsimplify_collision(prim_path=\"/World/Item_1/_11_banana\", approximation=\"convexHull\")\nbulk_set_attribute(prim_paths=[\"/World/Item_1\"], attr=\"physxRigidBody:sleepThreshold\", value=0.0)\napply_physics_material(prim_path=\"/World/Item_1/_11_banana\", material_name=\"rubber\")\ncreate_bin(prim_path=\"/World/Bin\", position=[0, -0.4, 0.75], size=[0.3, 0.3, 0.15])\nadd_proximity_sensor(sensor_path=\"/World/PickSensor\", position=[0.4, 0.4, 0.835], size=[0.06, 0.06, 0.06])\nsetup_pick_place_controller(robot_path=\"/World/Franka\", target_source=\"curobo\", sensor_path=\"/World/PickSensor\", belt_path=\"/World/ConveyorBelt\", source_paths=[\"/World/Item_1\"], destination_path=\"/World/Bin\", planning_obstacles=[\"/World/Table\", \"/World/ConveyorBelt\", \"/World/Bin\"])\n",
+  "role_defaults": {},
+  "simulate_args": {
+    "cube_path": "/World/Item_1",
+    "target_path": "/World/Bin",
+    "duration_s": 110
+  },
+  "verify_args": {
+    "stages": [
+      {
+        "robot_path": "/World/Franka",
+        "pick_path": "/World/ConveyorBelt",
+        "place_path": "/World/Bin",
+        "robot_kind": "franka_panda"
+      }
+    ],
+    "cube_path": "/World/Item_1"
+  }
+}
