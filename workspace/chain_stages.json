@@ -301,6 +301,15 @@
       "dir": "3-STAGE: source -> palletizer(mid) -> flat receiver",
       "handoff": "0.775->0.825->0.8->0.825 (1 cube)",
       "result": "GOLD 1/1+1/1+1/1 COMPLETE custody across 3 stations (cont.319-CHAIN5); KOMPOSITION-multiplier capstone"
+    },
+    {
+      "stages": [
+        "CP-CHAIN-FRANKA-SRC",
+        "CP-CHAIN-STACK-RECV"
+      ],
+      "dir": "Franka source -> stacker receiver",
+      "handoff": "flat 0.775->0.825 (1 cube)",
+      "result": "GOLD 1/1+1/1 ALL DELIVERED (cont.319-CHAIN6); completes receiver-type coverage (palletize/flat/stack)"
     }
   ]
 }
