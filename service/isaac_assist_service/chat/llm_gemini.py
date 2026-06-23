@@ -179,13 +179,50 @@ class GeminiProvider:
     with automatic retry and Gemini 3.x thought-signature round-trip.
     """
     def __init__(self, api_key: str, model: str = "gemini-robotics-er-1.6-preview"):
-        """Initialise with a Gemini API key, model name, and derived endpoint URL."""
+        """Initialise with a Gemini API key, model name, and derived endpoint URL.
+
+        OPT-IN Vertex AI mode (cont.319-28): when ``GEMINI_PROVIDER_VERTEX=1``
+        (a DEDICATED flag — NOT the genai-SDK's GOOGLE_GENAI_USE_VERTEXAI, which
+        the QA harness already sets and which would wrongly flip the live free-tier
+        provider) + GOOGLE_CLOUD_PROJECT / GOOGLE_CLOUD_LOCATION, route to the Vertex
+        ``generateContent`` endpoint with a GCP-ADC Bearer token instead of the
+        free-tier AI-Studio ``?key=`` endpoint — high RPM, no free-tier 429. The
+        deployment that opts in MUST also set a VERTEX-AVAILABLE model (e.g.
+        gemini-2.5-flash; the default gemini-robotics-er-1.6-preview is AI-Studio-only
+        and 404s on Vertex — verified 2026-06-23). DEFAULT (flag unset) is
+        byte-identical to the prior free-tier behaviour; the generateContent
+        request/response schema is identical, so the payload builder +
+        ``_parse_response`` are unchanged."""
+        import os as _os
         self.api_key = api_key
         self.model = model
-        self.base_url = (
-            f"https://generativelanguage.googleapis.com/v1beta/models/"
-            f"{self.model}:generateContent?key={self.api_key}"
-        )
+        self._use_vertex = (_os.environ.get("GEMINI_PROVIDER_VERTEX", "").lower() in ("1", "true", "yes"))
+        if self._use_vertex:
+            _proj = _os.environ.get("GOOGLE_CLOUD_PROJECT", "")
+            _loc = _os.environ.get("GOOGLE_CLOUD_LOCATION", "global")
+            _host = "aiplatform.googleapis.com" if _loc == "global" else f"{_loc}-aiplatform.googleapis.com"
+            self.base_url = (
+                f"https://{_host}/v1/projects/{_proj}/locations/{_loc}"
+                f"/publishers/google/models/{self.model}:generateContent"
+            )
+        else:
+            self.base_url = (
+                f"https://generativelanguage.googleapis.com/v1beta/models/"
+                f"{self.model}:generateContent?key={self.api_key}"
+            )
+
+    def _vertex_bearer(self) -> str:
+        """GCP-ADC access token for Vertex (cached on the class, refreshed when stale)."""
+        import google.auth
+        from google.auth.transport.requests import Request as _GAReq
+        creds = getattr(self.__class__, "_vertex_creds", None)
+        if creds is None:
+            creds, _ = google.auth.default(
+                scopes=["https://www.googleapis.com/auth/cloud-platform"])
+            self.__class__._vertex_creds = creds
+        if not creds.valid:
+            creds.refresh(_GAReq())
+        return creds.token
 
     async def complete(self, messages: List[Dict], context: Dict) -> LLMResponse:
         """Send a conversation to Gemini and return the parsed response.
@@ -285,7 +322,10 @@ class GeminiProvider:
             _att_t0 = _time_rt.monotonic()
             async with aiohttp.ClientSession() as session:
                 try:
-                    async with session.post(self.base_url, json=payload) as response:
+                    _headers = None
+                    if self._use_vertex:
+                        _headers = {"Authorization": "Bearer " + self._vertex_bearer()}
+                    async with session.post(self.base_url, json=payload, headers=_headers) as response:
                         _att_dt = _time_rt.monotonic() - _att_t0
                         if response.status == 200:
                             data = await response.json()
