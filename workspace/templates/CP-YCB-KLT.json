@@ -242,7 +242,7 @@
     ],
     "completeness": "all"
   },
-  "verified_status": "PARTIAL (fully real-asset cell cont.319o): real YCB foam_brick + real KLT tote in ONE cell. Brick picked + delivered to the tote xy [0,-0.38], UPRIGHT (tilt 4.9), RIGID HOLD, 0 plan_fails, scene_eyes excludes the tote mesh. BUT the brick PERCHES on the tote rim (z=0.925, base~0.896) instead of entering \u2014 the bigger object (8x5cm) catches the rim when released at rim level; the small cube clears the opening (CP-KLT-BIN cubes enter at 0.78, same hollow fix). descend-place-class: lower the object INTO the container before release. The real-asset WORKFLOW (real object -> real container) works for delivery-to-location; precise containerization of a larger object needs descend-place (task #50).",
+  "verified_status": "GENUINE 2026-06-23 (cont.319-REFUTED-ACCOUNTED re-verify): the prior PARTIAL (scene_eyes excludes the referenced tote mesh) is STALE \u2014 current scene_eyes RECORDS the referenced KLT tote footprint (named /World/Bin) and verifies xy-containment. Re-run: foam_brick CONVERGED+GRIPPED @104mm dxy=4mm, UPRIGHT (tilt 5.8deg), xy-IN-BIN=yes (settled z=0.925 on the real tote), plan_fails=0. Fully-real-asset cell (real YCB object -> real KLT container) GENUINE delivery, scene_eyes-verified.",
   "motion_controllers": {
     "verified": [
       "curobo"
