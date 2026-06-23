@@ -123,6 +123,25 @@ def full_dims(p):
         return [2 * sc[0], 2 * sc[1], 2 * sc[2]]
     return [0.05, 0.05, 0.05]
 
+# cont.319-YCBBBOX: a REFERENCED YCB Axis_Aligned asset has no procedural size/scale -> full_dims/_hasgeom
+# can't read it -> UNPARSED_GEOM. Look up the cached asset bbox (workspace/ycb_asset_bbox.json, built by the
+# one-time introspection) + its orientation-aware 3-tier jaw verdict so the static pre-gate covers real objects.
+import re as _re_y, json as _json_y, os as _os_y
+_YCB_CACHE = None
+def _ycb_jaw_lookup(g0, src):
+    global _YCB_CACHE
+    if _YCB_CACHE is None:
+        try:
+            _p = _os_y.path.join(_os_y.path.dirname(_os_y.path.dirname(_os_y.path.dirname(_os_y.path.abspath(__file__)))), "workspace", "ycb_asset_bbox.json")
+            _YCB_CACHE = _json_y.load(open(_p))
+        except Exception:
+            _YCB_CACHE = {}
+    _m = _re_y.search(r'add_reference\(prim_path=["\']' + _re_y.escape(g0) + r'["\'][^)]*YCB/Axis_Aligned/([0-9a-z_]+\.usd)', src or "")
+    if not _m:
+        return None
+    _rec = _YCB_CACHE.get(_m.group(1))
+    return _rec if (isinstance(_rec, dict) and _rec.get("verdict")) else None
+
 def _hasgeom(r):
     return bool(r and (r.get("scale") or r.get("size")))
 
@@ -157,6 +176,9 @@ def analyse(name):
     g0 = gpaths[0]
     gp = geom_for(g0, prims, loose)
     if not _hasgeom(gp):
+        _yl = _ycb_jaw_lookup(g0, src)
+        if _yl:
+            return {"tpl": name, "fam": fam, "verdict": _yl["verdict"], "grasped": g0, "ycb_size_mm": _yl.get("sorted_mm")}
         return {"tpl": name, "fam": fam, "verdict": "UNPARSED_GEOM", "grasped": g0}
     gdim = full_dims(gp)
     jaw_w = min(gdim[0], gdim[1])

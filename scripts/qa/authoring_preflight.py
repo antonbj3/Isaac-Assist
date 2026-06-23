@@ -25,7 +25,7 @@ def main():
     for tpl in tpls:
         print(f"=== PRE-FLIGHT {tpl} (static, no-Kit) ===")
         g = run("grasp_validate.py", tpl)
-        gv = "FAIL" if ("UNGRASPABLE" in g) else ("WARN" if "SUSPECT" in g else "PASS")
+        gv = "FAIL" if ("UNGRASPABLE" in g) else ("WARN" if ("SUSPECT" in g or "BORDERLINE" in g) else "PASS")
         gline = next((l for l in g.splitlines() if any(k in l for k in ("UNGRASPABLE","SUSPECT","graspable","geom-OK","jaw","pendulum"))), g.strip()[:90])
         print(f"  grasp_validate : {gv:4}  {gline.strip()[:100]}")
         # spawn-orientation: lint scans the whole corpus; run it + check if THIS tpl is flagged
