@@ -83,7 +83,12 @@ def chain_compat(src_name, recv_name, measured_z=None):
     # for fixed-height receivers only.
     _rs = _STAGES.get(recv_name) or {}
     _recv_hz = _rs.get("handoff_z")
-    _fixed_pick = bool(_rs.get("fixed_pick")) or any(w in recv_name.upper() for w in ("PALLETIZE", "STACK"))
+    # cont.319-CHAIN10: which receivers are HEIGHT-SENSITIVE (need source-z ~= their pick-surface)? MEASURED Δz
+    # tolerance: FRANKA receivers fail at Δ0.15 (chain2 palletize, chain10 flat-receive — the relayed cube falls
+    # from the raised delivery and the routine misses it) but work at Δ0.05; the UR10 receiver tolerated Δ0.20
+    # (chain8 — big arm, picks the cube where it lands). So the line is ROBOT-based: Franka receivers are fixed-
+    # height, UR10 is adaptive. (was palletize/stack-only -> too narrow, false-passed RAISED->flat-receive.)
+    _fixed_pick = (not _rs.get("adaptive")) and recv_robot != "UR10"
     if _fixed_pick and deliver_z is not None and _recv_hz is not None and abs(deliver_z - _recv_hz) > 0.10:
         return {"compatible": False, "height_verified": not height_inferred, "needs_measure": measure_target,
                 "reason": f"FIXED-height receiver {recv_name} picks at a SET surface z~{_recv_hz}; source delivers z={deliver_z} (Δ={round(abs(deliver_z-_recv_hz),3)}>0.10) — the relayed cube lands with no support at the pick surface and FALLS (verified RAISED-SRC->PALLETIZE = 0/1). Adaptive arm receivers tolerate this; fixed routines do not"}

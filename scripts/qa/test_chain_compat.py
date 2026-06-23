@@ -79,6 +79,17 @@ def main():
     else:
         print(f"  RAISED->PALLETIZE: INCOMPAT ok ({fix['reason'][:60]})")
 
+    # 6: FIXED-HEIGHT applies to ALL Franka receivers, not just palletize/stack (cont.319-CHAIN10). A RAISED
+    # source into a Franka FLAT receiver MUST be INCOMPAT (measured: RAISED-SRC -> franka-flat-receive 0/1, the
+    # relayed cube falls from 0.975 and the receiver misses it). Distinct from #5 (palletize) — locks that the
+    # height-sensitivity is robot-based (Franka fixed, UR10 adaptive), not routine-name-based.
+    fr = ch.chain_compat("CP-CHAIN-FRANKA-RAISED-SRC", "CP-NEW-franka-flat-receive")
+    if fr["compatible"]:
+        print("  RAISED->franka-flat: COMPAT (WRONG -- Franka flat receiver is height-sensitive, cube falls)")
+        fails.append("RAISED-SRC@0.975 -> franka-flat-receive@0.825 should be INCOMPAT (Δ0.15) but predicted COMPAT")
+    else:
+        print(f"  RAISED->franka-flat: INCOMPAT ok ({fr['reason'][:55]})")
+
     print(f"\n{n_pairs} proven pairs checked.")
     if fails:
         print("REGRESSION:")
