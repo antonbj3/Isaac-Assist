@@ -132,7 +132,7 @@ def _ycb_jaw_lookup(g0, src):
     global _YCB_CACHE
     if _YCB_CACHE is None:
         try:
-            _p = _os_y.path.join(_os_y.path.dirname(_os_y.path.dirname(_os_y.path.dirname(_os_y.path.abspath(__file__)))), "workspace", "ycb_asset_bbox.json")
+            _p = _os_y.path.join(_os_y.path.dirname(_os_y.path.abspath(__file__)), "ycb_asset_bbox.json")  # same dir as this script
             _YCB_CACHE = _json_y.load(open(_p))
         except Exception:
             _YCB_CACHE = {}
