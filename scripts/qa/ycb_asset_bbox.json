@@ -49,7 +49,8 @@
    68,
    102
   ],
-  "verdict": "GRASPABLE-STABLE(lie-flat grasps mid 68mm)"
+  "verdict": "GRASPABLE-STABLE(lie-flat grasps mid 68mm)",
+  "ground_truth": "VERIFIED-GRASPABLE (CP-YCB-MULTI; cont.319)"
  },
  "006_mustard_bottle.usd": {
   "size": [
@@ -101,7 +102,8 @@
    73,
    89
   ],
-  "verdict": "GRASPABLE-STABLE(lie-flat grasps mid 73mm)"
+  "verdict": "GRASPABLE-STABLE(lie-flat grasps mid 73mm)",
+  "ground_truth": "VERIFIED-GRASPABLE (CP-YCB-03 + CP-YCB-MULTI; cont.319)"
  },
  "010_potted_meat_can.usd": {
   "size": [
@@ -114,7 +116,8 @@
    84,
    102
   ],
-  "verdict": "BORDERLINE-EDGE(smallest 58mm fits but stable-pose mid 84mm >80 -> needs on-edge/regrasp)"
+  "verdict": "BORDERLINE-EDGE(smallest 58mm fits but stable-pose mid 84mm >80 -> needs on-edge/regrasp)",
+  "ground_truth": "VERIFIED-GRASPABLE-despite-borderline (squat can, [90,0,0] orients 58mm axis across jaw + stable; rotation-only control confirmed; cont.319)"
  },
  "011_banana.usd": {
   "size": [
@@ -127,7 +130,8 @@
    74,
    197
   ],
-  "verdict": "GRASPABLE-STABLE(lie-flat grasps mid 74mm)"
+  "verdict": "GRASPABLE-STABLE(lie-flat grasps mid 74mm)",
+  "ground_truth": "VERIFIED-GRASPABLE (lie-flat [90,0,0], scene_eyes delivered upright; cont.319)"
  },
  "019_pitcher_base.usd": {
   "size": [
@@ -270,6 +274,7 @@
    53,
    78
   ],
-  "verdict": "GRASPABLE-STABLE(lie-flat grasps mid 53mm)"
+  "verdict": "GRASPABLE-STABLE(lie-flat grasps mid 53mm)",
+  "ground_truth": "VERIFIED-GRASPABLE (CP-YCB-MULTI 3/3 + CP-YCB-SHELF; cont.319)"
  }
 }
