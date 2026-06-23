@@ -319,6 +319,15 @@
       "dir": "ROBOT-DIVERSITY: Franka source -> UR10 receiver",
       "handoff": "flat 0.775 (1 cube)",
       "result": "GOLD 1/1+1/1 COMPLETE custody (cont.319-CHAIN8); UR10 ADAPTED to the 0.775 delivery (not its native 0.975) -> confirms L3 adaptive-receiver model; cross-Kit isolates UR10 PhysX safely"
+    },
+    {
+      "stages": [
+        "CP-12",
+        "CP-CHAIN-PALLETIZE-RECV"
+      ],
+      "dir": "3-cube grid source -> palletizer receiver",
+      "handoff": "flat 0.825 (3 cubes)",
+      "result": "GOLD 3/3+3/3 COMPLETE custody (cont.319-CHAIN11); palletizer ARRANGES 3 relayed cubes in a grid (no stacking) -> clean, vs chain7 flat-receive STACKING which exploded the 3rd cube"
     }
   ]
 }
