@@ -1,0 +1,24 @@
+{
+  "task_id": "CP-YCB-BANANA-STATIC",
+  "goal": "ISOLATION (#50): YCB banana spawned STATIC on a table (no belt, no controller). Does the convexHull-collision banana settle stably or explode on its own? Localizes the CP-YCB-BANANA blowup to asset/collision vs belt-jitter vs grasp.",
+  "tools_used": [
+    "create_scene_baseline",
+    "create_prim",
+    "add_reference",
+    "apply_api_schema",
+    "simplify_collision",
+    "apply_physics_material"
+  ],
+  "code": "create_scene_baseline(include_ground=True, table_size=[2.0, 1.0])\ncreate_prim(prim_path=\"/World/Item_1\", prim_type=\"Xform\", position=[0.4, 0.0, 0.80])\nadd_reference(prim_path=\"/World/Item_1\", reference_path=\"/mnt/shared_data/isaac-sim-assets-complete-5.0.0/Assets/Isaac/5.0/Isaac/Props/YCB/Axis_Aligned/011_banana.usd\")\nfor api in (\"PhysicsRigidBodyAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n    apply_api_schema(prim_path=\"/World/Item_1\", schema_name=api)\napply_api_schema(prim_path=\"/World/Item_1/_11_banana\", schema_name=\"PhysicsCollisionAPI\")\nsimplify_collision(prim_path=\"/World/Item_1/_11_banana\", approximation=\"convexHull\")\napply_physics_material(prim_path=\"/World/Item_1/_11_banana\", material_name=\"rubber\")",
+  "code_template": "create_scene_baseline(include_ground=True, table_size=[2.0, 1.0])\ncreate_prim(prim_path=\"/World/Item_1\", prim_type=\"Xform\", position=[0.4, 0.0, 0.80])\nadd_reference(prim_path=\"/World/Item_1\", reference_path=\"/mnt/shared_data/isaac-sim-assets-complete-5.0.0/Assets/Isaac/5.0/Isaac/Props/YCB/Axis_Aligned/011_banana.usd\")\nfor api in (\"PhysicsRigidBodyAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n    apply_api_schema(prim_path=\"/World/Item_1\", schema_name=api)\napply_api_schema(prim_path=\"/World/Item_1/_11_banana\", schema_name=\"PhysicsCollisionAPI\")\nsimplify_collision(prim_path=\"/World/Item_1/_11_banana\", approximation=\"convexHull\")\napply_physics_material(prim_path=\"/World/Item_1/_11_banana\", material_name=\"rubber\")",
+  "role_defaults": {},
+  "simulate_args": {
+    "cube_path": "/World/Item_1",
+    "target_path": "/World/Item_1",
+    "duration_s": 60
+  },
+  "verify_args": {
+    "stages": [],
+    "cube_path": "/World/Item_1"
+  }
+}
