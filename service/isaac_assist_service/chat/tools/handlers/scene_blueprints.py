@@ -832,7 +832,11 @@ async def _handle_nucleus_browse(args: Dict) -> Dict:
     import json as _json
     import re as _re
     from .. import kit_tools
-    nucleus_path = args.get("path", "/NVIDIA/Assets/Isaac/5.1")
+    # Version-aware browse default (Anton 2026-06-23): a hardcoded /Isaac/5.1 default
+    # browses a non-existent dir in a 5.0/6.x env -> empty discovery. Use the detected
+    # leading Isaac version (ISAAC_ASSETS_VERSION / ASSETS_ROOT_PATH / newest-known).
+    from ._shared import _isaac_asset_versions as _iav
+    nucleus_path = args.get("path") or f"/NVIDIA/Assets/Isaac/{_iav()[0]}"
     # Sanitize: strip shell metacharacters, only allow alphanumeric + / . _ -
     if not _re.match(r'^[a-zA-Z0-9/_. :-]+$', nucleus_path):
         return {"error": "Invalid path characters"}
