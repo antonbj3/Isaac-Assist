@@ -48,7 +48,7 @@
       "curobo"
     ]
   },
-  "verified_status": "STANDALONE Kit-VERIFIED 1/1 2026-06-17 (cont.230, gate_one stable_ok: cube on /World/Tray at 0.775). Also chained cross-Kit: chain_xkit_gate.py CP-CHAIN-FRANKA-SRC CP-CHAIN-FLAT = 1/1 + 1/1 ALL DELIVERED (2-station Franka line). Franka FLAT-tray SOURCE (CP-CHAIN-FLAT pick regime, destination = flat Tray not deep Bin) for cross-Kit composition chains. Verify: gate_one.py CP-CHAIN-FRANKA-SRC on a freshly-restarted Kit (cube reaches /World/Tray). Chain: chain_xkit_gate.py CP-CHAIN-FRANKA-SRC CP-CHAIN-FLAT (2-station Franka cross-Kit line; flat-deliver 0.775 <-> flat-pick 0.775 per the handoff-height rule).",
+  "verified_status": "CHAIN-VERIFIED 2026-06-23 (cont.319-YCBCHAIN): real-object chain SOURCE proven end-to-end \u2014 delivers a YCB brick 1/1 then the cross-Kit relay carries it to FLAT-YCB-RECV (1/1, complete custody) AND to PALLETIZE-RECV (1/1, complete custody). Was STANDALONE-only; now chain-proven as a real-object source across 2 receiver types. [prior: STANDALONE Kit-VERIFIED 1/1 2026-06-17 (cont.230, gate_one s]",
   "intent": {
     "pattern_hint": "pick_place",
     "structural_features": {
