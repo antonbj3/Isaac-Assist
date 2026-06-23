@@ -88,7 +88,14 @@ Each target canonical = one row in the taxonomy, spec'd against the Phase-1 mall
 
 ## 7. Bidirectional abstraction — troubleshooting must be abstracted too (Anton, 2026-06-03)
 
-The product's user is an LLM; it must be able to TROUBLESHOOT, not just build. Abstraction does not hurt that — IF it is **bidirectional**. Verified gap: 56 high-level CONSTRUCTION tools, but diagnostics are infra-level (check_collisions, diagnose_physics_error, check_tf_health, check_vram, inspect_graph) + pass/fail gates (verify_pickplace_pipeline / function-gate). **No task-level "why did the pick-place / grasp / delivery fail" tool exists.** Construction is abstracted; diagnosis is not. (All of review-#2's RCA — +Y place-bias, belt ride-off, grasp-eject — was done MANUALLY by reading scene_timeseries; the LLM cannot do that as a tool today.)
+> **⚠️ STATUS UPDATE 2026-06-23 — §7–9 PLAN EXECUTED; THE DIAGNOSE LOOP IS CLOSED. Do not re-derive "the LLM is blind" from the present-tense below.** The "build diagnose_task_outcome to close the loop" plan in §7–9 was carried out. The LLM-callable diagnostic stack now exists, is registered, and is verified working:
+> - `observe_scene` — LIVE scene_eyes (`scripts/qa/scene_eyes.py --attach`) on the LLM's own built scene → the EXACT QA truth tool, no analysis divergence (handler `diagnostics.py:_handle_observe_scene`, built for "#28 gap 2, Anton").
+> - `diagnose_task_outcome` — the §9 WHY-classifier, productized in `qa/task_outcome.py` (P2-06); reads a recorded `ts_<template>.json` and grades each object DELIVERED_CLEAN / TOPPLED_IN_DEST / RODE_OFF_BELT / NOT_PICKED / FLUNG_TO_FLOOR / DROP_IMPRECISE_OR_EJECT from raw motion. Verified sane on 159 saved artifacts + `tests/test_task_outcome.py`.
+> - `static_eyes` (pre-build no-Kit geometry), `diagnose_pick_execution` (controller-side ctrl:* localizer), `trace_goal_frame` (planner goal trace), `verify_pickplace_pipeline` (gate). 51 observation/verify tools registered in total.
+>
+> So §7–9's "no task-level tool exists / the loop is NOT closed / greenlight-ready but unbuilt" is **stale plan-tense, not current state**. An Explore survey on 2026-06-23 mis-read this doc as a live gap and reported "the LLM can BUILD but cannot OBSERVE" — wrong. Lesson (the doc's own §8 standing note): verify each old-research claim against the live system before it becomes a plan dependency. The genuinely-open links below (PERCEIVE multimodal wiring, conveyor-sync handler fix §8.2, body toolify §4) are real; the DIAGNOSE link is **closed**.
+
+The product's user is an LLM; it must be able to TROUBLESHOOT, not just build. Abstraction does not hurt that — IF it is **bidirectional**. Verified gap: 56 high-level CONSTRUCTION tools, but diagnostics are infra-level (check_collisions, diagnose_physics_error, check_tf_health, check_vram, inspect_graph) + pass/fail gates (verify_pickplace_pipeline / function-gate). **No task-level "why did the pick-place / grasp / delivery fail" tool exists.** Construction is abstracted; diagnosis is not. ~~[2026-06-03]~~ → **RESOLVED 2026-06-23: `diagnose_task_outcome` + `observe_scene` now provide exactly this task-level WHY (see the §7 banner).** (All of review-#2's RCA — +Y place-bias, belt ride-off, grasp-eject — was done MANUALLY by reading scene_timeseries; the LLM cannot do that as a tool today.)
 
 **Three layers of troubleshooting that abstraction ENABLES when bidirectional:**
 1. **Prevention** — high-level tools encode correct patterns → fewer failures (can't forget the API set if `assign_physics_profile` owns it). Abstraction shrinks the debug surface.
@@ -117,7 +124,7 @@ Verified status of each stage (skeptical):
 | RETRIEVE/RATIFY | template retrieval + confidence-gate + ratify/HIL | exists; hit@1≈0.83 on a 30-prompt bench (2026-05-27, **re-verify — bench is stale**). |
 | BUILD | 407 registered tools | real but **125 unused (a third dead)**; the "body" (scene baseline/rigid-body/palletizer) is ~58% raw copy-paste (verified §1). |
 | SIMULATE | Kit RPC, single-tenant | the serial bottleneck (1 run at a time) — shaped this whole session. |
-| **DIAGNOSE** | scene_observer.py (2299L, 24 detectors) + scene_timeseries.py (531L) | **BOTH QA-only — NEITHER is an LLM-callable tool (verified).** The loop is NOT closed: the LLM can build but cannot see/explain its own result. ← the weakest link. |
+| **DIAGNOSE** | ~~scene_observer.py + scene_timeseries.py, QA-only~~ → **CLOSED 2026-06-23** | **LLM-callable now: `observe_scene` (=live scene_eyes --attach), `diagnose_task_outcome` (scene_timeseries WHY-classifier, P2-06), `static_eyes`, `diagnose_pick_execution`, `trace_goal_frame`.** The loop IS closed; the LLM sees what the gold-gate sees. (Was the weakest link in the 2026-06-03 draft.) |
 | ITERATE | de-abstract (codegen emit USD) + re-run | escape-hatch partially present (codegen tools); no in-loop diagnose to drive it. |
 
 **The single highest-leverage near-term move is CLOSING THE LOOP at DIAGNOSE — above even the construction toolify.** Reason: without an LLM-callable diagnostic, the LLM cannot troubleshoot *anything* autonomously — the entire review-#2 RCA (place-bias, belt ride-off, grasp-eject) was done by a human reading positions. Construction abstractions make building cleaner, but the product's value ("an LLM that works against the scene") is gated on the LLM being able to OBSERVE and EXPLAIN, not just build.
@@ -147,7 +154,9 @@ window / belt-index pause-on-claim in pick_place.py's _next_cube / _cube_to_pick
 
 ---
 
-## 9. Spec: `diagnose_task_outcome` — the loop-closing tool (greenlight-ready, 2026-06-03)
+## 9. Spec: `diagnose_task_outcome` — the loop-closing tool (✅ SHIPPED — was "greenlight-ready, 2026-06-03")
+
+> **✅ BUILT & REGISTERED (2026-06-23 verification).** This spec was implemented: `service/isaac_assist_service/qa/task_outcome.py` (`classify_timeseries` + `diagnose`, the §9.1 WHY-classifier productized), handler `_handle_diagnose_task_outcome` (diagnostics.py), schema `diagnose_task_outcome` (tool_schemas.py), unit test `tests/test_task_outcome.py`. The live complement `observe_scene` (scene_eyes --attach) was added for the in-loop case. The spec below is now DESIGN HISTORY, not a TODO.
 
 The #1 action (§8). Productize `scene_timeseries.py` (the current time-series eyes) into a registered LLM-callable tool so the LLM
 diagnoses in task terms — the RCA a human did all night, as one tool-call. Vision optional (correct-data-reading is the lever).
