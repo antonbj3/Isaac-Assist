@@ -66,15 +66,30 @@ def bb(p):
     r=UsdGeom.Imageable(pr).ComputeWorldBound(0,UsdGeom.Tokens.default_).ComputeAlignedRange()
     if r.IsEmpty(): return None
     return [float(r.GetMin()[i]) for i in range(3)],[float(r.GetMax()[i]) for i in range(3)]
+import math as _cm
+def ctilt(p):
+    # cont.319-CHAINTILT: a delivered cube's tilt from world-up (angle of its local +Z vs world +Z, 0-180).
+    # The position-only delivered-count (below) HID topples — a cube TOPPLED inside the target bbox still
+    # counted as delivered (the mandate's "delivered-count LJUGER"). This surfaces orientation so a chain
+    # gold is no longer blind to a toppled delivery.
+    pr=stage.GetPrimAtPath(Sdf.Path(p))
+    if not pr or not pr.IsValid(): return None
+    _m3=UsdGeom.Xformable(pr).ComputeLocalToWorldTransform(0).ExtractRotationMatrix()
+    _uz=_m3.GetRow(2)
+    _n=(float(_uz[0])**2+float(_uz[1])**2+float(_uz[2])**2)**0.5 or 1.0
+    return round(_cm.degrees(_cm.acos(max(-1.0,min(1.0,float(_uz[2])/_n)))),1)
 TARGET=__TARGET__; CUBES=__CUBES__; PLAY=__PLAY__
 if PLAY:
     app=omni.kit.app.get_app(); tl=omni.timeline.get_timeline_interface(); tl.play()
     for _ in range(5000): app.update()
-tb=bb(TARGET); res={"target":TARGET,"delivered":0,"total":len(CUBES),"poses":{},"delivered_paths":[]}
+tb=bb(TARGET); res={"target":TARGET,"delivered":0,"delivered_upright":0,"total":len(CUBES),"poses":{},"tilts":{},"delivered_paths":[],"toppled_delivered":[]}
 for cp in CUBES:
-    c=cz(cp); res["poses"][cp]=c
+    c=cz(cp); res["poses"][cp]=c; _ti=ctilt(cp); res["tilts"][cp]=_ti
     if tb and c and tb[0][0]-0.06<=c[0]<=tb[1][0]+0.06 and tb[0][1]-0.06<=c[1]<=tb[1][1]+0.06 and c[2]>tb[0][2]-0.04:
         res["delivered"]+=1; res["delivered_paths"].append(cp)
+        # a box flat-on-a-face reads tilt~0 (upright) or ~180 (inverted, still flat); on-side = ~90 = TOPPLED
+        if _ti is None or _ti<45 or _ti>135: res["delivered_upright"]+=1
+        else: res["toppled_delivered"].append(cp)
 print("MEASURE "+json.dumps(res))
 '''
 
@@ -293,7 +308,7 @@ async def main():
     results = []
     r0 = await run_stage0(specs[0]); r0["stage"] = 0; r0["name"] = specs[0]
     results.append(r0)
-    print(f"  stage0 {specs[0]}: delivered={r0['delivered']}/{r0['total']} handoff={r0.get('handoff')}")
+    print(f"  stage0 {specs[0]}: delivered={r0['delivered']}/{r0['total']} (upright={r0.get('delivered_upright','?')}{(' ⚠️TOPPLED-DELIVERED='+str(r0['toppled_delivered'])) if r0.get('toppled_delivered') else ''}) handoff={r0.get('handoff')}")
     handoff = r0.get("handoff", {})
     for i in range(1, len(specs)):
         if not handoff:
@@ -304,7 +319,7 @@ async def main():
             print("CHAIN_XKIT ABORT: kit_restart failed"); break
         rk = await run_stage_k(i, specs[i], handoff); rk["stage"] = i; rk["name"] = specs[i]
         results.append(rk)
-        print(f"  stage{i} {specs[i]}: delivered={rk['delivered']}/{rk['total']} auto_offset={rk.get('auto_offset')} poses={rk.get('poses')}")
+        print(f"  stage{i} {specs[i]}: delivered={rk['delivered']}/{rk['total']} (upright={rk.get('delivered_upright','?')}{(' ⚠️TOPPLED-DELIVERED='+str(rk['toppled_delivered'])) if rk.get('toppled_delivered') else ''}) auto_offset={rk.get('auto_offset')} poses={rk.get('poses')}")
         handoff = {cp: rk["poses"][cp] for cp in rk.get("delivered_paths", []) if rk["poses"].get(cp)}  # cont.319ww: delivered-only
     print("CHAIN_XKIT STAGES:")
     for r in results:
@@ -343,6 +358,14 @@ async def main():
         "ALL DELIVERED end-to-end (faithful cross-Kit relay)" if all_ok else "INCOMPLETE"))
     print("CHAIN_CUSTODY: %d parts, %d with COMPLETE end-to-end custody across all %d stations -> /tmp/chain_custody.json"
           % (len(_custody), _ncomp, len(results)))
+    # cont.319-CHAINTILT: surface ORIENTATION — the position-only delivered-count counts a TOPPLED-in-bbox cube as
+    # delivered (the mandate's "delivered-count LJUGER"). A real chain gold needs delivered == delivered_upright.
+    _topp = {r["name"]: r.get("toppled_delivered") for r in results if r.get("toppled_delivered")}
+    _ndel = sum(r.get("delivered", 0) for r in results); _nup = sum(r.get("delivered_upright", 0) for r in results)
+    if _topp:
+        print("CHAIN_ORIENTATION: ⚠️ only %d/%d delivered objects UPRIGHT — TOPPLED-but-in-bbox at %s (position-count HID these; NOT a clean gold)" % (_nup, _ndel, _topp))
+    else:
+        print("CHAIN_ORIENTATION: all %d delivered objects UPRIGHT (orientation-verified, no toppled-in-bbox deliveries)" % _ndel)
     if _custody and _ncomp < len(_custody):
         print("CHAIN_END_TO_END: WARNING only %d/%d parts completed the FULL chain — %d LOST at a handoff (custody gap; "
               "the per-stage counts HID it — likely an N-mismatch, source-N > receiver-N)." % (_ncomp, len(_custody), len(_custody) - _ncomp))
