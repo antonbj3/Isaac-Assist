@@ -351,11 +351,12 @@ async def main():
     json.dump({"chain": list(specs), "n_stations": len(results), "parts": list(_custody.values())},
               open("/tmp/chain_custody.json", "w"), indent=1)
     e2e_ok = bool(_custody) and _ncomp == len(_custody)   # every part that entered the chain completed EVERY station
+    _no_topple = not any(r.get("toppled_delivered") for r in results)   # cont.319-CHAINTILT: a clean gold needs UPRIGHT deliveries, not just position-in-bbox
     all_ok = (all(r.get("delivered", 0) >= r.get("total", 1) for r in results)
-              and len(results) == len(specs) and e2e_ok)
+              and len(results) == len(specs) and e2e_ok and _no_topple)
     print("CHAIN_XKIT SUMMARY: %d stage(s), %s — %s" % (
         len(results), " + ".join("%d/%d" % (r.get("delivered", 0), r.get("total", 1)) for r in results),
-        "ALL DELIVERED end-to-end (faithful cross-Kit relay)" if all_ok else "INCOMPLETE"))
+        "ALL DELIVERED end-to-end (faithful cross-Kit relay)" if all_ok else ("INCOMPLETE — TOPPLED deliveries (position-in-bbox but not upright)" if (not _no_topple and e2e_ok) else "INCOMPLETE")))
     print("CHAIN_CUSTODY: %d parts, %d with COMPLETE end-to-end custody across all %d stations -> /tmp/chain_custody.json"
           % (len(_custody), _ncomp, len(results)))
     # cont.319-CHAINTILT: surface ORIENTATION — the position-only delivered-count counts a TOPPLED-in-bbox cube as
