@@ -355,6 +355,15 @@
       "dir": "REAL-OBJECT chain -> REAL-FIXTURE (warehouse rack)",
       "handoff": "flat 0.776 -> real shelf deck 0.85",
       "result": "GOLD 1/1+1/1 COMPLETE custody (cont.319-CHAINSHELF); a YCB brick chains cross-Kit then the receiver places it on a REAL warehouse rack via drop_fixture (controller auto-measures the deck z=0.85). Combines chain-relay + real-fixture capabilities = realistic warehouse flow"
+    },
+    {
+      "stages": [
+        "CP-12",
+        "CP-CHAIN-SHELF-RECV"
+      ],
+      "dir": "MULTI-OBJECT warehouse flow: 3-cube grid source -> chain -> auto-distribute on REAL rack",
+      "handoff": "grid -> real shelf deck 0.85",
+      "result": "GOLD 3/3+3/3 COMPLETE custody (cont.319-MULTISHELF); 3 relayed cubes auto-distributed (drop_fixture) in a tight collision-safe row on the REAL warehouse rack deck (all z=0.85, x-spacing ~0.07m). The full realistic multi-object warehouse flow: pick N -> handoff chain -> auto-distribute grid on a real rack"
     }
   ]
 }
