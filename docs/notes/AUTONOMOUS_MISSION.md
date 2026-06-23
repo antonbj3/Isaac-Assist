@@ -8037,3 +8037,34 @@ cont.319-CHAIN9 (2026-06-23) — REVERSE robot-diversity chain CP-CHAIN-UR10-SRC
 cont.319-CHAIN10 (2026-06-23) — ★ 2nd L3 FALSE-POSITIVE caught + fixed (false-success-vakt on my own model): RAISED-SRC@0.975 -> CP-NEW-franka-flat-receive@0.825 predicted COMPAT but chained 0/1 (cube fell to 0.825, receiver missed it). My fixed-vs-adaptive model was TOO NARROW (palletize/stack-only) — flat-receive is ALSO height-sensitive. MEASURED tolerance is ROBOT-based: FRANKA receivers fail at Δ0.15 (chain2 palletize, chain10 flat), work at Δ0.05 (chain1,3); the UR10 receiver tolerates Δ0.20 (chain8 — big adaptive arm). Refined chain_compat: fixed-height check applies to ALL non-UR10 (Franka) receivers (+ a catalog adaptive override). VERIFIED: all 6 measured chains now match reality; regression 25 proven + 6 neg-controls (deep-bin/floor/capacity/palletize-Δ/franka-flat-Δ) all pass. Two false-positives in my reach-range model caught by RUNNING chains + refuting predictions vs reality — the chain_compat pre-filter is now empirically robust across arm/grid sources x palletize/flat/stack/UR10 receivers x matched/mismatched heights.
 
 cont.319-CHAIN11 (2026-06-23) — CP-12 (3-cube grid) -> CP-CHAIN-PALLETIZE-RECV = 3/3+3/3 COMPLETE custody (palletizer ARRANGES the 3 relayed cubes in a grid, all z=0.785). ★ This pins the cont.319-CHAIN7 explosion: it was STACKING-specific (flat-receive STACKS the relayed cubes -> the 3rd stack level NaN-exploded), NOT a relay/general issue — palletizing 3 relayed cubes (no stacking) is clean. So multi-cube relay is sound; the edge is stacking 3+ relayed cubes (residual velocity from teleport + tall stack). 9 verified chain flows now. The chain_compat pre-filter (25 proven + 6 neg-controls) + the chain mechanism are both validated; the only multi-cube edge is 3+-cube STACKING receivers.
+
+═══════════════════════════════════════════════════════════════════════
+NEXT-SESSION GUIDE (2026-06-23, after the composition direction is COMPLETE)
+═══════════════════════════════════════════════════════════════════════
+COMPLETE + VERIFIED (do NOT re-grind — it is exhaustive):
+  • Parallel composition: 89 scene_eyes golds, 2-5 cell; envelope mapped (light-robust -> 5-cell;
+    bin-drop class CP-28/29/50 fragile at 3+ cell — documented -0.16m curobo bias, #56 LOW).
+  • Chain composition: 9 verified flows (2+3 stage; arm/grid/real-asset sources x palletize/flat/
+    stack/UR10 receivers; robot-diversity BOTH directions); proven_chains registry has 24 entries.
+  • chain_compat pre-filter HARDENED: reach-range + robot-based fixed-height (Franka receivers need
+    |src_z - recv_handoff_z|<=0.10; UR10 adaptive) + capacity + deep-bin. test_chain_compat.py:
+    25 proven + 6 neg-controls, all green. 2 false-positives were caught by RUNNING chains.
+  • L4 mobile-handoff keystone: kinematic-carry (navigate_to attach_cargo), nav_gate cargo gate.
+  • Tools hardened: occupancy 3/3 (5.x API), measure_fixture, eyes_gold_gate xy-containment.
+
+NEXT SUBSTANTIAL DIRECTIONS (each needs FRESH context — they are NEW builds, not grinding):
+  1. #50 Real-object DEEP: descend-to-place, complex-mesh grasp, LLM-driven pick (real-asset
+     manipulation = platform differentiation). Build/research.
+  2. #51 Real-asset MEGA: conveyors/dimension-handling/humanoids/forklift/large scenes. Breadth.
+  3. #57 Dual-sensor stochasticity = the PROCESS-GLOBAL cuRobo lock (composer.py:309; per-instance
+     planners tried+reverted ~line 160). HIGHEST-LEVERAGE (root of bin-drop perturbation + dual-
+     sensor + contention degradation). Deep planning-architecture work.
+  4. #59 G1 gotcha flow: BLOCKED — Nova Carter has no payload deck/tall mast; needs a flat AGV asset.
+  KNOWN NICHE EDGES (low priority): chain stacking 3+ relayed cubes NaN-explodes (cont.319-CHAIN7,
+     stacking-specific; palletize-arrange is fine); #56 bin-drop needs curobo-generator+role_defaults work.
+
+★ CRITICAL LESSONS THIS SESSION (verify the code path / build field that ACTUALLY runs):
+  • Canonical templates build from code_template+role_defaults, NOT the `code` field (silent no-op).
+  • pick_place has SEPARATE rmpflow vs curobo state machines — edit the one the template uses.
+  • After ONE refuted fix, STOP + instrument the causal path / query the built stage before fix #2.
+
