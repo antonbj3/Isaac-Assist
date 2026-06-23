@@ -6570,6 +6570,21 @@ def _cube_to_pick():
             return cands[0][1]
         except Exception:
             pass
+    # DEPALLETIZE (cont.319): top-down pick order. For a vertical stack at the
+    # same xy, the default _d_sensor sort ties arbitrarily -> a bottom cube can
+    # be claimed first, collapsing the stack. Picking the HIGHEST remaining cube
+    # first means each removal never destabilises the cubes below. Sort by world-z
+    # DESCENDING. GATED on TASK_MODE=="depalletize" -> every belt/sensor/sort/pull
+    # template is byte-identical (branch skipped).
+    if TASK_MODE == "depalletize" and len(cands) > 1:
+        try:
+            def _zneg(_c):
+                _w = _world_pos(_c[1])
+                return -float(_w[2]) if _w is not None else 1e9
+            cands.sort(key=_zneg)
+            return cands[0][1]
+        except Exception:
+            pass
     cands.sort(); return cands[0][1]
 
 def _bin_bounds(dest_path=None):
