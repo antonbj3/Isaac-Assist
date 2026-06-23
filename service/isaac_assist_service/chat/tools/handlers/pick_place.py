@@ -5023,53 +5023,7 @@ def _bin_drop_pos(cube_path=None):
             if _rp and _rp.IsValid():
                 _bb = UsdGeom.Imageable(_rp).ComputeWorldBound(0, UsdGeom.Tokens.default_).ComputeAlignedRange()
                 _mn, _mx = _bb.GetMin(), _bb.GetMax()
-                _cx, _cy = (_mn[0]+_mx[0])/2.0, (_mn[1]+_mx[1])/2.0
-                # Bin-overfill raster (cont.319-RASTERDROP): > _RASTER_MIN same-class
-                # cubes all dropped at one bin CENTRE pile into an unstable column
-                # that cascades (MEASURED size-weight LightBin: 6 cubes -> 4 tilt + 1
-                # topple-out, N-of-2 deterministic). Spread them across the bin floor.
-                # <= _RASTER_MIN keeps the exact centre-drop -> ZERO regression for
-                # balanced sorters (color-3lane 3/bin), single-bin DEST_PATH cells
-                # (no COLOR_ROUTING), and explicit-DROP_TARGETS stackers (return early).
-                _RASTER_MIN = 4
-                _dropz = float(_mx[2]) + 0.05
-                _members = [_sp for _sp in SOURCE_PATHS if _destination_path_for(_sp) == COLOR_ROUTING[_col]]
-                if len(_members) > _RASTER_MIN and cube_path in _members:
-                    _csz = 0.06
-                    try:
-                        _cbb = UsdGeom.Imageable(stage.GetPrimAtPath(cube_path)).ComputeWorldBound(0, UsdGeom.Tokens.default_).ComputeAlignedRange()
-                        _csz = max(float(_cbb.GetMax()[0]-_cbb.GetMin()[0]), float(_cbb.GetMax()[1]-_cbb.GetMin()[1]))
-                    except Exception:
-                        pass
-                    # Count-sized ~square grid (ceil(sqrt(n)) cols), inset ONE cube
-                    # from each wall and spread EVENLY across the interior. The prior
-                    # max-columns grid pushed edge slots into the walls -> cubes bounced
-                    # inward onto neighbours (MEASURED: Cube_3/4 dxy=0.013 overlap -> tip).
-                    _n = len(_members)
-                    _ncol = 1
-                    while _ncol * _ncol < _n:
-                        _ncol += 1
-                    _nrow = (_n + _ncol - 1) // _ncol
-                    _cap = max(1, _ncol * _nrow)
-                    _idx = _members.index(cube_path)
-                    _layer = _idx // _cap
-                    _s = _idx % _cap
-                    _row = _s // _ncol
-                    _colp = _s - _row * _ncol
-                    _ux = float(_mx[0]-_mn[0]) - 2.0 * _csz
-                    _uy = float(_mx[1]-_mn[1]) - 2.0 * _csz
-                    if _ncol > 1:
-                        _cx = _cx - _ux * 0.5 + (_ux / (_ncol - 1)) * _colp
-                    if _nrow > 1:
-                        _cy = _cy - _uy * 0.5 + (_uy / (_nrow - 1)) * _row
-                    # Release just BELOW the bin rim (+ one cube per layer), not rim+5cm:
-                    # the default rim+0.05 drops a 5cm cube ~9cm onto the floor and it
-                    # tips on landing (MEASURED: raster xy alone -> 4/6 flat-in-bin).
-                    # _mx[2] is the rim; -0.02 puts release ~3cm above the floor rest
-                    # (interior floor sits near bin centre, observed single-cube rest
-                    # ~0.79 vs rim 0.825) -> gentle placement, no tip.
-                    _dropz = float(_mx[2]) - 0.02 + _csz * _layer
-                return np.array([_cx, _cy, _dropz], dtype=np.float32)
+                return np.array([(_mn[0]+_mx[0])/2, (_mn[1]+_mx[1])/2, float(_mx[2]) + 0.05], dtype=np.float32)
     if DROP_TARGET is not None: return np.array(DROP_TARGET, dtype=np.float32)
     # Color-routing: pick destination per cube. Falls back to DEST_PATH.
     dest = _destination_path_for(cube_path) if cube_path else DEST_PATH
