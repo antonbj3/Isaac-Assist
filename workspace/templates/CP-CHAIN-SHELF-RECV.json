@@ -32,5 +32,5 @@
     ],
     "cube_path": "/World/Cube_1"
   },
-  "verified_status": "CHAIN-VERIFIED 2026-06-23 (cont.319-CHAINSHELF): chain receiver delivers a relayed YCB brick onto a REAL warehouse rack via drop_fixture (controller auto-measures the deck) -> 1/1 COMPLETE end-to-end custody, object on the shelf deck z=0.85. NEW capability: chain -> real-fixture."
+  "verified_status": "CHAIN-VERIFIED 2026-06-23 (cont.319-CHAINSHELF): chain receiver delivers a relayed YCB brick onto a REAL warehouse rack via drop_fixture (controller auto-measures the deck) -> 1/1 COMPLETE end-to-end custody, object on the shelf deck z=0.85. NEW capability: chain -> real-fixture. \u2605 scene_eyes-HARDENED: standalone scene_eyes confirms the object placed UPRIGHT (tilt 7.8deg) on the real rack deck z=0.850, CONVERGED+GRIPPED, plan_fails=0 -> mandate-compliant gold (delivery+custody by chain gate, orientation by scene_eyes)."
 }
