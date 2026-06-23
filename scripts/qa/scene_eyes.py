@@ -417,6 +417,13 @@ _bin_bboxes_rec = []
 try:
     _bcrec = UsdGeom.BBoxCache(0, [UsdGeom.Tokens.default_])
     for _prrec in stage.Traverse():
+        # cont.319-BINSCOPE: in compose/focus mode, record ONLY the FOCUS instance's bins. Without this,
+        # stage.Traverse() picks up a SIBLING instance's bin (e.g. inst0 named /World/inst0/Bin) and the
+        # xy-containment check then false-REJECTs the focus cell's deliveries against the wrong-instance bin
+        # (caught: CP-YCB-BANANA+CP-50 compose -> CP-50's trays unrecorded, its cubes checked vs inst0's banana
+        # bin 2.8m away -> false REJECT). FOCUS="" (non-compose) -> unchanged/byte-identical. Mirrors L140.
+        if FOCUS and not str(_prrec.GetPath()).startswith(FOCUS + "/"):
+            continue
         if any(_k in _prrec.GetName().lower() for _k in ("bin", "tote", "hopper", "bucket", "crate")):   # cont.319cc audit #4: case-INSENSITIVE (was 'Bin' only -> a 'dropbin'/lowercase container went unrecorded) + 'crate' (deep collection container). Flat surfaces (pallet/tray/shelf) deliberately EXCLUDED so their topples stay rejects.
             _rrec = _bcrec.ComputeWorldBound(_prrec).ComputeAlignedRange()
             if not _rrec.IsEmpty():
