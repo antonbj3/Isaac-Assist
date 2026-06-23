@@ -328,6 +328,15 @@
       "dir": "3-cube grid source -> palletizer receiver",
       "handoff": "flat 0.825 (3 cubes)",
       "result": "GOLD 3/3+3/3 COMPLETE custody (cont.319-CHAIN11); palletizer ARRANGES 3 relayed cubes in a grid (no stacking) -> clean, vs chain7 flat-receive STACKING which exploded the 3rd cube"
+    },
+    {
+      "stages": [
+        "CP-CHAIN-FRANKA-SRC-YCB",
+        "CP-CHAIN-FLAT-YCB-RECV"
+      ],
+      "dir": "REAL-OBJECT chain: YCB brick source -> flat YCB receiver",
+      "handoff": "flat 0.776",
+      "result": "GOLD 1/1+1/1 COMPLETE custody (cont.319-YCBCHAIN); the cross-Kit relay re-instantiates a REFERENCED YCB MESH (not just a primitive cube) faithfully -> real-object chains work, extending KOMPOSITION x real-object to the CHAIN multiplier"
     }
   ]
 }
