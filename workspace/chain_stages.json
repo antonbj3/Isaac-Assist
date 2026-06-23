@@ -346,6 +346,15 @@
       "dir": "REAL-OBJECT chain -> STRUCTURED receiver",
       "handoff": "flat 0.776 -> palletizer",
       "result": "GOLD 1/1+1/1 COMPLETE custody (cont.319-YCBCHAIN2); a referenced YCB brick survives the relay INTO a palletizer (structured-slot) receiver -> real-object chains robust across receiver TYPES (flat + structured)"
+    },
+    {
+      "stages": [
+        "CP-CHAIN-FRANKA-SRC-YCB",
+        "CP-CHAIN-SHELF-RECV"
+      ],
+      "dir": "REAL-OBJECT chain -> REAL-FIXTURE (warehouse rack)",
+      "handoff": "flat 0.776 -> real shelf deck 0.85",
+      "result": "GOLD 1/1+1/1 COMPLETE custody (cont.319-CHAINSHELF); a YCB brick chains cross-Kit then the receiver places it on a REAL warehouse rack via drop_fixture (controller auto-measures the deck z=0.85). Combines chain-relay + real-fixture capabilities = realistic warehouse flow"
     }
   ]
 }
