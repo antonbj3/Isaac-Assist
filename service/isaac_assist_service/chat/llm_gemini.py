@@ -178,7 +178,7 @@ class GeminiProvider:
     keys from OpenAI tool parameter schemas.  Provides tool/function calling
     with automatic retry and Gemini 3.x thought-signature round-trip.
     """
-    def __init__(self, api_key: str, model: str = "gemini-robotics-er-1.6-preview"):
+    def __init__(self, api_key: str, model: str = "gemini-2.5-flash"):
         """Initialise with a Gemini API key, model name, and derived endpoint URL.
 
         OPT-IN Vertex AI mode (cont.319-28): when ``GEMINI_PROVIDER_VERTEX=1``
