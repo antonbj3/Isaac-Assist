@@ -31,7 +31,10 @@ async def main():
         for q in qs[:3]:
             print(f"     Q: {q}")
         print()
-        await asyncio.sleep(20)  # cont.319ddd: HEAVY pace (~3/min) to stay well under free-tier RPM + the provider's retry-burst -> clean run on the real Gemini model
+        # cont.319ddd: HEAVY pace (~3/min) for FREE-TIER RPM. On Vertex
+        # (GEMINI_PROVIDER_VERTEX=1, high RPM) the 20s is unnecessary -> NEGOTIATOR_PACE_S
+        # lets a Vertex run go fast (e.g. 3s). Default 20 keeps free-tier behaviour.
+        await asyncio.sleep(float(os.environ.get("NEGOTIATOR_PACE_S", "20")))
     print(f"=== {asks}/{len(CASES)} requests triggered a clarifying question ===")
     print("Read which it ASKS vs PROCEEDS on: does it catch the gripper-object / Y-split / geometric / vague traps,")
     print("or proceed silently? (This is the REAL production clarification depth, vs the qa-script shallowness.)")
