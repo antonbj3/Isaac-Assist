@@ -337,6 +337,15 @@
       "dir": "REAL-OBJECT chain: YCB brick source -> flat YCB receiver",
       "handoff": "flat 0.776",
       "result": "GOLD 1/1+1/1 COMPLETE custody (cont.319-YCBCHAIN); the cross-Kit relay re-instantiates a REFERENCED YCB MESH (not just a primitive cube) faithfully -> real-object chains work, extending KOMPOSITION x real-object to the CHAIN multiplier"
+    },
+    {
+      "stages": [
+        "CP-CHAIN-FRANKA-SRC-YCB",
+        "CP-CHAIN-PALLETIZE-RECV"
+      ],
+      "dir": "REAL-OBJECT chain -> STRUCTURED receiver",
+      "handoff": "flat 0.776 -> palletizer",
+      "result": "GOLD 1/1+1/1 COMPLETE custody (cont.319-YCBCHAIN2); a referenced YCB brick survives the relay INTO a palletizer (structured-slot) receiver -> real-object chains robust across receiver TYPES (flat + structured)"
     }
   ]
 }
