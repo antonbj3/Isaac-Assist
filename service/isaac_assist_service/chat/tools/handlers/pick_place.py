@@ -5228,6 +5228,32 @@ TASK_MODE = {task!r}
 TASK_JOINT_PATH = {task_joint_path!r}
 TASK_ARGS = {task_args!r}
 
+# DEPALLETIZE auto fill-order (cont.319): when explicit per-cube DROP_TARGETS are
+# given, reassign cube->target so the FIRST-picked (highest) cube goes to the target
+# FARTHEST from the robot base and the last-picked to the nearest. The arm then never
+# reaches over already-placed cubes -> no adjacent-placement knock (MEASURED CP-DEPAL-03:
+# arbitrary order -> 205mm knock on a same-row neighbour; fill-order -> <=23mm, N-of-2
+# clean). One-time init remap. GATED on TASK_MODE=="depalletize" so every other
+# DROP_TARGETS cell (palletizers/stackers) is byte-identical. Only remaps a dict that
+# covers exactly SOURCE_PATHS (a per-cube grid); leaves partial/list targets untouched.
+if TASK_MODE == "depalletize" and isinstance(DROP_TARGETS, dict) and len(DROP_TARGETS) >= 2:
+    try:
+        _srcs = [s for s in SOURCE_PATHS if s in DROP_TARGETS]
+        if len(_srcs) == len(DROP_TARGETS) and len(_srcs) >= 2:
+            _base = np.asarray(_usd_pos[:2], dtype=np.float32)
+            def _czi(_s):
+                _w = _world_pos(_s)
+                return float(_w[2]) if _w is not None else -1e9
+            _pick_order = sorted(_srcs, key=_czi, reverse=True)
+            _tgts = list(DROP_TARGETS.values())
+            def _tdist(_t):
+                return float(((_t[0]-_base[0])**2 + (_t[1]-_base[1])**2) ** 0.5)
+            _tgts_sorted = sorted(_tgts, key=_tdist, reverse=True)
+            DROP_TARGETS = {{_pick_order[_i]: _tgts_sorted[_i] for _i in range(len(_pick_order))}}
+            print("(depalletize fill-order remap applied: %d cubes -> farthest-first)" % len(_pick_order), flush=True)
+    except Exception:
+        pass
+
 # Scene-obstacle builder — transform USD prims' world-bboxes to BASE frame cuboids
 from curobo._src.geom.types import SceneCfg as _CuroboSceneCfg
 
