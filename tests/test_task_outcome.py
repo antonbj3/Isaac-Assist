@@ -142,6 +142,43 @@ def test_dispenser_fall_then_pick_grades_as_delivered():
     assert o["evidence"]["max_rise_m"] >= 0.2
 
 
+def test_no_objects_tracked_is_flagged_not_silent_fail():
+    # A zero-object artifact is a MEASUREMENT GAP, not "the cell failed":
+    # all_clean is False (no clean objects) but no_objects_tracked makes the
+    # reason explicit, and diagnose() surfaces a caution (honest-eyes).
+    art = _artifact({}, init={}, dests=_BIN, template="CP-EMPTY")
+    out = to.classify_timeseries(art)
+    assert out["no_objects_tracked"] is True
+    assert out["all_clean"] is False        # unchanged: no clean delivery
+    assert out["objects"] == {}
+
+
+def test_diagnose_flags_stale_and_empty_cautions(tmp_path):
+    art = _artifact({}, init={}, dests=_BIN, template="CP-EMPTY2")
+    p = tmp_path / "ts_CP-EMPTY2.json"
+    p.write_text(json.dumps(art))
+    # backdate the file well past the stale threshold
+    import os
+    old = to.STALE_ARTIFACT_S + 7200.0
+    st = p.stat()
+    os.utime(p, (st.st_atime - old, st.st_mtime - old))
+    res = to.diagnose(template="CP-EMPTY2", outdir=str(tmp_path))
+    assert res["type"] == "data"
+    assert res["stale"] is True
+    assert any("STALE" in c for c in res["cautions"])
+    assert any("NO tracked objects" in c for c in res["cautions"])
+
+
+def test_diagnose_fresh_artifact_not_stale(tmp_path):
+    art = _artifact(
+        {"Cube_1": [(0, [-0.5, 0.4, 0.84], 1.0), (10, [0.5, -0.3, 0.80], 1.0),
+                    (5, [0.0, 0.0, 1.2], 1.0)]},
+        init={"Cube_1": [-0.5, 0.4, 0.84]}, dests=_BIN, template="CP-FRESH")
+    (tmp_path / "ts_CP-FRESH.json").write_text(json.dumps(art))
+    res = to.diagnose(template="CP-FRESH", outdir=str(tmp_path))
+    assert res["stale"] is False and res["cautions"] == []
+
+
 def test_displaced_not_delivered_without_belt_exit():
     # Knocked off the dispenser sideways, never picked, no belt crossed:
     # must NOT read as the conveyor-sync class.

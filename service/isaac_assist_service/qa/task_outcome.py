@@ -45,6 +45,11 @@ from typing import Any, Dict, List, Optional
 #: scene_timeseries' artifact directory (its TS_OUTDIR default).
 DEFAULT_OUTDIR = "/home/anton/.isaac_qa/run"
 
+#: Beyond this age a read is flagged STALE. The tool's intended use is a
+#: fresh artifact (build->simulate->scene_timeseries->diagnose, seconds old);
+#: 1h is far past any legitimate in-loop flow, so it only trips on old reads.
+STALE_ARTIFACT_S = 3600.0
+
 WHY_TAXONOMY = (
     "NOT_PICKED", "RODE_OFF_BELT", "DISPLACED_NOT_DELIVERED",
     "FLUNG_TO_FLOOR", "DELIVERED_CLEAN", "TOPPLED_IN_DEST",
@@ -162,6 +167,11 @@ def classify_timeseries(raw: Dict[str, Any]) -> Dict[str, Any]:
     return {
         "objects": objects,
         "counts": counts,
+        # An artifact with ZERO tracked objects is a MEASUREMENT GAP, not a
+        # delivery verdict — surface it explicitly so the reader never treats
+        # the (then-False) all_clean as "the cell failed" (honest-eyes: a
+        # zero-object read is the same class of silence as a missing artifact).
+        "no_objects_tracked": not bool(objects),
         "all_clean": bool(objects) and not any(
             o["why"] in _BAD_WHYS or o["why"] == "UNCLASSIFIED"
             for o in objects.values()),
@@ -215,11 +225,33 @@ def diagnose(template: Optional[str] = None,
         age_s = round(datetime.now(timezone.utc).timestamp() - p.stat().st_mtime, 1)
     except OSError:
         pass
+    # The tool is meant to read a FRESH artifact (build -> simulate ->
+    # scene_timeseries -> diagnose, seconds old). A read far past that is a
+    # STALE single-sample: it reflects ONE old run, which for a stochastic
+    # template (e.g. a place-time-collision stack) can disagree with the
+    # template's documented multi-run verdict. Flag it so a confident
+    # all_clean is never trusted blind (honest-eyes: staleness is visible).
+    stale = age_s is not None and age_s > STALE_ARTIFACT_S
+    cautions: List[str] = []
+    if stale:
+        cautions.append(
+            f"STALE artifact ({age_s / 3600.0:.1f}h old): diagnose reads ONE "
+            "recorded run. Re-run scripts/qa/scene_timeseries.py for a fresh "
+            "read; a single old run cannot speak to a stochastic template's "
+            "distribution (it may read clean while the cell topples on retry).")
+    if result.get("no_objects_tracked"):
+        cautions.append(
+            "NO tracked objects in this artifact — a MEASUREMENT GAP (wrong "
+            "object names / tracking failure / empty scene), NOT a clean-or-"
+            "failed delivery verdict. Verify the scene + object naming before "
+            "trusting all_clean.")
     return {
         "type": "data",
         "template": raw.get("template") or template,
         "artifact": str(p),
         "artifact_age_s": age_s,
+        "stale": stale,
+        "cautions": cautions,
         "provenance": raw.get("provenance"),
         "taxonomy": list(WHY_TAXONOMY),
         "known_gaps": ["MISROUTED (class->required-bin) not graded here; "
