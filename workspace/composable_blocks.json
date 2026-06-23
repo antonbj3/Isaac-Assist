@@ -3,7 +3,7 @@
     "Franka:color-sort": "CP-03",
     "Franka:barcode-sort": "CP-NEW-barcode-scanner-divert",
     "Franka:material-sort": "CP-NEW-nir-material-divert",
-    "Franka:size-weight-sort": "CP-NEW-sorter-size-weight",
+    "Franka:size-weight-sort": null,
     "Franka:conveyor-pick": "CP-CONV-02",
     "Franka:inspect/vision": "CP-18",
     "Franka:kit/assembly": "CP-50",
@@ -35,14 +35,14 @@
       "robot": "Franka",
       "class": "sort-divert",
       "verdict": "GENUINE(NIR-material recycling divert to 3 BINS: scene_eyes RAW @ dur=320, 6/6 items CONVERGED+GRIPPED + routed to their material-class bin (metal->BinMetal x-0.30, plastic->BinPlastic x0, glass->BinGlass x+0.30; 2/bin, each within 0.01m, upright). DISTINCT material-sensing recycling sort vs barcode/SKU divert (CP-NEW-barcode-scanner-divert -> lanes) and color-sort-to-bins (CP-16/17).)",
-      "basis": "scene_eyes RAW cont.319kk-j @ dur=320 — per-item routing verified vs the code's exact material labels (round-robin metal/plastic/glass). Final eyes.json (the mid-run snapshot was a belt-fed 2/6; waited for completion -> 6/6).",
+      "basis": "scene_eyes RAW cont.319kk-j @ dur=320 \u2014 per-item routing verified vs the code's exact material labels (round-robin metal/plastic/glass). Final eyes.json (the mid-run snapshot was a belt-fed 2/6; waited for completion -> 6/6).",
       "n_objects": 6
     },
     "CP-NEW-barcode-scanner-divert": {
       "robot": "Franka",
       "class": "sort-divert",
       "verdict": "GENUINE(barcode/SKU sortation to 3 LANES: scene_eyes RAW @ dur=320, 6/6 items CONVERGED+GRIPPED + routed to their SKU-assigned lane (sku_a->LaneA x-0.35, sku_b->LaneB x0, sku_c->LaneC x+0.35; 2 items/lane, each within 0.01m of its lane x, upright, z>0.78). DISTINCT divert-to-lanes operation vs the color-sort-to-bins of CP-16/17.)",
-      "basis": "scene_eyes RAW cont.319kk-i @ dur=320 — per-item routing verified vs the code's exact semantic SKU labels (round-robin a/b/c). NOTE my initial 1/6 was a FALSE-NEGATIVE from a wrong static Item->SKU parse; the exact code tuple-list -> 6/6 (diagnostik-forst on my own parse).",
+      "basis": "scene_eyes RAW cont.319kk-i @ dur=320 \u2014 per-item routing verified vs the code's exact semantic SKU labels (round-robin a/b/c). NOTE my initial 1/6 was a FALSE-NEGATIVE from a wrong static Item->SKU parse; the exact code tuple-list -> 6/6 (diagnostik-forst on my own parse).",
       "n_objects": 6
     },
     "CP-YCB-02": {
@@ -62,8 +62,8 @@
     "CP-NEW-sorter-size-weight": {
       "robot": "Franka",
       "class": "physical-property-sort",
-      "verdict": "GENUINE(physical size+weight sort -> 2 bins; the DISTINCT physical-property routing modality vs all catalogued sorters which route on SEMANTIC color/SKU/material. Fresh-Kit belt-fed dur=360: 9/9 cubes CORRECTLY CLASSIFIED (0 misrouted) -- all 6 light (size0.05/mass0.2) -> LightBin x+0.35, all 3 heavy (size0.06/mass0.5) -> HeavyBin x-0.35; 8/9 settled xy-in-bin (Cube_2 light overshot the bin y-edge to -0.685 = a delivery-precision scatter, NOT a mis-route). plan_fails=0, arm 1.955 m/s).",
-      "basis": "scene_eyes RAW cont.319ll fresh-Kit dur=360 (per-cube final pos vs Heavy/Light bin_bboxes + template workpiece labels Cube_1-6=light/Cube_7-9=heavy; routing rule large-OR-heavy->HeavyBin). Earlier 0/9-frozen was a stale-Kit false-negative (ran after flip without restart-between), refuted by fresh-Kit re-run + CP-01 control.",
+      "verdict": "PARTIAL(scene_eyes-refuted 2026-06-23; orientation/overfill \u2014 see verified_status)",
+      "basis": "verified_status refutation (false-success audit)",
       "n_objects": 9
     },
     "CP-NEW-conveyor-recirculation-overflow": {
@@ -483,7 +483,7 @@
       "robot": "UR10",
       "class": "conveyor-pick",
       "verdict": "GENUINE(UR10 picks 1 cube OFF A CONVEYOR -> Bin; re-verified N-of-2 fresh-Kit cont.319nnn: both runs Cube_1 CONVERGED+GRIPPED (closest 25mm) + xy-in-bin=yes, identical convergence ~10-12s. Promoted to UR10:conveyor-pick = the robot-diversity gap (UR10 had 4 composable blocks vs Franka 13; this is the UR10 analog of Franka:conveyor-pick CP-CONV-02). Re-classed from pick-place-bin: CP-69 is conveyor-FED, distinct from CP-73's static-pedestal pick-place-bin.)",
-      "basis": "scene_eyes RAW N-of-2 fresh-Kit (cont.319nnn) — UR10 cuRobo/suction picks off the belt + delivers; cuRobo-stub did NOT block (UR10 controller works). Original cont.318g delivery-gate confirm.",
+      "basis": "scene_eyes RAW N-of-2 fresh-Kit (cont.319nnn) \u2014 UR10 cuRobo/suction picks off the belt + delivers; cuRobo-stub did NOT block (UR10 controller works). Original cont.318g delivery-gate confirm.",
       "n_objects": 1
     },
     "CP-70": {
@@ -532,14 +532,14 @@
       "robot": "UR10",
       "class": "stack/column",
       "verdict": "GENUINE(UR10 2-high STACK/column: re-verify fresh-Kit cont.319nnn -> STACK-STRUCTURE 2 distinct z-levels [0.785, 0.835] (5cm apart = stacked, not piled), xy-extent 0.02m (aligned column), min-pair-xy 0.018m, both CONVERGED+GRIPPED + xy-in-bin. Promoted to UR10:stack/column = the robot-diversity stack gap (Franka had stack/column CP-13, UR10 didn't). Re-classed from pick-place-bin.)",
-      "basis": "scene_eyes RAW STACK-STRUCTURE (cont.319nnn fresh-Kit) — 2 z-levels + tight xy = genuine 2-high column, not a pile. Original cont.318g delivery confirm.",
+      "basis": "scene_eyes RAW STACK-STRUCTURE (cont.319nnn fresh-Kit) \u2014 2 z-levels + tight xy = genuine 2-high column, not a pile. Original cont.318g delivery confirm.",
       "n_objects": 2
     },
     "CP-82": {
       "robot": "UR10",
       "class": "color-sort",
       "verdict": "GENUINE(UR10 2-bin COLOR-SORT, routing-verified: re-verify fresh-Kit cont.319nnn -> final eyes.json per-cube positions Cube_1=[0.51,-0.296] in Bin_red(y-center -0.30) + Cube_2=[0.51,-0.540] in Bin_blue(y-center -0.55) = CORRECT color routing (not just delivery), both upright tilt 0.3deg, 2/2 CONVERGED+GRIPPED. Promoted to UR10:color-sort. Re-classed from pick-place-bin.)",
-      "basis": "scene_eyes RAW per-cube xy vs bin_bboxes (cont.319nnn fresh-Kit) — false-success-vakt on the SORT: confirmed distinct color-correct bins, not just 2/2-in-some-bin. Original cont.318h routing-verify confirmed.",
+      "basis": "scene_eyes RAW per-cube xy vs bin_bboxes (cont.319nnn fresh-Kit) \u2014 false-success-vakt on the SORT: confirmed distinct color-correct bins, not just 2/2-in-some-bin. Original cont.318h routing-verify confirmed.",
       "n_objects": 2
     },
     "CP-83": {
@@ -649,13 +649,14 @@
     }
   },
   "summary": {
-    "trusted": 78,
+    "trusted": 77,
     "_trusted_note": "trusted = 57 cube-GENUINE + 1 real-object-GENUINE (CP-YCB-01C) + 1 real-conveyor-GENUINE (CP-CONV-02) + 1 forklift-GENUINE (CP-FORK-01) + 3 humanoid-GENUINE (CP-G1-ARM-01 arm-actuation zero-G, CP-G1-STAND-01 STANDING arm-actuation under gravity via root-weld FixedJoint, CP-G1-STAND-02 BIMANUAL standing reach, cont.319ii-5). cont.319cc: CP-10 downgraded GENUINE->PARTIAL by the adversarial audit (stochastic n=9 grid, saved RAW 8/9 off-pallet). META-RISK RESOLVED (cont.319dd): re-verified ALL 12 structure-class GENUINE blocks (palletize/grid + stack/column) vs their saved eyes.json -> 11 RAW-CONFIRM their verdict; CP-10 was the ONLY stale-lucky false GENUINE. Not systemic.",
     "genuine_execution_verified": 78,
     "position_honest_only": 0,
     "false": 3,
-    "partial": 7,
+    "partial": 9,
     "pending": 0,
-    "total": 88
+    "total": 88,
+    "_audit_note_2026_06_23": "false-success audit: CP-NEW-sorter-size-weight (Franka:size-weight-sort exemplar) moved trusted->PARTIAL (bin-overfill, scene_eyes-refuted) -> slot nulled (no clean exemplar); trusted 78->77. CP-NEW-y-merge-singulation was already absent from the registry. composable_registry.py hardened to respect verified_status refutations so a future regen reproduces this."
   }
 }

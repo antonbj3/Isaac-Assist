@@ -87,9 +87,17 @@ def main():
         robot = "UR10" if ("ur10" in (code + g.lower()) or "ur5" in (code + g.lower())) else ("Franka" if ("franka" in (code + g.lower()) or "panda" in (code + g.lower())) else "?")
         cls = fclass(g)
         structure = cls in ("stack/column", "palletize/grid")
-        # trust verdict
+        # trust verdict. A verified_status that LEADS with a refutation verdict
+        # overrides the position-honest default: the 2026-06-23 false-success
+        # audit proved bin/sort cells CAN fail orientation (a cube toppled
+        # OUTSIDE its bin — CP-NEW-y-merge-singulation, CP-NEW-sorter-size-weight),
+        # so "in-the-bin = trusted" is UNSAFE once scene_eyes has refuted the cell.
+        _vs = (t.get("verified_status") or "").strip().upper()
+        _refuted = _vs.startswith(("REFUTED", "ORIENTATION-REFUTED", "FALSE", "NOT A GOLD"))
         if n in KNOWN:
             verdict, basis = KNOWN[n], "scene_eyes (this session)"
+        elif _refuted:
+            verdict, basis = "PARTIAL(scene_eyes-refuted; see verified_status)", "verified_status refutation"
         elif structure:
             verdict, basis = sw.get(n, "PENDING(sweep)"), "scene_eyes STACK-STRUCTURE"
         else:
