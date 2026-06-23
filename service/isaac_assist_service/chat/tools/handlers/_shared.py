@@ -329,6 +329,40 @@ def _resolve_robot_asset(entry: Dict) -> str:
     cands = _robot_asset_candidates(entry)
     return cands[0] if cands else entry.get("cloud_url", "")
 
+
+def _version_robust_asset_candidates(path: str) -> "list[str]":
+    """Version-robust candidates for an arbitrary Isaac asset PATH (the templates'
+    hardcoded ``.../Assets/Isaac/5.0/...`` refs). Extracts the rel-path after
+    ``/Assets/Isaac/{V}/`` and re-derives it across Isaac versions: the original path
+    (if it resolves), the same local install root with the version substituted (in BOTH
+    the ``complete-X`` dir name and the ``/Isaac/{V}/`` segment), then cloud across
+    versions. Non-Isaac paths (custom URDFs, omniverse://, no Isaac/{V} segment) pass
+    through unchanged. Makes templates portable across Isaac 5.x and the upcoming 6.x
+    with NO template edits (Anton 2026-06-23 — harden asset resolution for all versions)."""
+    import os as _os, re as _re
+    if not path:
+        return [path]
+    m = _re.search(r"^(.*?/Assets/Isaac/)(\d+\.\d+)/(.+)$", path)
+    if not m:
+        return [path]  # not a version-pinned Isaac asset path
+    base_dir, _orig_v, rel = m.group(1), m.group(2), m.group(3)
+    out: "list[str]" = []
+    _is_url = path.startswith(("omniverse://", "http://", "https://", "file://"))
+    if _is_url or _os.path.exists(path):
+        out.append(path)  # original first (usually the env's working version)
+    versions = _isaac_asset_versions()
+    for v in versions:  # local: substitute version in install-dir name + /Isaac/{v}/
+        local_base = _re.sub(r"complete-\d+\.\d+(?:\.\d+)?", f"complete-{v}.0", base_dir)
+        cand = f"{local_base}{v}/{rel}"
+        if cand not in out and not cand.startswith(("omniverse://", "http://", "https://")) \
+                and _os.path.exists(cand):
+            out.append(cand)
+    for v in versions:  # cloud across versions
+        cu = f"{_ISAAC_CLOUD_BASE}/{v}/{rel}"
+        if cu not in out:
+            out.append(cu)
+    return out or [path]
+
 # from: feat/addendum-phase8F-ros2-quality
 # _ROS2_QOS_PRESETS migrated to handlers/ros2.py (Phase 8 wave 4, 2026-05-13).
 

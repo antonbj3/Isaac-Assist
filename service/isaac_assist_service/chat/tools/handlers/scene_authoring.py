@@ -959,23 +959,36 @@ def _gen_add_reference(args: Dict) -> str:
     #   1. prim.HasAuthoredReferences() after the call
     #   2. if the asset is a local path, os.path.exists() before the call
     #   3. re-traverse children to catch zero-child silent composition error
+    # Version-robust (Anton 2026-06-23): an Isaac asset path is expanded to
+    # candidates across versions (original + version-substituted local + cloud 5.x/6.x)
+    # so templates' hardcoded /Isaac/5.0/ refs stay portable; non-Isaac paths are a
+    # single candidate (unchanged behaviour).
+    from ._shared import _version_robust_asset_candidates as _vrac
+    import json as _json_ar
+    _cands_literal = _json_ar.dumps(_vrac(args.get("reference_path", "")))
     return (
         "import os\n"
         "import omni.usd\n"
-        "from pxr import Sdf\n"
+        "from pxr import Sdf, Usd\n"
         "stage = omni.usd.get_context().get_stage()\n"
         f"prim = stage.GetPrimAtPath('{args['prim_path']}')\n"
         f"if not prim.IsValid():\n"
         f"    raise RuntimeError('add_reference: prim not found: {args['prim_path']}')\n"
-        f"_ref = '{args['reference_path']}'\n"
-        # Local filesystem path (not omniverse:// or http(s)://): must exist.
-        "if not any(_ref.startswith(p) for p in ('omniverse://','http://','https://','file://')):\n"
-        "    if not os.path.isabs(_ref) or not os.path.exists(_ref):\n"
-        "        raise FileNotFoundError(f'add_reference: asset not found: {_ref!r}')\n"
-        "_added = prim.GetReferences().AddReference(_ref)\n"
-        "if not _added or not prim.HasAuthoredReferences():\n"
-        "    raise RuntimeError(f'add_reference: AddReference returned success but no reference was authored on {prim.GetPath()}')\n"
-        "print(f'added reference {_ref} to {prim.GetPath()}')"
+        f"_cands = {_cands_literal}\n"
+        "_ok = None; _tried = []\n"
+        "for _c in _cands:\n"
+        "    _islocal = not _c.startswith(('omniverse://','http://','https://','file://'))\n"
+        "    if _islocal and (not os.path.isabs(_c) or not os.path.exists(_c)):\n"
+        "        _tried.append((_c, 'no-disk')); continue\n"
+        "    prim.GetReferences().ClearReferences()\n"
+        "    prim.GetReferences().AddReference(_c)\n"
+        "    _n = len(list(Usd.PrimRange(prim))[1:]) if prim.HasAuthoredReferences() else 0\n"
+        "    _tried.append((_c, _n))\n"
+        "    if _n >= 1:\n"
+        "        _ok = _c; break\n"
+        "if _ok is None:\n"
+        "    raise FileNotFoundError('add_reference: no candidate asset resolved -- tried ' + str([(str(_t[0])[-55:], _t[1]) for _t in _tried]))\n"
+        "print('added reference ' + _ok + ' to ' + str(prim.GetPath()))"
     )
 
 
