@@ -1,0 +1,41 @@
+{
+  "task_id": "CP-LLM-PICK-REAL",
+  "goal": "LLM-pick on REAL objects: Gemini selected /World/Item_box for 'Pick the gelatin box.'; Franka picks ONLY that YCB object.",
+  "code": "create_scene_baseline(include_ground=False, table_size=[2.0, 1.0])\n\nrobot_wizard(robot_name=\"franka_panda\", dest_path=\"/World/Franka\", position=[0, 0, 0.75], orientation=[0.7071068, 0, 0, 0.7071068])\n\ncreate_prim(prim_path=\"/World/Item_banana\", prim_type=\"Xform\", position=[0.32, 0.16, 0.82])\nadd_reference(prim_path=\"/World/Item_banana\", reference_path=\"/mnt/shared_data/isaac-sim-assets-complete-5.0.0/Assets/Isaac/5.0/Isaac/Props/YCB/Axis_Aligned/011_banana.usd\")\nfor _api in (\"PhysicsRigidBodyAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n    apply_api_schema(prim_path=\"/World/Item_banana\", schema_name=_api)\napply_api_schema(prim_path=\"/World/Item_banana/_11_banana\", schema_name=\"PhysicsCollisionAPI\")\nsimplify_collision(prim_path=\"/World/Item_banana/_11_banana\", approximation=\"convexHull\")\napply_physics_material(prim_path=\"/World/Item_banana/_11_banana\", material_name=\"rubber\")\n\ncreate_prim(prim_path=\"/World/Item_can\", prim_type=\"Xform\", position=[0.42, 0.16, 0.82])\nadd_reference(prim_path=\"/World/Item_can\", reference_path=\"/mnt/shared_data/isaac-sim-assets-complete-5.0.0/Assets/Isaac/5.0/Isaac/Props/YCB/Axis_Aligned/005_tomato_soup_can.usd\")\nfor _api in (\"PhysicsRigidBodyAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n    apply_api_schema(prim_path=\"/World/Item_can\", schema_name=_api)\napply_api_schema(prim_path=\"/World/Item_can/_05_tomato_soup_can\", schema_name=\"PhysicsCollisionAPI\")\nsimplify_collision(prim_path=\"/World/Item_can/_05_tomato_soup_can\", approximation=\"convexHull\")\napply_physics_material(prim_path=\"/World/Item_can/_05_tomato_soup_can\", material_name=\"rubber\")\n\ncreate_prim(prim_path=\"/World/Item_box\", prim_type=\"Xform\", position=[0.52, 0.16, 0.82])\nadd_reference(prim_path=\"/World/Item_box\", reference_path=\"/mnt/shared_data/isaac-sim-assets-complete-5.0.0/Assets/Isaac/5.0/Isaac/Props/YCB/Axis_Aligned/009_gelatin_box.usd\")\nfor _api in (\"PhysicsRigidBodyAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n    apply_api_schema(prim_path=\"/World/Item_box\", schema_name=_api)\napply_api_schema(prim_path=\"/World/Item_box/_09_gelatin_box\", schema_name=\"PhysicsCollisionAPI\")\nsimplify_collision(prim_path=\"/World/Item_box/_09_gelatin_box\", approximation=\"convexHull\")\napply_physics_material(prim_path=\"/World/Item_box/_09_gelatin_box\", material_name=\"rubber\")\n\ncreate_bin(prim_path=\"/World/Bin\", position=[0.0, -0.45, 0.75], size=[0.3, 0.3, 0.15])\n\nsetup_pick_place_controller(\n    robot_path=\"/World/Franka\",\n    robot_family=\"franka\",\n    target_source=\"curobo\",\n    source_paths=[\"/World/Item_box\"],\n    destination_path=\"/World/Bin\",\n    planning_obstacles=[\"/World/Table\"],\n)\n",
+  "code_template": "create_scene_baseline(include_ground=False, table_size=[2.0, 1.0])\n\nrobot_wizard(robot_name=\"franka_panda\", dest_path=\"/World/Franka\", position=[0, 0, 0.75], orientation=[0.7071068, 0, 0, 0.7071068])\n\ncreate_prim(prim_path=\"/World/Item_banana\", prim_type=\"Xform\", position=[0.32, 0.16, 0.82])\nadd_reference(prim_path=\"/World/Item_banana\", reference_path=\"/mnt/shared_data/isaac-sim-assets-complete-5.0.0/Assets/Isaac/5.0/Isaac/Props/YCB/Axis_Aligned/011_banana.usd\")\nfor _api in (\"PhysicsRigidBodyAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n    apply_api_schema(prim_path=\"/World/Item_banana\", schema_name=_api)\napply_api_schema(prim_path=\"/World/Item_banana/_11_banana\", schema_name=\"PhysicsCollisionAPI\")\nsimplify_collision(prim_path=\"/World/Item_banana/_11_banana\", approximation=\"convexHull\")\napply_physics_material(prim_path=\"/World/Item_banana/_11_banana\", material_name=\"rubber\")\n\ncreate_prim(prim_path=\"/World/Item_can\", prim_type=\"Xform\", position=[0.42, 0.16, 0.82])\nadd_reference(prim_path=\"/World/Item_can\", reference_path=\"/mnt/shared_data/isaac-sim-assets-complete-5.0.0/Assets/Isaac/5.0/Isaac/Props/YCB/Axis_Aligned/005_tomato_soup_can.usd\")\nfor _api in (\"PhysicsRigidBodyAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n    apply_api_schema(prim_path=\"/World/Item_can\", schema_name=_api)\napply_api_schema(prim_path=\"/World/Item_can/_05_tomato_soup_can\", schema_name=\"PhysicsCollisionAPI\")\nsimplify_collision(prim_path=\"/World/Item_can/_05_tomato_soup_can\", approximation=\"convexHull\")\napply_physics_material(prim_path=\"/World/Item_can/_05_tomato_soup_can\", material_name=\"rubber\")\n\ncreate_prim(prim_path=\"/World/Item_box\", prim_type=\"Xform\", position=[0.52, 0.16, 0.82])\nadd_reference(prim_path=\"/World/Item_box\", reference_path=\"/mnt/shared_data/isaac-sim-assets-complete-5.0.0/Assets/Isaac/5.0/Isaac/Props/YCB/Axis_Aligned/009_gelatin_box.usd\")\nfor _api in (\"PhysicsRigidBodyAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n    apply_api_schema(prim_path=\"/World/Item_box\", schema_name=_api)\napply_api_schema(prim_path=\"/World/Item_box/_09_gelatin_box\", schema_name=\"PhysicsCollisionAPI\")\nsimplify_collision(prim_path=\"/World/Item_box/_09_gelatin_box\", approximation=\"convexHull\")\napply_physics_material(prim_path=\"/World/Item_box/_09_gelatin_box\", material_name=\"rubber\")\n\ncreate_bin(prim_path=\"/World/Bin\", position=[0.0, -0.45, 0.75], size=[0.3, 0.3, 0.15])\n\nsetup_pick_place_controller(\n    robot_path=\"/World/Franka\",\n    robot_family=\"franka\",\n    target_source=\"curobo\",\n    source_paths=[\"/World/Item_box\"],\n    destination_path=\"/World/Bin\",\n    planning_obstacles=[\"/World/Table\"],\n)\n",
+  "role_defaults": {
+    "primary_robot": {
+      "path": "/World/Franka",
+      "class": "franka_panda",
+      "position": [
+        0,
+        0,
+        0.75
+      ],
+      "orientation": [
+        0.7071068,
+        0,
+        0,
+        0.7071068
+      ]
+    },
+    "primary_destination": {
+      "path": "/World/Bin",
+      "position": [
+        0.0,
+        -0.45,
+        0.75
+      ],
+      "size": [
+        0.3,
+        0.3,
+        0.15
+      ]
+    }
+  },
+  "_llm_pick": {
+    "task": "Pick the gelatin box.",
+    "selected": "/World/Item_box"
+  },
+  "verified_status": "\u2605 GENUINE LLM-PICK-REAL GOLD (cont.319, #50 \u2014 LLM-driven REAL-object manipulation via Gemini-Vertex). Gemini selects a YCB object by NAME from a scene, controller picks ONLY it. scene_eyes (plan_fails=0): \"Pick the gelatin box\" -> Gemini selected /World/Item_box -> Item_box CONVERGED+GRIPPED + DELIVERED (xy-in-bin=yes), Item_banana + Item_can NEVER approached (untouched, scene_eyes-verified). So the LLM correctly drives WHICH real object is manipulated. NOTE: \"pick the banana\" -> Gemini selects the banana correctly + only it is attempted, but the BANANA GRIP-SLIPS (the known spawn-orientation confound, CP-YCB-BANANA needs lie-flat spawn) -- an orthogonal complex-mesh-grasp detail, NOT an LLM issue. Extends LLM-pick (cubes, CP-LLM-PICK gold) to real objects."
+}

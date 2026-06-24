@@ -179,7 +179,13 @@ _GRASP_TOK = ("handle", "broom", "blank", "knob", "lever", "valve", "cap", "bott
               # so render-only suction proxies (no rigid body) and scenery are not matched.
               # 2026-06-14: "box" too (CP-NEW-palletizer-mixed-sku uses Box_* workpieces — same
               # blind spot as spheres: untracked positionally -> can't SEE the actual SKU-sort).
-              "sphere", "ball", "box")
+              "sphere", "ball", "box",
+              # cont.319 2026-06-24: common YCB real-object names so they track POSITIONALLY by their
+              # NATURAL prim name (not just via the Item_*/Brick_* prefix workaround). LLM-pick-real
+              # used /World/Item_banana to dodge this gap; with these tokens /World/Banana etc. also
+              # track. RigidBodyAPI requirement (below) still excludes static scenery/containers.
+              "banana", "soup", "tomato", "mustard", "mug", "drill", "gelatin", "cracker", "sugar",
+              "pear", "apple", "lemon", "orange", "peach", "plum", "strawberry", "meat", "fish")
 try:
     for _pr in stage.Traverse():
         _pth = str(_pr.GetPath()); _lo = _pr.GetName().lower()
