@@ -37,3 +37,22 @@ So RTX render-DEPTH (what a real RGB-D camera gives) needs a render path the RPC
 Recommendation: (A) standalone vision-Kit for honest RTX RGB-D, OR (C) if the viewport depth-AOV
 is capturable. (B) raycast is a quick stand-in to prove the SAM2->mask->pose->grasp WIRING while
 deferring true-depth fidelity. The LLM-ID layer (Gemini-vision on the RGB) is independent + works now.
+
+## ★ RESULT (2026-06-24): LLM-VISION-pick PROVEN 3/3 (the (a) multimodal-vision sense)
+Gemini-2.5-flash via Vertex SEES the rendered scene + identifies the target object VISUALLY.
+- Feasibility: gemini_vision_test.py -> Gemini reads a 3-colour test image correctly (image POST via
+  the GeminiProvider Vertex base_url + ADC bearer works; provider doesn't parse images so POST raw).
+- End-to-end (llm_vision_pick.py): build 3 cubes with NEUTRAL prim names (Cube_A/B/C) + display colours,
+  capture the viewport RGB (vpu.capture_viewport_to_file — the proven in-Kit RGB path), POST image+prim-list
+  to Gemini "based ONLY on the image, which prim is the RED cube?". 3/3 CORRECT: red->Cube_A, green->Cube_B,
+  blue->Cube_C. Names neutral -> Gemini MUST read colour from the image (true visual identification).
+- ★ RENDER-FIDELITY findings (diagnostik-först, Gemini self-reported the failures honestly):
+  (1) default USD camera focal -> ~23deg FOV too narrow; set focal ~16 for ~65deg.
+  (2) a cube DIRECTLY BELOW an overhead camera SPECULAR-BLOWS-OUT to white (Gemini saw the middle cube as
+      "white / a light source", not green) -> ANGLE the camera (translate -y + RotateX ~20deg) so no object
+      is directly under it -> all colours render crisply.
+  (3) pure display colours (1,0,0)/(0,1,0)/(0,0,1) + a DomeLight (even fill) + moderate DistantLight.
+  -> with these, 3/3. The LLM-vision capability is solid; render quality is the lever, and Gemini HONESTLY
+     reports when it can't see a colour (a good built-in false-success guard).
+NEXT for a scene_eyes-verified GOLD: wire vision-selection -> source_paths -> Franka pick -> scene_eyes
+(the pick half is the proven LLM-pick pipeline). DEPTH/SAM2 path (sense b) still pending the (A/B/C) decision.
