@@ -3463,10 +3463,34 @@ def _plan_pick_place(cube_pos, drop_pos, current_joints=None):
     # additional user-configurable tweak (default 0 for spline).
     FINGER_LEN = 0.105
     pick_descend_z = pick_z + FINGER_LEN + float(EE_OFFSET[2])
+    # NEIGHBOUR-AWARE grasp axis (cont.319 declutter, CLEAREST-AXIS): default _DOWN_QUAT closes the jaw along
+    # world-X, so neighbours on +/-X block the fingers. Choose the jaw axis with the MOST clearance: classify
+    # each remaining (un-delivered) source cube as X-blocking (|dx|>=|dy|) or Y-blocking, take the nearest gap
+    # on each axis, and close along whichever is CLEARER. (First attempt rotated toward the nearest neighbour
+    # regardless of the OTHER axis -> broke working grasps; clearest-axis fixes that.) GATED TASK_MODE=="declutter".
+    _pick_quat = _DOWN_QUAT
+    if TASK_MODE == "declutter":
+        try:
+            _xclear = 1e9; _yclear = 1e9
+            for _sp in SOURCE_PATHS:
+                if _sp in S.get("delivered", set()): continue
+                _w = _world_pos(_sp)
+                if _w is None: continue
+                _dxy = np.asarray(_w, dtype=float)[:2] - np.asarray(pick_xy, dtype=float)
+                _d = float(np.linalg.norm(_dxy))
+                if _d < 0.001 or _d > 0.12: continue
+                if abs(float(_dxy[0])) >= abs(float(_dxy[1])):
+                    _xclear = min(_xclear, _d)
+                else:
+                    _yclear = min(_yclear, _d)
+            if _yclear > _xclear:
+                _pick_quat = _eul2q(np.array([0.0, np.pi, np.pi / 2]))
+        except Exception:
+            pass
     unique_wps = [
-        (np.array([pick_xy[0], pick_xy[1], h1]),            _DOWN_QUAT),  # 0 approach
-        (np.array([pick_xy[0], pick_xy[1], pick_descend_z]), _DOWN_QUAT),  # 1 descend_pick
-        (np.array([pick_xy[0], pick_xy[1], h1]),            _DOWN_QUAT),  # 2 lift
+        (np.array([pick_xy[0], pick_xy[1], h1]),            _pick_quat),  # 0 approach
+        (np.array([pick_xy[0], pick_xy[1], pick_descend_z]), _pick_quat),  # 1 descend_pick
+        (np.array([pick_xy[0], pick_xy[1], h1]),            _pick_quat),  # 2 lift
         (np.array([drop_xy[0], drop_xy[1], h1]),            _DOWN_QUAT),  # 3 transit
         (np.array([drop_xy[0], drop_xy[1], drop_z]),        _DOWN_QUAT),  # 4 descend_drop
         (np.array([drop_xy[0], drop_xy[1], h1]),            _DOWN_QUAT),  # 5 retreat
