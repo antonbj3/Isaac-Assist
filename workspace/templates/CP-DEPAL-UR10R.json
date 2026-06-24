@@ -1,0 +1,122 @@
+{
+  "task_id": "CP-DEPAL-UR10R",
+  "goal": "Robot-diversity depalletize: a UR10 (suction) destacks a 4-cube vertical column TOP-DOWN into a bin — extends the task=\"depalletize\" top-down capability to a 2nd robot.",
+  "tools_used": [
+    "robot_wizard",
+    "create_prim",
+    "set_attribute",
+    "apply_api_schema",
+    "teleport_prim",
+    "create_bin",
+    "set_physics_scene_config",
+    "apply_physics_material",
+    "set_semantic_label",
+    "create_material",
+    "assign_material",
+    "bulk_set_attribute",
+    "surface_gripper",
+    "setup_pick_place_controller"
+  ],
+  "thoughts": "Color-routing on UR10 pedestal scene:\n1) UR10 base + table + pedestals same as CP-81.\n2) Cube_1 = red, Cube_2 = blue. Set semantic_label color and visual material via create_material + assign_material.\n3) Two bins: /World/Bin_red at (0.5, -0.4, 0.75) and /World/Bin_blue at (0.5, -0.55, 0.75) — different y to keep separate.\n4) drop_targets dict: {'red': '/World/Bin_red', 'blue': '/World/Bin_blue'}.\n5) Validates raycast workaround integrates with color-routing dispatch — cube finds correct bin per its semantic label.\n6) simulate_traversal_check measures Cube_1 → Bin_red only.",
+  "code": "# Toolified opening [P2-07]: light+ground+cell+table+physics in ONE call\ncreate_scene_baseline(table_size=[3.0, 1.4])\n\nrobot_wizard(\n    robot_name=\"ur10\",\n    dest_path=\"/World/UR10\",\n    position=[0, 0, 0.75],\n    orientation=[1, 0, 0, 0],\n)\n\n# Suction gripper attached to UR10's ee_link\nsurface_gripper(\n    robot_path=\"/World/UR10\",\n    ee_link=\"/World/UR10/ee_link\",\n    grip_threshold=0.02,\n    force_limit=200.0,\n    torque_limit=200.0,\n)\n\ncreate_prim(prim_path=\"/World/Pedestal_1\", prim_type=\"Cube\", position=[-0.5, 0.55, 0.875], scale=[0.06, 0.06, 0.075])\napply_api_schema(prim_path=\"/World/Pedestal_1\", schema_name=\"PhysicsCollisionAPI\")\ncreate_prim(prim_path=\"/World/Pedestal_2\", prim_type=\"Cube\", position=[-0.5, 0.25, 0.875], scale=[0.06, 0.06, 0.075])\napply_api_schema(prim_path=\"/World/Pedestal_2\", schema_name=\"PhysicsCollisionAPI\")\n\n# Red cube\ncreate_prim(prim_path=\"/World/Cube_1\", prim_type=\"Cube\", position=[-0.5, 0.55, 0.975], size=0.05)\nfor api in (\"PhysicsRigidBodyAPI\", \"PhysicsCollisionAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n    apply_api_schema(prim_path=\"/World/Cube_1\", schema_name=api)\nbulk_set_attribute(prim_paths=[\"/World/Cube_1\"], attr=\"physxRigidBody:sleepThreshold\", value=0.0)\napply_physics_material(prim_path=\"/World/Cube_1\", material_name=\"rubber\")\nset_semantic_label(prim_path=\"/World/Cube_1\", semantic_type=\"color\", class_name=\"red\")\n\n# Blue cube\ncreate_prim(prim_path=\"/World/Cube_2\", prim_type=\"Cube\", position=[-0.5, 0.25, 0.975], size=0.05)\nfor api in (\"PhysicsRigidBodyAPI\", \"PhysicsCollisionAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n    apply_api_schema(prim_path=\"/World/Cube_2\", schema_name=api)\nbulk_set_attribute(prim_paths=[\"/World/Cube_2\"], attr=\"physxRigidBody:sleepThreshold\", value=0.0)\napply_physics_material(prim_path=\"/World/Cube_2\", material_name=\"rubber\")\nset_semantic_label(prim_path=\"/World/Cube_2\", semantic_type=\"color\", class_name=\"blue\")\n\ncreate_bin(prim_path=\"/World/Bin_red\", position=[0.5, -0.30, 0.75], size=[0.20, 0.20, 0.15])\ncreate_bin(prim_path=\"/World/Bin_blue\", position=[0.5, -0.55, 0.75], size=[0.20, 0.20, 0.15])\n\nsetup_pick_place_controller(\n    robot_path=\"/World/UR10\",\n    robot_family=\"ur10\",\n    target_source=\"curobo\",\n    source_paths=[\"/World/Cube_1\", \"/World/Cube_2\"],\n    destination_path=\"/World/Bin_red\",\n    color_routing={\"red\": \"/World/Bin_red\", \"blue\": \"/World/Bin_blue\"},\n    end_effector_offset=[0.0, 0.0, 0.02],\n)",
+  "intent": {
+    "pattern_hint": "sort",
+    "structural_features": {
+      "n_robot_stations": 1,
+      "n_handoffs": 0,
+      "destination_kind": "n_bins_routed",
+      "uses_conveyor_transport": false,
+      "routing_axis": "color"
+    },
+    "structural_tags": [
+      "isaac:robot.fixed_base.arm",
+      "isaac:topology.single_station",
+      "isaac:robot.ur10",
+      "isaac:source.static_pedestal",
+      "isaac:routing.color"
+    ]
+  },
+  "roles": {
+    "primary_robot": {
+      "constraints": [
+        "ur10e",
+        "ur10"
+      ],
+      "expected_count": 1,
+      "required": true
+    },
+    "primary_destination": {
+      "constraints": [
+        "bin"
+      ],
+      "expected_count": 1,
+      "required": true
+    }
+  },
+  "role_defaults": {
+    "primary_robot": {
+      "path": "/World/UR10",
+      "class": "ur10e",
+      "position": [
+        0,
+        0,
+        0.75
+      ],
+      "orientation": [
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    "primary_destination": {
+      "path": "/World/Bin",
+      "position": [
+        0.5,
+        -0.4,
+        0.75
+      ],
+      "size": [
+        0.25,
+        0.25,
+        0.15
+      ]
+    }
+  },
+  "code_template": "create_scene_baseline(table_size=[3.0, 1.4])\n\nrobot_wizard(robot_name=\"ur10\", dest_path=\"/World/UR10\", position=[0, 0, 0.75], orientation=[1, 0, 0, 0])\n\nsurface_gripper(robot_path=\"/World/UR10\", ee_link=\"/World/UR10/ee_link\", grip_threshold=0.02, force_limit=200.0, torque_limit=200.0)\n\n# Pedestal supporting the stack (UR10-friendly height, like CP-82)\ncreate_prim(prim_path=\"/World/Pedestal\", prim_type=\"Cube\", position=[-0.5, 0.4, 0.86], scale=[0.14, 0.14, 0.10])\napply_api_schema(prim_path=\"/World/Pedestal\", schema_name=\"PhysicsCollisionAPI\")\n\n# 4-cube vertical column on the pedestal (top at z=0.91), faces touching\ncreate_prim(prim_path=\"/World/Cube_1\", prim_type=\"Cube\", position=[-0.5, 0.4, 0.935], size=0.05)\ncreate_prim(prim_path=\"/World/Cube_2\", prim_type=\"Cube\", position=[-0.5, 0.4, 0.985], size=0.05)\ncreate_prim(prim_path=\"/World/Cube_3\", prim_type=\"Cube\", position=[-0.5, 0.4, 1.035], size=0.05)\ncreate_prim(prim_path=\"/World/Cube_4\", prim_type=\"Cube\", position=[-0.5, 0.4, 1.085], size=0.05)\nfor _p in (\"/World/Cube_1\",\"/World/Cube_2\",\"/World/Cube_3\",\"/World/Cube_4\"):\n    for _api in (\"PhysicsRigidBodyAPI\",\"PhysicsCollisionAPI\",\"PhysicsMassAPI\"):\n        apply_api_schema(prim_path=_p, schema_name=_api)\n    apply_physics_material(prim_path=_p, material_name=\"rubber\")\n\ncreate_bin(prim_path=\"/World/Bin\", position=[0.5, -0.4, 0.75], size=[0.25, 0.25, 0.15])\n\nsetup_pick_place_controller(\n    robot_path=\"/World/UR10\",\n    robot_family=\"ur10\",\n    target_source=\"curobo\",\n    source_paths=[\"/World/Cube_1\",\"/World/Cube_2\",\"/World/Cube_3\",\"/World/Cube_4\"],\n    destination_path=\"/World/Bin\",\n    task=\"depalletize\",\n    end_effector_offset=[0.0, 0.0, 0.02],\n    planning_obstacles=[\"/World/Table\", \"/World/Pedestal\"],\n)\n",
+  "extends": "CP-81",
+  "extension_notes": "CP-82 = converted from builtin to cuRobo. cuRobo handler implements _destination_path_for via Semantics_color lookup; builtin handler doesn't.",
+  "failure_modes": [
+    "set_semantic_label / Semantics_color attribute may need specific schema names — handler reads Semantics_color, Semantics_colour, Semantics_class.",
+    "Bin proximity (10cm gap between bins) may cause cube-to-wrong-bin if drop accuracy is poor.",
+    "Same raycast dependencies as CP-78."
+  ],
+  "verified_status": "BANKED — UR10 depalletize is FINICKY (cont.319, NOT gold). scene_eyes: only 1/4 delivered (Cube_3), plan_calls=79 plan_fails=31, top cube Cube_4 (z=1.085) NEVER approached (reach/planning at the stack top), Cube_1/2 approached-but-not-gripped. The top-down sort is robot-agnostic in PRINCIPLE, but UR10's SUCTION approach + cuRobo planning on a TALL vertical column struggles (vs Franka jaw 4/4 clean, CP-DEPAL-01). Robot-diversity for depalletize needs UR10-specific work (suction approach to stack-top, shorter stack, cuRobo tuning) — banked, not a quick win. Franka remains the robust depalletize gold.",
+  "motion_controllers": {
+    "verified": [
+      "curobo"
+    ],
+    "untested": [
+      "rmpflow",
+      "moveit2"
+    ]
+  },
+  "verification": {
+    "function_gate": {
+      "status": "pass",
+      "n": 8,
+      "m": 8,
+      "wilson_lower": 0.6756,
+      "last_run_sha": "8a1118e6",
+      "last_run_at": "2026-06-13T10:29:34+00:00"
+    },
+    "faithfulness": {
+      "status": "pass",
+      "n": 5,
+      "m": 5,
+      "wilson_lower": 0.5655,
+      "last_run_sha": "8108e660",
+      "last_run_at": "2026-06-11T04:08:37+00:00"
+    }
+  }
+}
