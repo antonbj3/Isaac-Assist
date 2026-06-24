@@ -75,16 +75,16 @@ for t, (p, usd, inner, pos, rot) in OBJS.items():
               f'simplify_collision(prim_path="{p}/{inner}", approximation="convexHull")',
               f'apply_physics_material(prim_path="{p}/{inner}", material_name="rubber")', '']
 srcs = ",".join(f'"{s}"' for s in src_paths)
-lines += ['create_bin(prim_path="/World/KitTray", position=[0.0, -0.45, 0.75], size=[0.3, 0.3, 0.12])', '',
+lines += ['create_bin(prim_path="/World/KitBin", position=[0.0, -0.45, 0.75], size=[0.3, 0.3, 0.12])', '',
           'setup_pick_place_controller(', '    robot_path="/World/Franka",', '    robot_family="franka",',
           '    target_source="curobo",', f'    source_paths=[{srcs}],',
-          '    destination_path="/World/KitTray",', '    planning_obstacles=["/World/Table"],', ')']
+          '    destination_path="/World/KitBin",', '    planning_obstacles=["/World/Table"],', ')']
 code = "\n".join(lines) + "\n"
 tpl = {"task_id": "CP-VISION-KIT",
        "goal": f"Vision KITTING/order fulfilment: order {ORDER!r}; Gemini identified {picked}; Franka picks ONLY the ordered subset {src_paths} into the kit tray, leaving the rest.",
        "code": code, "code_template": code,
        "role_defaults": {"primary_robot": {"path": "/World/Franka", "class": "franka_panda", "position": [0, 0, 0.75], "orientation": [0.7071068, 0, 0, 0.7071068]},
-                         "primary_destination": {"path": "/World/KitTray", "position": [0.0, -0.45, 0.75], "size": [0.3, 0.3, 0.12]}},
+                         "primary_destination": {"path": "/World/KitBin", "position": [0.0, -0.45, 0.75], "size": [0.3, 0.3, 0.12]}},
        "_vision_kit": {"order": ORDER, "picked_types": picked, "source_paths": src_paths},
        "verified_status": f"VISION-KIT (cont.319): multi-target selective pick from Gemini order-read {picked}. UNVERIFIED."}
 json.dump(tpl, open("/home/anton/projects/Omniverse_Nemotron_Ext/workspace/templates/CP-VISION-KIT.json", "w"), indent=2)
