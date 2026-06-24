@@ -1,0 +1,158 @@
+{
+  "task_id": "CP-DEPAL-YCB",
+  "goal": "Real-object depalletize: a Franka destacks a column of 3 REAL YCB foam bricks TOP-DOWN into a bin — combines top-down depalletize + real-object (referenced-USD) manipulation.",
+  "tools_used": [
+    "create_prim",
+    "set_attribute",
+    "apply_api_schema",
+    "robot_wizard",
+    "create_conveyor",
+    "create_bin",
+    "add_proximity_sensor",
+    "set_physics_scene_config",
+    "apply_physics_material",
+    "bulk_set_attribute",
+    "setup_pick_place_controller"
+  ],
+  "thoughts": "Nine non-obvious patterns for CP-01:\n1) Table top at z=0.75 anchors all heights (Franka base, belt, cubes, bin floor).\n2) Franka orientation [0.7071068, 0, 0, 0.7071068] (90° around Z) so cube/belt at world +Y is in robot's natural pick direction. Without this the wrist bumps cube during descent.\n3) PhysicsScene MUST use CPU dynamics: enable_gpu_dynamics=False + broadphase_type='MBP'. PhysxSurfaceVelocityAPI is silently ignored under GPU broadphase — belt won't move cubes.\n4) Surface velocity carries cubes ~3× the configured nominal due to PhysX stick-slip with high-friction material. Set surface_velocity to ~1/3 of desired apparent speed.\n5) Cubes need physxRigidBody:sleepThreshold=0. Without this PhysX deactivates resting cubes when belt is paused, surface velocity skips sleeping bodies → cube stuck on resume. Apply PhysxRigidBodyAPI then bulk_set_attribute.\n6) Cubes start OUTSIDE robot's 0.70m horizontal pick reach so belt has visible work carrying each into the pick zone sequentially.\n7) Apply 'rubber' physics material to cubes ONLY — NOT to fingers. Binding to fingers fires PhysX 'triangle mesh on dynamic body' warnings that pop modal-style on every Play and block the viewport. Combined-friction rubber-cube vs default-mu fingers gives ~0.75 effective grip — sufficient.\n8) DomeLight required: viewport renders black after new_stage() without one. Set inputs:intensity=1000.\n9) target_source='curobo' for smoothest motion + scene-collision-aware planning.",
+  "code": "# Pick-and-place cell with a REAL YCB asset (foam_brick) instead of a primitive cube.\n# Proves the referenced-USD-asset manipulation path end-to-end: add_reference loader +\n# mesh convex-hull collider + bbox-driven cuRobo grasp. [real-object manipulation]\ncreate_scene_baseline(include_ground=False, table_size=[2.0, 1.0])\n\nrobot_wizard(\n    robot_name={{primary_robot.class}},\n    dest_path={{primary_robot.path}},\n    position={{primary_robot.position}},\n    orientation={{primary_robot.orientation}},\n)\n\ncreate_conveyor(\n    prim_path={{input_conveyor.path}},\n    position={{input_conveyor.position}},\n    size={{input_conveyor.size}},\n    surface_velocity={{input_conveyor.surface_velocity}},\n)\n\n# Workpiece: a real YCB foam brick referenced from the local Isaac 5.0 asset library.\n# Native Axis_Aligned extent x=7.8 y=5.1 z=5.3 cm; grasp q=[0,1,0,0] closes the jaw along\n# world-Y -> grips the 5.1cm narrow axis (cube-like, fits the ~8cm Franka jaw). No rotation.\ncreate_prim(prim_path=\"/World/Brick_1\", prim_type=\"Xform\", position=[0.2, 0.4, 0.835])\nadd_reference(prim_path=\"/World/Brick_1\", reference_path=\"/mnt/shared_data/isaac-sim-assets-complete-5.0.0/Assets/Isaac/5.0/Isaac/Props/YCB/Axis_Aligned/061_foam_brick.usd\")\nfor api in (\"PhysicsRigidBodyAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n    apply_api_schema(prim_path=\"/World/Brick_1\", schema_name=api)\napply_api_schema(prim_path=\"/World/Brick_1/_61_foam_brick\", schema_name=\"PhysicsCollisionAPI\")\nsimplify_collision(prim_path=\"/World/Brick_1/_61_foam_brick\", approximation=\"convexHull\")\nbulk_set_attribute(prim_paths=[\"/World/Brick_1\"], attr=\"physxRigidBody:sleepThreshold\", value=0.0)\napply_physics_material(prim_path=\"/World/Brick_1/_61_foam_brick\", material_name=\"rubber\")\n\ncreate_bin(prim_path={{primary_destination.path}}, position={{primary_destination.position}}, size={{primary_destination.size}})\n\nadd_proximity_sensor(sensor_path={{pick_sensor.path}}, position={{pick_sensor.position}}, size={{pick_sensor.size}})\n\nsetup_pick_place_controller(\n    robot_path={{primary_robot.path}},\n    target_source=\"curobo\",\n    sensor_path={{pick_sensor.path}},\n    belt_path={{input_conveyor.path}},\n    source_paths=[\"/World/Brick_1\"],\n    destination_path={{primary_destination.path}},\n    planning_obstacles=[\"/World/Table\", {{input_conveyor.path}}, {{primary_destination.path}}],\n)\n",
+  "intent": {
+    "pattern_hint": "pick_place",
+    "structural_features": {
+      "n_robot_stations": 1,
+      "n_handoffs": 0,
+      "destination_kind": "single_bin",
+      "uses_conveyor_transport": true
+    },
+    "structural_tags": [
+      "isaac:transport.conveyor",
+      "isaac:robot.fixed_base.arm",
+      "isaac:topology.single_station"
+    ]
+  },
+  "roles": {
+    "primary_robot": {
+      "constraints": [
+        "franka_panda",
+        "ur5e",
+        "kinova_gen3"
+      ],
+      "expected_count": 1,
+      "required": true,
+      "disambiguator": "smaller_x_first"
+    },
+    "input_conveyor": {
+      "constraints": [
+        "conveyor"
+      ],
+      "expected_count": 1,
+      "required": true
+    },
+    "primary_destination": {
+      "constraints": [
+        "bin"
+      ],
+      "expected_count": 1,
+      "required": true
+    },
+    "workpieces": {
+      "constraints": [
+        "cube"
+      ],
+      "min": 1,
+      "max": 4,
+      "param_name": "n_cubes",
+      "unordered": true
+    }
+  },
+  "role_defaults": {
+    "primary_robot": {
+      "path": "/World/Franka",
+      "class": "franka_panda",
+      "position": [
+        0,
+        0,
+        0.75
+      ],
+      "orientation": [
+        0.7071068,
+        0,
+        0,
+        0.7071068
+      ]
+    },
+    "primary_destination": {
+      "path": "/World/Bin",
+      "position": [
+        0.0,
+        -0.45,
+        0.75
+      ],
+      "size": [
+        0.3,
+        0.3,
+        0.15
+      ]
+    }
+  },
+  "code_template": "create_scene_baseline(include_ground=False, table_size=[2.0, 1.0])\n\nrobot_wizard(robot_name=\"franka_panda\", dest_path=\"/World/Franka\", position=[0, 0, 0.75], orientation=[0.7071068, 0, 0, 0.7071068])\n\n# Column of 3 REAL YCB foam bricks (stacked, 0.06 spacing -> settle onto each other)\ncreate_prim(prim_path=\"/World/Brick_1\", prim_type=\"Xform\", position=[0.45, 0.0, 0.8])\nadd_reference(prim_path=\"/World/Brick_1\", reference_path=\"/mnt/shared_data/isaac-sim-assets-complete-5.0.0/Assets/Isaac/5.0/Isaac/Props/YCB/Axis_Aligned/061_foam_brick.usd\")\nfor api in (\"PhysicsRigidBodyAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n    apply_api_schema(prim_path=\"/World/Brick_1\", schema_name=api)\napply_api_schema(prim_path=\"/World/Brick_1/_61_foam_brick\", schema_name=\"PhysicsCollisionAPI\")\nsimplify_collision(prim_path=\"/World/Brick_1/_61_foam_brick\", approximation=\"convexHull\")\napply_physics_material(prim_path=\"/World/Brick_1/_61_foam_brick\", material_name=\"rubber\")\n\ncreate_prim(prim_path=\"/World/Brick_2\", prim_type=\"Xform\", position=[0.45, 0.0, 0.86])\nadd_reference(prim_path=\"/World/Brick_2\", reference_path=\"/mnt/shared_data/isaac-sim-assets-complete-5.0.0/Assets/Isaac/5.0/Isaac/Props/YCB/Axis_Aligned/061_foam_brick.usd\")\nfor api in (\"PhysicsRigidBodyAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n    apply_api_schema(prim_path=\"/World/Brick_2\", schema_name=api)\napply_api_schema(prim_path=\"/World/Brick_2/_61_foam_brick\", schema_name=\"PhysicsCollisionAPI\")\nsimplify_collision(prim_path=\"/World/Brick_2/_61_foam_brick\", approximation=\"convexHull\")\napply_physics_material(prim_path=\"/World/Brick_2/_61_foam_brick\", material_name=\"rubber\")\n\ncreate_prim(prim_path=\"/World/Brick_3\", prim_type=\"Xform\", position=[0.45, 0.0, 0.92])\nadd_reference(prim_path=\"/World/Brick_3\", reference_path=\"/mnt/shared_data/isaac-sim-assets-complete-5.0.0/Assets/Isaac/5.0/Isaac/Props/YCB/Axis_Aligned/061_foam_brick.usd\")\nfor api in (\"PhysicsRigidBodyAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n    apply_api_schema(prim_path=\"/World/Brick_3\", schema_name=api)\napply_api_schema(prim_path=\"/World/Brick_3/_61_foam_brick\", schema_name=\"PhysicsCollisionAPI\")\nsimplify_collision(prim_path=\"/World/Brick_3/_61_foam_brick\", approximation=\"convexHull\")\napply_physics_material(prim_path=\"/World/Brick_3/_61_foam_brick\", material_name=\"rubber\")\n\ncreate_bin(prim_path=\"/World/Bin\", position=[0.0, -0.45, 0.75], size=[0.3, 0.3, 0.15])\n\nsetup_pick_place_controller(\n    robot_path=\"/World/Franka\",\n    robot_family=\"franka\",\n    target_source=\"curobo\",\n    source_paths=[\"/World/Brick_1\",\"/World/Brick_2\",\"/World/Brick_3\"],\n    destination_path=\"/World/Bin\",\n    task=\"depalletize\",\n    planning_obstacles=[\"/World/Table\"],\n)\n",
+  "verify_args_template": {
+    "stages": [
+      {
+        "robot_path": "{{primary_robot.path}}",
+        "pick_path": "{{input_conveyor.path}}",
+        "place_path": "{{primary_destination.path}}",
+        "robot_kind": "{{primary_robot.class}}"
+      }
+    ],
+    "cube_path": "/World/Brick_1"
+  },
+  "simulate_args_template": {
+    "cube_path": "/World/Brick_1",
+    "target_path": "/World/Bin",
+    "duration_s": 40,
+    "cube_paths": [
+      "/World/Brick_1"
+    ],
+    "completeness": "all"
+  },
+  "failure_modes": [
+    "PhysicsScene without enable_gpu_dynamics=False → PhysxSurfaceVelocityAPI silently ignored, belt doesn't move cubes.",
+    "Cubes without physxRigidBody:sleepThreshold=0 → PhysX sleeps them when belt is paused (between picks); surface velocity is friction-mediated and skips sleeping bodies → cube stuck even when belt resumes. Apply PhysxRigidBodyAPI then bulk_set_attribute.",
+    "Cubes inside robot's 0.70m horizontal reach at start → controller pauses belt immediately for the closest cube and never resumes between picks → belt never visibly moves.",
+    "No friction material anywhere → cube slips during lift. Apply rubber to cubes only (NOT fingers — that fires PhysX triangle-mesh-on-dynamic-body warnings that block the viewport on Play). Combined-friction rubber-cube vs default-mu finger gives ~0.75 effective which is sufficient.",
+    "Reading cube position before pause+settle → trajectory aims behind where cube ends up resting → fingers grip back edge of cube. cuRobo handler does this internally via 'settling' state (8 ticks).",
+    "Robot orientation = identity instead of [0.7071, 0, 0, 0.7071] → cube at world +Y is at 90 to robot's natural pick direction → wrist bumps cube during descent.",
+    "Setting EE_INITIAL_HEIGHT manually below robot base → IK target below base → arm folds. Auto-compute is correct.",
+    "Using target_source='spline' on a GPU-equipped machine — older default; cuRobo gives smoother motion."
+  ],
+  "verified_status": "★ GENUINE REAL-OBJECT DEPALLETIZE GOLD (cont.319, N-of-2 deterministic). A Franka destacks a column of 3 REAL YCB foam bricks (referenced-USD, convex-hull collider, bbox-driven grasp) TOP-DOWN into a bin. scene_eyes (150s, both runs IDENTICAL, plan_fails=0): real-brick stack HELD (Brick_1 on Table, Brick_2 on Brick_1, Brick_3 on Brick_2, no explosion); destacked TOP-DOWN (Brick_3 top @6s -> Brick_2 @28s -> Brick_1 bottom @57s, all CONVERGED+GRIPPED); all 3 xy-in-bin=yes (delivered). Two bricks topple IN the collection bin (orientation-irrelevant for a collection delivery). Combines top-down depalletize + real-object (mesh) manipulation — touches #50. The depalletize block now verified across PRIMITIVES (CP-DEPAL-01), mixed-size (DIM), color-sorted (SORT), AND REAL objects (this).",
+  "motion_controllers": {
+    "verified": [
+      "curobo"
+    ],
+    "untested": [
+      "rmpflow",
+      "moveit2",
+      "admittance"
+    ]
+  },
+  "verification": {
+    "function_gate": {
+      "status": "pass",
+      "n": 7,
+      "m": 7,
+      "wilson_lower": 0.6457,
+      "last_run_sha": "8a1118e6",
+      "last_run_at": "2026-06-13T10:29:34+00:00"
+    },
+    "faithfulness": {
+      "status": "pass",
+      "n": 5,
+      "m": 5,
+      "wilson_lower": 0.5655,
+      "last_run_sha": "8108e660",
+      "last_run_at": "2026-06-11T04:19:41+00:00"
+    }
+  }
+}
