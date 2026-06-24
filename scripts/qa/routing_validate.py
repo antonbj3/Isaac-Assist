@@ -64,8 +64,10 @@ def _source_paths(tpl):
     sp = list(sa.get("cube_paths") or ([sa["cube_path"]] if sa.get("cube_path") else []))
     if sp:
         return sp
-    # cont.319-CV fallback: no simulate_args (hand-built CV templates) -> parse source_paths=[...] from code.
-    code = tpl.get("code", "") or tpl.get("code_template", "")
+    # cont.319-CV fallback: no simulate_args (hand-built CV templates) -> parse source_paths=[...] from the
+    # BUILT field code_template (NOT code — CP-DEPAL-YCB-SORT's code had only Brick_1 while code_template had
+    # all 4; parse must match what the canonical instantiator builds).
+    code = tpl.get("code_template", "") or tpl.get("code", "")
     m = re.search(r"source_paths\s*=\s*\[(.*?)\]", code, re.S)
     return re.findall(r'["\']([^"\']+)["\']', m.group(1)) if m else []
 
@@ -85,8 +87,18 @@ async def _validate_one(kit_tools, etc, name):
     if not routing:
         return {"template": name, "status": "NOT_A_COLOR_SORT (no color_routing dict)"}
     srcs = _source_paths(tpl)
+    item_class = _parse_item_class(code)
+    # cont.319-CV: code source_paths can be a TEMPLATED loop/f-string (e.g. "/World/Cube_{i+1}") that the
+    # regex grabs unsubstituted -> 1 phantom placeholder. The set_semantic_label labels carry the LITERAL
+    # routed-item paths, so when srcs is empty or contains an unsubstituted {placeholder}, use those keys.
+    if (not srcs or any("{" in s for s in srcs)) and item_class:
+        srcs = list(item_class.keys())
     sa = tpl.get("simulate_args") or {}
     dur = int(sa.get("duration_s") or 120)
+    # cont.319-CV: --dur N override — depalletize-sorts (destack one-by-one) need longer than the 120s
+    # default to route the LAST-picked (bottom) item; without it that item reads STILL-FEEDING (under-run).
+    if "--dur" in sys.argv:
+        dur = int(sys.argv[sys.argv.index("--dur") + 1])
     # cont.200: run the FULL authored duration (multi-cube sorters are throughput-paced) — the old
     # min(...,5000)-step cap UNDER-RAN long sorters (CP-35 read 3/8 at ~150s but 9/10 at 175s = the
     # cont.188 under-duration trap reproduced in this tool). Scale to dur, generous cap.
@@ -111,7 +123,7 @@ async def _validate_one(kit_tools, etc, name):
         "import omni.timeline,omni.kit.app; omni.timeline.get_timeline_interface().play()\n"
         f"_a=omni.kit.app.get_app()\nfor _ in range({steps}): _a.update()", timeout=int(steps/25)+120)
 
-    spec = json.dumps({"routing": routing, "srcs": srcs, "starts": starts, "item_class": _parse_item_class(code)})
+    spec = json.dumps({"routing": routing, "srcs": srcs, "starts": starts, "item_class": item_class})
     code_q = f'''
 import omni.usd, json as _j
 from pxr import UsdGeom, Sdf
