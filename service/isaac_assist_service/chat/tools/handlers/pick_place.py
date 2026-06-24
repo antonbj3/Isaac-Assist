@@ -6611,6 +6611,24 @@ def _cube_to_pick():
             return cands[0][1]
         except Exception:
             pass
+    # DECLUTTER (cont.319): dense-cluster CLEARANCE. The jaw can't extract a fully-SURROUNDED cube
+    # (needs >=2 opposite sides clear -> cont.319-DECLUTTER-LIMIT: a centre cube grip-slips). Pick the
+    # MOST-EXPOSED remaining cube first (fewest near neighbours), so each removal exposes the next and the
+    # centre is left until its blockers are gone. (source_paths order is NOT honoured by the default sort,
+    # which is why centre-last ordering failed; this exposure sort fixes it.) GATED TASK_MODE=="declutter"
+    # -> every other template byte-identical.
+    if TASK_MODE == "declutter" and len(cands) > 1:
+        try:
+            _wp = [(_c, _world_pos(_c[1])) for _c in cands]
+            _wp = [(_c, np.asarray(_w)[:2]) for _c, _w in _wp if _w is not None]
+            if len(_wp) > 1:
+                def _exposure(_it):
+                    _c, _xy = _it
+                    return sum(1 for _o, _oxy in _wp if _o is not _c and float(np.linalg.norm(_oxy - _xy)) < 0.10)
+                _wp.sort(key=_exposure)
+                return _wp[0][0][1]
+        except Exception:
+            pass
     cands.sort(); return cands[0][1]
 
 def _bin_bounds(dest_path=None):
