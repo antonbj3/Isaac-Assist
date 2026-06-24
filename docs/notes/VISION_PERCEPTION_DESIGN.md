@@ -140,3 +140,17 @@ display-coloured cubes (CP-VISION-GRASP, both colour-seed and VLM-driven). The R
 a different recipe: tighter camera (objects large in frame), depth/instance segmentation instead of
 auto-mask+area-filter, thin-mesh raycast handling (sample object-class hits only, reject table by z),
 and a settle-to-static gate read back from sim before perceiving. NOT a quick wire — a deliberate arc.
+
+## REAL-OBJECT CV — ROOT CAUSE + WORKING PATH (cont.319, 2026-06-24, corrected)
+The earlier "SAM2 table-dominance / thin-mesh graze" was a symptom. MEASURED ROOT CAUSE (probe):
+**referenced YCB mesh colliders are NOT hit by physx scene-query raycast** — a ray straight down at a
+settled can's exact xy passes THROUGH it to the table (z=0.80), even with instanceable=False, even
+though the object rests on the table (rigid-body collision works). Native UsdGeom.Cube colliders ARE
+raycast-hittable (why the colour-cube CV-grasp works). So the raycast-for-prim-identity path does not
+transfer to referenced YCB assets.
+WORKING PATH (verified, CP-VISION-YCB gold): the raycast was only doing IDENTITY; get identity from
+**Gemini visual recognition** instead — Gemini SEES the render + names the object type (banana/can/box),
+3/3 correct; map type->prim; reuse the gold YCB grasp (controller bbox-localizes the selected prim, no
+raycast pose needed). End-to-end: Gemini visually picked the box -> Franka gripped + delivered ONLY the
+box (xy-in-bin=yes, plan_fails=0), banana+can untouched. Honest scope: identity from VISION (real),
+pose from the object registry/bbox (as all YCB golds do). Pure no-GT raycast-pose remains colour-cube-only.
