@@ -61,13 +61,46 @@ img = np.array(Image.open(PNG).convert("RGB"))
 pred = SAM2ImagePredictor(build_sam2("configs/sam2.1/sam2.1_hiera_s.yaml",
        "/home/anton/projects/Omniverse_Nemotron_Ext/vision_models/sam2.1_hiera_small.pt", device="cuda"))
 pred.set_image(img)
-r, g, b = img[..., 0].astype(int), img[..., 1].astype(int), img[..., 2].astype(int)
-seed = {"red": (r > 110) & (g < 90) & (b < 90), "green": (g > 110) & (r < 90) & (b < 90),
-        "blue": (b > 110) & (r < 90) & (g < 90)}[TARGET]
-ys, xs = np.where(seed)
-if len(xs) == 0:
-    print("TARGET colour %s not visible in render" % TARGET); sys.exit(1)
-px, py = int(np.median(xs)), int(np.median(ys))
+if os.environ.get("VLM") == "1":
+    # VLM-SEMANTIC seed: Gemini-vision POINTS at the target (no colour heuristic, no GT).
+    import base64, urllib.request, re as _re
+    os.environ["GEMINI_PROVIDER_VERTEX"] = "1"
+    from service.isaac_assist_service.chat.llm_gemini import GeminiProvider
+    gp = GeminiProvider(api_key="vertex-adc", model="gemini-2.5-flash")
+    png = open(PNG, "rb").read()
+    prompt = (f"This {W}x{H} image shows several cubes on a table. Point at the {TARGET.upper()} cube. "
+              f"Reply with ONLY the pixel coordinate of its centre as JSON: {{\"x\": <int 0-{W}>, \"y\": <int 0-{H}>}}.")
+    body = {"contents": [{"role": "user", "parts": [
+        {"inline_data": {"mime_type": "image/png", "data": base64.b64encode(png).decode()}}, {"text": prompt}]}]}
+    req = urllib.request.Request(gp.base_url, data=json.dumps(body).encode(),
+        headers={"Content-Type": "application/json", "Authorization": "Bearer " + gp._vertex_bearer()})
+    ans = json.load(urllib.request.urlopen(req, timeout=60))["candidates"][0]["content"]["parts"][0]["text"]
+    m = _re.search(r'"x"\s*:\s*(\d+).*?"y"\s*:\s*(\d+)', ans, _re.S)
+    if not m:
+        print("VLM gave no point:", ans[:120]); sys.exit(1)
+    gx, gy = int(m.group(1)), int(m.group(2))
+    print("VLM(Gemini-vision) pointed at target=%s pixel=(%d,%d) raw=%r" % (TARGET, gx, gy, ans.strip()[:60]))
+    # SAM2 finds the OBJECTS; the VLM's coarse point SELECTS among them (decouples VLM precision).
+    from sam2.automatic_mask_generator import SAM2AutomaticMaskGenerator
+    amg = SAM2AutomaticMaskGenerator(pred.model, points_per_side=32, pred_iou_thresh=0.85, stability_score_thresh=0.9)
+    cands = []
+    for mm in amg.generate(img):
+        a = mm["area"]
+        if 0.0003 * img.shape[0] * img.shape[1] < a < 0.03 * img.shape[0] * img.shape[1]:  # cube-sized
+            ys2, xs2 = np.where(mm["segmentation"])
+            cands.append((int(xs2.mean()), int(ys2.mean())))
+    if not cands:
+        print("SAM2-auto found no cube-sized masks"); sys.exit(1)
+    px, py = min(cands, key=lambda c: (c[0] - gx) ** 2 + (c[1] - gy) ** 2)
+    print("SAM2-auto %d cube masks; nearest to VLM point -> seed=(%d,%d)" % (len(cands), px, py))
+else:
+    r, g, b = img[..., 0].astype(int), img[..., 1].astype(int), img[..., 2].astype(int)
+    seed = {"red": (r > 110) & (g < 90) & (b < 90), "green": (g > 110) & (r < 90) & (b < 90),
+            "blue": (b > 110) & (r < 90) & (g < 90)}[TARGET]
+    ys, xs = np.where(seed)
+    if len(xs) == 0:
+        print("TARGET colour %s not visible in render" % TARGET); sys.exit(1)
+    px, py = int(np.median(xs)), int(np.median(ys))
 masks, scores, _ = pred.predict(point_coords=np.array([[px, py]]), point_labels=np.array([1]), multimask_output=False)
 mys, mxs = np.where(masks[0].astype(bool))
 cpx, cpy = int(mxs.mean()), int(mys.mean())
