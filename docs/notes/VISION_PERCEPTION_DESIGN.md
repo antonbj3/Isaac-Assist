@@ -56,3 +56,19 @@ Gemini-2.5-flash via Vertex SEES the rendered scene + identifies the target obje
      reports when it can't see a colour (a good built-in false-success guard).
 NEXT for a scene_eyes-verified GOLD: wire vision-selection -> source_paths -> Franka pick -> scene_eyes
 (the pick half is the proven LLM-pick pipeline). DEPTH/SAM2 path (sense b) still pending the (A/B/C) decision.
+
+## ★ SAM2 segmentation PROVEN (2026-06-24, scripts/qa/sam2_segment_poc.py)
+SAM2.1-hiera-small (vision_models/) segments a cube from a COARSE point seed on our captured
+render: a colour-centroid seed (= what a VLM 'point at the X cube' gives) -> SAM2 precise mask.
+3/3: red/green/blue masks each ~0.7% of image, score 0.92-0.94, coherent + cube-sized. Mask
+centroids ((469,402),(639,402),(810,402)) = the cube image-centres -> these feed depth-unproject.
+⇒ the SEGMENTATION half of the CV-grasp pipeline works (point -> precise mask).
+
+## CV PIPELINE STATUS (perception -> grasp)
+- [x] RGB capture (viewport, in-Kit) — works
+- [x] LLM-vision identification (Gemini-2.5-flash Vertex sees render, IDs target) — 3/3
+- [x] SAM2 segmentation (coarse point -> precise mask) — 3/3, score ~0.93
+- [ ] mask + DEPTH -> 3D pose : depth path = (A) standalone RTX-Kit / (B) in-Kit RAYCAST / (C) viewport-AOV
+- [ ] grasp from camera-derived pose -> scene_eyes verify
+NEXT: (B) raycast-depth (no 2nd process) — unproject the SAM2 mask centroid to a camera ray,
+physx-raycast into the scene -> 3D hit point, compare to ground-truth (perception accuracy), then grasp.
