@@ -9,9 +9,9 @@ os.environ["GEMINI_PROVIDER_VERTEX"] = "1"
 from service.isaac_assist_service.chat.llm_gemini import GeminiProvider
 
 CUBES = {  # path -> (color, [x,y,z])
-    "/World/Cube_red":   ("RED",   [0.40, 0.15, 0.79]),
-    "/World/Cube_green": ("GREEN", [0.40, 0.00, 0.79]),
-    "/World/Cube_blue":  ("BLUE",  [0.40, -0.15, 0.79]),
+    "/World/Cube_red":   ("RED",   [0.32, 0.16, 0.79]),
+    "/World/Cube_green": ("GREEN", [0.42, 0.16, 0.79]),
+    "/World/Cube_blue":  ("BLUE",  [0.52, 0.16, 0.79]),
 }
 SYS = ("You are a robot pick-selector. Given a scene and a task, choose the ONE object to pick. "
        "Reply with ONLY its prim path (e.g. /World/Cube_red) and nothing else.")
