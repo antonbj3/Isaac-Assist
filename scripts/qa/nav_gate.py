@@ -167,15 +167,26 @@ print("NAV_CARGO_JSON " + _j.dumps(cargo_out))
     carrier = max(robots, key=lambda d: d.get("disp") or 0) if robots else None
     base_disp = (carrier.get("disp") or 0.0) if carrier else 0.0
     bx, by = (carrier["p1"][0], carrier["p1"][1]) if (carrier and carrier.get("p1")) else (0.0, 0.0)
-    RIDE_TOL = 1.0  # m: cargo within this of the carrier at end = on the deck (deck offset ~0.3 + slack)
+    # cont.319-AMR: a riding cargo and a FALLEN cargo can share the SAME final xy (the cube fell straight
+    # down out of the moving bin -> ends at the bin's transported xy but on the floor). xy-proximity ALONE
+    # cannot tell them apart, and a fixed 1.0m tol also false-NEGATIVES a deliberately Franka-offset floating
+    # bin (deck >1m from the base). TWO discriminators now: (a) raised xy tol admits an offset deck; (b) a
+    # Z-DROP check — a riding cargo stays at its loaded height, a fallen one drops to the floor.
+    RIDE_TOL = 1.6   # m: cargo within this xy of carrier at end = on the deck (admits a Franka-offset floating bin)
+    DROP_TOL = 0.30  # m: cargo that dropped >this below its loaded (p0) z = fell off the deck, NOT transported
     cargo_verdict = []
     for c in cargo:
-        cf = c.get("p1")
+        cf = c.get("p1"); c0 = c.get("p0")
         dist = round(((cf[0] - bx) ** 2 + (cf[1] - by) ** 2) ** 0.5, 3) if cf else None
-        rode = bool(dist is not None and base_disp > 0.5 and dist < RIDE_TOL)
-        cargo_verdict.append({**c, "base_disp": round(base_disp, 3), "final_dist_to_carrier": dist, "rode": rode})
-        print(f"  CARGO {c['path']}: final_dist_to_AMR={dist} base_disp={round(base_disp,3)} disp={c['disp']} -> "
-              f"{'RODE with AMR (transported)' if rode else 'did NOT transport (left behind / fell)'}")
+        zdrop = round(float(c0[2]) - float(cf[2]), 3) if (cf and c0) else None
+        rode = bool(dist is not None and base_disp > 0.5 and dist < RIDE_TOL
+                    and (zdrop is None or zdrop < DROP_TOL))
+        cargo_verdict.append({**c, "base_disp": round(base_disp, 3), "final_dist_to_carrier": dist,
+                              "z_drop": zdrop, "rode": rode})
+        _why = "" if rode else (" [z-drop %.2f>%.2f = fell off deck]" % (zdrop, DROP_TOL)
+                                if (zdrop is not None and zdrop >= DROP_TOL) else " [xy %.2f>%.2f from carrier]" % (dist, RIDE_TOL) if dist is not None else "")
+        print(f"  CARGO {c['path']}: final_dist_to_AMR={dist} z_drop={zdrop} base_disp={round(base_disp,3)} disp={c['disp']} -> "
+              f"{'RODE with AMR (transported)' if rode else 'did NOT transport (left behind / fell)'+_why}")
     print("NAV_GATE_FULL=" + json.dumps({"template": tpl_name, "robots": robots, "cargo": cargo_verdict,
           "n": n, "n_spawned": n_spawned, "n_moved": n_moved, "n_reached": n_reached,
           "success": allp, "build_err": build_err}))
