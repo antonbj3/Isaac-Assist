@@ -1,0 +1,45 @@
+{
+  "task_id": "CP-VISION-CLUTTER-SEG",
+  "code": "create_scene_baseline(include_ground=False, table_size=[2.0, 1.0])\n\nrobot_wizard(robot_name=\"franka_panda\", dest_path=\"/World/Franka\", position=[0, 0, 0.75], orientation=[0.7071068, 0, 0, 0.7071068])\n\ncreate_prim(prim_path=\"/World/Cube_red\", prim_type=\"Cube\", position=[0.36, 0.16, 0.83], size=0.05)\nfor _api in (\"PhysicsRigidBodyAPI\",\"PhysicsCollisionAPI\",\"PhysicsMassAPI\"):\n    apply_api_schema(prim_path=\"/World/Cube_red\", schema_name=_api)\ncreate_prim(prim_path=\"/World/Cube_green\", prim_type=\"Cube\", position=[0.5, 0.16, 0.83], size=0.05)\nfor _api in (\"PhysicsRigidBodyAPI\",\"PhysicsCollisionAPI\",\"PhysicsMassAPI\"):\n    apply_api_schema(prim_path=\"/World/Cube_green\", schema_name=_api)\ncreate_prim(prim_path=\"/World/Cube_blue\", prim_type=\"Cube\", position=[0.4, 0.23, 0.83], size=0.05)\nfor _api in (\"PhysicsRigidBodyAPI\",\"PhysicsCollisionAPI\",\"PhysicsMassAPI\"):\n    apply_api_schema(prim_path=\"/World/Cube_blue\", schema_name=_api)\ncreate_prim(prim_path=\"/World/Cube_yellow\", prim_type=\"Cube\", position=[0.47, 0.23, 0.83], size=0.05)\nfor _api in (\"PhysicsRigidBodyAPI\",\"PhysicsCollisionAPI\",\"PhysicsMassAPI\"):\n    apply_api_schema(prim_path=\"/World/Cube_yellow\", schema_name=_api)\ncreate_prim(prim_path=\"/World/Cube_cyan\", prim_type=\"Cube\", position=[0.43, 0.09, 0.83], size=0.05)\nfor _api in (\"PhysicsRigidBodyAPI\",\"PhysicsCollisionAPI\",\"PhysicsMassAPI\"):\n    apply_api_schema(prim_path=\"/World/Cube_cyan\", schema_name=_api)\ncreate_prim(prim_path=\"/World/Cube_magenta\", prim_type=\"Cube\", position=[0.43, 0.16, 0.83], size=0.05)\nfor _api in (\"PhysicsRigidBodyAPI\",\"PhysicsCollisionAPI\",\"PhysicsMassAPI\"):\n    apply_api_schema(prim_path=\"/World/Cube_magenta\", schema_name=_api)\n\ncreate_bin(prim_path=\"/World/Bin\", position=[0.0, -0.45, 0.75], size=[0.3, 0.3, 0.15])\n\nsetup_pick_place_controller(\n    robot_path=\"/World/Franka\",\n    robot_family=\"franka\",\n    target_source=\"curobo\",\n    source_paths=[\"/World/Cube_red\"],\n    destination_path=\"/World/Bin\",\n    planning_obstacles=[\"/World/Table\"],\n)\n",
+  "code_template": "create_scene_baseline(include_ground=False, table_size=[2.0, 1.0])\n\nrobot_wizard(robot_name=\"franka_panda\", dest_path=\"/World/Franka\", position=[0, 0, 0.75], orientation=[0.7071068, 0, 0, 0.7071068])\n\ncreate_prim(prim_path=\"/World/Cube_red\", prim_type=\"Cube\", position=[0.36, 0.16, 0.83], size=0.05)\nfor _api in (\"PhysicsRigidBodyAPI\",\"PhysicsCollisionAPI\",\"PhysicsMassAPI\"):\n    apply_api_schema(prim_path=\"/World/Cube_red\", schema_name=_api)\ncreate_prim(prim_path=\"/World/Cube_green\", prim_type=\"Cube\", position=[0.5, 0.16, 0.83], size=0.05)\nfor _api in (\"PhysicsRigidBodyAPI\",\"PhysicsCollisionAPI\",\"PhysicsMassAPI\"):\n    apply_api_schema(prim_path=\"/World/Cube_green\", schema_name=_api)\ncreate_prim(prim_path=\"/World/Cube_blue\", prim_type=\"Cube\", position=[0.4, 0.23, 0.83], size=0.05)\nfor _api in (\"PhysicsRigidBodyAPI\",\"PhysicsCollisionAPI\",\"PhysicsMassAPI\"):\n    apply_api_schema(prim_path=\"/World/Cube_blue\", schema_name=_api)\ncreate_prim(prim_path=\"/World/Cube_yellow\", prim_type=\"Cube\", position=[0.47, 0.23, 0.83], size=0.05)\nfor _api in (\"PhysicsRigidBodyAPI\",\"PhysicsCollisionAPI\",\"PhysicsMassAPI\"):\n    apply_api_schema(prim_path=\"/World/Cube_yellow\", schema_name=_api)\ncreate_prim(prim_path=\"/World/Cube_cyan\", prim_type=\"Cube\", position=[0.43, 0.09, 0.83], size=0.05)\nfor _api in (\"PhysicsRigidBodyAPI\",\"PhysicsCollisionAPI\",\"PhysicsMassAPI\"):\n    apply_api_schema(prim_path=\"/World/Cube_cyan\", schema_name=_api)\ncreate_prim(prim_path=\"/World/Cube_magenta\", prim_type=\"Cube\", position=[0.43, 0.16, 0.83], size=0.05)\nfor _api in (\"PhysicsRigidBodyAPI\",\"PhysicsCollisionAPI\",\"PhysicsMassAPI\"):\n    apply_api_schema(prim_path=\"/World/Cube_magenta\", schema_name=_api)\n\ncreate_bin(prim_path=\"/World/Bin\", position=[0.0, -0.45, 0.75], size=[0.3, 0.3, 0.15])\n\nsetup_pick_place_controller(\n    robot_path=\"/World/Franka\",\n    robot_family=\"franka\",\n    target_source=\"curobo\",\n    source_paths=[\"/World/Cube_red\"],\n    destination_path=\"/World/Bin\",\n    planning_obstacles=[\"/World/Table\"],\n)\n",
+  "goal": "Rigorous vision grasp: Gemini pointed at the red cube; segmentation resolved /World/Cube_red (NO layout); Franka grasps that physical prim.",
+  "role_defaults": {
+    "primary_robot": {
+      "path": "/World/Franka",
+      "class": "franka_panda",
+      "position": [
+        0,
+        0,
+        0.75
+      ],
+      "orientation": [
+        0.7071068,
+        0,
+        0,
+        0.7071068
+      ]
+    },
+    "primary_destination": {
+      "path": "/World/Bin",
+      "position": [
+        0.0,
+        -0.45,
+        0.75
+      ],
+      "size": [
+        0.3,
+        0.3,
+        0.15
+      ]
+    }
+  },
+  "_vision_seg": {
+    "target": "red",
+    "gemini_point": [
+      160,
+      260
+    ],
+    "seg_prim": "/World/Cube_red"
+  },
+  "verified_status": "VISION-SEG (cont.319): source_paths from SEGMENTATION (/World/Cube_red), no layout. UNVERIFIED."
+}
