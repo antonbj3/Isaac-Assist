@@ -105,3 +105,20 @@ The remaining work is pure INTEGRATION (wire perception 3D pose -> controller gr
 all blockers cleared. Build order: (1) scene with collision cubes + Franka + bin + angled camera;
 (2) capture RGB; (3) SAM2 mask centroid; (4) camera-ray + physx-raycast -> 3D pose (no ground-truth);
 (5) grasp at that pose; (6) scene_eyes verifies the right object delivered. = honest sim-to-real camera grasp.
+
+## STATUS: INTEGRATION COMPLETE (cont.319, 2026-06-24)
+Full camera-perception-driven grasp VERIFIED end-to-end (`scripts/qa/vision_grasp_e2e.py`),
+NO ground-truth used for selection or localisation:
+ 1. Kit renders 3 colour collision-cubes via an offset-overhead camera -> RGB.
+ 2. SAM2 segments the TARGET colour -> mask centroid pixel (3/3 colours).
+ 3. Camera-ray (camera FRUSTUM intrinsics) + physx `raycast_closest` -> HIT PRIM + 3D pose.
+ 4. CP-VISION-GRASP written with `source_paths=[hit_prim]` (camera-chosen, not GT).
+ 5. scene_eyes confirms ONLY the perceived cube is delivered to the bin; others untouched.
+Results: red->Cube_red delivered (xy-in-bin=yes, gripped, converged, upright); blue->Cube_blue
+delivered, red+green untouched. The camera DRIVES which cube is grasped (target swap changes the
+delivered object). Pose accuracy X 0.8-2.5mm, Z exact (cube top 0.825).
+### KEY CALIBRATION FIX
+The Omniverse viewport CONFORMS the camera vertical aperture to the viewport aspect ratio, so the
+USD `verticalAperture` attribute is stale -> pixels are SQUARE in the render -> use `fy = fx =
+focal*W/horizontalAperture`. Reading the stale vertical-aperture attr made fy too small by H/W
+(0.5625), overshooting the y-ray by 1/0.5625=1.78x and MISSING the cube. One-line fix `fy=fx`.
