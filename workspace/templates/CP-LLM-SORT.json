@@ -1,0 +1,45 @@
+{
+  "task_id": "CP-LLM-SORT",
+  "goal": "LLM-driven sort: Gemini planned {'red': 'bin_A', 'green': 'bin_B', 'blue': 'bin_A'} for rule 'Put the cube that is the colour of grass in bin_B, all others in bin_A.'; the Franka routes each cube to its LLM-assigned bin.",
+  "code": "create_scene_baseline(include_ground=False, table_size=[2.0, 1.0])\n\nrobot_wizard(robot_name=\"franka_panda\", dest_path=\"/World/Franka\", position=[0, 0, 0.75], orientation=[0.7071068, 0, 0, 0.7071068])\n\ncreate_prim(prim_path=\"/World/Cube_red\", prim_type=\"Cube\", position=[0.32, 0.16, 0.79], size=0.05)\nfor _api in (\"PhysicsRigidBodyAPI\",\"PhysicsCollisionAPI\",\"PhysicsMassAPI\"):\n    apply_api_schema(prim_path=\"/World/Cube_red\", schema_name=_api)\nset_semantic_label(prim_path=\"/World/Cube_red\", semantic_type=\"color\", class_name=\"red\")\ncreate_prim(prim_path=\"/World/Cube_green\", prim_type=\"Cube\", position=[0.42, 0.16, 0.79], size=0.05)\nfor _api in (\"PhysicsRigidBodyAPI\",\"PhysicsCollisionAPI\",\"PhysicsMassAPI\"):\n    apply_api_schema(prim_path=\"/World/Cube_green\", schema_name=_api)\nset_semantic_label(prim_path=\"/World/Cube_green\", semantic_type=\"color\", class_name=\"green\")\ncreate_prim(prim_path=\"/World/Cube_blue\", prim_type=\"Cube\", position=[0.52, 0.16, 0.79], size=0.05)\nfor _api in (\"PhysicsRigidBodyAPI\",\"PhysicsCollisionAPI\",\"PhysicsMassAPI\"):\n    apply_api_schema(prim_path=\"/World/Cube_blue\", schema_name=_api)\nset_semantic_label(prim_path=\"/World/Cube_blue\", semantic_type=\"color\", class_name=\"blue\")\ncreate_bin(prim_path=\"/World/bin_A\", position=[0.0, -0.45, 0.75], size=[0.22, 0.22, 0.15])\ncreate_bin(prim_path=\"/World/bin_B\", position=[0.32, -0.45, 0.75], size=[0.22, 0.22, 0.15])\n\nsetup_pick_place_controller(\n    robot_path=\"/World/Franka\",\n    robot_family=\"franka\",\n    target_source=\"curobo\",\n    source_paths=[\"/World/Cube_red\", \"/World/Cube_green\", \"/World/Cube_blue\"],\n    destination_path=\"/World/bin_A\",\n    color_routing={\"red\": \"/World/bin_A\", \"green\": \"/World/bin_B\", \"blue\": \"/World/bin_A\"},\n    planning_obstacles=[\"/World/Table\"],\n)\n",
+  "code_template": "create_scene_baseline(include_ground=False, table_size=[2.0, 1.0])\n\nrobot_wizard(robot_name=\"franka_panda\", dest_path=\"/World/Franka\", position=[0, 0, 0.75], orientation=[0.7071068, 0, 0, 0.7071068])\n\ncreate_prim(prim_path=\"/World/Cube_red\", prim_type=\"Cube\", position=[0.32, 0.16, 0.79], size=0.05)\nfor _api in (\"PhysicsRigidBodyAPI\",\"PhysicsCollisionAPI\",\"PhysicsMassAPI\"):\n    apply_api_schema(prim_path=\"/World/Cube_red\", schema_name=_api)\nset_semantic_label(prim_path=\"/World/Cube_red\", semantic_type=\"color\", class_name=\"red\")\ncreate_prim(prim_path=\"/World/Cube_green\", prim_type=\"Cube\", position=[0.42, 0.16, 0.79], size=0.05)\nfor _api in (\"PhysicsRigidBodyAPI\",\"PhysicsCollisionAPI\",\"PhysicsMassAPI\"):\n    apply_api_schema(prim_path=\"/World/Cube_green\", schema_name=_api)\nset_semantic_label(prim_path=\"/World/Cube_green\", semantic_type=\"color\", class_name=\"green\")\ncreate_prim(prim_path=\"/World/Cube_blue\", prim_type=\"Cube\", position=[0.52, 0.16, 0.79], size=0.05)\nfor _api in (\"PhysicsRigidBodyAPI\",\"PhysicsCollisionAPI\",\"PhysicsMassAPI\"):\n    apply_api_schema(prim_path=\"/World/Cube_blue\", schema_name=_api)\nset_semantic_label(prim_path=\"/World/Cube_blue\", semantic_type=\"color\", class_name=\"blue\")\ncreate_bin(prim_path=\"/World/bin_A\", position=[0.0, -0.45, 0.75], size=[0.22, 0.22, 0.15])\ncreate_bin(prim_path=\"/World/bin_B\", position=[0.32, -0.45, 0.75], size=[0.22, 0.22, 0.15])\n\nsetup_pick_place_controller(\n    robot_path=\"/World/Franka\",\n    robot_family=\"franka\",\n    target_source=\"curobo\",\n    source_paths=[\"/World/Cube_red\", \"/World/Cube_green\", \"/World/Cube_blue\"],\n    destination_path=\"/World/bin_A\",\n    color_routing={\"red\": \"/World/bin_A\", \"green\": \"/World/bin_B\", \"blue\": \"/World/bin_A\"},\n    planning_obstacles=[\"/World/Table\"],\n)\n",
+  "role_defaults": {
+    "primary_robot": {
+      "path": "/World/Franka",
+      "class": "franka_panda",
+      "position": [
+        0,
+        0,
+        0.75
+      ],
+      "orientation": [
+        0.7071068,
+        0,
+        0,
+        0.7071068
+      ]
+    },
+    "primary_destination": {
+      "path": "/World/bin_A",
+      "position": [
+        0.0,
+        -0.45,
+        0.75
+      ],
+      "size": [
+        0.22,
+        0.22,
+        0.15
+      ]
+    }
+  },
+  "_llm_sort": {
+    "rule": "Put the cube that is the colour of grass in bin_B, all others in bin_A.",
+    "routing": {
+      "red": "bin_A",
+      "green": "bin_B",
+      "blue": "bin_A"
+    }
+  },
+  "verified_status": "\u2605 GENUINE LLM-SORT GOLD (cont.319 \u2014 LLM-driven SORTING via Gemini-Vertex). Gemini reasons about a natural-language RULE and assigns EACH object to a bin (the full routing plan, vs LLM-pick selecting one); color_routing is set from Gemini plan; scene_eyes verifies each cube lands in its LLM-ASSIGNED bin. VERIFIED across 2 reasoning rules (N=2): (1) \"warm colours->bin_A, cool->bin_B\" -> Gemini: red->A, green/blue->B -> all 3 routed correctly; (2) \"grass-coloured cube->bin_B, rest->bin_A\" -> Gemini: green->B (grass=green), red/blue->A -> all 3 routed correctly. Both: 3/3 delivered to the LLM-planned bins (final-position-verified), plan_fails<=1. The LLM drives the SORT PLAN (which object to which bin) by semantic reasoning. Completes the LLM-manipulation sub-arc: LLM-PICK (select one: CP-LLM-PICK primitives + CP-LLM-PICK-REAL real objects) + LLM-SORT (plan routing: this)."
+}
