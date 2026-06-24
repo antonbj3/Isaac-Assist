@@ -65,6 +65,11 @@ def _claimed_leaves(template):
 
 
 def verdict_for_instance(text, cls, claimed=None):
+    # cont.319 (Anton): a BUILD failure (robot/gripper/controller setup errored — scene_eyes now emits
+    # *** BUILD-CRITICAL ***) is NOT a manipulation result. Reject with the ACCURATE reason FIRST, before
+    # the never-gripped check would reject it with a misleading "never approached".
+    if "BUILD-CRITICAL" in text:
+        return False, "BUILD FAILED — robot/gripper/controller setup errored (not a manipulation result; fix the build)"
     """Return (genuine: bool, reason: str) from one instance's scene_eyes printed analysis."""
     # ANY ungripped cube = partial = reject. scene_eyes writes "never-gripped" for BOTH the far case
     # ("NEVER approached") AND the close-but-no-grasp case ("approached but not gripped") — match the
