@@ -51,17 +51,32 @@ def _parse_item_class(code):
     out = {}
     for m in re.finditer(r'\(["\'](/World/(?:Item|Cube)_\d+)["\']\s*,\s*[-0-9.]+\s*,\s*["\']([^"\']+)["\']', code):
         out[m.group(1)] = m.group(2).lower()
+    # cont.319-CV: set_semantic_label(prim_path="P", semantic_type="...", class_name="C") -> {P: C}.
+    # Covers vision-sort / YCB-SKU-sort labeled via set_semantic_label with TYPE-named prims (Item_box1,
+    # Item_brick), which the name-suffix path can't map (Item_box1 -> "box1" != routing key "box").
+    for m in re.finditer(r'set_semantic_label\(\s*prim_path\s*=\s*["\']([^"\']+)["\'][^)]*?class_name\s*=\s*["\']([^"\']+)["\']', code, re.S):
+        out[m.group(1)] = m.group(2).lower()
     return out
 
 
 def _source_paths(tpl):
     sa = tpl.get("simulate_args") or {}
-    return list(sa.get("cube_paths") or ([sa["cube_path"]] if sa.get("cube_path") else []))
+    sp = list(sa.get("cube_paths") or ([sa["cube_path"]] if sa.get("cube_path") else []))
+    if sp:
+        return sp
+    # cont.319-CV fallback: no simulate_args (hand-built CV templates) -> parse source_paths=[...] from code.
+    code = tpl.get("code", "") or tpl.get("code_template", "")
+    m = re.search(r"source_paths\s*=\s*\[(.*?)\]", code, re.S)
+    return re.findall(r'["\']([^"\']+)["\']', m.group(1)) if m else []
 
 
 async def _validate_one(kit_tools, etc, name):
     tpl = json.load(open(f"{REPO}/workspace/templates/{name}.json"))
-    code = tpl.get("code", "")
+    # cont.319-CV: PARSE the SAME field the canonical instantiator BUILDS from = code_template (the built
+    # field; `code` can differ or lack the controller call entirely -> CP-DEPAL-YCB-SORT's code had no
+    # color_routing while code_template did, a latent parse-vs-build mismatch). Prefer code_template, fall
+    # back to code for older code-only templates.
+    code = tpl.get("code_template", "") or tpl.get("code", "")
     # cont.319kk-k: prefer the CLEAN simulate_args.color_routing dict over the code-regex — the regex's
     # non-greedy {.*?} UNDER-PARSED a 3-key routing (barcode read only sku_a/sku_b, dropped sku_c -> 4/6
     # false-mis-route). simulate_args carries the authoritative {class: dest} map; fall back to the code parse.
