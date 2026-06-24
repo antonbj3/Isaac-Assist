@@ -36,8 +36,8 @@
   "_vision_seg": {
     "target": "green1",
     "gemini_point": [
-      245,
-      349
+      210,
+      294
     ],
     "seg_prim": "/World/Cube_green1"
   },
