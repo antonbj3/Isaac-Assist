@@ -122,3 +122,21 @@ The Omniverse viewport CONFORMS the camera vertical aperture to the viewport asp
 USD `verticalAperture` attribute is stale -> pixels are SQUARE in the render -> use `fy = fx =
 focal*W/horizontalAperture`. Reading the stale vertical-aperture attr made fy too small by H/W
 (0.5625), overshooting the y-ray by 1/0.5625=1.78x and MISSING the cube. One-line fix `fy=fx`.
+
+## REAL-OBJECT CV-PERCEPTION — HONEST STATUS (cont.319, 2026-06-24)
+`scripts/qa/vision_grasp_real.py` extends the pipeline to REAL YCB meshes (banana/can/brick via
+add_reference). The synthetic-cube pipeline does NOT transfer cleanly — concrete measured blockers:
+ 1. **SAM2-auto segments the TABLE + fragments, not the small objects.** Candidate masks come back
+    table-sized (5596-9146px); nearest-to-VLM matching then selects a table region. Area-filtering
+    by absolute px is too coarse — the table dominates the scene.
+ 2. **Thin settled meshes graze to the table on raycast.** Banana/brick lie flat (~3cm), can rolls
+    onto its side; a ray to the mask centroid (or 60 samples across a table-dominated mask) hits
+    /World/Table at z=0.80, not the object.
+ 3. **YCB props ROLL/settle** to unpredictable xy (cans especially); needs full settle-to-static
+    BEFORE capture, and the live RPC-Kit sim advances between the capture exec and the raycast exec.
+ 4. Gemini-vision pointing is in the right x-REGION but imprecise (±60-110px) on small varied shapes.
+What WORKS (verified, synthetic): Gemini-vision selection + SAM2 + camera-ray + raycast + grasp on
+display-coloured cubes (CP-VISION-GRASP, both colour-seed and VLM-driven). The REAL-object arc needs
+a different recipe: tighter camera (objects large in frame), depth/instance segmentation instead of
+auto-mask+area-filter, thin-mesh raycast handling (sample object-class hits only, reject table by z),
+and a settle-to-static gate read back from sim before perceiving. NOT a quick wire — a deliberate arc.
