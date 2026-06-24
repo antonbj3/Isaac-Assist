@@ -42,12 +42,42 @@ def _class(template):
     return "pick-place-bin"
 
 
-def verdict_for_instance(text, cls):
+def _claimed_leaves(template):
+    """Leaf names of the controller's source_paths = the CLAIMED picks. For a SELECTIVE pick (vision/LLM
+    picks a SUBSET, e.g. source_paths=[one object] among many), the UN-claimed objects are left BY DESIGN
+    and must NOT count as never-gripped / outside-bin failures. Returns set() when source_paths can't be
+    resolved (no list, or a templated loop) -> caller falls back to the old all-objects behaviour (safe:
+    never relaxes a multi-pick scene)."""
+    try:
+        t = json.load(open(f"/home/anton/projects/Omniverse_Nemotron_Ext/workspace/templates/{template}.json"))
+    except Exception:
+        return set()
+    code = t.get("code_template", "") or t.get("code", "")
+    m = re.search(r"source_paths\s*=\s*\[(.*?)\]", code, re.S)
+    if not m:
+        return set()
+    leaves = set()
+    for p in re.findall(r'["\']([^"\']+)["\']', m.group(1)):
+        if "{" in p:                       # templated loop -> unresolved -> old behaviour
+            return set()
+        leaves.add(p.rsplit("/", 1)[-1])
+    return leaves
+
+
+def verdict_for_instance(text, cls, claimed=None):
     """Return (genuine: bool, reason: str) from one instance's scene_eyes printed analysis."""
     # ANY ungripped cube = partial = reject. scene_eyes writes "never-gripped" for BOTH the far case
     # ("NEVER approached") AND the close-but-no-grasp case ("approached but not gripped") — match the
     # common token, not just "NEVER approached" (that hole passed a 3/4 CP-08 partial as GOLD, cont.108).
     never = len(re.findall(r"never-gripped", text, re.I))
+    # SELECTIVE-PICK scope (vision/LLM pick a SUBSET): un-claimed objects left by design are NOT a partial.
+    # Count never-gripped only among CLAIMED picks (source_paths leaves); fall back to all if names unparsed
+    # or claimed unresolved (multi-pick = all claimed -> unchanged). Conservative: a CLAIMED never-gripped
+    # still rejects (no false-positive); only provably-left objects are excused.
+    if claimed and never:
+        _ng_names = re.findall(r"^\s{2,}(\S+)\s+never-gripped", text, re.M)
+        if _ng_names:
+            never = sum(1 for n in _ng_names if n in claimed)
     # cont.319cc audit #5: a per-object 'GRIP-SLIP (... object NEVER LIFTED, not held)' (scene_eyes PICK-CONVERGENCE
     # 1086/1090) = the gripper contacted the cube but it never came off the surface = NOT transported. That token is
     # neither 'never-gripped' nor 'CONVERGED + GRIPPED', so the gate was BLIND to it: a partial where one cube
@@ -106,7 +136,15 @@ def verdict_for_instance(text, cls):
     if real_explosion:
         return False, "real EJECTION/EXPLOSION detected"
     if toppled:
-        return False, f"object(s) TOPPLED — delivered but tipped >60° from upright (not correctly placed): {toppled.group(1).strip()}"
+        _topp = toppled.group(1).strip()
+        # SELECTIVE-PICK scope: only a CLAIMED pick toppling = bad PLACEMENT. An un-claimed object left in
+        # place that settles tilted (e.g. a curved banana's spawn pose, a tipped cylinder) is not a delivery
+        # failure — we never placed it. Keep the reject for claimed picks (and for multi-pick where claimed=all).
+        if claimed:
+            _claimed_topp = [n for n in re.split(r"[,\s]+", _topp) if n and n in claimed]
+            _topp = ", ".join(_claimed_topp) if _claimed_topp else ""
+        if _topp:
+            return False, f"object(s) TOPPLED — delivered but tipped >60° from upright (not correctly placed): {_topp}"
     if low_z:
         return False, "a cube ended below 0.6m (fell to ground / never placed on the target surface)"
     if cls in ("unknown", ""):
@@ -145,6 +183,12 @@ def verdict_for_instance(text, cls):
     # in scene_eyes) because it is class-aware: a composed bin+pallet scene has pallet objects legitimately
     # outside the bin, and that path is graded by compose_and_verify, never this single-instance bin branch.
     outside = re.findall(r"xy-in-bin=NO", text)
+    # SELECTIVE-PICK scope: only CLAIMED picks are required to land in the bin; un-claimed objects left in
+    # place (on the table / source bin) are correctly outside the OUTPUT bin and must not reject.
+    if claimed and outside:
+        _out_names = re.findall(r"^\s{2,}(\S+)\s+xy-in-bin=NO", text, re.M)
+        if _out_names:
+            outside = [n for n in _out_names if n in claimed]
     if outside:
         return False, f"{len(outside)} delivery object(s) settled OUTSIDE the bin xy footprint (transported+gripped but dropped next to the bin, not IN it)"
     return True, f"delivery verified ({gripped} gripped)"
@@ -173,7 +217,7 @@ def main():
     for tpl, path in pairs:
         cls = _class(tpl)
         text = open(path).read() if os.path.exists(path) else ""
-        ok, reason = verdict_for_instance(text, cls)
+        ok, reason = verdict_for_instance(text, cls, claimed=_claimed_leaves(tpl))
         all_ok = all_ok and ok
         cells.append(tpl); verdicts.append({"template": tpl, "class": cls, "genuine": ok, "reason": reason})
         print(f"  {tpl:12s} [{cls:16s}] {'GENUINE' if ok else 'REJECT '} — {reason}")
