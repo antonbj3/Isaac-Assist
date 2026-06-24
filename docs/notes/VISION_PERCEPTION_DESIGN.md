@@ -72,3 +72,20 @@ centroids ((469,402),(639,402),(810,402)) = the cube image-centres -> these feed
 - [ ] grasp from camera-derived pose -> scene_eyes verify
 NEXT: (B) raycast-depth (no 2nd process) — unproject the SAM2 mask centroid to a camera ray,
 physx-raycast into the scene -> 3D hit point, compare to ground-truth (perception accuracy), then grasp.
+
+## ★ Camera-ray GEOMETRY VALIDATED (2026-06-24, client-side from SAM2 centroids)
+Unproject each SAM2 mask-centroid through the camera intrinsics+pose, intersect the table plane:
+- X (horizontal): err <=5mm (0.304/0.419/0.535 vs gt 0.30/0.42/0.54) -> intrinsics fx/cx + pose correct.
+- Y: consistent systematic offset 14-31mm depending on the assumed plane-z (0.06->31, 0.03->23, 0.0->14mm).
+  Most of it is the PLANE-Z ASSUMPTION (centroid maps to the object centre/contact, not its top) + a ~14mm
+  residual (tilt/fy). ⇒ the chain (RGB -> SAM2 mask -> camera ray -> 3D) is geometrically SOUND; true
+  per-pixel DEPTH (not a plane assumption) removes the Y systematic AND gives z for non-planar objects.
+So the only thing between here and a camera-derived grasp pose is the DEPTH source (A/B/C decision).
+
+## CV PIPELINE — UPDATED STATUS
+- [x] RGB capture (viewport) | [x] Gemini-vision ID 3/3 | [x] SAM2 segmentation 3/3 | [x] camera-ray geom (X 5mm)
+- [ ] TRUE DEPTH -> z + Y-systematic-fix : (A) standalone RTX-Kit RGB-D / (B) in-Kit physx-RAYCAST / (C) viewport-AOV
+- [ ] grasp from camera pose -> scene_eyes verify
+The HARD perception parts (identify, segment, unproject geometry) are PROVEN. Remaining = the depth-source
+engineering + grasp wiring. Recommendation: try (B) physx-raycast first (in-Kit, no 2nd process; feasibility
+check needed: does omni.physx scene-query raycast work in the RPC Kit, given the Replicator render did not?).
