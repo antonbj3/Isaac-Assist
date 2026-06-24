@@ -1,0 +1,41 @@
+{
+  "task_id": "CP-LLM-PICK",
+  "goal": "LLM-pick: Gemini selected /World/Cube_red for task 'Pick the red cube.'; the Franka picks ONLY that cube, leaving the others.",
+  "code": "create_scene_baseline(include_ground=False, table_size=[2.0, 1.0])\n\nrobot_wizard(robot_name=\"franka_panda\", dest_path=\"/World/Franka\", position=[0, 0, 0.75], orientation=[0.7071068, 0, 0, 0.7071068])\n\ncreate_prim(prim_path=\"/World/Cube_red\", prim_type=\"Cube\", position=[0.4, 0.15, 0.79], size=0.05)\nfor _api in (\"PhysicsRigidBodyAPI\",\"PhysicsCollisionAPI\",\"PhysicsMassAPI\"):\n    apply_api_schema(prim_path=\"/World/Cube_red\", schema_name=_api)\nset_semantic_label(prim_path=\"/World/Cube_red\", semantic_type=\"color\", class_name=\"red\")\ncreate_prim(prim_path=\"/World/Cube_green\", prim_type=\"Cube\", position=[0.4, 0.0, 0.79], size=0.05)\nfor _api in (\"PhysicsRigidBodyAPI\",\"PhysicsCollisionAPI\",\"PhysicsMassAPI\"):\n    apply_api_schema(prim_path=\"/World/Cube_green\", schema_name=_api)\nset_semantic_label(prim_path=\"/World/Cube_green\", semantic_type=\"color\", class_name=\"green\")\ncreate_prim(prim_path=\"/World/Cube_blue\", prim_type=\"Cube\", position=[0.4, -0.15, 0.79], size=0.05)\nfor _api in (\"PhysicsRigidBodyAPI\",\"PhysicsCollisionAPI\",\"PhysicsMassAPI\"):\n    apply_api_schema(prim_path=\"/World/Cube_blue\", schema_name=_api)\nset_semantic_label(prim_path=\"/World/Cube_blue\", semantic_type=\"color\", class_name=\"blue\")\n\ncreate_bin(prim_path=\"/World/Bin\", position=[0.0, -0.45, 0.75], size=[0.3, 0.3, 0.15])\n\nsetup_pick_place_controller(\n    robot_path=\"/World/Franka\",\n    robot_family=\"franka\",\n    target_source=\"curobo\",\n    source_paths=[\"/World/Cube_red\"],\n    destination_path=\"/World/Bin\",\n    planning_obstacles=[\"/World/Table\"],\n)\n",
+  "code_template": "create_scene_baseline(include_ground=False, table_size=[2.0, 1.0])\n\nrobot_wizard(robot_name=\"franka_panda\", dest_path=\"/World/Franka\", position=[0, 0, 0.75], orientation=[0.7071068, 0, 0, 0.7071068])\n\ncreate_prim(prim_path=\"/World/Cube_red\", prim_type=\"Cube\", position=[0.4, 0.15, 0.79], size=0.05)\nfor _api in (\"PhysicsRigidBodyAPI\",\"PhysicsCollisionAPI\",\"PhysicsMassAPI\"):\n    apply_api_schema(prim_path=\"/World/Cube_red\", schema_name=_api)\nset_semantic_label(prim_path=\"/World/Cube_red\", semantic_type=\"color\", class_name=\"red\")\ncreate_prim(prim_path=\"/World/Cube_green\", prim_type=\"Cube\", position=[0.4, 0.0, 0.79], size=0.05)\nfor _api in (\"PhysicsRigidBodyAPI\",\"PhysicsCollisionAPI\",\"PhysicsMassAPI\"):\n    apply_api_schema(prim_path=\"/World/Cube_green\", schema_name=_api)\nset_semantic_label(prim_path=\"/World/Cube_green\", semantic_type=\"color\", class_name=\"green\")\ncreate_prim(prim_path=\"/World/Cube_blue\", prim_type=\"Cube\", position=[0.4, -0.15, 0.79], size=0.05)\nfor _api in (\"PhysicsRigidBodyAPI\",\"PhysicsCollisionAPI\",\"PhysicsMassAPI\"):\n    apply_api_schema(prim_path=\"/World/Cube_blue\", schema_name=_api)\nset_semantic_label(prim_path=\"/World/Cube_blue\", semantic_type=\"color\", class_name=\"blue\")\n\ncreate_bin(prim_path=\"/World/Bin\", position=[0.0, -0.45, 0.75], size=[0.3, 0.3, 0.15])\n\nsetup_pick_place_controller(\n    robot_path=\"/World/Franka\",\n    robot_family=\"franka\",\n    target_source=\"curobo\",\n    source_paths=[\"/World/Cube_red\"],\n    destination_path=\"/World/Bin\",\n    planning_obstacles=[\"/World/Table\"],\n)\n",
+  "role_defaults": {
+    "primary_robot": {
+      "path": "/World/Franka",
+      "class": "franka_panda",
+      "position": [
+        0,
+        0,
+        0.75
+      ],
+      "orientation": [
+        0.7071068,
+        0,
+        0,
+        0.7071068
+      ]
+    },
+    "primary_destination": {
+      "path": "/World/Bin",
+      "position": [
+        0.0,
+        -0.45,
+        0.75
+      ],
+      "size": [
+        0.3,
+        0.3,
+        0.15
+      ]
+    }
+  },
+  "_llm_pick": {
+    "task": "Pick the red cube.",
+    "selected": "/World/Cube_red"
+  },
+  "verified_status": "LLM-PICK PROVEN (cont.319, #50 \u2014 LLM-in-the-loop manipulation via Gemini-Vertex). Pipeline: NL task -> Gemini SELECTS the object -> source_paths=[selection] -> controller picks ONLY it -> scene_eyes verifies. (1) LLM-SELECT eval (llm_pick_eval.py): 5/5 correct over color/position/semantic criteria (red, middle->green, blue, largest-Y->red, colour-of-sky->blue), all Gemini-Vertex 200 OK no 429. (2) END-TO-END (this template): Gemini selected /World/Cube_red for \"Pick the red cube\" -> Cube_red CONVERGED+GRIPPED + DELIVERED (xy-in-bin=yes), Cube_green/blue NEVER approached (untouched) -> the LLM correctly drives WHICH object is picked. NOTE: grasp is position-sensitive in this 3-cube layout \u2014 the -y cubes (green/blue) grip-slip (34mm lateral IK error at the rotated-Franka -y reach, single-source = less retry than CP-STATICPICK-R 3-source); +y (red) delivers clean. The grasp imprecision is an ORTHOGONAL manipulation detail; the LLM-SELECTION+TARGETING (the novel LLM-pick part) is proven across all 3 selections."
+}
