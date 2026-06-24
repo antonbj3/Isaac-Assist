@@ -1,0 +1,49 @@
+{
+  "task_id": "CP-VISION-SORT3",
+  "goal": "Vision 3-shape sort: Gemini SAW + classified shapes ['cylinder', 'box', 'box']; Franka routes each to its category bin {'Item_can': '/World/Bin_cyl', 'Item_box': '/World/Bin_box', 'Item_brick': '/World/Bin_box'}.",
+  "code": "create_scene_baseline(include_ground=False, table_size=[2.0, 1.0])\n\nrobot_wizard(robot_name=\"franka_panda\", dest_path=\"/World/Franka\", position=[0, 0, 0.75], orientation=[0.7071068, 0, 0, 0.7071068])\n\ncreate_prim(prim_path=\"/World/Item_can\", prim_type=\"Xform\", position=[0.32, 0.16, 0.82], rotation_euler=[90, 0, 0])\nadd_reference(prim_path=\"/World/Item_can\", reference_path=\"/mnt/shared_data/isaac-sim-assets-complete-5.0.0/Assets/Isaac/5.0/Isaac/Props/YCB/Axis_Aligned/005_tomato_soup_can.usd\")\nfor _api in (\"PhysicsRigidBodyAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n    apply_api_schema(prim_path=\"/World/Item_can\", schema_name=_api)\napply_api_schema(prim_path=\"/World/Item_can/_05_tomato_soup_can\", schema_name=\"PhysicsCollisionAPI\")\nsimplify_collision(prim_path=\"/World/Item_can/_05_tomato_soup_can\", approximation=\"convexHull\")\napply_physics_material(prim_path=\"/World/Item_can/_05_tomato_soup_can\", material_name=\"rubber\")\nset_semantic_label(prim_path=\"/World/Item_can\", semantic_type=\"color\", class_name=\"cylinder\")\n\ncreate_prim(prim_path=\"/World/Item_box\", prim_type=\"Xform\", position=[0.42, 0.16, 0.82], rotation_euler=[0, 0, 0])\nadd_reference(prim_path=\"/World/Item_box\", reference_path=\"/mnt/shared_data/isaac-sim-assets-complete-5.0.0/Assets/Isaac/5.0/Isaac/Props/YCB/Axis_Aligned/009_gelatin_box.usd\")\nfor _api in (\"PhysicsRigidBodyAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n    apply_api_schema(prim_path=\"/World/Item_box\", schema_name=_api)\napply_api_schema(prim_path=\"/World/Item_box/_09_gelatin_box\", schema_name=\"PhysicsCollisionAPI\")\nsimplify_collision(prim_path=\"/World/Item_box/_09_gelatin_box\", approximation=\"convexHull\")\napply_physics_material(prim_path=\"/World/Item_box/_09_gelatin_box\", material_name=\"rubber\")\nset_semantic_label(prim_path=\"/World/Item_box\", semantic_type=\"color\", class_name=\"box\")\n\ncreate_prim(prim_path=\"/World/Item_brick\", prim_type=\"Xform\", position=[0.52, 0.16, 0.82], rotation_euler=[0, 0, 0])\nadd_reference(prim_path=\"/World/Item_brick\", reference_path=\"/mnt/shared_data/isaac-sim-assets-complete-5.0.0/Assets/Isaac/5.0/Isaac/Props/YCB/Axis_Aligned/061_foam_brick.usd\")\nfor _api in (\"PhysicsRigidBodyAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n    apply_api_schema(prim_path=\"/World/Item_brick\", schema_name=_api)\napply_api_schema(prim_path=\"/World/Item_brick/_61_foam_brick\", schema_name=\"PhysicsCollisionAPI\")\nsimplify_collision(prim_path=\"/World/Item_brick/_61_foam_brick\", approximation=\"convexHull\")\napply_physics_material(prim_path=\"/World/Item_brick/_61_foam_brick\", material_name=\"rubber\")\nset_semantic_label(prim_path=\"/World/Item_brick\", semantic_type=\"color\", class_name=\"box\")\n\ncreate_bin(prim_path=\"/World/Bin_cyl\", position=[0.0, -0.45, 0.75], size=[0.22, 0.22, 0.15])\ncreate_bin(prim_path=\"/World/Bin_box\", position=[0.32, -0.45, 0.75], size=[0.22, 0.22, 0.15])\n\nsetup_pick_place_controller(\n    robot_path=\"/World/Franka\",\n    robot_family=\"franka\",\n    target_source=\"curobo\",\n    source_paths=[\"/World/Item_can\",\"/World/Item_box\",\"/World/Item_brick\"],\n    destination_path=\"/World/Bin_cyl\",\n    color_routing={\"cylinder\": \"/World/Bin_cyl\", \"box\": \"/World/Bin_box\"},\n    planning_obstacles=[\"/World/Table\"],\n)\n",
+  "code_template": "create_scene_baseline(include_ground=False, table_size=[2.0, 1.0])\n\nrobot_wizard(robot_name=\"franka_panda\", dest_path=\"/World/Franka\", position=[0, 0, 0.75], orientation=[0.7071068, 0, 0, 0.7071068])\n\ncreate_prim(prim_path=\"/World/Item_can\", prim_type=\"Xform\", position=[0.32, 0.16, 0.82], rotation_euler=[90, 0, 0])\nadd_reference(prim_path=\"/World/Item_can\", reference_path=\"/mnt/shared_data/isaac-sim-assets-complete-5.0.0/Assets/Isaac/5.0/Isaac/Props/YCB/Axis_Aligned/005_tomato_soup_can.usd\")\nfor _api in (\"PhysicsRigidBodyAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n    apply_api_schema(prim_path=\"/World/Item_can\", schema_name=_api)\napply_api_schema(prim_path=\"/World/Item_can/_05_tomato_soup_can\", schema_name=\"PhysicsCollisionAPI\")\nsimplify_collision(prim_path=\"/World/Item_can/_05_tomato_soup_can\", approximation=\"convexHull\")\napply_physics_material(prim_path=\"/World/Item_can/_05_tomato_soup_can\", material_name=\"rubber\")\nset_semantic_label(prim_path=\"/World/Item_can\", semantic_type=\"color\", class_name=\"cylinder\")\n\ncreate_prim(prim_path=\"/World/Item_box\", prim_type=\"Xform\", position=[0.42, 0.16, 0.82], rotation_euler=[0, 0, 0])\nadd_reference(prim_path=\"/World/Item_box\", reference_path=\"/mnt/shared_data/isaac-sim-assets-complete-5.0.0/Assets/Isaac/5.0/Isaac/Props/YCB/Axis_Aligned/009_gelatin_box.usd\")\nfor _api in (\"PhysicsRigidBodyAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n    apply_api_schema(prim_path=\"/World/Item_box\", schema_name=_api)\napply_api_schema(prim_path=\"/World/Item_box/_09_gelatin_box\", schema_name=\"PhysicsCollisionAPI\")\nsimplify_collision(prim_path=\"/World/Item_box/_09_gelatin_box\", approximation=\"convexHull\")\napply_physics_material(prim_path=\"/World/Item_box/_09_gelatin_box\", material_name=\"rubber\")\nset_semantic_label(prim_path=\"/World/Item_box\", semantic_type=\"color\", class_name=\"box\")\n\ncreate_prim(prim_path=\"/World/Item_brick\", prim_type=\"Xform\", position=[0.52, 0.16, 0.82], rotation_euler=[0, 0, 0])\nadd_reference(prim_path=\"/World/Item_brick\", reference_path=\"/mnt/shared_data/isaac-sim-assets-complete-5.0.0/Assets/Isaac/5.0/Isaac/Props/YCB/Axis_Aligned/061_foam_brick.usd\")\nfor _api in (\"PhysicsRigidBodyAPI\", \"PhysicsMassAPI\", \"PhysxRigidBodyAPI\"):\n    apply_api_schema(prim_path=\"/World/Item_brick\", schema_name=_api)\napply_api_schema(prim_path=\"/World/Item_brick/_61_foam_brick\", schema_name=\"PhysicsCollisionAPI\")\nsimplify_collision(prim_path=\"/World/Item_brick/_61_foam_brick\", approximation=\"convexHull\")\napply_physics_material(prim_path=\"/World/Item_brick/_61_foam_brick\", material_name=\"rubber\")\nset_semantic_label(prim_path=\"/World/Item_brick\", semantic_type=\"color\", class_name=\"box\")\n\ncreate_bin(prim_path=\"/World/Bin_cyl\", position=[0.0, -0.45, 0.75], size=[0.22, 0.22, 0.15])\ncreate_bin(prim_path=\"/World/Bin_box\", position=[0.32, -0.45, 0.75], size=[0.22, 0.22, 0.15])\n\nsetup_pick_place_controller(\n    robot_path=\"/World/Franka\",\n    robot_family=\"franka\",\n    target_source=\"curobo\",\n    source_paths=[\"/World/Item_can\",\"/World/Item_box\",\"/World/Item_brick\"],\n    destination_path=\"/World/Bin_cyl\",\n    color_routing={\"cylinder\": \"/World/Bin_cyl\", \"box\": \"/World/Bin_box\"},\n    planning_obstacles=[\"/World/Table\"],\n)\n",
+  "role_defaults": {
+    "primary_robot": {
+      "path": "/World/Franka",
+      "class": "franka_panda",
+      "position": [
+        0,
+        0,
+        0.75
+      ],
+      "orientation": [
+        0.7071068,
+        0,
+        0,
+        0.7071068
+      ]
+    },
+    "primary_destination": {
+      "path": "/World/Bin_cyl",
+      "position": [
+        0.0,
+        -0.45,
+        0.75
+      ],
+      "size": [
+        0.22,
+        0.22,
+        0.15
+      ]
+    }
+  },
+  "_vision_sort3": {
+    "gemini_classify": [
+      "cylinder",
+      "box",
+      "box"
+    ],
+    "routing": {
+      "Item_can": "/World/Bin_cyl",
+      "Item_box": "/World/Bin_box",
+      "Item_brick": "/World/Bin_box"
+    }
+  },
+  "verified_status": "VISION-SORT3 (cont.319): color_routing from Gemini shape-classify ['cylinder', 'box', 'box']. UNVERIFIED."
+}
