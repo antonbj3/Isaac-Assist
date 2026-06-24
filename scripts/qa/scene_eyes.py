@@ -1408,6 +1408,21 @@ async def main():
         b = await asyncio.wait_for(execute_template_canonical(tpl), timeout=600)
         if not b.get("instantiated"):
             print("BUILD_FAIL", str(b.get("errors"))[:400]); return
+        # cont.319 (Anton: "scene_eyes doesn't detect build errors?"): execute_template_canonical returns
+        # instantiated=True even when INDIVIDUAL tool calls (robot_wizard / surface_gripper / controller)
+        # ERRORED -> the scene exists but the robot/controller never set up, and the run below then
+        # MIS-REPORTS a build failure as a 'never-gripped' MANIPULATION failure (the UR5/cobotta case:
+        # invalid robot_name -> robot=None -> "never-gripped" with no build flag). Surface the per-call
+        # errors, and flag robot/controller setup failures as BUILD-CRITICAL (the measurement is INVALID).
+        _berr = [e for e in (b.get("errors") or []) if e]
+        if _berr:
+            print("BUILD_ERRORS (%d tool-call error(s) despite instantiated=True):" % len(_berr))
+            for _e in _berr:
+                print("   !!", str(_e)[:220])
+            if any(any(_k in str(_e).lower() for _k in ("robot_wizard", "setup_pick_place_controller",
+                    "robot not found", "unsupported robot", "no articulation", "surface_gripper")) for _e in _berr):
+                print("*** BUILD-CRITICAL: robot/gripper/controller setup FAILED -> the run below is NOT a "
+                      "valid manipulation result (a BUILD failure, not a pick failure). Fix the build first. ***")
         try:
             await asyncio.wait_for(settle_after_canonical(tpl), timeout=30)
         except Exception:
