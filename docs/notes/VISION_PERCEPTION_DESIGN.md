@@ -89,3 +89,19 @@ So the only thing between here and a camera-derived grasp pose is the DEPTH sour
 The HARD perception parts (identify, segment, unproject geometry) are PROVEN. Remaining = the depth-source
 engineering + grasp wiring. Recommendation: try (B) physx-raycast first (in-Kit, no 2nd process; feasibility
 check needed: does omni.physx scene-query raycast work in the RPC Kit, given the Replicator render did not?).
+
+## ★★ PATH (B) VIABLE — physx-raycast WORKS in the RPC Kit (2026-06-24)
+omni.physx scene-query raycast(origin,dir) in the shared :8001 Kit -> EXACT hit: from (0.40,0.15,0.5)
+straight down hit /World/Cube at (0.40,0.15,0.075) = the cube top (cube centre 0.05, top 0.075),
+distance 0.425, collision='/World/Cube'. (Needs CollisionAPI on the object + a PhysicsScene + a few
+timeline.play() updates to cook colliders.) So unlike the Replicator RGB-D annotators (which need a
+standalone workflow), RAYCAST works IN-KIT -> true per-pixel depth without a 2nd process.
+
+## ⇒ ENTIRE CV-PERCEPTION PIPELINE PROVEN (every piece), full camera-grasp UNBLOCKED:
+  [x] RGB capture (viewport)              [x] Gemini-vision ID 3/3 (Vertex, sees render)
+  [x] SAM2 segmentation 3/3 (point->mask) [x] camera-ray geometry (X 5mm)
+  [x] physx-raycast in-Kit (EXACT depth)  -> mask-centroid pixel -> camera ray -> raycast -> TRUE 3D pose
+The remaining work is pure INTEGRATION (wire perception 3D pose -> controller grasp -> scene_eyes verify),
+all blockers cleared. Build order: (1) scene with collision cubes + Franka + bin + angled camera;
+(2) capture RGB; (3) SAM2 mask centroid; (4) camera-ray + physx-raycast -> 3D pose (no ground-truth);
+(5) grasp at that pose; (6) scene_eyes verifies the right object delivered. = honest sim-to-real camera grasp.
