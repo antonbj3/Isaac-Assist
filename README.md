@@ -1,6 +1,10 @@
 # Isaac Assist — Omniverse Extension & Background Service
 
+![Isaac Assist banner](docs/banner.jpg)
+
 > An agentic AI assistant for NVIDIA Isaac Sim that provides LLM-powered scene diagnostics, patch planning, and governance — surfaced through a dockable Omniverse UI panel backed by a local FastAPI service.
+
+> **Note:** the description below is from the original repo (12 April 2026) and will be updated to match the current branch.
 
 ---
 
